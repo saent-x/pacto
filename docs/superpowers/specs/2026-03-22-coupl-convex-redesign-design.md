@@ -200,6 +200,19 @@ Recommended flow:
 
 Invite flow should remain lightweight, but the underlying model should be explicit and durable.
 
+### Cutover Strategy
+
+This repository is still early-stage and should treat the migration as a product/backend replacement rather than a live production data migration.
+
+Assumptions for planning:
+
+- existing Supabase code will be removed rather than supported indefinitely in parallel
+- no dual-write period is required
+- existing local/dev users can be reset if needed during migration
+- the implementation plan must choose one concrete auth provider path for Convex and apply it consistently across sign-in, sign-up, session restore, and sign-out
+
+If an existing real user base is discovered later, a separate migration spec is required. It should not be folded into this redesign plan by default.
+
 ### Access Boundaries
 
 The couple becomes the root shared boundary. Private content remains visible only to its author even within that couple boundary.
@@ -223,6 +236,7 @@ Recommended entities:
 - `couples`
 - `memberships`
 - `events`
+- `plans`
 - `rituals`
 - `checkIns`
 - `reminders`
@@ -237,6 +251,51 @@ Recommended entities:
 - `timelineItems` or equivalent derived timeline composition model
 
 The critical addition is a composition layer that allows the home timeline to present multiple object types in one ordered narrative without duplicating presentation logic across the client.
+
+### Planning Object Definition
+
+`plans` are first-class shared planning records and should not be collapsed into generic `events`.
+
+Suggested responsibility split:
+
+- `events`: fixed-time calendar items such as reservations, appointments, anniversaries, and scheduled moments
+- `plans`: multi-step or evolving shared intentions such as trip planning, date ideas, weekend plans, or goal-driven preparations that may later produce one or more events
+- `rituals`: recurring relationship practices such as weekly review, gratitude check-in, or date-night ritual
+
+This distinction matters because `plans` belong both in calendar-adjacent experiences and in the home narrative, but they have different lifecycle rules than point-in-time events.
+
+### Home Timeline Composition Contract
+
+The home timeline should be treated as a derived query contract, not a freeform UI invention.
+
+It must support these item families:
+
+- featured relationship signal
+- upcoming event
+- active plan
+- reminder due today
+- task due today
+- ritual due or completed
+- recent shared note or memory
+- milestone or countdown moment
+
+Minimum contract requirements:
+
+- every timeline item has a stable type
+- every item exposes source object id and source collection
+- items can be filtered by date window and couple
+- private records never appear in shared home results
+- ordering rules are deterministic
+
+Initial ordering recommendation:
+
+1. featured hero signal selected by app logic
+2. overdue items
+3. items happening today ordered by time, then importance
+4. near-future items within the chosen preview window
+5. reflective or memory items
+
+The plan should define where the derived result is computed, how it invalidates after source updates, and whether it is materialized or resolved at query time.
 
 ## Feature Scope for First Complete Version
 
@@ -263,6 +322,33 @@ Every shipped feature must be:
 - coherent with the overall product language
 
 Avoid modules that exist only as empty destinations or future placeholders.
+
+### Delivery Priority
+
+The first implementation plan should explicitly stage this work into priority bands.
+
+#### Must ship in the first executable phase
+
+- auth and invite flow
+- couple membership model
+- shared timeline home
+- calendar/events/plans foundation
+- reminders
+- rituals/check-ins
+
+#### Must follow immediately after foundation
+
+- tasks and lists
+- journal with private/shared visibility
+- profile/settings shell
+
+#### Can land after the core relationship/planning loop is stable
+
+- wishlists
+- shared expenses
+- milestone depth
+
+This keeps the product direction intact while giving the implementation plan permission to sequence broad scope sensibly.
 
 ## Error Handling and Resilience
 
@@ -319,6 +405,13 @@ The current repository already contains:
 The redesign should preserve the useful product intent from the PRD while substantially changing the IA, interaction model, and backend architecture.
 
 The implementation should be split into clear phases rather than attempted as a single undifferentiated rewrite.
+
+Planning guidance:
+
+- Phase 1 should establish Convex auth, couple membership, navigation skeleton, and the home/calendar foundation.
+- Phase 2 should make the core relationship loop usable end-to-end with rituals, reminders, and plans.
+- Phase 3 should migrate and redesign operational tools such as tasks, journal, and settings.
+- Phase 4 should expand into secondary modules such as wishlists and expenses.
 
 ## Approved Decisions Summary
 
