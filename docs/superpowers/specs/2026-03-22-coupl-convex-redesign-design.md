@@ -295,7 +295,13 @@ Initial ordering recommendation:
 4. near-future items within the chosen preview window
 5. reflective or memory items
 
-The plan should define where the derived result is computed, how it invalidates after source updates, and whether it is materialized or resolved at query time.
+Architecture decision:
+
+- the home timeline should be resolved at query time in Convex from source collections, not stored as a permanently materialized table
+- invalidation should happen naturally through Convex reactivity when underlying source documents change
+- helper functions may normalize different source records into a shared timeline item shape, but the canonical data remains in the source collections
+
+This keeps the timeline consistent with live data and avoids duplicated write paths during the rebuild.
 
 ## Feature Scope for First Complete Version
 
@@ -408,8 +414,8 @@ The implementation should be split into clear phases rather than attempted as a 
 
 Planning guidance:
 
-- Phase 1 should establish Convex auth, couple membership, navigation skeleton, and the home/calendar foundation.
-- Phase 2 should make the core relationship loop usable end-to-end with rituals, reminders, and plans.
+- Phase 1 should establish Convex auth, couple membership, navigation skeleton, and the home/calendar foundation. This phase should include the `plans` data model and minimal query/mutation support needed for home and calendar composition, but not full plan-management depth.
+- Phase 2 should make the core relationship loop usable end-to-end with rituals, reminders, and full plan flows.
 - Phase 3 should migrate and redesign operational tools such as tasks, journal, and settings.
 - Phase 4 should expand into secondary modules such as wishlists and expenses.
 
