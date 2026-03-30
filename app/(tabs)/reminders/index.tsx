@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useRef, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, RefreshControl, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
@@ -7,33 +7,61 @@ import { Feather } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { format, isPast, isToday } from 'date-fns';
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { useColors } from '@/src/hooks/useColors';
+import { useSession } from '@/src/hooks/useSession';
+import { useTheme } from '@/src/lib/theme';
 import { useReminders } from '@/src/hooks/useReminders';
-import { useAuthStore } from '@/src/stores/authStore';
+import { useSwipeTabs } from '@/src/hooks/useSwipeTabs';
 import { Typography } from '@/src/constants/typography';
 import { Spacing, BorderRadius } from '@/src/constants/spacing';
+import { MiniDateRail } from '@/src/components/calendar/MiniDateRail';
 import { EmptyState } from '@/src/components/ui';
 import { CreateReminderSheet } from '@/src/components/reminders/CreateReminderSheet';
 import { Reminder } from '@/src/types/database';
 
-
-
 type Filter = 'all' | 'mine' | 'partner';
+
+function toLocalDateKey(value: string) {
+  return format(new Date(value), 'yyyy-MM-dd');
+}
 
 export default function RemindersScreen() {
   const C = useColors();
-  const userId = useAuthStore((s) => s.user?.id);
-  const { upcoming, completed, isLoading, create, update, toggleComplete, remove } = useReminders();
+  const { mode } = useTheme();
+  const { profile } = useSession();
+  const userId = profile?._id ?? null;
+  const { upcoming, completed, isLoading, create, update, toggleComplete, remove, refetch } = useReminders();
 
   const sheetRef = useRef<BottomSheetModal>(null);
   const [editingReminder, setEditingReminder] = useState<Reminder | undefined>();
   const [filter, setFilter] = useState<Filter>('all');
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.6)';
+  const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
 
   const filtered = upcoming.filter((r) => {
+    if (selectedDate && toLocalDateKey(r.due_at) !== selectedDate) return false;
     if (filter === 'mine') return r.created_by === userId || r.assigned_to === userId;
     if (filter === 'partner') return r.created_by !== userId;
     return true;
+  });
+  const filteredCompleted = completed.filter((r) => !selectedDate || toLocalDateKey(r.due_at) === selectedDate);
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch]);
+  const tabSwipe = useSwipeTabs({
+    tabs: ['all', 'mine', 'partner'] as const,
+    value: filter,
+    onChange: setFilter,
   });
 
   const handleSave = async (data: any) => {
@@ -60,111 +88,178 @@ export default function RemindersScreen() {
     toggleComplete(r);
   };
 
+  const handleDelete = (r: Reminder) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    Alert.alert('Delete Reminder', `Remove "${r.title}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => remove(r.id) },
+    ]);
+  };
+
+  const renderSwipeRight = useCallback((item: Reminder) => () => (
+    <TouchableOpacity
+      style={[styles.swipeAction, styles.swipeDelete, { backgroundColor: C.error }]}
+      onPress={() => handleDelete(item)}
+    >
+      <Feather name="trash-2" size={18} color="#fff" />
+    </TouchableOpacity>
+  ), [C]);
+
+  const renderSwipeLeft = useCallback((item: Reminder) => () => (
+    <TouchableOpacity
+      style={[styles.swipeAction, styles.swipeComplete, { backgroundColor: C.success }]}
+      onPress={() => handleToggle(item)}
+    >
+      <Feather name={item.is_completed ? 'rotate-ccw' : 'check'} size={18} color="#fff" />
+    </TouchableOpacity>
+  ), [C]);
+
   const renderItem = ({ item }: { item: Reminder }) => {
     const overdue = !item.is_completed && isPast(new Date(item.due_at)) && !isToday(new Date(item.due_at));
     return (
-      <TouchableOpacity
-        style={[styles.reminderRow, { borderBottomColor: C.border }]}
-        activeOpacity={0.7}
-        onPress={() => openEdit(item)}
+      <Swipeable
+        renderRightActions={renderSwipeRight(item)}
+        renderLeftActions={renderSwipeLeft(item)}
+        overshootRight={false}
+        overshootLeft={false}
+        friction={2}
       >
         <TouchableOpacity
-          onPress={() => handleToggle(item)}
-          style={[
-            styles.checkbox,
-            { borderColor: item.is_completed ? C.reminders : C.dusk },
-            item.is_completed && { backgroundColor: C.reminders },
-          ]}
+          style={[styles.reminderRow, { backgroundColor: C.background }]}
+          activeOpacity={0.6}
+          onPress={() => openEdit(item)}
+          onLongPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            handleDelete(item);
+          }}
         >
-          {item.is_completed && <Feather name="check" size={14} color={C.ink} />}
-        </TouchableOpacity>
-        <View style={styles.reminderBody}>
-          <Text
+          <TouchableOpacity
+            onPress={() => handleToggle(item)}
             style={[
-              styles.reminderTitle,
-              { color: item.is_completed ? C.textTertiary : C.text },
-              item.is_completed && styles.strikethrough,
+              styles.checkbox,
+              {
+                borderColor: item.is_completed ? C.reminders : mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)',
+              },
+              item.is_completed && { backgroundColor: C.reminders },
             ]}
-            numberOfLines={1}
           >
-            {item.title}
-          </Text>
-          <Text style={[styles.reminderDate, { color: overdue ? C.error : C.textTertiary }]}>
-            {format(new Date(item.due_at), 'MMM d, h:mm a')}
-          </Text>
-        </View>
-        {item.priority > 0 && (
-          <View
-            style={[
-              styles.priorityDot,
-              { backgroundColor: item.priority === 3 ? C.error : item.priority === 2 ? C.warning : C.haze },
-            ]}
-          />
-        )}
-      </TouchableOpacity>
+            {item.is_completed && <Feather name="check" size={14} color="#fff" />}
+          </TouchableOpacity>
+          <View style={styles.reminderBody}>
+            <Text
+              style={[
+                styles.reminderTitle,
+                { color: item.is_completed ? C.textTertiary : C.text },
+                item.is_completed && styles.strikethrough,
+              ]}
+              numberOfLines={1}
+            >
+              {item.title}
+            </Text>
+            <Text style={[styles.reminderMeta, { color: overdue ? C.error : C.textTertiary }]}>
+              {format(new Date(item.due_at), 'MMM d, h:mm a')}
+              {item.category ? ` · ${item.category}` : ''}
+            </Text>
+          </View>
+          {item.priority > 0 && (
+            <View
+              style={[
+                styles.priorityBadge,
+                {
+                  backgroundColor:
+                    item.priority === 3 ? C.errorLight : item.priority === 2 ? C.warningLight : 'rgba(255,255,255,0.04)',
+                },
+              ]}
+            >
+              <Feather
+                name={item.priority === 3 ? 'alert-triangle' : item.priority === 2 ? 'alert-circle' : 'minus'}
+                size={12}
+                color={item.priority === 3 ? C.error : item.priority === 2 ? C.warning : C.haze}
+              />
+            </View>
+          )}
+        </TouchableOpacity>
+      </Swipeable>
     );
   };
 
-  const hasItems = upcoming.length > 0 || completed.length > 0;
+  const hasItems = filtered.length > 0 || filteredCompleted.length > 0;
+  const openCount = filtered.length;
+  const doneCount = filteredCompleted.length;
 
   return (
     <View style={[styles.screen, { backgroundColor: C.background }]}>
-      <SafeAreaView style={styles.flex} edges={['top']}>
-        {/* Header */}
+      <SafeAreaView style={[styles.flex, { backgroundColor: C.surface }]} edges={['top']}>
+        <MiniDateRail
+          title="Reminders"
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+          accentColor={C.reminders}
+          tabs={[
+            { value: 'all', label: 'All' },
+            { value: 'mine', label: 'Mine' },
+            { value: 'partner', label: "Partner's" },
+          ]}
+          selectedTab={filter}
+          onSelectTab={(value) => setFilter(value as Filter)}
+        />
         <View style={[styles.header, { backgroundColor: C.surface }]}>
-          <View style={styles.headerRow}>
-            <Text style={[styles.title, { color: C.text }]}>Reminders</Text>
-            <TouchableOpacity onPress={openCreate} style={[styles.addBtn, { backgroundColor: C.primaryMuted }]}>
-              <Feather name="plus" size={18} color={C.primary} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.filterRow}>
-            {(['all', 'mine', 'partner'] as Filter[]).map((f) => (
-              <TouchableOpacity
-                key={f}
-                onPress={() => setFilter(f)}
-                style={[
-                  styles.filterPill,
-                  { borderColor: filter === f ? C.reminders : C.dusk },
-                  filter === f && { backgroundColor: C.remindersLight },
-                ]}
-              >
-                <Text style={[styles.filterText, { color: filter === f ? C.reminders : C.haze }]}>
-                  {f === 'all' ? 'All' : f === 'mine' ? 'Mine' : "Partner's"}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          <View style={styles.summaryRow}>
+            <Text style={[styles.summaryText, { color: C.textTertiary }]}>
+              {openCount} open
+            </Text>
+            <View style={[styles.summaryDivider, { backgroundColor: C.border }]} />
+            <Text style={[styles.summaryText, { color: C.textTertiary }]}>
+              {doneCount} done
+            </Text>
           </View>
         </View>
-
         {!hasItems && !isLoading ? (
-          <EmptyState
-            icon="bell"
-            title="No reminders yet"
-            description="Create shared reminders so you never forget what matters."
-            actionLabel="Add Reminder"
-            onAction={openCreate}
-          />
+          <ScrollView
+            contentContainerStyle={styles.emptyContent}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.reminders} />
+            }
+            showsVerticalScrollIndicator={false}
+            {...tabSwipe.panHandlers}
+          >
+            <EmptyState
+              icon="bell"
+              title="No reminders yet"
+              description="Create shared reminders so you never forget what matters."
+              actionLabel="Add Reminder"
+              onAction={openCreate}
+            />
+          </ScrollView>
         ) : (
           <FlashList
             data={filtered}
             renderItem={renderItem}
-
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.reminders} />
+            }
+            ItemSeparatorComponent={() => (
+              <View style={[styles.separator, { backgroundColor: glassBorder }]} />
+            )}
+            {...tabSwipe.panHandlers}
             ListFooterComponent={
-              completed.length > 0 ? (
+              filteredCompleted.length > 0 ? (
                 <View style={styles.completedSection}>
                   <TouchableOpacity
-                    onPress={() => setShowCompleted(!showCompleted)}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setShowCompleted(!showCompleted);
+                    }}
                     style={styles.completedToggle}
                   >
                     <Text style={[styles.completedLabel, { color: C.textTertiary }]}>
-                      Completed ({completed.length})
+                      Completed ({filteredCompleted.length})
                     </Text>
                     <Feather name={showCompleted ? 'chevron-up' : 'chevron-down'} size={14} color={C.textTertiary} />
                   </TouchableOpacity>
-                  {showCompleted && completed.map((item) => (
+                  {showCompleted && filteredCompleted.map((item) => (
                     <View key={item.id}>
                       {renderItem({ item })}
                     </View>
@@ -174,6 +269,18 @@ export default function RemindersScreen() {
             }
           />
         )}
+
+        {/* FAB */}
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            openCreate();
+          }}
+          activeOpacity={0.85}
+          style={[styles.fab, { backgroundColor: C.reminders }]}
+        >
+          <Feather name="plus" size={22} color="#fff" />
+        </TouchableOpacity>
 
         <CreateReminderSheet
           sheetRef={sheetRef}
@@ -191,41 +298,37 @@ const styles = StyleSheet.create({
 
   header: {
     paddingHorizontal: Spacing['2xl'],
-    paddingTop: Spacing.lg,
+    paddingTop: Spacing.sm,
     paddingBottom: Spacing.lg,
   },
-  headerRow: {
+  summaryRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    gap: Spacing.sm,
+    marginTop: Spacing.lg,
   },
-  title: { ...Typography.title },
-  addBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+  summaryText: {
+    ...Typography.small,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
   },
-  filterRow: { flexDirection: 'row', gap: Spacing.sm },
-  filterPill: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
+  summaryDivider: {
+    width: 18,
+    height: StyleSheet.hairlineWidth,
   },
-  filterText: { ...Typography.small, fontWeight: '500' },
-
   listContent: { paddingBottom: 120 },
+  emptyContent: { flexGrow: 1 },
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: 68,
+  },
 
   reminderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.lg,
+    paddingVertical: 14,
     paddingHorizontal: Spacing['2xl'],
     gap: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   checkbox: {
     width: 24,
@@ -236,12 +339,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   reminderBody: { flex: 1 },
-  reminderTitle: { ...Typography.body, marginBottom: 2 },
+  reminderTitle: { ...Typography.body, fontSize: 15, marginBottom: 2 },
   strikethrough: { textDecorationLine: 'line-through' },
-  reminderDate: { ...Typography.small },
-  priorityDot: { width: 8, height: 8, borderRadius: 4 },
+  reminderMeta: { ...Typography.small },
+  priorityBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
-  completedSection: { paddingTop: Spacing.xl },
+  // Swipe actions
+  swipeAction: {
+    width: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  swipeDelete: {},
+  swipeComplete: {},
+
+  completedSection: { paddingTop: Spacing.md },
   completedToggle: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -250,5 +368,19 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
   },
   completedLabel: { ...Typography.captionMedium },
-
+  fab: {
+    position: 'absolute',
+    bottom: 100,
+    right: Spacing['2xl'],
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
+  },
 });

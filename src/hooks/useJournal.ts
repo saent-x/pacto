@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/src/lib/supabase';
-import { useAuthStore } from '@/src/stores/authStore';
-import { useCoupleStore } from '@/src/stores/coupleStore';
-import { useRealtime } from './useRealtime';
-import { JournalEntry } from '@/src/types/database';
+import { useCallback, useMemo, useState } from 'react';
+import { useConvex, useMutation, useQuery } from 'convex/react';
+import { makeFunctionReference } from 'convex/server';
+
+import { useSession } from './useSession';
+import type { JournalEntry } from '@/src/types/database';
 
 type EntryInput = {
   title?: string | null;
@@ -11,123 +11,173 @@ type EntryInput = {
   mood?: string | null;
   is_private?: boolean;
   entry_date: string;
+  media_storage_ids?: string[];
+};
+
+type JournalImageUploadInput = {
+  uri: string;
+  contentType?: string;
+};
+
+type JournalEntryDoc = {
+  _id: string;
+  coupleId: string;
+  authorId: string;
+  title: string | null;
+  body: string;
+  mood: string | null;
+  isPrivate: boolean;
+  mediaUrls: string[];
+  tags: string[];
+  entryDate: string;
+  createdAt: number;
+  updatedAt: number;
 };
 
 export type JournalFilter = 'all' | 'shared' | 'private';
 
-export function useJournal() {
-  const userId = useAuthStore((s) => s.user?.id);
-  const coupleId = useCoupleStore((s) => s.coupleId);
+const getJournalEntriesQuery = makeFunctionReference<'query', {}, JournalEntryDoc[]>('journalEntries:getJournalEntries');
+const generateJournalImageUploadUrlMutation = makeFunctionReference<'mutation', {}, string>(
+  'journalEntries:generateJournalImageUploadUrl',
+);
+const createJournalEntryMutation = makeFunctionReference<
+  'mutation',
+  {
+    title?: string | null;
+    body: string;
+    mood?: string | null;
+    isPrivate?: boolean;
+    entryDate: string;
+    mediaStorageIds?: string[];
+  },
+  JournalEntryDoc
+>('journalEntries:createJournalEntry');
+const updateJournalEntryMutation = makeFunctionReference<
+  'mutation',
+  {
+    entryId: string;
+    title?: string | null;
+    body?: string;
+    mood?: string | null;
+    isPrivate?: boolean;
+    entryDate?: string;
+    mediaStorageIds?: string[];
+  },
+  JournalEntryDoc
+>('journalEntries:updateJournalEntry');
+const deleteJournalEntryMutation = makeFunctionReference<'mutation', { entryId: string }, null>('journalEntries:deleteJournalEntry');
 
-  const [entries, setEntries] = useState<JournalEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+function toJournalEntryRow(entry: JournalEntryDoc): JournalEntry {
+  return {
+    id: entry._id,
+    couple_id: entry.coupleId,
+    author_id: entry.authorId,
+    title: entry.title,
+    body: entry.body,
+    mood: entry.mood,
+    is_private: entry.isPrivate,
+    media_urls: [...entry.mediaUrls],
+    tags: [...entry.tags],
+    entry_date: entry.entryDate,
+    created_at: new Date(entry.createdAt).toISOString(),
+    updated_at: new Date(entry.updatedAt).toISOString(),
+  };
+}
+
+export function useJournal() {
+  const { activeCouple, profile } = useSession();
+  const convex = useConvex();
+  const userId = profile?._id ?? null;
+  const rows = useQuery(getJournalEntriesQuery, activeCouple ? {} : 'skip');
+  const generateImageUploadUrl = useMutation(generateJournalImageUploadUrlMutation);
+  const createJournalEntry = useMutation(createJournalEntryMutation);
+  const updateJournalEntry = useMutation(updateJournalEntryMutation);
+  const deleteJournalEntry = useMutation(deleteJournalEntryMutation);
   const [filter, setFilter] = useState<JournalFilter>('all');
 
-  const fetchEntries = useCallback(async () => {
-    if (!coupleId || !userId) return;
-
-    // RLS handles privacy — partner's private entries are automatically excluded
-    const { data } = await supabase
-      .from('journal_entries')
-      .select('*')
-      .eq('couple_id', coupleId)
-      .order('entry_date', { ascending: false });
-
-    setEntries((data as JournalEntry[]) ?? []);
-    setIsLoading(false);
-  }, [coupleId, userId]);
-
-  useEffect(() => {
-    fetchEntries();
-  }, [fetchEntries]);
-
-  useRealtime<JournalEntry>(
-    'journal_entries',
-    (record) => {
-      // Only add if not partner's private entry
-      if (record.author_id !== userId && record.is_private) return;
-      setEntries((prev) =>
-        prev.some((e) => e.id === record.id) ? prev : [record, ...prev],
-      );
-    },
-    (record) => {
-      if (record.author_id !== userId && record.is_private) {
-        // Partner made it private — remove from our view
-        setEntries((prev) => prev.filter((e) => e.id !== record.id));
-        return;
-      }
-      setEntries((prev) =>
-        prev.map((e) => (e.id === record.id ? record : e)),
-      );
-    },
-    (record) => {
-      setEntries((prev) => prev.filter((e) => e.id !== record.id));
-    },
-  );
+  const allEntries = useMemo(() => (rows ?? []).map(toJournalEntryRow), [rows]);
 
   const create = useCallback(
     async (data: EntryInput) => {
-      if (!coupleId || !userId) return;
-      const tempId = 'temp-' + Date.now();
-      const optimistic = {
-        id: tempId,
-        ...data,
-        couple_id: coupleId,
-        author_id: userId,
-        is_private: data.is_private ?? false,
-        media_urls: [],
-        tags: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      } as JournalEntry;
-      setEntries((prev) => [optimistic, ...prev]);
-
-      const { data: inserted, error } = await supabase.from('journal_entries').insert({
-        ...data,
-        couple_id: coupleId,
-        author_id: userId,
-        is_private: data.is_private ?? false,
-      } as any).select().single();
-
-      if (error) {
-        console.warn('[Coupl] Create entry failed:', error.message);
-        setEntries((prev) => prev.filter((e) => e.id !== tempId));
-      } else if (inserted) {
-        setEntries((prev) => prev.map((e) => e.id === tempId ? (inserted as JournalEntry) : e));
-      }
+      await createJournalEntry({
+        title: data.title ?? null,
+        body: data.body,
+        mood: data.mood ?? null,
+        isPrivate: data.is_private ?? false,
+        entryDate: data.entry_date,
+        ...(data.media_storage_ids ? { mediaStorageIds: data.media_storage_ids } : {}),
+      });
     },
-    [coupleId, userId],
+    [createJournalEntry],
   );
 
   const update = useCallback(
     async (id: string, data: Partial<EntryInput>) => {
-      const { error } = await supabase
-        .from('journal_entries')
-        .update(data as never)
-        .eq('id', id);
-      if (error) console.warn('[Coupl] Update entry failed:', error.message);
+      await updateJournalEntry({
+        entryId: id,
+        ...(data.title !== undefined ? { title: data.title ?? null } : {}),
+        ...(data.body !== undefined ? { body: data.body } : {}),
+        ...(data.mood !== undefined ? { mood: data.mood ?? null } : {}),
+        ...(data.is_private !== undefined ? { isPrivate: data.is_private } : {}),
+        ...(data.entry_date !== undefined ? { entryDate: data.entry_date } : {}),
+        ...(data.media_storage_ids !== undefined ? { mediaStorageIds: data.media_storage_ids } : {}),
+      });
     },
-    [],
+    [updateJournalEntry],
   );
 
   const remove = useCallback(
     async (id: string) => {
-      setEntries((prev) => prev.filter((e) => e.id !== id));
-      const { error } = await supabase.from('journal_entries').delete().eq('id', id);
-      if (error) {
-        console.warn('[Coupl] Delete entry failed:', error.message);
-        fetchEntries();
-      }
+      await deleteJournalEntry({ entryId: id });
     },
-    [fetchEntries],
+    [deleteJournalEntry],
   );
 
-  // Apply filter
-  const filtered = entries.filter((e) => {
-    if (filter === 'shared') return !e.is_private;
-    if (filter === 'private') return e.author_id === userId && e.is_private;
+  const entries = allEntries.filter((entry) => {
+    if (filter === 'shared') return !entry.is_private;
+    if (filter === 'private') return entry.author_id === userId && entry.is_private;
     return true;
   });
 
-  return { entries: filtered, allEntries: entries, isLoading, filter, setFilter, create, update, remove };
+  const getImageUploadUrl = useCallback(async () => {
+    return await generateImageUploadUrl({});
+  }, [generateImageUploadUrl]);
+
+  const uploadJournalImage = useCallback(
+    async ({ uri, contentType }: JournalImageUploadInput) => {
+      const uploadUrl = await getImageUploadUrl();
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: contentType ? { 'Content-Type': contentType } : undefined,
+        body: blob,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload journal image.');
+      }
+
+      const result = (await uploadResponse.json()) as { storageId: string };
+      return result.storageId;
+    },
+    [getImageUploadUrl],
+  );
+
+  return {
+    entries,
+    allEntries,
+    isLoading: !!activeCouple && rows === undefined,
+    filter,
+    setFilter,
+    create,
+    update,
+    remove,
+    getImageUploadUrl,
+    uploadJournalImage,
+    refetch: async () => {
+      if (!activeCouple) return;
+      await convex.query(getJournalEntriesQuery, {});
+    },
+  };
 }

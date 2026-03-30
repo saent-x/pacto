@@ -192,7 +192,7 @@ The redesign requires real authentication and real shared syncing from day one.
 
 Recommended flow:
 
-- account creation/sign-in through a Convex-supported auth integration
+- account creation/sign-in through Better Auth backed by Convex
 - secure session persistence on-device
 - create couple
 - create membership
@@ -209,7 +209,7 @@ Assumptions for planning:
 - existing Supabase code will be removed rather than supported indefinitely in parallel
 - no dual-write period is required
 - existing local/dev users can be reset if needed during migration
-- the implementation plan must choose one concrete auth provider path for Convex and apply it consistently across sign-in, sign-up, session restore, and sign-out
+- the implementation plan must apply one concrete Better Auth path consistently across sign-in, sign-up, session restore, and sign-out
 
 If an existing real user base is discovered later, a separate migration spec is required. It should not be folded into this redesign plan by default.
 

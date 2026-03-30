@@ -4,8 +4,8 @@ import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { ThemedSheet, BottomSheetTextInput } from '@/src/components/ui';
-import { Button } from '@/src/components/ui';
 import { useColors } from '@/src/hooks/useColors';
+import { useTheme } from '@/src/lib/theme';
 import { Typography } from '@/src/constants/typography';
 import { Spacing, BorderRadius } from '@/src/constants/spacing';
 
@@ -26,10 +26,13 @@ interface Props {
 
 export function CreateListSheet({ sheetRef, onSave }: Props) {
   const C = useColors();
+  const { mode } = useTheme();
   const [name, setName] = useState('');
   const [icon, setIcon] = useState<string>('shopping-cart');
   const [color, setColor] = useState(COLORS[0]);
   const [saving, setSaving] = useState(false);
+
+  const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
 
   const handleSave = useCallback(async () => {
     if (!name.trim()) {
@@ -37,20 +40,45 @@ export function CreateListSheet({ sheetRef, onSave }: Props) {
       return;
     }
     setSaving(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await onSave({ name: name.trim(), icon, color });
-    setSaving(false);
-    sheetRef.current?.dismiss();
-    setName('');
-    setIcon('shopping-cart');
-    setColor(COLORS[0]);
+    try {
+      await onSave({ name: name.trim(), icon, color });
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      sheetRef.current?.dismiss();
+      setName('');
+      setIcon('shopping-cart');
+      setColor(COLORS[0]);
+    } catch (error) {
+      console.warn('[Coupl] Save list failed:', error);
+      Alert.alert('Create failed', 'Try again.');
+    } finally {
+      setSaving(false);
+    }
   }, [name, icon, color, onSave]);
 
+  const footer = (
+    <TouchableOpacity
+      onPress={handleSave}
+      disabled={saving}
+      activeOpacity={0.8}
+      style={[styles.saveBtn, { backgroundColor: C.tasks }]}
+    >
+      <Feather name="plus" size={18} color={C.ink} />
+      <Text style={[styles.saveBtnText, { color: C.ink }]}>
+        {saving ? 'Creating...' : 'Create List'}
+      </Text>
+    </TouchableOpacity>
+  );
+
   return (
-    <ThemedSheet sheetRef={sheetRef} snapPoints={['60%']} title="New List">
+    <ThemedSheet sheetRef={sheetRef} snapPoints={['72%']} scrollable footer={footer}>
       <View style={styles.form}>
+        <View style={styles.dateHeader}>
+          <Text style={[styles.sheetLabel, { color: C.tasks }]}>NEW LIST</Text>
+          <Text style={[styles.dateDisplay, { color: C.primary }]}>Shape your shared workflow</Text>
+        </View>
+
         <BottomSheetTextInput
-          style={[styles.nameInput, { color: C.text, borderBottomColor: C.dusk }]}
+          style={[styles.nameInput, { color: C.text }]}
           placeholder="List name"
           placeholderTextColor={C.fog}
           value={name}
@@ -58,90 +86,107 @@ export function CreateListSheet({ sheetRef, onSave }: Props) {
           autoFocus
         />
 
-        {/* Icon picker */}
-        <View style={styles.field}>
-          <Text style={[styles.label, { color: C.fog }]}>Icon</Text>
-          <View style={styles.iconRow}>
-            {ICONS.map((ic) => (
-              <TouchableOpacity
-                key={ic}
-                style={[
-                  styles.iconCircle,
-                  { borderColor: icon === ic ? color : C.dusk },
-                  icon === ic && { backgroundColor: color + '20' },
-                ]}
-                onPress={() => setIcon(ic)}
-              >
-                <Feather name={ic} size={18} color={icon === ic ? color : C.haze} />
-              </TouchableOpacity>
-            ))}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: C.textTertiary }]}>Icon</Text>
+          <View style={styles.iconGrid}>
+            {ICONS.map((ic) => {
+              const active = icon === ic;
+              return (
+                <TouchableOpacity
+                  key={ic}
+                  style={[
+                    styles.iconBtn,
+                    { borderColor: active ? color : glassBorder },
+                    active ? styles.iconBtnActive : undefined,
+                  ]}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setIcon(ic);
+                  }}
+                >
+                  <Feather name={ic} size={20} color={active ? color : C.haze} />
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
-        {/* Color picker */}
-        <View style={styles.field}>
-          <Text style={[styles.label, { color: C.fog }]}>Color</Text>
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: C.textTertiary }]}>Color</Text>
           <View style={styles.colorRow}>
-            {COLORS.map((c) => (
-              <TouchableOpacity
-                key={c}
-                style={[
-                  styles.colorSwatch,
-                  { backgroundColor: c },
-                  color === c && styles.colorSelected,
-                ]}
-                onPress={() => setColor(c)}
-              />
-            ))}
+            {COLORS.map((c) => {
+              const active = color === c;
+              return (
+                <TouchableOpacity
+                  key={c}
+                  style={[
+                    styles.colorSwatch,
+                    { backgroundColor: c },
+                    active && styles.colorActive,
+                  ]}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setColor(c);
+                  }}
+                >
+                  {active && <Feather name="check" size={14} color="#fff" />}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
-        <Button
-          title="Create List"
-          onPress={handleSave}
-          loading={saving}
-          size="lg"
-          style={styles.saveBtn}
-        />
       </View>
     </ThemedSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  form: { gap: Spacing['2xl'] },
-  nameInput: {
-    ...Typography.heading,
-    borderBottomWidth: 1,
-    paddingBottom: Spacing.md,
-  },
-  field: { gap: Spacing.md },
-  label: { ...Typography.overline },
-  iconRow: {
+  form: { gap: Spacing.lg },
+  dateHeader: { gap: Spacing.xs },
+  sheetLabel: { ...Typography.overline, letterSpacing: 3 },
+  dateDisplay: { ...Typography.overline, letterSpacing: 1.5 },
+  nameInput: { ...Typography.title, padding: 0 },
+  section: { gap: Spacing.md },
+  sectionTitle: { ...Typography.overline, letterSpacing: 2 },
+  iconGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.sm,
   },
-  iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
+  iconBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  iconBtnActive: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
   },
   colorRow: {
     flexDirection: 'row',
     gap: Spacing.md,
   },
   colorSwatch: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  colorSelected: {
-    borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.4)',
+  colorActive: {
+    borderWidth: 2.5,
+    borderColor: 'rgba(255,255,255,0.35)',
   },
-  saveBtn: { marginTop: Spacing.md },
+  saveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: 16,
+    borderRadius: 14,
+  },
+  saveBtnText: { ...Typography.subheading, fontSize: 15 },
 });

@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/src/lib/supabase';
-import { useAuthStore } from '@/src/stores/authStore';
-import { useCoupleStore } from '@/src/stores/coupleStore';
-import { useRealtime } from './useRealtime';
-import { Reminder } from '@/src/types/database';
+import { useCallback, useMemo } from 'react';
+import { useConvex, useMutation, useQuery } from 'convex/react';
+import { makeFunctionReference } from 'convex/server';
+
+import { useSession } from './useSession';
+import type { Reminder } from '@/src/types/database';
 
 type ReminderInput = {
   title: string;
@@ -15,131 +15,146 @@ type ReminderInput = {
   assigned_to?: string | null;
 };
 
+type ReminderDoc = {
+  _id: string;
+  coupleId: string;
+  createdBy: string;
+  assignedTo: string | null;
+  title: string;
+  description: string | null;
+  dueAt: number;
+  recurrence: string | null;
+  isCompleted: boolean;
+  completedAt: number | null;
+  completedBy: string | null;
+  priority: number;
+  category: string | null;
+  createdAt: number;
+  updatedAt: number;
+};
+
+const getRemindersQuery = makeFunctionReference<'query', {}, ReminderDoc[]>('reminders:getReminders');
+const createReminderMutation = makeFunctionReference<
+  'mutation',
+  {
+    title: string;
+    description?: string | null;
+    dueAt: number;
+    recurrence?: string | null;
+    priority?: number;
+    category?: string | null;
+    assignedTo?: string | null;
+  },
+  ReminderDoc
+>('reminders:createReminder');
+const updateReminderMutation = makeFunctionReference<
+  'mutation',
+  {
+    reminderId: string;
+    title?: string;
+    description?: string | null;
+    dueAt?: number;
+    recurrence?: string | null;
+    priority?: number;
+    category?: string | null;
+    assignedTo?: string | null;
+  },
+  ReminderDoc
+>('reminders:updateReminder');
+const toggleReminderMutation = makeFunctionReference<'mutation', { reminderId: string }, ReminderDoc>('reminders:toggleReminder');
+const deleteReminderMutation = makeFunctionReference<'mutation', { reminderId: string }, null>('reminders:deleteReminder');
+
+function toReminderRow(reminder: ReminderDoc): Reminder {
+  return {
+    id: reminder._id,
+    couple_id: reminder.coupleId,
+    created_by: reminder.createdBy,
+    assigned_to: reminder.assignedTo,
+    title: reminder.title,
+    description: reminder.description,
+    due_at: new Date(reminder.dueAt).toISOString(),
+    recurrence: reminder.recurrence,
+    is_completed: reminder.isCompleted,
+    completed_at: reminder.completedAt === null ? null : new Date(reminder.completedAt).toISOString(),
+    completed_by: reminder.completedBy,
+    priority: reminder.priority,
+    category: reminder.category,
+    created_at: new Date(reminder.createdAt).toISOString(),
+    updated_at: new Date(reminder.updatedAt).toISOString(),
+  };
+}
+
 export function useReminders() {
-  const userId = useAuthStore((s) => s.user?.id);
-  const coupleId = useCoupleStore((s) => s.coupleId);
+  const { activeCouple } = useSession();
+  const convex = useConvex();
+  const rows = useQuery(getRemindersQuery, activeCouple ? {} : 'skip');
+  const createReminder = useMutation(createReminderMutation);
+  const updateReminderFn = useMutation(updateReminderMutation);
+  const toggleReminder = useMutation(toggleReminderMutation);
+  const deleteReminder = useMutation(deleteReminderMutation);
 
-  const [reminders, setReminders] = useState<Reminder[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const fetch = useCallback(async () => {
-    if (!coupleId) return;
-    const { data } = await supabase
-      .from('reminders')
-      .select('*')
-      .eq('couple_id', coupleId)
-      .order('due_at', { ascending: true });
-
-    setReminders((data as Reminder[]) ?? []);
-    setIsLoading(false);
-  }, [coupleId]);
-
-  useEffect(() => {
-    fetch();
-  }, [fetch]);
-
-  useRealtime<Reminder>(
-    'reminders',
-    (record) => {
-      setReminders((prev) =>
-        prev.some((r) => r.id === record.id) ? prev : [...prev, record],
-      );
-    },
-    (record) => {
-      setReminders((prev) =>
-        prev.map((r) => (r.id === record.id ? record : r)),
-      );
-    },
-    (record) => {
-      setReminders((prev) => prev.filter((r) => r.id !== record.id));
-    },
-  );
+  const reminders = useMemo(() => (rows ?? []).map(toReminderRow), [rows]);
 
   const create = useCallback(
     async (data: ReminderInput) => {
-      if (!coupleId || !userId) return;
-      // Optimistic: add temp item immediately
-      const tempId = 'temp-' + Date.now();
-      const optimistic = {
-        id: tempId,
-        ...data,
-        couple_id: coupleId,
-        created_by: userId,
+      await createReminder({
+        title: data.title,
+        description: data.description ?? null,
+        dueAt: new Date(data.due_at).getTime(),
+        recurrence: data.recurrence ?? null,
         priority: data.priority ?? 0,
-        is_completed: false,
-        completed_at: null,
-        completed_by: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      } as Reminder;
-      setReminders((prev) => [...prev, optimistic]);
-
-      const { data: inserted, error } = await supabase.from('reminders').insert({
-        ...data,
-        couple_id: coupleId,
-        created_by: userId,
-        priority: data.priority ?? 0,
-      } as any).select().single();
-
-      if (error) {
-        console.warn('[Coupl] Create reminder failed:', error.message);
-        setReminders((prev) => prev.filter((r) => r.id !== tempId));
-      } else if (inserted) {
-        // Replace temp with real
-        setReminders((prev) => prev.map((r) => r.id === tempId ? (inserted as Reminder) : r));
-      }
+        category: data.category ?? null,
+        assignedTo: data.assigned_to ?? null,
+      });
     },
-    [coupleId, userId],
+    [createReminder],
   );
 
   const update = useCallback(
     async (id: string, data: Partial<ReminderInput>) => {
-      const { error } = await supabase
-        .from('reminders')
-        .update(data as never)
-        .eq('id', id);
-      if (error) console.warn('[Coupl] Update reminder failed:', error.message);
+      await updateReminderFn({
+        reminderId: id,
+        ...(data.title !== undefined ? { title: data.title } : {}),
+        ...(data.description !== undefined ? { description: data.description ?? null } : {}),
+        ...(data.due_at !== undefined ? { dueAt: new Date(data.due_at).getTime() } : {}),
+        ...(data.recurrence !== undefined ? { recurrence: data.recurrence ?? null } : {}),
+        ...(data.priority !== undefined ? { priority: data.priority } : {}),
+        ...(data.category !== undefined ? { category: data.category ?? null } : {}),
+        ...(data.assigned_to !== undefined ? { assignedTo: data.assigned_to ?? null } : {}),
+      });
     },
-    [],
+    [updateReminderFn],
   );
 
-  const remove = useCallback(async (id: string) => {
-    setReminders((prev) => prev.filter((r) => r.id !== id));
-    const { error } = await supabase.from('reminders').delete().eq('id', id);
-    if (error) {
-      console.warn('[Coupl] Delete reminder failed:', error.message);
-      fetch();
-    }
-  }, [fetch]);
+  const remove = useCallback(
+    async (id: string) => {
+      await deleteReminder({ reminderId: id });
+    },
+    [deleteReminder],
+  );
 
   const toggleComplete = useCallback(
     async (reminder: Reminder) => {
-      if (!userId) return;
-      const now = new Date().toISOString();
-      const updates = reminder.is_completed
-        ? { is_completed: false, completed_at: null, completed_by: null }
-        : { is_completed: true, completed_at: now, completed_by: userId };
-
-      // Optimistic
-      setReminders((prev) =>
-        prev.map((r) => (r.id === reminder.id ? { ...r, ...updates } : r)),
-      );
-
-      const { error } = await supabase
-        .from('reminders')
-        .update(updates as never)
-        .eq('id', reminder.id);
-
-      if (error) {
-        console.warn('[Coupl] Toggle reminder failed:', error.message);
-        fetch();
-      }
+      await toggleReminder({ reminderId: reminder.id });
     },
-    [userId, fetch],
+    [toggleReminder],
   );
 
-  const upcoming = reminders.filter((r) => !r.is_completed);
-  const completed = reminders.filter((r) => r.is_completed);
+  const upcoming = reminders.filter((reminder) => !reminder.is_completed);
+  const completed = reminders.filter((reminder) => reminder.is_completed);
 
-  return { reminders, upcoming, completed, isLoading, create, update, remove, toggleComplete };
+  return {
+    reminders,
+    upcoming,
+    completed,
+    isLoading: !!activeCouple && rows === undefined,
+    create,
+    update,
+    remove,
+    toggleComplete,
+    refetch: async () => {
+      if (!activeCouple) return;
+      await convex.query(getRemindersQuery, {});
+    },
+  };
 }

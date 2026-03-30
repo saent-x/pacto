@@ -9,6 +9,14 @@ dist/
 web-build/
 expo-env.d.ts
 
+.factory/
+.gemini/
+.kilocode/
+.superpowers/
+.vibe/
+.agents/
+.github/
+
 # Native
 .kotlin/
 *.orig.*
@@ -40,6 +48,6 @@ yarn-error.*
 /ios
 /android
 
-/docs
-/.claude
+docs/
+.claude/
 .env

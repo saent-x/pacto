@@ -1,16 +1,12 @@
 import { Redirect } from 'expo-router';
-import { useAuthStore } from '@/src/stores/authStore';
+import { useSession } from '@/src/hooks/useSession';
 
 export default function Index() {
-  const { session, profile } = useAuthStore();
+  const { isLoading, route } = useSession();
 
-  if (!session) {
-    return <Redirect href="/(auth)/sign-in" />;
+  if (isLoading || !route) {
+    return null;
   }
 
-  if (!profile?.couple_id) {
-    return <Redirect href="/(auth)/onboarding" />;
-  }
-
-  return <Redirect href="/(tabs)/home" />;
+  return <Redirect href={route} />;
 }

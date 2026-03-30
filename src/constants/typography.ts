@@ -1,108 +1,130 @@
 import { TextStyle, Platform } from 'react-native';
 
-// Display: platform serif for personality
-const serifFamily = Platform.select({
-  ios: 'Georgia',
-  android: 'serif',
-  default: 'Georgia',
-});
+// Display: Newsreader italic serif — the signature look for headings
+const serifFamily = 'Newsreader_300Light_Italic';
+const serifRegular = 'Newsreader_400Regular';
 
-// Body: system sans for readability on dark bg
-const sansFamily = Platform.select({
-  ios: 'System',
-  android: 'Roboto',
-  default: 'System',
-});
+// Body: DM Sans — clean, modern, with full italic + bold-italic support
+const sansFamily = 'DMSans_400Regular';
+const sansItalic = 'DMSans_400Regular_Italic';
+const sansMedium = 'DMSans_500Medium';
+const sansMediumItalic = 'DMSans_500Medium_Italic';
+const sansSemiBold = 'DMSans_600SemiBold';
+const sansBold = 'DMSans_700Bold';
+const sansBoldItalic = 'DMSans_700Bold_Italic';
+
+// Fallbacks for before fonts load
+const serifFallback = Platform.select({ ios: 'Georgia', android: 'serif', default: 'Georgia' });
+const sansFallback = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
 
 export const Typography = {
-  // Serif display styles — the signature
+  // Serif display styles — Newsreader italic, the signature look
   display: {
     fontFamily: serifFamily,
-    fontSize: 42,
-    fontWeight: '400' as const,
+    fontSize: 48,
     lineHeight: 48,
-    letterSpacing: -0.5,
+    letterSpacing: -1.2,
+    fontStyle: 'italic' as const,
   } as TextStyle,
   largeTitle: {
     fontFamily: serifFamily,
     fontSize: 34,
-    fontWeight: '400' as const,
     lineHeight: 40,
     letterSpacing: -0.3,
+    fontStyle: 'italic' as const,
   } as TextStyle,
   title: {
     fontFamily: serifFamily,
-    fontSize: 26,
-    fontWeight: '400' as const,
-    lineHeight: 32,
-    letterSpacing: -0.2,
+    fontSize: 30,
+    lineHeight: 36,
+    letterSpacing: -0.75,
+    fontStyle: 'italic' as const,
   } as TextStyle,
   heading: {
     fontFamily: serifFamily,
-    fontSize: 21,
-    fontWeight: '400' as const,
+    fontSize: 24,
+    lineHeight: 32,
+    letterSpacing: -0.6,
+    fontStyle: 'italic' as const,
+  } as TextStyle,
+  headingRegular: {
+    fontFamily: serifRegular,
+    fontSize: 18,
     lineHeight: 28,
     letterSpacing: 0,
   } as TextStyle,
 
-  // Sans body styles — clean and functional
+  // Sans body styles — DM Sans, clean and functional
   subheading: {
-    fontFamily: sansFamily,
+    fontFamily: sansSemiBold,
     fontSize: 17,
-    fontWeight: '600' as const,
     lineHeight: 24,
     letterSpacing: 0,
   } as TextStyle,
   body: {
     fontFamily: sansFamily,
     fontSize: 16,
-    fontWeight: '400' as const,
     lineHeight: 24,
     letterSpacing: 0.15,
   } as TextStyle,
   bodyMedium: {
-    fontFamily: sansFamily,
+    fontFamily: sansMedium,
     fontSize: 16,
-    fontWeight: '500' as const,
     lineHeight: 24,
     letterSpacing: 0.15,
   } as TextStyle,
   caption: {
     fontFamily: sansFamily,
     fontSize: 14,
-    fontWeight: '400' as const,
     lineHeight: 20,
     letterSpacing: 0.2,
   } as TextStyle,
   captionMedium: {
-    fontFamily: sansFamily,
+    fontFamily: sansMedium,
     fontSize: 14,
-    fontWeight: '500' as const,
     lineHeight: 20,
     letterSpacing: 0.2,
   } as TextStyle,
   small: {
     fontFamily: sansFamily,
     fontSize: 12,
-    fontWeight: '400' as const,
     lineHeight: 16,
     letterSpacing: 0.3,
   } as TextStyle,
   overline: {
     fontFamily: sansFamily,
-    fontSize: 11,
-    fontWeight: '600' as const,
-    lineHeight: 16,
-    letterSpacing: 2,
+    fontSize: 10,
+    lineHeight: 15,
+    letterSpacing: 3,
     textTransform: 'uppercase' as const,
+  } as TextStyle,
+
+  // Logo
+  logo: {
+    fontFamily: serifFamily,
+    fontSize: 30,
+    lineHeight: 36,
+    letterSpacing: -0.75,
+    fontStyle: 'italic' as const,
   } as TextStyle,
 
   // Mono — for codes, numbers, data
   mono: {
     fontFamily: Platform.select({ ios: 'Courier New', android: 'monospace', default: 'Courier New' }),
     fontSize: 16,
-    fontWeight: '400' as const,
     lineHeight: 24,
     letterSpacing: 2,
   } as TextStyle,
+
+  // Font family references for direct use
+  sans: sansFamily,
+  sansItalic,
+  sansMedium,
+  sansMediumItalic,
+  sansBold,
+  sansBoldItalic,
+
+  // Fallbacks
+  fallbackSerif: serifFallback,
+  fallbackSans: sansFallback,
 } as const;

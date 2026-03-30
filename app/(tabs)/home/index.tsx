@@ -1,604 +1,642 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Platform } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
-import { useColors } from '@/src/hooks/useColors';
-import { useMood as useMoodHook } from '@/src/hooks/useMood';
-import { useReminders } from '@/src/hooks/useReminders';
-import { Typography } from '@/src/constants/typography';
-import { Spacing, BorderRadius } from '@/src/constants/spacing';
-import { useAuthStore } from '@/src/stores/authStore';
-import { useCoupleStore } from '@/src/stores/coupleStore';
+import * as Haptics from "expo-haptics";
+import { useRouter } from "expo-router";
+import { Feather } from "@expo/vector-icons";
 import {
-  format,
-  startOfWeek,
-  addDays,
-  isToday,
-  isSameDay,
-} from 'date-fns';
-import { useState, useMemo, useRef } from 'react';
-import { getDailyVerse } from '@/src/constants/verses';
+  Image,
+  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useCallback, useState } from "react";
+import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
 
-const { width: SCREEN_W } = Dimensions.get('window');
+import { format } from "date-fns";
+import { MarkdownText } from "@/src/components/journal/MarkdownText";
+import { TimelineFeed } from "@/src/components/home/TimelineFeed";
+import { BorderRadius, Spacing } from "@/src/constants/spacing";
+import { Typography } from "@/src/constants/typography";
+import { useColors } from "@/src/hooks/useColors";
+import { useTheme } from "@/src/lib/theme";
+import { useHomeTimeline, HomeQuickAction } from "@/src/hooks/useHomeTimeline";
+import { useSession } from "@/src/hooks/useSession";
+import type { HomeView } from "@/convex/timeline";
 
-function WeekStrip({ selectedDate, onSelect, colors: C }: {
-  selectedDate: Date;
-  onSelect: (d: Date) => void;
-  colors: ReturnType<typeof useColors>;
+/* ─── Helpers ─── */
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 5) return "Good night";
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+/* ─── Avatar Token ─── */
+
+function AvatarToken({
+  name,
+  avatarUrl,
+  size = 44,
+  bg,
+  color,
+  border,
+}: {
+  name?: string | null;
+  avatarUrl?: string | null;
+  size?: number;
+  bg: string;
+  color: string;
+  border: string;
 }) {
-  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-
+  const letter = (name?.trim()?.[0] ?? "?").toUpperCase();
   return (
-    <View style={styles.weekStrip}>
-      <View style={styles.weekHeader}>
-        <Text style={[styles.weekMonth, { color: C.text }]}>
-          {format(new Date(), 'MMMM yyyy')}
-        </Text>
-        <TouchableOpacity
-          onPress={() => onSelect(new Date())}
-          style={[styles.todayBtn, { backgroundColor: C.primaryMuted }]}
-        >
-          <Text style={[styles.todayBtnText, { color: C.primary }]}>Today</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.weekDays}>
-        {days.map((day) => {
-          const today = isToday(day);
-          const selected = isSameDay(day, selectedDate);
-          return (
-            <TouchableOpacity
-              key={day.toISOString()}
-              onPress={() => onSelect(day)}
-              style={[
-                styles.dayCell,
-                selected && { backgroundColor: C.primary },
-              ]}
-              activeOpacity={0.7}
-            >
-              <Text style={[
-                styles.dayName,
-                { color: selected ? C.ink : C.textTertiary },
-              ]}>
-                {format(day, 'EEE')}
-              </Text>
-              <Text style={[
-                styles.dayNum,
-                { color: selected ? C.ink : C.text },
-                today && !selected && { color: C.primary },
-              ]}>
-                {format(day, 'd')}
-              </Text>
-              {today && !selected && (
-                <View style={[styles.todayDot, { backgroundColor: C.primary }]} />
-              )}
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        borderWidth: 1.5,
+        overflow: "hidden",
+        alignItems: "center",
+        justifyContent: "center",
+        borderColor: border,
+        backgroundColor: bg,
+      }}
+    >
+      {avatarUrl ? (
+        <Image source={{ uri: avatarUrl }} style={{ width: "100%", height: "100%" }} />
+      ) : (
+        <Text style={{ fontSize: size * 0.38, fontWeight: "600", color }}>{letter}</Text>
+      )}
     </View>
   );
 }
 
-const MOODS = [
-  { level: 1, label: 'Great', icon: 'sun' as const, color: '#8AAF7B' },
-  { level: 2, label: 'Good', icon: 'cloud' as const, color: '#7BA0AF' },
-  { level: 3, label: 'Okay', icon: 'minus' as const, color: '#D4A054' },
-  { level: 4, label: 'Low', icon: 'cloud-drizzle' as const, color: '#B08090' },
-  { level: 5, label: 'Rough', icon: 'cloud-lightning' as const, color: '#C96B5A' },
-];
+/* ─── Daily Verse ─── */
 
-function HeaderMood({ colors: C }: {
-  colors: ReturnType<typeof useColors>;
+function DailyVerse({
+  text,
+  reference,
+}: {
+  text: string;
+  reference: string;
+  source: "remote" | "fallback";
 }) {
-  const { myMood, partnerMood, checkIn } = useMoodHook();
+  const C = useColors();
+  return (
+    <Animated.View entering={FadeInDown.duration(500).delay(200)}>
+      <View style={styles.verse}>
+        <View style={[styles.verseMark, { backgroundColor: C.primary }]} />
+        <View style={styles.verseBody}>
+          <Text style={[styles.verseText, { color: C.text }]}>"{text}"</Text>
+          <Text style={[styles.verseRef, { color: C.primary }]}>{reference}</Text>
+        </View>
+      </View>
+    </Animated.View>
+  );
+}
 
-  const selected = myMood?.mood ?? null;
+/* ─── Shared Memories ─── */
 
-  const handleSelect = (level: number, icon: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    checkIn(level, icon);
+type MemoryItem = HomeView["memories"][number];
+
+function SharedMemories({ memories, isLoading }: { memories: MemoryItem[]; isLoading: boolean }) {
+  const C = useColors();
+  const { mode } = useTheme();
+  const memoryRouter = useRouter();
+  const [index, setIndex] = useState(0);
+
+  const glassBg = mode === "dark" ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)";
+  const glassBorder = mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
+  const arrowBg = mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
+
+  const count = memories.length;
+  const current = count > 0 ? memories[Math.min(index, count - 1)] : null;
+
+  const goPrev = () => {
+    if (index > 0) {
+      Haptics.selectionAsync();
+      setIndex(index - 1);
+    }
+  };
+  const goNext = () => {
+    if (index < count - 1) {
+      Haptics.selectionAsync();
+      setIndex(index + 1);
+    }
   };
 
-  if (selected !== null) {
-    const mood = MOODS.find((m) => m.level === selected);
-    if (!mood) return null;
-    return (
-      <View style={styles.headerMood}>
-        <View style={[styles.headerMoodPill, { backgroundColor: mood.color + '15' }]}>
-          <Feather name={mood.icon} size={13} color={mood.color} />
-          <Text style={[styles.headerMoodText, { color: mood.color }]}>
-            {mood.label}
-          </Text>
+  return (
+    <View style={styles.memorySection}>
+      {/* Header */}
+      <View style={styles.memoryHeaderRow}>
+        <View style={{ gap: 2 }}>
+          <Text style={[styles.memoryEyebrow, { color: C.journal }]}>Shared memories</Text>
+          <Text style={[styles.memoryHeading, { color: C.text }]}>Our story</Text>
         </View>
-        {partnerMood && (
-          <View style={[styles.headerMoodPill, { backgroundColor: C.dim }]}>
-            <Text style={[styles.headerMoodText, { color: C.textTertiary }]}>
-              Partner: {MOODS.find((m) => m.level === partnerMood.mood)?.label ?? ''}
+        {count > 1 && (
+          <View style={styles.memoryNav}>
+            <TouchableOpacity
+              onPress={goPrev}
+              disabled={index === 0}
+              style={[styles.memoryArrow, { backgroundColor: arrowBg, opacity: index === 0 ? 0.3 : 1 }]}
+            >
+              <Feather name="chevron-left" size={16} color={C.text} />
+            </TouchableOpacity>
+            <Text style={[styles.memoryCounter, { color: C.textTertiary }]}>
+              {index + 1}/{count}
             </Text>
+            <TouchableOpacity
+              onPress={goNext}
+              disabled={index >= count - 1}
+              style={[styles.memoryArrow, { backgroundColor: arrowBg, opacity: index >= count - 1 ? 0.3 : 1 }]}
+            >
+              <Feather name="chevron-right" size={16} color={C.text} />
+            </TouchableOpacity>
           </View>
         )}
       </View>
-    );
-  }
 
-  return (
-    <View style={styles.headerMood}>
-      <Text style={[styles.headerMoodAsk, { color: C.textTertiary }]}>How are you?</Text>
-      <View style={styles.headerMoodIcons}>
-        {MOODS.map((mood) => (
-          <TouchableOpacity
-            key={mood.level}
-            onPress={() => handleSelect(mood.level, mood.icon)}
-            activeOpacity={0.7}
-            style={[styles.headerMoodIcon, { backgroundColor: mood.color + '12' }]}
-          >
-            <Feather name={mood.icon} size={14} color={mood.color} />
-          </TouchableOpacity>
-        ))}
-      </View>
+      {/* Card */}
+      {isLoading ? (
+        <View style={[styles.memoryCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
+          <Text style={[styles.memoryLoadingText, { color: C.textSecondary }]}>
+            Loading shared memories…
+          </Text>
+        </View>
+      ) : current ? (
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            if (current.sourceTable === "journalEntries") {
+              memoryRouter.push(`/(tabs)/journal/${current.sourceId}` as any);
+            }
+          }}
+          style={[styles.memoryCard, { backgroundColor: glassBg, borderColor: glassBorder }]}
+        >
+          <View style={styles.memoryCardHeader}>
+            <Text style={[styles.memoryCardTitle, { color: C.text }]} numberOfLines={1}>
+              {current.title}
+            </Text>
+            <Text style={[styles.memoryCardDate, { color: C.textTertiary }]}>
+              {format(current.createdAt, "MMM d")}
+            </Text>
+          </View>
+          {current.mediaUrls[0] ? (
+            <Image
+              source={{ uri: current.mediaUrls[0] }}
+              style={[styles.memoryCardImage, { backgroundColor: C.card }]}
+            />
+          ) : null}
+          <View style={styles.memoryCardBody}>
+            <MarkdownText value={current.body} />
+          </View>
+        </TouchableOpacity>
+      ) : (
+        <View style={[styles.memoryCard, styles.memoryEmpty, { backgroundColor: glassBg, borderColor: glassBorder }]}>
+          <View style={[styles.memoryEmptyIcon, { backgroundColor: C.journalLight }]}>
+            <Feather name="book-open" size={22} color={C.journal} />
+          </View>
+          <Text style={[styles.memoryEmptyTitle, { color: C.text }]}>No shared memories yet</Text>
+          <Text style={[styles.memoryEmptyBody, { color: C.textSecondary }]}>
+            Write a journal entry and keep it shared — it'll appear here for both of you.
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
 
+/* ─── Quick Nav ─── */
+
+function QuickNav({
+  actions,
+  onPress,
+}: {
+  actions: HomeQuickAction[];
+  onPress: (a: HomeQuickAction) => void;
+}) {
+  const C = useColors();
+  const { mode } = useTheme();
+  const glassBorder = mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
+
+  return (
+    <Animated.View entering={FadeInDown.duration(400).delay(300)} style={styles.navRow}>
+      {actions.map((a) => (
+        <Pressable
+          key={a.id}
+          onPress={() => onPress(a)}
+          style={({ pressed }) => [
+            styles.navPill,
+            {
+              backgroundColor: a.background,
+              borderColor: glassBorder,
+              opacity: pressed ? 0.7 : 1,
+            },
+          ]}
+        >
+          <Feather name={a.icon} size={16} color={a.tint} />
+          <Text style={[styles.navLabel, { color: C.text }]}>{a.label}</Text>
+        </Pressable>
+      ))}
+    </Animated.View>
+  );
+}
+
+/* ─── Milestones ─── */
+
+function MilestoneStrip({ milestones }: { milestones: HomeView["milestones"] }) {
+  const C = useColors();
+  const { mode } = useTheme();
+  if (milestones.length === 0) return null;
+
+  const glassBg = mode === "dark" ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)";
+  const glassBorder = mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
+
+  return (
+    <Animated.View entering={FadeInDown.duration(400).delay(350)}>
+      <Text style={[styles.sectionEyebrow, { color: C.textTertiary }]}>Counting down</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.milestoneScroll}
+      >
+        {milestones.map((m) => (
+          <View
+            key={m.id}
+            style={[styles.milestoneCard, { backgroundColor: glassBg, borderColor: glassBorder }]}
+          >
+            <Text style={[styles.milestoneDays, { color: C.primary }]}>
+              {m.daysUntil === 0 ? "Today" : `${m.daysUntil}d`}
+            </Text>
+            <Text style={[styles.milestoneTitle, { color: C.text }]} numberOfLines={1}>
+              {m.title}
+            </Text>
+          </View>
+        ))}
+      </ScrollView>
+    </Animated.View>
+  );
+}
+
+/* ═══════════════════════════════════ HOME SCREEN ═══════════════════════════════════ */
+
 export default function HomeScreen() {
   const C = useColors();
-  const profile = useAuthStore((s) => s.profile);
-  const couple = useCoupleStore((s) => s.couple);
-  const partner = useCoupleStore((s) => s.partner);
-  const { upcoming: allReminders } = useReminders();
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [nameWidth, setNameWidth] = useState(0);
-  const nameWidthRef = useRef(false);
+  const { mode } = useTheme();
+  const router = useRouter();
+  const home = useHomeTimeline({ previewDays: 7 });
+  const { profile, activeCouple } = useSession();
+  const partner = activeCouple?.partner ?? null;
+  const coupleName = activeCouple?.couple?.name;
+  const [refreshing, setRefreshing] = useState(false);
 
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-  const firstName = profile?.display_name?.split(' ')[0] || 'there';
-  const selectedLabel = isToday(selectedDate)
-    ? 'Today'
-    : format(selectedDate, 'EEEE, MMM d');
-  const verse = useMemo(() => getDailyVerse(), []);
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await home.refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [home]);
 
-  // Items for selected day
-  const dayReminders = useMemo(() => {
-    const dayStr = format(selectedDate, 'yyyy-MM-dd');
-    return allReminders.filter((r) => r.due_at.startsWith(dayStr));
-  }, [allReminders, selectedDate]);
+  const handleAction = useCallback(
+    (action: HomeQuickAction) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      router.push(action.route as never);
+    },
+    [router],
+  );
+
+  const glassBorder = mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
 
   return (
     <View style={[styles.screen, { backgroundColor: C.background }]}>
-      <SafeAreaView style={styles.flex} edges={['top']}>
-
-        {/* Static header — doesn't scroll */}
-        <View style={[styles.hero, { backgroundColor: C.surface }]}>
-          <View pointerEvents="none" style={styles.ringsWrap}>
-            <View style={[styles.ring, styles.ringLeft, { borderColor: C.primary }]} />
-            <View style={[styles.ring, styles.ringRight, { borderColor: C.primary }]} />
-          </View>
-
-          <Animated.View entering={FadeInDown.duration(600)} style={styles.heroTop}>
-            <View>
-              <Text style={[styles.greeting, { color: C.textTertiary }]}>{greeting}</Text>
-              <View style={styles.nameWrap}>
-                <Text
-                  style={[styles.heroName, { color: C.text }]}
-                  onLayout={(e) => {
-                    if (!nameWidthRef.current) {
-                      nameWidthRef.current = true;
-                      setNameWidth(e.nativeEvent.layout.width);
-                    }
-                  }}
-                >
-                  {firstName}
+      <SafeAreaView style={styles.safe} edges={["top"]}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />
+          }
+        >
+          {/* ─── Header ─── */}
+          <Animated.View entering={FadeIn.duration(600)} style={styles.header}>
+            <View style={styles.headerTop}>
+              <View style={styles.headerLeft}>
+                <Text style={[styles.greeting, { color: C.textTertiary }]}>{getGreeting()}</Text>
+                <Text style={[styles.userName, { color: C.text }]}>
+                  {profile?.displayName ?? "there"}
                 </Text>
-                {nameWidth > 0 && (
-                  <Svg width={nameWidth} height={12} viewBox="0 0 100 12" preserveAspectRatio="none" style={styles.nameCurve}>
-                    <Path
-                      d="M2 8 C25 3, 45 2, 55 5 S80 10, 98 4"
-                      stroke="#C8930F"
-                      strokeWidth={4}
-                      strokeLinecap="round"
-                      fill="none"
-                      opacity={0.75}
-                    />
-                  </Svg>
-                )}
               </View>
-            </View>
-            {couple && (
-              <View style={styles.coupleChip}>
-                <View style={styles.coupleAvatars}>
-                  <View style={[styles.miniAvatar, { backgroundColor: C.primaryMuted, borderColor: C.primary }]}>
-                    <Text style={[styles.miniLetter, { color: C.primary }]}>
-                      {(profile?.display_name?.[0] || 'Y').toUpperCase()}
-                    </Text>
-                  </View>
-                  <View style={[styles.miniAvatar, styles.miniOverlap, { backgroundColor: C.card, borderColor: C.border }]}>
-                    <Text style={[styles.miniLetter, { color: C.textSecondary }]}>
-                      {(partner?.display_name?.[0] || '?').toUpperCase()}
-                    </Text>
+              <View style={styles.avatarWrap}>
+                <View pointerEvents="none" style={styles.ringsWrap}>
+                  <View style={[styles.ring, styles.ringL, { borderColor: C.primary }]} />
+                  <View style={[styles.ring, styles.ringR, { borderColor: C.primary }]} />
+                </View>
+                <View style={styles.avatarStack}>
+                  <AvatarToken
+                    name={profile?.displayName}
+                    avatarUrl={profile?.avatarUrl}
+                    size={46}
+                    bg={C.primaryMuted}
+                    color={C.primary}
+                    border={C.primary}
+                  />
+                  <View style={styles.partnerOverlap}>
+                    <AvatarToken
+                      name={partner?.displayName ?? "?"}
+                      avatarUrl={partner?.avatarUrl}
+                      size={46}
+                      bg={C.card}
+                      color={C.textSecondary}
+                      border={C.border}
+                    />
                   </View>
                 </View>
-                <Text style={[styles.coupleLabel, { color: C.textSecondary }]}>{couple.name}</Text>
+              </View>
+            </View>
+            {coupleName && (
+              <View style={[styles.coupleTag, { borderColor: glassBorder }]}>
+                <Feather name="heart" size={10} color={C.primary} />
+                <Text style={[styles.coupleTagText, { color: C.textSecondary }]}>{coupleName}</Text>
               </View>
             )}
           </Animated.View>
 
-          {/* Mood — compact, in header */}
-          <HeaderMood colors={C} />
+          {/* ─── Daily Verse ─── */}
+          {home.dailyVerse ? (
+            <DailyVerse
+              text={home.dailyVerse.text}
+              reference={home.dailyVerse.reference}
+              source={home.dailyVerse.source}
+            />
+          ) : null}
 
-          <WeekStrip selectedDate={selectedDate} onSelect={setSelectedDate} colors={C} />
-        </View>
+          {/* ─── Shared Memories ─── */}
+          <Animated.View entering={FadeInDown.duration(500).delay(250)}>
+            <SharedMemories memories={home.memories} isLoading={home.isLoading} />
+          </Animated.View>
 
-        {/* Scrollable content */}
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <View style={styles.body}>
-            {/* Daily verse */}
-            <Animated.View entering={FadeInDown.duration(700).delay(200)} style={styles.verse}>
-              <View style={[styles.verseLine, { backgroundColor: C.primary }]} />
-              <View style={styles.verseContent}>
-                <Text style={[styles.verseText, { color: C.text }]}>
-                  {verse.text}
-                </Text>
-                <Text style={[styles.verseRef, { color: C.primary }]}>
-                  {verse.ref}
-                </Text>
-              </View>
-            </Animated.View>
+          {/* ─── Quick Nav ─── */}
+          <QuickNav actions={home.quickActions} onPress={handleAction} />
 
-            <Animated.View entering={FadeInDown.duration(500).delay(400)}>
-              <Text style={[styles.dayTitle, { color: C.text }]}>{selectedLabel}</Text>
-            </Animated.View>
+          {/* ─── Milestones ─── */}
+          <MilestoneStrip milestones={home.milestones} />
 
-            {/* Day timeline */}
-            {dayReminders.length === 0 ? (
-              <Animated.View entering={FadeInDown.duration(500).delay(400)}>
-                <View style={[styles.emptyDay, { borderColor: C.border }]}>
-                  <View style={[styles.timelineLine, { backgroundColor: C.border }]} />
-                  <View style={[styles.timelineDot, { backgroundColor: C.primary }]} />
-                  <View style={styles.emptyContent}>
-                    <Text style={[styles.emptyTitle, { color: C.textSecondary }]}>Your day is clear</Text>
-                    <Text style={[styles.emptyDesc, { color: C.textTertiary }]}>
-                      Reminders and tasks for this day will show up here.
-                    </Text>
-                  </View>
-                </View>
-              </Animated.View>
-            ) : (
-              <Animated.View entering={FadeInDown.duration(500).delay(400)}>
-                {dayReminders.map((r, i) => (
-                  <View key={r.id} style={[styles.timelineItem, { borderColor: C.border }]}>
-                    <View style={[styles.timelineLine, { backgroundColor: C.border }]} />
-                    <View style={[styles.timelineDot, { backgroundColor: r.is_completed ? C.success : C.reminders }]} />
-                    <View style={styles.timelineContent}>
-                      <Text style={[styles.timelineTime, { color: C.textTertiary }]}>
-                        {format(new Date(r.due_at), 'h:mm a')}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.timelineTitle,
-                          { color: r.is_completed ? C.textTertiary : C.text },
-                          r.is_completed && styles.strikethrough,
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {r.title}
-                      </Text>
-                    </View>
-                    <View style={[styles.timelineBadge, { backgroundColor: C.remindersLight }]}>
-                      <Feather name="bell" size={10} color={C.reminders} />
-                    </View>
-                  </View>
-                ))}
-              </Animated.View>
-            )}
-
-            {/* Explore together — badge pills */}
-            <Animated.View entering={FadeInDown.duration(500).delay(650)} style={styles.explore}>
-              <Text style={[styles.exploreLabel, { color: C.textTertiary }]}>Explore together</Text>
-              <View style={styles.exploreBadges}>
-                {([
-                  { icon: 'star' as const, label: 'Wishlists', color: C.wishlists, bg: C.wishlistsLight },
-                  { icon: 'compass' as const, label: 'Plans', color: C.plans, bg: C.plansLight },
-                  { icon: 'clipboard' as const, label: 'Checklists', color: C.checklists, bg: C.checklistsLight },
-                  { icon: 'credit-card' as const, label: 'Expenses', color: C.expenses, bg: C.expensesLight },
-                  { icon: 'flag' as const, label: 'Milestones', color: C.milestones, bg: C.milestonesLight },
-                ]).map((t) => (
-                  <TouchableOpacity
-                    key={t.label}
-                    activeOpacity={0.7}
-                    style={[styles.exploreBadge, { backgroundColor: t.bg }]}
-                  >
-                    <Feather name={t.icon} size={13} color={t.color} />
-                    <Text style={[styles.exploreBadgeText, { color: t.color }]}>{t.label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </Animated.View>
-          </View>
+          {/* ─── Timeline ─── */}
+          <Animated.View entering={FadeInDown.duration(400).delay(400)}>
+            <TimelineFeed
+              isLoading={home.isLoading}
+              timeline={home.timeline}
+            />
+          </Animated.View>
         </ScrollView>
       </SafeAreaView>
     </View>
   );
 }
 
+/* ═══════════════════════════════════ STYLES ═══════════════════════════════════ */
+
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  flex: { flex: 1 },
-  scroll: { paddingBottom: Spacing['4xl'] },
+  safe: { flex: 1 },
+  scroll: {
+    paddingHorizontal: Spacing["2xl"],
+    paddingBottom: 120,
+    gap: Spacing["xl"],
+  },
 
-  // Hero
-  hero: {
-    paddingHorizontal: Spacing['2xl'],
-    paddingTop: Spacing.xl,
-    paddingBottom: Spacing['2xl'],
-    overflow: 'hidden',
+  /* ── Header ── */
+  header: {
+    paddingTop: Spacing.sm,
+    gap: Spacing.md,
+  },
+  headerTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  headerLeft: {
+    flex: 1,
+    gap: 2,
+  },
+  greeting: {
+    ...Typography.overline,
+    letterSpacing: 2,
+  },
+  userName: {
+    ...Typography.largeTitle,
+  },
+  avatarWrap: {
+    position: "relative",
+    overflow: "visible",
   },
   ringsWrap: {
-    position: 'absolute',
+    position: "absolute",
     top: -40,
-    right: -20,
+    left: -35,
     width: 160,
     height: 160,
   },
   ring: {
-    position: 'absolute',
+    position: "absolute",
     width: 120,
     height: 120,
     borderRadius: 60,
     borderWidth: 1,
     opacity: 0.07,
   },
-  ringLeft: {
-    top: 10,
-    left: 0,
+  ringL: { top: 10, left: 0 },
+  ringR: { top: 10, left: 40 },
+  avatarStack: {
+    flexDirection: "row",
+    alignItems: "center",
   },
-  ringRight: {
-    top: 10,
-    left: 40,
+  partnerOverlap: {
+    marginLeft: -14,
   },
-  heroTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: Spacing['2xl'],
-  },
-  greeting: { ...Typography.overline, marginBottom: Spacing.xs },
-  nameWrap: {
-    position: 'relative',
-    alignSelf: 'flex-start',
-  },
-  heroName: { ...Typography.display, fontSize: 36, lineHeight: 40 },
-  nameCurve: {
-    marginTop: -4,
-    marginLeft: 2,
-  },
-
-  // Couple chip
-  coupleChip: {
-    alignItems: 'center',
+  coupleTag: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
     gap: Spacing.xs,
-  },
-  coupleAvatars: { flexDirection: 'row' },
-  miniAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  miniOverlap: { marginLeft: -10 },
-  miniLetter: { fontSize: 13, fontWeight: '600' },
-  coupleLabel: { ...Typography.small },
-
-  // Week strip
-  weekStrip: {},
-  weekHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
-  weekMonth: { ...Typography.subheading },
-  todayBtn: {
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
+    paddingVertical: 5,
     borderRadius: BorderRadius.full,
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  todayBtnText: { ...Typography.small, fontWeight: '600' },
-  weekDays: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  dayCell: {
-    alignItems: 'center',
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.sm,
-    borderRadius: BorderRadius.md,
-    width: (SCREEN_W - 48) / 7,
-    position: 'relative',
-  },
-  dayName: { ...Typography.small, fontSize: 10, marginBottom: 4 },
-  dayNum: { fontSize: 16, fontWeight: '600' },
-  todayDot: {
-    position: 'absolute',
-    bottom: 2,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
+  coupleTagText: {
+    ...Typography.small,
+    letterSpacing: 0.3,
   },
 
-  // Shared
-  sectionLabel: {
-    ...Typography.overline,
-    marginBottom: Spacing.lg,
-    marginTop: Spacing.lg,
-  },
-
-  // Body
-  body: {
-    paddingHorizontal: Spacing['2xl'],
-    paddingTop: Spacing['2xl'],
-  },
-
-  // Daily verse
+  /* ── Daily Verse ── */
   verse: {
-    flexDirection: 'row',
-    marginBottom: Spacing['3xl'],
+    flexDirection: "row",
     gap: Spacing.lg,
   },
-  verseLine: {
-    width: 2,
-    borderRadius: 1,
+  verseMark: {
+    width: 3,
+    borderRadius: 1.5,
   },
-  verseContent: {
+  verseBody: {
     flex: 1,
+    gap: Spacing.sm,
   },
   verseText: {
-    ...Typography.body,
-    fontFamily: Typography.heading.fontFamily,
-    fontStyle: 'italic',
-    lineHeight: 24,
-    marginBottom: Spacing.sm,
+    ...Typography.heading,
+    fontSize: 18,
+    lineHeight: 28,
   },
   verseRef: {
-    ...Typography.small,
-    fontWeight: '500',
+    ...Typography.captionMedium,
+    fontSize: 12,
     letterSpacing: 0.5,
   },
 
-  dayTitle: {
-    ...Typography.heading,
-    marginBottom: Spacing.xl,
-  },
-
-  // Empty day — timeline style
-  emptyDay: {
-    flexDirection: 'row',
-    paddingVertical: Spacing.lg,
-    paddingLeft: Spacing.xl,
-    marginBottom: Spacing['2xl'],
-    position: 'relative',
-  },
-  timelineLine: {
-    position: 'absolute',
-    left: 7,
-    top: 0,
-    bottom: 0,
-    width: 1,
-  },
-  timelineDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    marginRight: Spacing.lg,
-    marginTop: 3,
-  },
-  emptyContent: {
-    flex: 1,
-  },
-  emptyTitle: { ...Typography.body, marginBottom: Spacing.xs },
-  emptyDesc: { ...Typography.caption },
-
-  // Timeline items (when day has reminders)
-  timelineItem: {
-    flexDirection: 'row',
-    paddingVertical: Spacing.md,
-    paddingLeft: Spacing.xl,
-    position: 'relative',
-    alignItems: 'center',
-  },
-  timelineContent: {
-    flex: 1,
-    marginLeft: Spacing.md,
-  },
-  timelineTime: {
-    ...Typography.small,
-    fontSize: 11,
-    marginBottom: 1,
-  },
-  timelineTitle: {
-    ...Typography.body,
-  },
-  strikethrough: {
-    textDecorationLine: 'line-through',
-  },
-  timelineBadge: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: Spacing.sm,
-  },
-
-  // Header mood
-  headerMood: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.xl,
+  /* ── Shared Memories ── */
+  memorySection: {
     gap: Spacing.md,
   },
-  headerMoodAsk: {
-    ...Typography.small,
+  memoryHeaderRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
   },
-  headerMoodIcons: {
-    flexDirection: 'row',
+  memoryEyebrow: {
+    ...Typography.overline,
+    letterSpacing: 2.4,
+  },
+  memoryHeading: {
+    ...Typography.heading,
+  },
+  memoryNav: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: Spacing.sm,
   },
-  headerMoodIcon: {
+  memoryArrow: {
     width: 30,
     height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  headerMoodPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.full,
-  },
-  headerMoodText: {
+  memoryCounter: {
     ...Typography.small,
-    fontWeight: '500',
+    fontSize: 11,
+    minWidth: 28,
+    textAlign: "center",
   },
-  headerMoodChange: {
+  memoryCard: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    gap: Spacing.md,
+  },
+  memoryCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: Spacing.md,
+  },
+  memoryCardTitle: {
+    ...Typography.heading,
+    fontSize: 20,
+    flex: 1,
+  },
+  memoryCardDate: {
     ...Typography.small,
+  },
+  memoryCardImage: {
+    width: "100%",
+    height: 160,
+    borderRadius: BorderRadius.lg,
+  },
+  memoryCardBody: {
+    maxHeight: 90,
+    overflow: "hidden",
+  },
+  memoryLoadingText: {
+    ...Typography.body,
+    fontSize: 14,
+    textAlign: "center",
+    paddingVertical: Spacing.xl,
+  },
+  memoryEmpty: {
+    alignItems: "center",
+    paddingVertical: Spacing["3xl"],
+  },
+  memoryEmptyIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: Spacing.sm,
+  },
+  memoryEmptyTitle: {
+    ...Typography.subheading,
+  },
+  memoryEmptyBody: {
+    ...Typography.body,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: "center",
+    maxWidth: 260,
   },
 
-  // Explore — badge pills
-  explore: {
-    alignItems: 'center',
-    paddingTop: 0,
-    paddingBottom: Spacing['2xl'],
+  /* ── Quick Nav ── */
+  navRow: {
+    flexDirection: "row",
+    gap: Spacing.sm,
   },
-  exploreLabel: {
+  navPill: {
+    flex: 1,
+    borderRadius: BorderRadius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingVertical: Spacing.md,
+    alignItems: "center",
+    gap: 6,
+  },
+  navLabel: {
     ...Typography.small,
-    letterSpacing: 1,
-    marginBottom: Spacing.lg,
+    fontSize: 11,
+    fontFamily: Typography.subheading.fontFamily,
   },
-  exploreBadges: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: Spacing.sm,
+
+  /* ── Milestones ── */
+  sectionEyebrow: {
+    ...Typography.overline,
+    letterSpacing: 2,
+    marginBottom: Spacing.md,
   },
-  exploreBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.full,
+  milestoneScroll: {
+    gap: Spacing.md,
+    paddingRight: Spacing.md,
   },
-  exploreBadgeText: {
+  milestoneCard: {
+    width: 110,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    gap: 4,
+  },
+  milestoneDays: {
+    ...Typography.heading,
+    fontSize: 20,
+  },
+  milestoneTitle: {
     ...Typography.captionMedium,
-    fontSize: 13,
+    fontSize: 12,
   },
 });

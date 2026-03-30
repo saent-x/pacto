@@ -1,18 +1,24 @@
-import { useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, RefreshControl, ScrollView, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { FlashList } from '@shopify/flash-list';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Feather } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { format } from 'date-fns';
 import { useColors } from '@/src/hooks/useColors';
+import { useSession } from '@/src/hooks/useSession';
 import { useJournal, JournalFilter } from '@/src/hooks/useJournal';
-import { useAuthStore } from '@/src/stores/authStore';
+import { useSwipeTabs } from '@/src/hooks/useSwipeTabs';
 import { Typography } from '@/src/constants/typography';
 import { Spacing, BorderRadius } from '@/src/constants/spacing';
+import { MiniDateRail } from '@/src/components/calendar/MiniDateRail';
 import { EmptyState } from '@/src/components/ui';
 import { CreateEntrySheet } from '@/src/components/journal/CreateEntrySheet';
+import { MarkdownText } from '@/src/components/journal/MarkdownText';
 import { JournalEntry } from '@/src/types/database';
 
 const MOOD_ICONS: Record<string, { icon: string; color: string }> = {
@@ -25,46 +31,84 @@ const MOOD_ICONS: Record<string, { icon: string; color: string }> = {
 
 export default function JournalScreen() {
   const C = useColors();
-  const userId = useAuthStore((s) => s.user?.id);
-  const { entries, isLoading, filter, setFilter, create, update, remove } = useJournal();
+  const router = useRouter();
+  const { profile } = useSession();
+  const userId = profile?._id ?? null;
+  const { entries, isLoading, filter, setFilter, create, update, remove, refetch, uploadJournalImage } = useJournal();
 
   const sheetRef = useRef<BottomSheetModal>(null);
-  const [editingEntry, setEditingEntry] = useState<JournalEntry | undefined>();
-  const [readOnly, setReadOnly] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const visibleEntries = selectedDate
+    ? entries.filter((entry) => entry.entry_date === selectedDate)
+    : entries;
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch]);
+  const tabSwipe = useSwipeTabs({
+    tabs: ['all', 'shared', 'private'] as const,
+    value: filter,
+    onChange: (next) => setFilter(next as JournalFilter),
+  });
 
   const handleSave = async (data: any) => {
-    if (editingEntry) {
-      await update(editingEntry.id, data);
-    } else {
-      await create(data);
-    }
-    setEditingEntry(undefined);
-    setReadOnly(false);
+    await create(data);
   };
 
   const openCreate = () => {
-    setEditingEntry(undefined);
-    setReadOnly(false);
     sheetRef.current?.present();
   };
 
   const openEntry = (entry: JournalEntry) => {
-    setEditingEntry(entry);
-    setReadOnly(entry.author_id !== userId);
-    sheetRef.current?.present();
+    // Navigate to full-screen detail view
+    router.push(`/(tabs)/journal/${entry.id}` as any);
   };
 
   const renderItem = ({ item }: { item: JournalEntry }) => {
     const isOwn = item.author_id === userId;
     const moodInfo = item.mood ? MOOD_ICONS[item.mood] : null;
 
+    const handleDelete = () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      Alert.alert('Delete entry', 'Remove this journal entry?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => remove(item.id) },
+      ]);
+    };
+
     return (
       <Animated.View entering={FadeInDown.duration(400)}>
-        <TouchableOpacity
-          style={[styles.entryCard, { backgroundColor: C.card, borderColor: C.border }]}
-          activeOpacity={0.85}
-          onPress={() => openEntry(item)}
+        <Swipeable
+          renderRightActions={() => (
+            <TouchableOpacity
+              style={[styles.swipeAction, { backgroundColor: C.error }]}
+              onPress={handleDelete}
+            >
+              <Feather name="trash-2" size={18} color="#fff" />
+            </TouchableOpacity>
+          )}
+          renderLeftActions={() => (
+            <TouchableOpacity
+              style={[styles.swipeAction, { backgroundColor: C.journal }]}
+              onPress={() => openEntry(item)}
+            >
+              <Feather name="edit-3" size={18} color={C.ink} />
+            </TouchableOpacity>
+          )}
+          overshootRight={false}
+          overshootLeft={false}
+          friction={2}
         >
+          <TouchableOpacity
+            style={[styles.entryCard, { backgroundColor: C.card, borderColor: C.border }]}
+            activeOpacity={0.85}
+            onPress={() => openEntry(item)}
+          >
           {/* Left accent for partner entries */}
           {!isOwn && <View style={[styles.partnerBar, { backgroundColor: C.primary }]} />}
 
@@ -87,9 +131,7 @@ export default function JournalScreen() {
             )}
 
             {/* Body preview */}
-            <Text style={[styles.entryBody, { color: C.textSecondary }]} numberOfLines={2}>
-              {item.body}
-            </Text>
+            <MarkdownText value={item.body} numberOfLines={2} />
 
             {/* Bottom row */}
             <View style={styles.entryFooter}>
@@ -103,68 +145,83 @@ export default function JournalScreen() {
               )}
             </View>
           </View>
-        </TouchableOpacity>
+
+          {item.media_urls[0] ? (
+            <View style={styles.entryMediaWrap}>
+              <Image source={{ uri: item.media_urls[0] }} style={styles.entryMedia} />
+            </View>
+          ) : null}
+          </TouchableOpacity>
+        </Swipeable>
       </Animated.View>
     );
   };
 
-  const hasEntries = entries.length > 0;
+  const hasEntries = visibleEntries.length > 0;
 
   return (
     <View style={[styles.screen, { backgroundColor: C.background }]}>
-      <SafeAreaView style={styles.flex} edges={['top']}>
-        {/* Header */}
-        <View style={[styles.header, { backgroundColor: C.surface }]}>
-          <View style={styles.headerRow}>
-            <Text style={[styles.title, { color: C.text }]}>Journal</Text>
-            <TouchableOpacity onPress={openCreate} style={styles.writeBtn}>
-              <Feather name="edit-3" size={18} color={C.journal} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Filter tabs */}
-          <View style={styles.filterRow}>
-            {(['all', 'shared', 'private'] as JournalFilter[]).map((f) => (
-              <TouchableOpacity
-                key={f}
-                onPress={() => setFilter(f)}
-                style={styles.filterTab}
-              >
-                <Text style={[
-                  styles.filterText,
-                  { color: filter === f ? C.journal : C.textTertiary },
-                ]}>
-                  {f.charAt(0).toUpperCase() + f.slice(1)}
-                </Text>
-                {filter === f && <View style={[styles.filterLine, { backgroundColor: C.journal }]} />}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
+      <SafeAreaView style={[styles.flex, { backgroundColor: C.surface }]} edges={['top']}>
+        <MiniDateRail
+          title="Journal"
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+          accentColor={C.journal}
+          tabs={[
+            { value: 'all', label: 'All' },
+            { value: 'shared', label: 'Shared' },
+            { value: 'private', label: 'Private' },
+          ]}
+          selectedTab={filter}
+          onSelectTab={(value) => setFilter(value as JournalFilter)}
+        />
         {!hasEntries && !isLoading ? (
-          <EmptyState
-            icon="book-open"
-            title="Your journal is empty"
-            description="Write together or keep a private journal just for you."
-            actionLabel="Write Entry"
-            onAction={openCreate}
-          />
+          <ScrollView
+            contentContainerStyle={styles.emptyContent}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.journal} />
+            }
+            showsVerticalScrollIndicator={false}
+            {...tabSwipe.panHandlers}
+          >
+            <EmptyState
+              icon="book-open"
+              title="Your journal is empty"
+              description="Write together or keep a private journal just for you."
+              actionLabel="Write Entry"
+              onAction={openCreate}
+            />
+          </ScrollView>
         ) : (
           <FlashList
-            data={entries}
+            data={visibleEntries}
             renderItem={renderItem}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.journal} />
+            }
             ItemSeparatorComponent={() => <View style={styles.separator} />}
+            {...tabSwipe.panHandlers}
           />
         )}
+
+        {/* FAB */}
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            openCreate();
+          }}
+          activeOpacity={0.85}
+          style={[styles.fab, { backgroundColor: C.journal }]}
+        >
+          <Feather name="plus" size={22} color={C.ink} />
+        </TouchableOpacity>
 
         <CreateEntrySheet
           sheetRef={sheetRef}
           onSave={handleSave}
-          entry={editingEntry}
-          readOnly={readOnly}
+          onUploadImage={uploadJournalImage}
         />
       </SafeAreaView>
     </View>
@@ -176,64 +233,45 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
 
   header: {
-    paddingHorizontal: Spacing['2xl'],
-    paddingTop: Spacing.lg,
     paddingBottom: 0,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
-  title: { ...Typography.title },
-  writeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  filterRow: {
-    flexDirection: 'row',
-    gap: Spacing['2xl'],
-  },
-  filterTab: {
-    paddingBottom: Spacing.md,
-    position: 'relative',
-  },
-  filterText: {
-    ...Typography.captionMedium,
-  },
-  filterLine: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 2,
-    borderRadius: 1,
   },
 
   listContent: {
-    paddingHorizontal: Spacing['2xl'],
     paddingTop: Spacing.xl,
     paddingBottom: 100,
   },
-  separator: { height: Spacing.md },
+  emptyContent: {
+    flexGrow: 1,
+  },
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: 27,
+    marginRight: Spacing['2xl'],
+  },
 
   entryCard: {
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
     overflow: 'hidden',
     flexDirection: 'row',
+    alignItems: 'stretch',
+    paddingRight: Spacing['2xl'],
   },
   partnerBar: {
     width: 3,
   },
   entryContent: {
     flex: 1,
-    padding: Spacing.xl,
+    paddingVertical: 14,
+    paddingLeft: Spacing.xl,
+  },
+  entryMediaWrap: {
+    paddingVertical: 14,
+    justifyContent: 'center',
+  },
+  entryMedia: {
+    width: 72,
+    height: 72,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.08)',
   },
   entryMeta: {
     flexDirection: 'row',
@@ -246,13 +284,13 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   entryTitle: {
-    ...Typography.heading,
+    ...Typography.bodyMedium,
     marginBottom: Spacing.xs,
   },
   entryBody: {
-    ...Typography.caption,
+    ...Typography.small,
     lineHeight: 20,
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   entryFooter: {
     flexDirection: 'row',
@@ -268,5 +306,25 @@ const styles = StyleSheet.create({
   },
   authorLabel: {
     ...Typography.small,
+  },
+  swipeAction: {
+    width: 76,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 100,
+    right: Spacing['2xl'],
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
   },
 });

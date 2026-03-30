@@ -36,6 +36,7 @@ export interface Database {
           couple_id?: string | null;
           updated_at?: string;
         };
+        Relationships: [];
       };
       couples: {
         Row: {
@@ -62,6 +63,7 @@ export interface Database {
           anniversary_date?: string | null;
           partner_2_id?: string | null;
         };
+        Relationships: [];
       };
       reminders: {
         Row: {
@@ -111,6 +113,7 @@ export interface Database {
           category?: string | null;
           updated_at?: string;
         };
+        Relationships: [];
       };
       task_lists: {
         Row: {
@@ -139,6 +142,7 @@ export interface Database {
           color?: string;
           sort_order?: number;
         };
+        Relationships: [];
       };
       tasks: {
         Row: {
@@ -184,9 +188,11 @@ export interface Database {
           assigned_to?: string | null;
           due_date?: string | null;
           priority?: number;
+          list_id?: string;
           sort_order?: number;
           updated_at?: string;
         };
+        Relationships: [];
       };
       journal_entries: {
         Row: {
@@ -227,6 +233,7 @@ export interface Database {
           entry_date?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       wishlists: {
         Row: {
@@ -246,6 +253,7 @@ export interface Database {
         Update: {
           name?: string;
         };
+        Relationships: [];
       };
       wishlist_items: {
         Row: {
@@ -291,6 +299,7 @@ export interface Database {
           priority?: number;
           sort_order?: number;
         };
+        Relationships: [];
       };
       plans: {
         Row: {
@@ -334,6 +343,7 @@ export interface Database {
           notes?: string | null;
           updated_at?: string;
         };
+        Relationships: [];
       };
       checklists: {
         Row: {
@@ -359,6 +369,7 @@ export interface Database {
           description?: string | null;
           is_template?: boolean;
         };
+        Relationships: [];
       };
       checklist_items: {
         Row: {
@@ -390,6 +401,7 @@ export interface Database {
           sort_order?: number;
           parent_id?: string | null;
         };
+        Relationships: [];
       };
       milestones: {
         Row: {
@@ -421,6 +433,7 @@ export interface Database {
           icon?: string;
           photo_url?: string | null;
         };
+        Relationships: [];
       };
       shared_expenses: {
         Row: {
@@ -462,6 +475,7 @@ export interface Database {
           is_settled?: boolean;
           receipt_url?: string | null;
         };
+        Relationships: [];
       };
       mood_check_ins: {
         Row: {
@@ -492,6 +506,7 @@ export interface Database {
           note?: string | null;
           is_private?: boolean;
         };
+        Relationships: [];
       };
     };
     Functions: {

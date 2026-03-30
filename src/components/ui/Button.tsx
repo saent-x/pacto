@@ -12,6 +12,7 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { Colors } from '@/src/constants/colors';
 import { Typography } from '@/src/constants/typography';
 import { BorderRadius, Spacing } from '@/src/constants/spacing';
@@ -48,6 +49,7 @@ export function Button({
   }));
 
   const handlePressIn = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     scale.value = withSpring(0.965, { damping: 15, stiffness: 350 });
   };
   const handlePressOut = () => {

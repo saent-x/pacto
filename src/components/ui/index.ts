@@ -3,4 +3,8 @@ export { Input } from './Input';
 export { Card } from './Card';
 export { Badge } from './Badge';
 export { EmptyState } from './EmptyState';
+export { GlassView } from './GlassView';
+export { GlassSection } from './GlassSection';
+export { GlassRow } from './GlassRow';
+export { SegmentedControl } from './SegmentedControl';
 export { ThemedSheet, BottomSheetTextInput } from './BottomSheet';

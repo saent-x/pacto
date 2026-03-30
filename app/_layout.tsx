@@ -1,16 +1,29 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native';
 import 'react-native-reanimated';
+import { useFonts } from 'expo-font';
+import {
+  Newsreader_300Light_Italic,
+  Newsreader_400Regular,
+  Newsreader_400Regular_Italic,
+} from '@expo-google-fonts/newsreader';
+import {
+  DMSans_400Regular,
+  DMSans_400Regular_Italic,
+  DMSans_500Medium,
+  DMSans_500Medium_Italic,
+  DMSans_600SemiBold,
+  DMSans_700Bold,
+  DMSans_700Bold_Italic,
+} from '@expo-google-fonts/dm-sans';
 
-import { supabase } from '@/src/lib/supabase';
-import { ThemeProvider, useTheme } from '@/src/lib/theme';
-import { useAuthStore } from '@/src/stores/authStore';
-import { useCoupleStore } from '@/src/stores/coupleStore';
+import { useTheme } from '@/src/lib/theme';
+import { useSession } from '@/src/hooks/useSession';
+import { AppProviders } from '@/src/providers/AppProviders';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -19,107 +32,106 @@ SplashScreen.preventAutoHideAsync();
 function useProtectedRoute() {
   const segments = useSegments();
   const router = useRouter();
-  const { session, profile, isLoading } = useAuthStore();
+  const { activeCouple, isAuthenticated, isLoading, route } = useSession();
 
   useEffect(() => {
-    if (isLoading) return;
-
-    const inAuthGroup = segments[0] === '(auth)';
-    const currentRoute = segments.join('/');
-
-    if (!session) {
-      // Not signed in → go to sign-in (unless already there)
-      if (!currentRoute.includes('sign-in') && !currentRoute.includes('sign-up')) {
-        router.replace('/(auth)/sign-in');
-      }
-    } else if (!profile?.couple_id) {
-      // Signed in but no couple → go to onboarding (unless already on onboarding/invite)
-      if (!currentRoute.includes('onboarding') && !currentRoute.includes('invite')) {
-        router.replace('/(auth)/onboarding');
-      }
-    } else {
-      // Signed in with couple → go to home
-      if (inAuthGroup) {
-        router.replace('/(tabs)/home');
-      }
+    if (isLoading || !route) {
+      return;
     }
-  }, [session, profile, isLoading, segments]);
+
+    const authScreen = segments[1];
+    const inAuthGroup = segments[0] === '(auth)';
+    const inTabsGroup = segments[0] === '(tabs)';
+
+    if (!isAuthenticated) {
+      const onSignedOutScreen =
+        inAuthGroup &&
+        (authScreen === 'sign-in' || authScreen === 'sign-up');
+
+      if (!onSignedOutScreen) {
+        router.replace(route);
+      }
+      return;
+    }
+
+    if (!activeCouple) {
+      const onMembershipScreen =
+        inAuthGroup &&
+        (authScreen === 'onboarding' || authScreen === 'invite');
+
+      if (!onMembershipScreen) {
+        router.replace(route);
+      }
+      return;
+    }
+
+    if (!inTabsGroup) {
+      router.replace(route);
+    }
+  }, [activeCouple, isAuthenticated, isLoading, route, router, segments]);
 }
 
-export default function RootLayout() {
-  const { setSession, fetchProfile, profile } = useAuthStore();
-  const { fetchCouple, fetchPartner } = useCoupleStore();
-  const [appReady, setAppReady] = useState(false);
-  const appReadyRef = useRef(false);
-
-  const markReady = () => {
-    if (!appReadyRef.current) {
-      appReadyRef.current = true;
-      setAppReady(true);
-      SplashScreen.hideAsync();
-    }
-  };
-
-  useEffect(() => {
-    // 1. Check for existing session immediately
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log('[Coupl] Initial session:', session ? 'found' : 'none');
-      setSession(session);
-      if (session?.user) {
-        await useAuthStore.getState().fetchProfile();
-      }
-      markReady();
-    }).catch(() => {
-      console.log('[Coupl] getSession failed, proceeding without session');
-      setSession(null);
-      markReady();
-    });
-
-    // 2. Listen for future auth changes (sign in, sign out, token refresh)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('[Coupl] Auth event:', event);
-        setSession(session);
-        if (session?.user) {
-          await useAuthStore.getState().fetchProfile();
-        }
-        markReady();
-      },
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  // When profile loads with a couple_id, fetch couple data
-  useEffect(() => {
-    if (profile?.couple_id) {
-      fetchCouple(profile.couple_id);
-      if (profile.id) {
-        fetchPartner(profile.couple_id, profile.id);
-      }
-    }
-  }, [profile?.couple_id]);
+function RootNavigator({
+  fontsLoaded,
+  markReady,
+}: {
+  fontsLoaded: boolean;
+  markReady: () => void;
+}) {
+  const { isLoading } = useSession();
 
   useProtectedRoute();
 
-  if (!appReady) {
+  useEffect(() => {
+    if (fontsLoaded && !isLoading) {
+      markReady();
+    }
+  }, [fontsLoaded, isLoading, markReady]);
+
+  if (!fontsLoaded || isLoading) {
     return null;
   }
 
   return (
-    <ThemeProvider>
-      <GestureHandlerRootView style={styles.container}>
-        <BottomSheetModalProvider>
-          <StatusBarWrapper />
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(tabs)" />
-          </Stack>
-        </BottomSheetModalProvider>
-      </GestureHandlerRootView>
-    </ThemeProvider>
+    <>
+      <StatusBarWrapper />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+      </Stack>
+    </>
+  );
+}
+
+export default function RootLayout() {
+  const appReadyRef = useRef(false);
+
+  const [fontsLoaded] = useFonts({
+    Newsreader_300Light_Italic,
+    Newsreader_400Regular,
+    Newsreader_400Regular_Italic,
+    DMSans_400Regular,
+    DMSans_400Regular_Italic,
+    DMSans_500Medium,
+    DMSans_500Medium_Italic,
+    DMSans_600SemiBold,
+    DMSans_700Bold,
+    DMSans_700Bold_Italic,
+  });
+
+  const markReady = () => {
+    if (!appReadyRef.current) {
+      appReadyRef.current = true;
+      SplashScreen.hideAsync();
+    }
+  };
+
+  return (
+    <GestureHandlerRootView style={styles.container}>
+      <AppProviders>
+        <RootNavigator fontsLoaded={fontsLoaded} markReady={markReady} />
+      </AppProviders>
+    </GestureHandlerRootView>
   );
 }
 

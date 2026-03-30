@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -16,17 +16,22 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { format } from 'date-fns';
 import { useColors } from '@/src/hooks/useColors';
-import { useTaskItems } from '@/src/hooks/useTasks';
+import { useTaskItems, useTasks } from '@/src/hooks/useTasks';
 import { Typography } from '@/src/constants/typography';
 import { Spacing, BorderRadius } from '@/src/constants/spacing';
-import { CreateTaskSheet } from '@/src/components/tasks/CreateTaskSheet';
+import { CreateTaskSheet, type TaskComposerSaveInput } from '@/src/components/tasks/CreateTaskSheet';
+import {
+  saveTaskFromListDetail,
+} from '@/src/components/tasks/listDetailComposer';
 import { Task } from '@/src/types/database';
 
 export default function TaskListDetailScreen() {
   const C = useColors();
   const router = useRouter();
   const { listId } = useLocalSearchParams<{ listId: string }>();
-  const { tasks, counts, create, update, toggleComplete, remove } = useTaskItems(listId!);
+  const currentListId = listId!;
+  const { lists } = useTasks();
+  const { tasks, counts, create, update, toggleComplete, remove } = useTaskItems(currentListId);
 
   const sheetRef = useRef<BottomSheetModal>(null);
   const [editingTask, setEditingTask] = useState<Task | undefined>();
@@ -44,12 +49,8 @@ export default function TaskListDetailScreen() {
     toggleComplete(task);
   };
 
-  const handleSave = async (data: any) => {
-    if (editingTask) {
-      await update(editingTask.id, data);
-    } else {
-      await create(data);
-    }
+  const handleSave = async (data: TaskComposerSaveInput) => {
+    await saveTaskFromListDetail({ editingTask, data, create, update });
     setEditingTask(undefined);
   };
 
@@ -178,6 +179,8 @@ export default function TaskListDetailScreen() {
           sheetRef={sheetRef}
           onSave={handleSave}
           task={editingTask}
+          selectedListId={currentListId}
+          lists={lists}
         />
       </SafeAreaView>
     </View>

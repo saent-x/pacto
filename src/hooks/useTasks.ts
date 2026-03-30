@@ -1,11 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/src/lib/supabase';
-import { useAuthStore } from '@/src/stores/authStore';
-import { useCoupleStore } from '@/src/stores/coupleStore';
-import { useRealtime } from './useRealtime';
-import { TaskList, Task } from '@/src/types/database';
+import { useCallback, useMemo } from 'react';
+import { useConvex, useMutation, useQuery } from 'convex/react';
+import { makeFunctionReference } from 'convex/server';
 
-// ── Task Lists ──
+import { useSession } from './useSession';
+import type { Database, TaskList, Task } from '@/src/types/database';
 
 type ListInput = {
   name: string;
@@ -13,57 +11,272 @@ type ListInput = {
   color?: string;
 };
 
+type TaskUpdateInput = Database['public']['Tables']['tasks']['Update'];
+type TaskCreateInput = {
+  title: string;
+  list_id: string;
+  notes?: string | null;
+  due_date?: string | null;
+  priority?: number;
+  assigned_to?: string | null;
+};
+
+type TaskFeedFilter = 'all' | 'active' | 'done';
+
+type TaskListSummary = Pick<TaskList, 'id' | 'name' | 'color' | 'icon'>;
+
+type TaskListDoc = {
+  _id: string;
+  coupleId: string;
+  name: string;
+  icon: string;
+  color: string;
+  sortOrder: number;
+  createdBy: string;
+  createdAt: number;
+};
+
+type TaskDoc = {
+  _id: string;
+  listId: string;
+  coupleId: string;
+  title: string;
+  notes: string | null;
+  isCompleted: boolean;
+  completedAt: number | null;
+  completedBy: string | null;
+  assignedTo: string | null;
+  dueDate: string | null;
+  priority: number;
+  sortOrder: number;
+  createdBy: string;
+  createdAt: number;
+  updatedAt: number;
+};
+
+type TaskBoard = {
+  lists: TaskListDoc[];
+  tasks: TaskDoc[];
+};
+
+const getTaskBoardQuery = makeFunctionReference<'query', {}, TaskBoard>('tasks:getTaskBoard');
+const getTasksForListQuery = makeFunctionReference<'query', { listId: string }, TaskDoc[]>('tasks:getTasksForList');
+const createTaskListMutation = makeFunctionReference<
+  'mutation',
+  { name: string; icon?: string; color?: string },
+  TaskListDoc
+>('tasks:createTaskList');
+const deleteTaskListMutation = makeFunctionReference<'mutation', { listId: string }, null>('tasks:deleteTaskList');
+const createTaskMutation = makeFunctionReference<
+  'mutation',
+  {
+    listId: string;
+    title: string;
+    notes?: string | null;
+    dueDate?: string | null;
+    priority?: number;
+    assignedTo?: string | null;
+  },
+  TaskDoc
+>('tasks:createTask');
+const updateTaskMutation = makeFunctionReference<
+  'mutation',
+  {
+    taskId: string;
+    title?: string;
+    notes?: string | null;
+    dueDate?: string | null;
+    priority?: number;
+    assignedTo?: string | null;
+    listId?: string;
+  },
+  TaskDoc
+>('tasks:updateTask');
+const toggleTaskMutation = makeFunctionReference<'mutation', { taskId: string }, TaskDoc>('tasks:toggleTask');
+const deleteTaskMutation = makeFunctionReference<'mutation', { taskId: string }, null>('tasks:deleteTask');
+
+export type TaskFeedItem = Task & {
+  list: TaskListSummary | null;
+};
+
+export type TaskFeedViewState = {
+  items: TaskFeedItem[];
+  emptyState: {
+    title: string;
+    description: string;
+    actionLabel: string;
+  } | null;
+};
+
+function toIso(timestamp: number) {
+  return new Date(timestamp).toISOString();
+}
+
+function toTaskListRow(list: TaskListDoc): TaskList {
+  return {
+    id: list._id,
+    couple_id: list.coupleId,
+    name: list.name,
+    icon: list.icon,
+    color: list.color,
+    sort_order: list.sortOrder,
+    created_by: list.createdBy,
+    created_at: toIso(list.createdAt),
+  };
+}
+
+function toTaskRow(task: TaskDoc): Task {
+  return {
+    id: task._id,
+    list_id: task.listId,
+    couple_id: task.coupleId,
+    title: task.title,
+    notes: task.notes,
+    is_completed: task.isCompleted,
+    completed_at: task.completedAt === null ? null : toIso(task.completedAt),
+    completed_by: task.completedBy,
+    assigned_to: task.assignedTo,
+    due_date: task.dueDate,
+    priority: task.priority,
+    sort_order: task.sortOrder,
+    created_by: task.createdBy,
+    created_at: toIso(task.createdAt),
+    updated_at: toIso(task.updatedAt),
+  };
+}
+
+function toTaskListSummary(list: TaskList | undefined): TaskListSummary | null {
+  if (!list) return null;
+  return {
+    id: list.id,
+    name: list.name,
+    color: list.color,
+    icon: list.icon,
+  };
+}
+
+function parseDueDate(value: string | null): number {
+  if (!value) return Number.POSITIVE_INFINITY;
+  const parsed = new Date(`${value}T00:00:00`).getTime();
+  return Number.isNaN(parsed) ? Number.POSITIVE_INFINITY : parsed;
+}
+
+function compareTaskFeedItems(left: TaskFeedItem, right: TaskFeedItem) {
+  if (left.is_completed !== right.is_completed) {
+    return left.is_completed ? 1 : -1;
+  }
+
+  const leftDueDate = parseDueDate(left.due_date);
+  const rightDueDate = parseDueDate(right.due_date);
+  if (leftDueDate !== rightDueDate) {
+    return leftDueDate - rightDueDate;
+  }
+
+  const priorityComparison = (right.priority ?? 0) - (left.priority ?? 0);
+  if (priorityComparison !== 0) {
+    return priorityComparison;
+  }
+
+  const listComparison = (left.list?.name ?? '').localeCompare(right.list?.name ?? '');
+  if (listComparison !== 0) {
+    return listComparison;
+  }
+
+  const titleComparison = left.title.localeCompare(right.title);
+  if (titleComparison !== 0) {
+    return titleComparison;
+  }
+
+  return left.sort_order - right.sort_order || left.id.localeCompare(right.id);
+}
+
+function matchesTaskFeedFilter(task: Task, filter: TaskFeedFilter) {
+  if (filter === 'active') {
+    return !task.is_completed;
+  }
+
+  if (filter === 'done') {
+    return task.is_completed;
+  }
+
+  return true;
+}
+
+export function buildTaskFeed(lists: TaskList[], allTasks: Task[], filter: TaskFeedFilter = 'all'): TaskFeedItem[] {
+  const listsById = new Map(lists.map((list) => [list.id, list] as const));
+
+  return allTasks
+    .filter((task) => matchesTaskFeedFilter(task, filter))
+    .map((task) => ({
+      ...task,
+      list: toTaskListSummary(listsById.get(task.list_id)),
+    }))
+    .sort(compareTaskFeedItems);
+}
+
+export function buildTaskFeedViewState(
+  lists: TaskList[],
+  allTasks: Task[],
+  filter: TaskFeedFilter = 'all',
+): TaskFeedViewState {
+  const items = buildTaskFeed(lists, allTasks, filter);
+
+  if (items.length > 0) {
+    return { items, emptyState: null };
+  }
+
+  if (lists.length === 0) {
+    return {
+      items,
+      emptyState: {
+        title: 'No tasks yet',
+        description: 'Add your first task and Coupl will create a General list automatically.',
+        actionLabel: 'Add Task',
+      },
+    };
+  }
+
+  return {
+    items,
+    emptyState: {
+      title: filter === 'done' ? 'No completed tasks' : filter === 'active' ? 'No active tasks' : 'Nothing here yet',
+      description:
+        filter === 'done'
+          ? 'Completed tasks will appear here once you finish them.'
+          : filter === 'active'
+            ? 'Active tasks will show up here as soon as they are added.'
+            : 'Start by creating a task in one of your lists.',
+      actionLabel: 'Add Task',
+    },
+  };
+}
+
 export function useTasks() {
-  const userId = useAuthStore((s) => s.user?.id);
-  const coupleId = useCoupleStore((s) => s.coupleId);
+  const { activeCouple } = useSession();
+  const convex = useConvex();
+  const board = useQuery(getTaskBoardQuery, activeCouple ? {} : 'skip');
+  const createTaskList = useMutation(createTaskListMutation);
+  const deleteTaskList = useMutation(deleteTaskListMutation);
+  const createTaskMutationFn = useMutation(createTaskMutation);
+  const updateTaskMutationFn = useMutation(updateTaskMutation);
+  const toggleTaskMutationFn = useMutation(toggleTaskMutation);
+  const deleteTaskMutationFn = useMutation(deleteTaskMutation);
 
-  const [lists, setLists] = useState<TaskList[]>([]);
-  const [allTasks, setAllTasks] = useState<Task[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const lists = useMemo(() => (board?.lists ?? []).map(toTaskListRow), [board?.lists]);
+  const allTasks = useMemo(() => (board?.tasks ?? []).map(toTaskRow), [board?.tasks]);
+  const taskFeed = useMemo(() => buildTaskFeed(lists, allTasks, 'all'), [lists, allTasks]);
 
-  const fetchAll = useCallback(async () => {
-    if (!coupleId) return;
-    const [listsRes, tasksRes] = await Promise.all([
-      supabase
-        .from('task_lists')
-        .select('*')
-        .eq('couple_id', coupleId)
-        .order('sort_order'),
-      supabase
-        .from('tasks')
-        .select('*')
-        .eq('couple_id', coupleId),
-    ]);
-
-    setLists((listsRes.data as TaskList[]) ?? []);
-    setAllTasks((tasksRes.data as Task[]) ?? []);
-    setIsLoading(false);
-  }, [coupleId]);
-
-  useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
-
-  useRealtime<TaskList>(
-    'task_lists',
-    (r) => setLists((prev) => prev.some((l) => l.id === r.id) ? prev : [...prev, r]),
-    (r) => setLists((prev) => prev.map((l) => (l.id === r.id ? r : l))),
-    (r) => setLists((prev) => prev.filter((l) => l.id !== r.id)),
-  );
-
-  useRealtime<Task>(
-    'tasks',
-    (r) => setAllTasks((prev) => prev.some((t) => t.id === r.id) ? prev : [...prev, r]),
-    (r) => setAllTasks((prev) => prev.map((t) => (t.id === r.id ? r : t))),
-    (r) => setAllTasks((prev) => prev.filter((t) => t.id !== r.id)),
+  const getTaskFeed = useCallback(
+    (filter: TaskFeedFilter = 'all') => buildTaskFeed(lists, allTasks, filter),
+    [lists, allTasks],
   );
 
   const getListCounts = useCallback(
     (listId: string) => {
-      const items = allTasks.filter((t) => t.list_id === listId);
+      const items = allTasks.filter((task) => task.list_id === listId);
       return {
         total: items.length,
-        completed: items.filter((t) => t.is_completed).length,
+        completed: items.filter((task) => task.is_completed).length,
       };
     },
     [allTasks],
@@ -71,55 +284,85 @@ export function useTasks() {
 
   const createList = useCallback(
     async (data: ListInput) => {
-      if (!coupleId || !userId) return;
-      const tempId = 'temp-' + Date.now();
-      const optimistic = {
-        id: tempId,
+      const created = await createTaskList({
         name: data.name,
-        icon: data.icon ?? '📋',
-        color: data.color ?? '#7BA08A',
-        couple_id: coupleId,
-        created_by: userId,
-        sort_order: lists.length,
-        created_at: new Date().toISOString(),
-      } as TaskList;
-      setLists((prev) => [...prev, optimistic]);
-
-      const { data: inserted, error } = await supabase.from('task_lists').insert({
-        name: data.name,
-        icon: data.icon ?? '📋',
-        color: data.color ?? '#7BA08A',
-        couple_id: coupleId,
-        created_by: userId,
-        sort_order: lists.length,
-      } as any).select().single();
-
-      if (error) {
-        console.warn('[Coupl] Create list failed:', error.message);
-        setLists((prev) => prev.filter((l) => l.id !== tempId));
-      } else if (inserted) {
-        setLists((prev) => prev.map((l) => l.id === tempId ? (inserted as TaskList) : l));
-      }
+        ...(data.icon !== undefined ? { icon: data.icon } : {}),
+        ...(data.color !== undefined ? { color: data.color } : {}),
+      });
+      return toTaskListRow(created);
     },
-    [coupleId, userId, lists.length],
+    [createTaskList],
   );
 
   const deleteList = useCallback(
     async (id: string) => {
-      setLists((prev) => prev.filter((l) => l.id !== id));
-      const { error } = await supabase.from('task_lists').delete().eq('id', id);
-      if (error) {
-        console.warn('[Coupl] Delete list failed:', error.message);
-        fetchAll();
-      }
+      await deleteTaskList({ listId: id });
     },
-    [fetchAll],
+    [deleteTaskList],
   );
 
-  return { lists, allTasks, isLoading, getListCounts, createList, deleteList, refetch: fetchAll };
-}
+  const createTask = useCallback(
+    async (data: TaskCreateInput) => {
+      await createTaskMutationFn({
+        listId: data.list_id,
+        title: data.title,
+        ...(data.notes !== undefined ? { notes: data.notes ?? null } : {}),
+        ...(data.due_date !== undefined ? { dueDate: data.due_date ?? null } : {}),
+        ...(data.priority !== undefined ? { priority: data.priority } : {}),
+        ...(data.assigned_to !== undefined ? { assignedTo: data.assigned_to ?? null } : {}),
+      });
+    },
+    [createTaskMutationFn],
+  );
 
-// ── Tasks within a list ──
+  const updateTask = useCallback(
+    async (id: string, data: TaskUpdateInput) => {
+      await updateTaskMutationFn({
+        taskId: id,
+        ...(data.title !== undefined ? { title: data.title } : {}),
+        ...(data.notes !== undefined ? { notes: data.notes ?? null } : {}),
+        ...(data.due_date !== undefined ? { dueDate: data.due_date ?? null } : {}),
+        ...(data.priority !== undefined ? { priority: data.priority } : {}),
+        ...(data.assigned_to !== undefined ? { assignedTo: data.assigned_to ?? null } : {}),
+        ...(data.list_id !== undefined ? { listId: data.list_id } : {}),
+      });
+    },
+    [updateTaskMutationFn],
+  );
+
+  const toggleTask = useCallback(
+    async (task: Pick<Task, 'id'>) => {
+      await toggleTaskMutationFn({ taskId: task.id });
+    },
+    [toggleTaskMutationFn],
+  );
+
+  const deleteTask = useCallback(
+    async (id: string) => {
+      await deleteTaskMutationFn({ taskId: id });
+    },
+    [deleteTaskMutationFn],
+  );
+
+  return {
+    lists,
+    allTasks,
+    taskFeed,
+    getTaskFeed,
+    isLoading: !!activeCouple && board === undefined,
+    getListCounts,
+    createList,
+    deleteList,
+    createTask,
+    updateTask,
+    toggleTask,
+    deleteTask,
+    refetch: async () => {
+      if (!activeCouple) return;
+      await convex.query(getTaskBoardQuery, {});
+    },
+  };
+}
 
 type TaskInput = {
   title: string;
@@ -127,139 +370,74 @@ type TaskInput = {
   due_date?: string | null;
   priority?: number;
   assigned_to?: string | null;
+  list_id?: string;
 };
 
 export function useTaskItems(listId: string) {
-  const userId = useAuthStore((s) => s.user?.id);
-  const coupleId = useCoupleStore((s) => s.coupleId);
+  const { activeCouple } = useSession();
+  const taskRows = useQuery(getTasksForListQuery, activeCouple && listId ? { listId } : 'skip');
+  const createTaskMutationFn = useMutation(createTaskMutation);
+  const updateTaskMutationFn = useMutation(updateTaskMutation);
+  const deleteTaskMutationFn = useMutation(deleteTaskMutation);
+  const toggleTaskMutationFn = useMutation(toggleTaskMutation);
 
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const fetch = useCallback(async () => {
-    if (!listId || !coupleId) return;
-    const { data } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('list_id', listId)
-      .order('sort_order');
-
-    setTasks((data as Task[]) ?? []);
-    setIsLoading(false);
-  }, [listId, coupleId]);
-
-  useEffect(() => {
-    fetch();
-  }, [fetch]);
-
-  // Realtime: filter by list_id client-side
-  useRealtime<Task>(
-    'tasks',
-    (r) => {
-      if (r.list_id === listId) {
-        setTasks((prev) => prev.some((t) => t.id === r.id) ? prev : [...prev, r]);
-      }
-    },
-    (r) => {
-      if (r.list_id === listId) {
-        setTasks((prev) => prev.map((t) => (t.id === r.id ? r : t)));
-      }
-    },
-    (r) => {
-      setTasks((prev) => prev.filter((t) => t.id !== r.id));
-    },
-  );
+  const tasks = useMemo(() => (taskRows ?? []).map(toTaskRow), [taskRows]);
 
   const create = useCallback(
     async (data: TaskInput) => {
-      if (!coupleId || !userId) return;
-      const tempId = 'temp-' + Date.now();
-      const optimistic = {
-        id: tempId,
-        ...data,
-        list_id: listId,
-        couple_id: coupleId,
-        created_by: userId,
-        priority: data.priority ?? 0,
-        sort_order: tasks.length,
-        is_completed: false,
-        completed_at: null,
-        completed_by: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      } as Task;
-      setTasks((prev) => [...prev, optimistic]);
-
-      const { data: inserted, error } = await supabase.from('tasks').insert({
-        ...data,
-        list_id: listId,
-        couple_id: coupleId,
-        created_by: userId,
-        priority: data.priority ?? 0,
-        sort_order: tasks.length,
-      } as any).select().single();
-
-      if (error) {
-        console.warn('[Coupl] Create task failed:', error.message);
-        setTasks((prev) => prev.filter((t) => t.id !== tempId));
-      } else if (inserted) {
-        setTasks((prev) => prev.map((t) => t.id === tempId ? (inserted as Task) : t));
-      }
+      await createTaskMutationFn({
+        listId: data.list_id ?? listId,
+        title: data.title,
+        ...(data.notes !== undefined ? { notes: data.notes ?? null } : {}),
+        ...(data.due_date !== undefined ? { dueDate: data.due_date ?? null } : {}),
+        ...(data.priority !== undefined ? { priority: data.priority } : {}),
+        ...(data.assigned_to !== undefined ? { assignedTo: data.assigned_to ?? null } : {}),
+      });
     },
-    [coupleId, userId, listId, tasks.length],
+    [createTaskMutationFn, listId],
   );
 
   const update = useCallback(
-    async (id: string, data: Partial<TaskInput>) => {
-      const { error } = await supabase
-        .from('tasks')
-        .update(data as never)
-        .eq('id', id);
-      if (error) console.warn('[Coupl] Update task failed:', error.message);
+    async (id: string, data: Partial<TaskUpdateInput>) => {
+      await updateTaskMutationFn({
+        taskId: id,
+        ...(data.title !== undefined ? { title: data.title } : {}),
+        ...(data.notes !== undefined ? { notes: data.notes ?? null } : {}),
+        ...(data.due_date !== undefined ? { dueDate: data.due_date ?? null } : {}),
+        ...(data.priority !== undefined ? { priority: data.priority } : {}),
+        ...(data.assigned_to !== undefined ? { assignedTo: data.assigned_to ?? null } : {}),
+        ...(data.list_id !== undefined ? { listId: data.list_id } : {}),
+      });
     },
-    [],
+    [updateTaskMutationFn],
   );
 
   const remove = useCallback(
     async (id: string) => {
-      setTasks((prev) => prev.filter((t) => t.id !== id));
-      const { error } = await supabase.from('tasks').delete().eq('id', id);
-      if (error) {
-        console.warn('[Coupl] Delete task failed:', error.message);
-        fetch();
-      }
+      await deleteTaskMutationFn({ taskId: id });
     },
-    [fetch],
+    [deleteTaskMutationFn],
   );
 
   const toggleComplete = useCallback(
     async (task: Task) => {
-      if (!userId) return;
-      const updates = task.is_completed
-        ? { is_completed: false, completed_at: null, completed_by: null }
-        : { is_completed: true, completed_at: new Date().toISOString(), completed_by: userId };
-
-      setTasks((prev) =>
-        prev.map((t) => (t.id === task.id ? { ...t, ...updates } : t)),
-      );
-
-      const { error } = await supabase
-        .from('tasks')
-        .update(updates as never)
-        .eq('id', task.id);
-
-      if (error) {
-        console.warn('[Coupl] Toggle task failed:', error.message);
-        fetch();
-      }
+      await toggleTaskMutationFn({ taskId: task.id });
     },
-    [userId, fetch],
+    [toggleTaskMutationFn],
   );
 
   const counts = {
     total: tasks.length,
-    completed: tasks.filter((t) => t.is_completed).length,
+    completed: tasks.filter((task) => task.is_completed).length,
   };
 
-  return { tasks, isLoading, counts, create, update, remove, toggleComplete };
+  return {
+    tasks,
+    isLoading: !!activeCouple && taskRows === undefined,
+    counts,
+    create,
+    update,
+    remove,
+    toggleComplete,
+  };
 }
