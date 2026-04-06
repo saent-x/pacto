@@ -331,70 +331,6 @@ function upsertTaskRow(row: Task) {
   state.tasks = next;
 }
 
-function updateTaskRow(id: string, patch: Partial<Task>) {
-  state.tasks = state.tasks.map((task) => (task.id === id ? { ...task, ...patch } : task));
-}
-
-function deleteTaskRow(id: string) {
-  state.tasks = state.tasks.filter((task) => task.id !== id);
-}
-
-function buildSelectQuery(table: 'task_lists' | 'tasks') {
-  const filters: Record<string, string> = {};
-
-  const resolve = () => {
-    if (table === 'task_lists') {
-      const data = getListRows().filter((row) => {
-        if (filters.couple_id && row.couple_id !== filters.couple_id) return false;
-        return true;
-      });
-      return { data, error: null };
-    }
-
-    const data = getTaskRows().filter((row) => {
-      if (filters.couple_id && row.couple_id !== filters.couple_id) return false;
-      if (filters.list_id && row.list_id !== filters.list_id) return false;
-      return true;
-    });
-    return { data, error: null };
-  };
-
-  const chain: any = {
-    select: () => chain,
-    eq: (field: string, value: string) => {
-      filters[field] = value;
-      return chain;
-    },
-    order: () => Promise.resolve(resolve()),
-    then: (onFulfilled: (value: { data: unknown[]; error: null }) => unknown, onRejected?: (reason: unknown) => unknown) =>
-      Promise.resolve(resolve()).then(onFulfilled, onRejected),
-  };
-
-  return chain;
-}
-
-function buildInsertQuery(table: 'task_lists' | 'tasks', payload: TaskList | Task) {
-  return {
-    select: () => ({
-      single: async () => {
-        if (table === 'task_lists') {
-          const row = createListResult(payload as Partial<TaskList> & Pick<TaskList, 'name' | 'couple_id' | 'created_by'>);
-          state.lists = [...state.lists, row];
-          return { data: row, error: null };
-        }
-
-        const row = createTaskResult(payload as Partial<Task> & Pick<Task, 'title' | 'list_id' | 'couple_id' | 'created_by'>);
-        upsertTaskRow(row);
-        return { data: row, error: null };
-      },
-    }),
-  };
-}
-
-function buildMutationResult() {
-  return Promise.resolve({ data: null, error: null });
-}
-
 vi.mock('convex/react', () => {
   const React = require('react');
 
@@ -594,53 +530,6 @@ vi.mock('convex/react', () => {
   };
 });
 
-vi.mock('@/src/lib/supabase', () => ({
-  supabase: {
-    from: (table: 'task_lists' | 'tasks') => {
-      if (table === 'task_lists' || table === 'tasks') {
-        return {
-          select: () => buildSelectQuery(table),
-          insert: (payload: TaskList | Task) => buildInsertQuery(table, payload),
-          update: (patch: Partial<Task>) => ({
-            eq: (_field: string, value: string) => {
-              if (table === 'tasks') {
-                updateTaskRow(value, patch);
-              } else {
-                state.lists = state.lists.map((list) => (list.id === value ? { ...list, ...patch } : list));
-              }
-              return buildMutationResult();
-            },
-          }),
-          delete: () => ({
-            eq: (_field: string, value: string) => {
-              if (table === 'tasks') {
-                deleteTaskRow(value);
-              } else {
-                state.lists = state.lists.filter((list) => list.id !== value);
-              }
-              return buildMutationResult();
-            },
-          }),
-        };
-      }
-
-      throw new Error(`Unexpected table: ${table}`);
-    },
-    channel: () => ({ on: () => ({ subscribe: () => ({}) }) }),
-    removeChannel: () => undefined,
-  },
-}));
-
-vi.mock('@/src/stores/authStore', () => ({
-  useAuthStore: (selector: (value: { user: { id: string } | null }) => unknown) =>
-    selector({ user: state.authUserId ? { id: state.authUserId } : null }),
-}));
-
-vi.mock('@/src/stores/coupleStore', () => ({
-  useCoupleStore: (selector: (value: { coupleId: string | null }) => unknown) =>
-    selector({ coupleId: state.coupleId }),
-}));
-
 vi.mock('@/src/hooks/useSession', () => ({
   useSession: () => ({
     profile: state.authUserId ? { _id: state.authUserId } : null,
@@ -654,18 +543,6 @@ vi.mock('@/src/hooks/useSession', () => ({
   }),
 }));
 
-vi.mock('@/src/hooks/useRealtime', () => ({
-  useRealtime: (
-    table: string,
-    onInsert?: (record: Task) => void,
-    onUpdate?: (record: Task) => void,
-    onDelete?: (record: Task) => void,
-  ) => {
-    if (table === 'tasks') {
-      state.taskRealtime = { onInsert, onUpdate, onDelete };
-    }
-  },
-}));
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 

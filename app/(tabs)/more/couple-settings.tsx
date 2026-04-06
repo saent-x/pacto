@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Platform, Share } from 'react-native';
 import { useCallback, useState, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,6 +19,7 @@ import { GlassSection, GlassRow, ThemedSheet, BottomSheetTextInput } from '@/src
 
 const updateCoupleMutation = makeFunctionReference<'mutation', { name?: string; anniversary?: string | null }, any>('couples:updateCouple');
 const leaveCoupleMutation = makeFunctionReference<'mutation', {}>('couples:leaveCouple');
+const exportDataQuery = makeFunctionReference<'query', {}, any>('dataExport:exportMyData');
 
 export default function CoupleSettingsScreen() {
   const C = useColors();
@@ -70,6 +71,20 @@ export default function CoupleSettingsScreen() {
       await refetch();
     } catch (e: any) {
       Alert.alert('Error', e?.message ?? 'Failed to update anniversary.');
+    }
+  };
+
+  const handleExportData = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      const data = await convex.query(exportDataQuery, {});
+      const json = JSON.stringify(data, null, 2);
+      await Share.share({
+        message: json,
+        title: 'Coupl Data Export',
+      });
+    } catch (e: any) {
+      Alert.alert('Error', e?.message ?? 'Failed to export data.');
     }
   };
 
@@ -218,8 +233,34 @@ export default function CoupleSettingsScreen() {
             </GlassSection>
           </Animated.View>
 
-          {/* Destructive */}
+          {/* Privacy & Data */}
           <Animated.View entering={FadeInDown.duration(400).delay(400)}>
+            <GlassSection header="Privacy & Data">
+              <GlassRow
+                icon="lock"
+                iconColor={C.primary}
+                label="Encryption"
+                subtitle="End-to-end encrypt your data"
+                chevron
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push('/(tabs)/more/key-exchange' as never);
+                }}
+              />
+              <GlassRow
+                icon="download"
+                iconColor={C.info}
+                label="Export My Data"
+                subtitle="Download all your couple data"
+                chevron
+                onPress={handleExportData}
+                last
+              />
+            </GlassSection>
+          </Animated.View>
+
+          {/* Destructive */}
+          <Animated.View entering={FadeInDown.duration(400).delay(500)}>
             <GlassSection>
               <GlassRow
                 icon="log-out"

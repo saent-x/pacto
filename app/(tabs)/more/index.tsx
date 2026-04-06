@@ -1,10 +1,12 @@
-import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, Alert } from 'react-native';
 import { useCallback, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useMutation } from 'convex/react';
+import { makeFunctionReference } from 'convex/server';
 import { useColors } from '@/src/hooks/useColors';
 import { useTheme } from '@/src/lib/theme';
 import { useSession } from '@/src/hooks/useSession';
@@ -13,12 +15,15 @@ import { Typography } from '@/src/constants/typography';
 import { Spacing } from '@/src/constants/spacing';
 import { GlassSection, GlassRow, SegmentedControl } from '@/src/components/ui';
 
+const deleteAccountMutation = makeFunctionReference<'mutation', {}, null>('users:deleteAccount');
+
 export default function MoreScreen() {
   const C = useColors();
   const { mode, toggle } = useTheme();
   const { signOut } = useAuthActions();
   const { profile, activeCouple, refetch } = useSession();
   const router = useRouter();
+  const deleteAccount = useMutation(deleteAccountMutation);
   const couple = activeCouple?.couple ?? null;
   const partner = activeCouple?.partner ?? null;
   const [refreshing, setRefreshing] = useState(false);
@@ -106,14 +111,16 @@ export default function MoreScreen() {
             </GlassSection>
           </Animated.View>
 
-          {/* Support */}
+          {/* Support & Legal */}
           <Animated.View entering={FadeInDown.duration(400).delay(300)} style={styles.sectionWrap}>
-            <GlassSection header="Support">
-              <GlassRow icon="info" iconColor={C.textTertiary} label="About Coupl" value="v1.0.0" chevron onPress={navigate('/(tabs)/more/about')} last />
+            <GlassSection header="Support & Legal">
+              <GlassRow icon="info" iconColor={C.textTertiary} label="About Coupl" value="v1.0.0" chevron onPress={navigate('/(tabs)/more/about')} />
+              <GlassRow icon="shield" iconColor={C.textTertiary} label="Privacy Policy" chevron onPress={navigate('/(tabs)/more/privacy')} />
+              <GlassRow icon="file-text" iconColor={C.textTertiary} label="Terms of Service" chevron onPress={navigate('/(tabs)/more/terms')} last />
             </GlassSection>
           </Animated.View>
 
-          {/* Sign out */}
+          {/* Sign out & Delete */}
           <Animated.View entering={FadeInDown.duration(400).delay(400)} style={styles.sectionWrap}>
             <GlassSection>
               <GlassRow
@@ -122,10 +129,39 @@ export default function MoreScreen() {
                 iconBg={C.errorLight}
                 label="Sign Out"
                 destructive
-                last
                 onPress={() => {
                   Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
                   signOut();
+                }}
+              />
+              <GlassRow
+                icon="trash-2"
+                iconColor={C.error}
+                iconBg={C.errorLight}
+                label="Delete Account"
+                destructive
+                last
+                onPress={() => {
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                  Alert.alert(
+                    'Delete Account',
+                    'This will permanently delete your account and all content you created. This action cannot be undone.',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'Delete',
+                        style: 'destructive',
+                        onPress: async () => {
+                          try {
+                            await deleteAccount({});
+                            signOut();
+                          } catch {
+                            Alert.alert('Error', 'Failed to delete account. Please try again.');
+                          }
+                        },
+                      },
+                    ],
+                  );
                 }}
               />
             </GlassSection>

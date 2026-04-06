@@ -188,7 +188,7 @@ export const getTaskBoard = queryGeneric({
 
 export const getTasksForList = queryGeneric({
   args: {
-    listId: v.string(),
+    listId: v.id("taskLists"),
   },
   returns: v.array(taskRecordValidator),
   handler: async (ctx, args) => {
@@ -238,7 +238,7 @@ export const createTaskList = mutationGeneric({
 
 export const deleteTaskList = mutationGeneric({
   args: {
-    listId: v.string(),
+    listId: v.id("taskLists"),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -256,7 +256,7 @@ export const deleteTaskList = mutationGeneric({
 
 export const updateTaskList = mutationGeneric({
   args: {
-    listId: v.string(),
+    listId: v.id("taskLists"),
     name: v.optional(v.string()),
     icon: v.optional(v.string()),
     color: v.optional(v.string()),
@@ -277,12 +277,12 @@ export const updateTaskList = mutationGeneric({
 
 export const createTask = mutationGeneric({
   args: {
-    listId: v.string(),
+    listId: v.id("taskLists"),
     title: v.string(),
     notes: v.optional(v.union(v.string(), v.null())),
     dueDate: v.optional(v.union(v.string(), v.null())),
     priority: v.optional(v.number()),
-    assignedTo: v.optional(v.union(v.string(), v.null())),
+    assignedTo: v.optional(v.union(v.id("users"), v.null())),
   },
   returns: taskRecordValidator,
   handler: async (ctx, args) => {
@@ -290,6 +290,13 @@ export const createTask = mutationGeneric({
     const user = await requireAuthenticatedUser(ctx);
     const activeCouple = await requireActiveCouple(ctx);
     const coupleId = activeCouple.couple._id;
+    if (args.assignedTo) {
+      const partner = activeCouple.partner;
+      const validUserIds = [activeCouple.membership.userId, partner?._id].filter(Boolean);
+      if (!validUserIds.includes(args.assignedTo)) {
+        throw new Error("Can only assign to couple members.");
+      }
+    }
     await getTaskListOrThrow(db, args.listId, coupleId);
     const existingTasks = await listTasksForList(db, args.listId);
     const now = Date.now();
@@ -332,19 +339,26 @@ export const createTask = mutationGeneric({
 
 export const updateTask = mutationGeneric({
   args: {
-    taskId: v.string(),
+    taskId: v.id("tasks"),
     title: v.optional(v.string()),
     notes: v.optional(v.union(v.string(), v.null())),
     dueDate: v.optional(v.union(v.string(), v.null())),
     priority: v.optional(v.number()),
-    assignedTo: v.optional(v.union(v.string(), v.null())),
-    listId: v.optional(v.string()),
+    assignedTo: v.optional(v.union(v.id("users"), v.null())),
+    listId: v.optional(v.id("taskLists")),
   },
   returns: taskRecordValidator,
   handler: async (ctx, args) => {
     const db = ctx.db as unknown as LooseDb;
     const activeCouple = await requireActiveCouple(ctx);
     const coupleId = activeCouple.couple._id;
+    if (args.assignedTo) {
+      const partner = activeCouple.partner;
+      const validUserIds = [activeCouple.membership.userId, partner?._id].filter(Boolean);
+      if (!validUserIds.includes(args.assignedTo)) {
+        throw new Error("Can only assign to couple members.");
+      }
+    }
     const existing = await getTaskOrThrow(db, args.taskId, coupleId);
     const nextListId = args.listId ?? existing.listId;
     if (nextListId !== existing.listId) {
@@ -369,7 +383,7 @@ export const updateTask = mutationGeneric({
 
 export const toggleTask = mutationGeneric({
   args: {
-    taskId: v.string(),
+    taskId: v.id("tasks"),
   },
   returns: taskRecordValidator,
   handler: async (ctx, args) => {
@@ -394,7 +408,7 @@ export const toggleTask = mutationGeneric({
 
 export const deleteTask = mutationGeneric({
   args: {
-    taskId: v.string(),
+    taskId: v.id("tasks"),
   },
   returns: v.null(),
   handler: async (ctx, args) => {

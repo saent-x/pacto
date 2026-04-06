@@ -159,12 +159,15 @@ export async function listPlansForCouple(
   ctx: QueryCtx,
   coupleId: Id<"couples">,
 ): Promise<PlanRecord[]> {
-  const rows = (await ctx.db.query("plans").collect()) as Array<
+  const rows = (await ctx.db
+    .query("plans")
+    .withIndex("by_coupleId", (q: any) => q.eq("coupleId", coupleId))
+    .collect()) as Array<
     Record<string, unknown> & { _id: Id<"plans"> }
   >;
   return rows
     .map(toPlanRecord)
-    .filter((plan): plan is PlanRecord => !!plan && plan.coupleId === coupleId)
+    .filter((plan): plan is PlanRecord => !!plan)
     .sort((left, right) => {
       const leftDate = left.targetDate ?? "9999-12-31";
       const rightDate = right.targetDate ?? "9999-12-31";

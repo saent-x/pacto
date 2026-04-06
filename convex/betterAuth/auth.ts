@@ -11,11 +11,14 @@ import schema from "./schema";
 
 const appScheme = "coupl";
 
-function getEnvWithFallback(
-  name: "BETTER_AUTH_SECRET" | "CONVEX_SITE_URL",
-  fallback: string,
-) {
-  return process.env[name] ?? fallback;
+function getEnvOrThrow(name: "BETTER_AUTH_SECRET" | "CONVEX_SITE_URL") {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(
+      `Missing required environment variable: ${name}. Set it in your Convex dashboard.`,
+    );
+  }
+  return value;
 }
 
 function getTrustedOrigins() {
@@ -44,11 +47,8 @@ export const createAuthOptions = (
   ctx: GenericCtx<DataModel>
 ): BetterAuthOptions => ({
     appName: "Coupl",
-    baseURL: getEnvWithFallback("CONVEX_SITE_URL", "https://example.convex.site"),
-    secret: getEnvWithFallback(
-      "BETTER_AUTH_SECRET",
-      "convex-build-placeholder-secret",
-    ),
+    baseURL: getEnvOrThrow("CONVEX_SITE_URL"),
+    secret: getEnvOrThrow("BETTER_AUTH_SECRET"),
     trustedOrigins: getTrustedOrigins(),
     database: authComponent.adapter(ctx),
     emailAndPassword: {

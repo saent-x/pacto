@@ -1,16 +1,53 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { useColors } from '@/src/hooks/useColors';
+import { useTheme } from '@/src/lib/theme';
 import { Typography } from '@/src/constants/typography';
 import { Spacing, BorderRadius } from '@/src/constants/spacing';
+import { GlassSection, GlassRow } from '@/src/components/ui';
+
+const features: { icon: keyof typeof Feather.glyphMap; text: string; accentKey: string }[] = [
+  { icon: 'calendar', text: 'Shared calendar & events', accentKey: 'reminders' },
+  { icon: 'bell', text: 'Reminders that matter', accentKey: 'reminders' },
+  { icon: 'check-square', text: 'Task lists for us', accentKey: 'tasks' },
+  { icon: 'book-open', text: 'Journaling together', accentKey: 'journal' },
+  { icon: 'heart', text: 'Love notes & check-ins', accentKey: 'error' },
+  { icon: 'gift', text: 'Wishlists & surprises', accentKey: 'wishlists' },
+  { icon: 'dollar-sign', text: 'Expense tracking', accentKey: 'expenses' },
+  { icon: 'repeat', text: 'Rituals & habits', accentKey: 'plans' },
+  { icon: 'flag', text: 'Milestones & countdowns', accentKey: 'milestones' },
+];
 
 export default function AboutScreen() {
   const C = useColors();
+  const { mode } = useTheme();
   const router = useRouter();
+
+  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)';
+  const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+
+  const getAccent = (key: string) => {
+    const map: Record<string, string> = {
+      reminders: C.reminders,
+      tasks: C.tasks,
+      journal: C.journal,
+      error: C.error,
+      wishlists: C.wishlists,
+      expenses: C.expenses,
+      plans: C.plans,
+      milestones: C.milestones,
+    };
+    return map[key] ?? C.primary;
+  };
+
+  const navigate = (path: string) => () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push(path as never);
+  };
 
   return (
     <View style={[styles.screen, { backgroundColor: C.background }]}>
@@ -28,42 +65,42 @@ export default function AboutScreen() {
         </View>
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <Animated.View entering={FadeInDown.duration(500)} style={styles.logoSection}>
+          {/* Logo + tagline */}
+          <Animated.View entering={FadeIn.duration(600)} style={styles.logoSection}>
             <Text style={[styles.logo, { color: C.primary }]}>coupl</Text>
+            <View style={[styles.goldRule, { backgroundColor: C.primary }]} />
             <Text style={[styles.tagline, { color: C.textSecondary }]}>
-              A shared space for two people building something together.
+              A shared space for two people{'\n'}building something together.
             </Text>
           </Animated.View>
 
-          <Animated.View entering={FadeInDown.duration(400).delay(100)} style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: C.primary }]}>What is Coupl?</Text>
-            <Text style={[styles.body, { color: C.textSecondary }]}>
-              Coupl is a private space for couples to share their life — from daily reminders and tasks to love notes,
-              wishlists, and shared memories. Everything stays between you and your partner.
-            </Text>
+          {/* Features */}
+          <Animated.View entering={FadeInDown.duration(400).delay(150)}>
+            <Text style={[styles.sectionTitle, { color: C.primary }]}>What you can do</Text>
+            <View style={styles.featureGrid}>
+              {features.map((item, i) => (
+                <Animated.View
+                  key={item.text}
+                  entering={FadeInDown.duration(300).delay(200 + i * 40)}
+                  style={[styles.featureCard, { backgroundColor: glassBg, borderColor: glassBorder }]}
+                >
+                  <Feather name={item.icon} size={15} color={getAccent(item.accentKey)} />
+                  <Text style={[styles.featureText, { color: C.text }]}>{item.text}</Text>
+                </Animated.View>
+              ))}
+            </View>
           </Animated.View>
 
-          <Animated.View entering={FadeInDown.duration(400).delay(150)} style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: C.primary }]}>Features</Text>
-            {[
-              { icon: 'calendar', text: 'Shared calendar & events' },
-              { icon: 'bell', text: 'Reminders that matter' },
-              { icon: 'check-square', text: 'Task lists for us' },
-              { icon: 'book-open', text: 'Journaling together' },
-              { icon: 'heart', text: 'Love notes & check-ins' },
-              { icon: 'gift', text: 'Wishlists & surprises' },
-              { icon: 'dollar-sign', text: 'Expense tracking' },
-              { icon: 'repeat', text: 'Rituals & habits' },
-              { icon: 'flag', text: 'Milestones & countdowns' },
-            ].map((item, i) => (
-              <View key={i} style={styles.featureRow}>
-                <Feather name={item.icon as any} size={16} color={C.primary} />
-                <Text style={[styles.featureText, { color: C.text }]}>{item.text}</Text>
-              </View>
-            ))}
+          {/* Legal links */}
+          <Animated.View entering={FadeInDown.duration(400).delay(500)}>
+            <GlassSection header="Legal">
+              <GlassRow icon="shield" iconColor={C.textTertiary} label="Privacy Policy" chevron onPress={navigate('/(tabs)/more/privacy')} />
+              <GlassRow icon="file-text" iconColor={C.textTertiary} label="Terms of Service" chevron onPress={navigate('/(tabs)/more/terms')} last />
+            </GlassSection>
           </Animated.View>
 
-          <Animated.View entering={FadeInDown.duration(400).delay(200)} style={styles.footer}>
+          {/* Footer */}
+          <Animated.View entering={FadeInDown.duration(400).delay(600)} style={styles.footer}>
             <Text style={[styles.version, { color: C.textTertiary }]}>Version 1.0.0</Text>
             <Text style={[styles.madeWith, { color: C.textTertiary }]}>
               Made with love for couples everywhere
@@ -96,10 +133,10 @@ const styles = StyleSheet.create({
     ...Typography.subheading,
   },
   content: {
-    paddingHorizontal: Spacing['2xl'],
-    paddingTop: Spacing['3xl'],
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing['2xl'],
     paddingBottom: 120,
-    gap: Spacing['3xl'],
+    gap: Spacing['2xl'],
   },
   logoSection: {
     alignItems: 'center',
@@ -108,38 +145,46 @@ const styles = StyleSheet.create({
   },
   logo: {
     ...Typography.display,
-    fontSize: 56,
+    fontSize: 52,
+  },
+  goldRule: {
+    width: 24,
+    height: 2,
+    borderRadius: 1,
   },
   tagline: {
     ...Typography.body,
     textAlign: 'center',
+    lineHeight: 22,
     maxWidth: 280,
-  },
-  section: {
-    gap: Spacing.lg,
   },
   sectionTitle: {
     ...Typography.overline,
     letterSpacing: 2.4,
     fontSize: 11,
+    marginBottom: Spacing.md,
   },
-  body: {
-    ...Typography.body,
-    lineHeight: 24,
+  featureGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
   },
-  featureRow: {
+  featureCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
-    paddingVertical: 6,
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.sm,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   featureText: {
-    ...Typography.body,
+    ...Typography.small,
   },
   footer: {
     alignItems: 'center',
     gap: Spacing.xs,
-    paddingTop: Spacing.xl,
+    paddingTop: Spacing.md,
   },
   version: {
     ...Typography.caption,

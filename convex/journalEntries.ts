@@ -112,7 +112,11 @@ export const getJournalEntries = queryGeneric({
     const db = ctx.db as unknown as LooseDb;
     const storage = ctx.storage as unknown as LooseStorage;
     const activeCouple = await requireActiveCouple(ctx);
-    return listJournalEntriesForCouple(db, storage, activeCouple.couple._id);
+    const entries = await listJournalEntriesForCouple(db, storage, activeCouple.couple._id);
+    return entries.filter(
+      (entry) =>
+        !entry.isPrivate || entry.authorId === activeCouple.membership.userId,
+    );
   },
 });
 
@@ -177,7 +181,7 @@ export const createJournalEntry = mutationGeneric({
 
 export const updateJournalEntry = mutationGeneric({
   args: {
-    entryId: v.string(),
+    entryId: v.id("journalEntries"),
     title: v.optional(v.union(v.string(), v.null())),
     body: v.optional(v.string()),
     mood: v.optional(v.union(v.string(), v.null())),
@@ -223,7 +227,7 @@ export const updateJournalEntry = mutationGeneric({
 
 export const deleteJournalEntry = mutationGeneric({
   args: {
-    entryId: v.string(),
+    entryId: v.id("journalEntries"),
   },
   returns: v.null(),
   handler: async (ctx, args) => {

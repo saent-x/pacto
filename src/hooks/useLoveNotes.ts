@@ -1,8 +1,9 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useConvex, useMutation, useQuery } from 'convex/react';
 import { makeFunctionReference } from 'convex/server';
 
 import { useSession } from './useSession';
+import { useEncryption } from './useEncryption';
 
 type LoveNoteDoc = {
   _id: string;
@@ -41,32 +42,53 @@ const deleteLoveNoteMutation = makeFunctionReference<
 export function useLoveNotes() {
   const { activeCouple } = useSession();
   const convex = useConvex();
+  const { encrypt, decrypt, hasKey } = useEncryption();
   const rows = useQuery(listLoveNotesQuery, activeCouple ? {} : 'skip');
   const createLoveNote = useMutation(createLoveNoteMutation);
   const updateLoveNoteFn = useMutation(updateLoveNoteMutation);
   const deleteLoveNote = useMutation(deleteLoveNoteMutation);
 
-  const notes = useMemo(() => rows ?? [], [rows]);
+  const rawNotes = useMemo(() => rows ?? [], [rows]);
+  const [notes, setNotes] = useState<LoveNoteDoc[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function decryptNotes() {
+      const decrypted = await Promise.all(
+        rawNotes.map(async (note) => ({
+          ...note,
+          body: await decrypt(note.body),
+        })),
+      );
+      if (!cancelled) setNotes(decrypted);
+    }
+    if (hasKey) {
+      decryptNotes();
+    } else {
+      setNotes(rawNotes);
+    }
+    return () => { cancelled = true; };
+  }, [rawNotes, decrypt, hasKey]);
 
   const create = useCallback(
     async (data: LoveNoteInput) => {
       await createLoveNote({
-        body: data.body,
+        body: await encrypt(data.body),
         isPrivate: data.isPrivate,
       });
     },
-    [createLoveNote],
+    [createLoveNote, encrypt],
   );
 
   const update = useCallback(
     async (id: string, data: Partial<LoveNoteInput>) => {
       await updateLoveNoteFn({
         noteId: id,
-        ...(data.body !== undefined ? { body: data.body } : {}),
+        ...(data.body !== undefined ? { body: await encrypt(data.body!) } : {}),
         ...(data.isPrivate !== undefined ? { isPrivate: data.isPrivate } : {}),
       });
     },
-    [updateLoveNoteFn],
+    [updateLoveNoteFn, encrypt],
   );
 
   const remove = useCallback(

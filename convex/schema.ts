@@ -61,6 +61,7 @@ export default defineSchema({
     budget: v.union(v.number(), v.null()),
     status: v.string(),
     notes: v.union(v.string(), v.null()),
+    coverImageUrl: v.optional(v.union(v.string(), v.null())),
     priority: v.number(),
     isPrivate: v.boolean(),
     createdAt: v.number(),

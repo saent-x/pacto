@@ -159,12 +159,15 @@ export async function listRitualsForCouple(
   ctx: QueryCtx,
   coupleId: Id<"couples">,
 ): Promise<RitualRecord[]> {
-  const rows = (await ctx.db.query("rituals").collect()) as Array<
+  const rows = (await ctx.db
+    .query("rituals")
+    .withIndex("by_coupleId", (q: any) => q.eq("coupleId", coupleId))
+    .collect()) as Array<
     Record<string, unknown> & { _id: Id<"rituals"> }
   >;
   return rows
     .map(toRitualRecord)
-    .filter((ritual): ritual is RitualRecord => !!ritual && ritual.coupleId === coupleId)
+    .filter((ritual): ritual is RitualRecord => !!ritual)
     .sort((left, right) => {
       const leftSort = left.nextOccurrenceAt ?? Number.MAX_SAFE_INTEGER;
       const rightSort = right.nextOccurrenceAt ?? Number.MAX_SAFE_INTEGER;

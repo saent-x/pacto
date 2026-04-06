@@ -110,13 +110,20 @@ export const createReminder = mutationGeneric({
     recurrence: v.optional(v.union(v.string(), v.null())),
     priority: v.optional(v.number()),
     category: v.optional(v.union(v.string(), v.null())),
-    assignedTo: v.optional(v.union(v.string(), v.null())),
+    assignedTo: v.optional(v.union(v.id("users"), v.null())),
   },
   returns: reminderValidator,
   handler: async (ctx, args) => {
     const db = ctx.db as unknown as LooseDb;
     const user = await requireAuthenticatedUser(ctx);
     const activeCouple = await requireActiveCouple(ctx);
+    if (args.assignedTo) {
+      const partner = activeCouple.partner;
+      const validUserIds = [activeCouple.membership.userId, partner?._id].filter(Boolean);
+      if (!validUserIds.includes(args.assignedTo)) {
+        throw new Error("Can only assign to couple members.");
+      }
+    }
     const now = Date.now();
     const reminderId = await db.insert("reminders", {
       coupleId: activeCouple.couple._id,
@@ -156,19 +163,26 @@ export const createReminder = mutationGeneric({
 
 export const updateReminder = mutationGeneric({
   args: {
-    reminderId: v.string(),
+    reminderId: v.id("reminders"),
     title: v.optional(v.string()),
     description: v.optional(v.union(v.string(), v.null())),
     dueAt: v.optional(v.number()),
     recurrence: v.optional(v.union(v.string(), v.null())),
     priority: v.optional(v.number()),
     category: v.optional(v.union(v.string(), v.null())),
-    assignedTo: v.optional(v.union(v.string(), v.null())),
+    assignedTo: v.optional(v.union(v.id("users"), v.null())),
   },
   returns: reminderValidator,
   handler: async (ctx, args) => {
     const db = ctx.db as unknown as LooseDb;
     const activeCouple = await requireActiveCouple(ctx);
+    if (args.assignedTo) {
+      const partner = activeCouple.partner;
+      const validUserIds = [activeCouple.membership.userId, partner?._id].filter(Boolean);
+      if (!validUserIds.includes(args.assignedTo)) {
+        throw new Error("Can only assign to couple members.");
+      }
+    }
     const existing = await getReminderOrThrow(db, args.reminderId, activeCouple.couple._id);
     const updates = {
       ...(args.title !== undefined ? { title: args.title } : {}),
@@ -187,7 +201,7 @@ export const updateReminder = mutationGeneric({
 
 export const toggleReminder = mutationGeneric({
   args: {
-    reminderId: v.string(),
+    reminderId: v.id("reminders"),
   },
   returns: reminderValidator,
   handler: async (ctx, args) => {
@@ -209,7 +223,7 @@ export const toggleReminder = mutationGeneric({
 
 export const deleteReminder = mutationGeneric({
   args: {
-    reminderId: v.string(),
+    reminderId: v.id("reminders"),
   },
   returns: v.null(),
   handler: async (ctx, args) => {

@@ -154,12 +154,15 @@ export async function listEventsForCouple(
   ctx: QueryCtx,
   coupleId: Id<"couples">,
 ): Promise<EventRecord[]> {
-  const rows = (await ctx.db.query("events").collect()) as Array<
+  const rows = (await ctx.db
+    .query("events")
+    .withIndex("by_coupleId", (q: any) => q.eq("coupleId", coupleId))
+    .collect()) as Array<
     Record<string, unknown> & { _id: Id<"events"> }
   >;
   return rows
     .map(toEventRecord)
-    .filter((event): event is EventRecord => !!event && event.coupleId === coupleId)
+    .filter((event): event is EventRecord => !!event)
     .sort(
       (left, right) =>
         left.startsAt - right.startsAt ||
