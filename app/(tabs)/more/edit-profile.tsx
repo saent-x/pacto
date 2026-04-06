@@ -5,6 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useMutation } from 'convex/react';
+import { makeFunctionReference } from 'convex/server';
 import { useColors } from '@/src/hooks/useColors';
 import { useTheme } from '@/src/lib/theme';
 import { useSession } from '@/src/hooks/useSession';
@@ -12,12 +14,19 @@ import { Typography } from '@/src/constants/typography';
 import { Spacing } from '@/src/constants/spacing';
 import { GlassSection, GlassRow } from '@/src/components/ui';
 
+const createProfileMutation = makeFunctionReference<
+  'mutation',
+  { displayName?: string; avatarUrl?: string },
+  unknown
+>('users:createProfile');
+
 export default function EditProfileScreen() {
   const C = useColors();
   const { mode } = useTheme();
   const router = useRouter();
   const { profile, refetch } = useSession();
   const [displayName, setDisplayName] = useState(profile?.displayName ?? '');
+  const updateProfile = useMutation(createProfileMutation);
 
   const handleEditName = () => {
     Haptics.selectionAsync();
@@ -31,8 +40,12 @@ export default function EditProfileScreen() {
             text: 'Save',
             onPress: async (text?: string) => {
               if (text?.trim() && text.trim() !== displayName) {
-                setDisplayName(text.trim());
-                await refetch();
+                try {
+                  await updateProfile({ displayName: text.trim() });
+                  setDisplayName(text.trim());
+                } catch {
+                  Alert.alert('Error', 'Failed to update display name. Please try again.');
+                }
               }
             },
           },

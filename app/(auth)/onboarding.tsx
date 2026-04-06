@@ -24,6 +24,7 @@ import { Spacing, BorderRadius } from '@/src/constants/spacing';
 import { Button, Input } from '@/src/components/ui';
 import { useAuthActions } from '@/src/hooks/useAuthActions';
 import { useSession } from '@/src/hooks/useSession';
+import { generateCoupleKey, storeCoupleKey } from '@/src/lib/crypto';
 
 type Step = 'choose' | 'create' | 'created';
 
@@ -50,6 +51,16 @@ export default function OnboardingScreen() {
         name: coupleName.trim(),
       });
       setInviteCode(result.inviteCode);
+
+      // Auto-generate encryption key for the new couple
+      try {
+        const coupleId = result.couple._id;
+        const keyBase64 = await generateCoupleKey();
+        await storeCoupleKey(coupleId, keyBase64);
+      } catch {
+        // Non-fatal — encryption can be set up later from settings
+      }
+
       setStep('created');
     } catch (error) {
       Alert.alert(

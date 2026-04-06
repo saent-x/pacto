@@ -21,11 +21,11 @@ type FeatureItem = {
 };
 
 const FEATURES: FeatureItem[] = [
+  { id: 'love-notes', label: 'Love Notes', subtitle: 'Say something sweet', icon: 'heart', route: '/(tabs)/together/love-notes', accentKey: 'error' },
+  { id: 'check-ins', label: 'Check-ins', subtitle: 'Share how you feel', icon: 'smile', route: '/(tabs)/together/check-ins', accentKey: 'mood' },
   { id: 'expenses', label: 'Expenses', subtitle: 'Track & settle', icon: 'dollar-sign', route: '/(tabs)/together/expenses', accentKey: 'expenses' },
   { id: 'wishlists', label: 'Wishlists', subtitle: 'Drop hints', icon: 'gift', route: '/(tabs)/together/wishlists', accentKey: 'wishlists' },
-  { id: 'love-notes', label: 'Love Notes', subtitle: 'Say something sweet', icon: 'heart', route: '/(tabs)/together/love-notes', accentKey: 'error' },
   { id: 'milestones', label: 'Milestones', subtitle: 'Moments that matter', icon: 'flag', route: '/(tabs)/together/milestones', accentKey: 'milestones' },
-  { id: 'check-ins', label: 'Check-ins', subtitle: 'Share how you feel', icon: 'smile', route: '/(tabs)/together/check-ins', accentKey: 'mood' },
   { id: 'plans', label: 'Plans', subtitle: 'Dream & do', icon: 'map', route: '/(tabs)/together/plans', accentKey: 'plans' },
 ];
 
@@ -74,7 +74,7 @@ export default function TogetherScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />
           }
         >
-          {/* Header — matches home pattern */}
+          {/* Header */}
           <Animated.View entering={FadeIn.duration(500)} style={styles.header}>
             <Text style={[styles.greeting, { color: C.textTertiary }]}>Together</Text>
             <Text style={[styles.title, { color: C.text }]}>{coupleName}</Text>
@@ -88,14 +88,24 @@ export default function TogetherScreen() {
             )}
           </Animated.View>
 
-          {/* Feature Grid */}
+          {/* Warm intro card */}
+          <Animated.View
+            entering={FadeInDown.duration(400).delay(60)}
+            style={[styles.introCard, { backgroundColor: C.primaryMuted, borderColor: glassBorder }]}
+          >
+            <Text style={[styles.introText, { color: C.textSecondary }]}>
+              Your shared tools for everyday life together — from love notes to expense tracking.
+            </Text>
+          </Animated.View>
+
+          {/* Feature Grid — two columns */}
           <View style={styles.grid}>
             {FEATURES.map((feature, index) => {
               const accent = getAccent(feature.accentKey, C);
               return (
                 <Animated.View
                   key={feature.id}
-                  entering={FadeInDown.duration(400).delay(80 + index * 40)}
+                  entering={FadeInDown.duration(350).delay(120 + index * 50)}
                   style={styles.gridItem}
                 >
                   <TouchableOpacity
@@ -104,13 +114,10 @@ export default function TogetherScreen() {
                     style={[styles.card, { backgroundColor: glassBg, borderColor: glassBorder }]}
                   >
                     <View style={[styles.iconCircle, { backgroundColor: accent.bg }]}>
-                      <Feather name={feature.icon} size={18} color={accent.fg} />
+                      <Feather name={feature.icon} size={20} color={accent.fg} />
                     </View>
-                    <View style={styles.cardBody}>
-                      <Text style={[styles.cardLabel, { color: C.text }]}>{feature.label}</Text>
-                      <Text style={[styles.cardSub, { color: C.textTertiary }]}>{feature.subtitle}</Text>
-                    </View>
-                    <Feather name="chevron-right" size={14} color={C.textTertiary} style={{ opacity: 0.4 }} />
+                    <Text style={[styles.cardLabel, { color: C.text }]}>{feature.label}</Text>
+                    <Text style={[styles.cardSub, { color: C.textTertiary }]}>{feature.subtitle}</Text>
                   </TouchableOpacity>
                 </Animated.View>
               );
@@ -126,12 +133,12 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   flex: { flex: 1 },
   scroll: {
-    paddingHorizontal: Spacing['2xl'],
+    paddingHorizontal: Spacing.lg,
     paddingBottom: 120,
-    gap: Spacing['2xl'],
+    gap: Spacing.xl,
   },
 
-  // Header — unified with home
+  // Header
   header: {
     paddingTop: Spacing.sm,
     gap: Spacing.sm,
@@ -159,35 +166,48 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  // Grid — list layout for better readability
-  grid: {
-    gap: Spacing.sm,
+  // Intro
+  introCard: {
+    borderRadius: BorderRadius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
   },
-  gridItem: {},
-  card: {
+  introText: {
+    ...Typography.caption,
+    lineHeight: 20,
+  },
+
+  // Grid — 2 columns
+  grid: {
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: Spacing.md,
+  },
+  gridItem: {
+    width: '47.5%',
+  },
+  card: {
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
-    gap: Spacing.lg,
+    gap: Spacing.sm,
+    minHeight: 130,
   },
   iconCircle: {
-    width: 42,
-    height: 42,
+    width: 40,
+    height: 40,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardBody: {
-    flex: 1,
-    gap: 2,
-  },
   cardLabel: {
     ...Typography.subheading,
     fontSize: 15,
+    marginTop: Spacing.xs,
   },
   cardSub: {
     ...Typography.small,
+    lineHeight: 16,
   },
 });

@@ -7,6 +7,8 @@ const createCoupleMutation = makeFunctionReference<
   'mutation',
   { name: string; anniversary?: string | null },
   {
+    couple: { _id: string; name: string };
+    membership: { _id: string };
     inviteCode: string;
   }
 >('couples:createCouple');

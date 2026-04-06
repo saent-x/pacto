@@ -1,4 +1,4 @@
-import { useRef, useCallback, useState } from 'react';
+import React, { useRef, useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,37 +7,70 @@ import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { FlashList } from '@shopify/flash-list';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { makeFunctionReference } from 'convex/server';
 import { useColors } from '@/src/hooks/useColors';
 import { useSession } from '@/src/hooks/useSession';
-import { useMood } from '@/src/hooks/useMood';
+import { useEncryption } from '@/src/hooks/useEncryption';
 import { Typography } from '@/src/constants/typography';
 import { Spacing, BorderRadius } from '@/src/constants/spacing';
 import { EmptyState } from '@/src/components/ui';
 import { CreateCheckInSheet } from '@/src/components/checkIns/CreateCheckInSheet';
 
 const getCheckInsQuery = makeFunctionReference<'query', { checkInDate?: string }, any>('checkIns:getCheckIns');
+const submitCheckInMutation = makeFunctionReference<'mutation', { mood?: string | null; note?: string | null; isPrivate?: boolean }, any>('checkIns:submitCheckIn');
 
 interface CheckInRecord {
   _id: string;
+  authorId: string;
   mood: string | null;
   note: string | null;
   isPrivate: boolean;
   checkInDate: string;
   createdAt: number;
-  userId: string;
 }
 
 export default function CheckInsScreen() {
   const C = useColors();
   const router = useRouter();
   const { profile, activeCouple } = useSession();
-  const { myMood, partnerMood, checkIn } = useMood();
+  const { encrypt, decrypt, hasKey } = useEncryption();
   const sheetRef = useRef<BottomSheetModal>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const submitCheckIn = useMutation(submitCheckInMutation);
 
-  const checkIns = useQuery(getCheckInsQuery, {}) as CheckInRecord[] | undefined;
+  const today = new Date().toISOString().slice(0, 10);
+  const rawCheckIns = useQuery(getCheckInsQuery, {}) as CheckInRecord[] | undefined;
+  const rawTodayCheckIns = useQuery(getCheckInsQuery, { checkInDate: today }) as CheckInRecord[] | undefined;
+
+  // Decrypt notes asynchronously — existing plaintext passes through
+  const [checkIns, setCheckIns] = useState<CheckInRecord[] | undefined>(rawCheckIns);
+  const [todayCheckIns, setTodayCheckIns] = useState<CheckInRecord[] | undefined>(rawTodayCheckIns);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    async function decryptList(items: CheckInRecord[] | undefined, setter: (v: CheckInRecord[]) => void) {
+      if (!items) return;
+      const decrypted = await Promise.all(
+        items.map(async (c) => ({
+          ...c,
+          note: c.note ? await decrypt(c.note) : c.note,
+        })),
+      );
+      if (!cancelled) setter(decrypted);
+    }
+    if (hasKey) {
+      decryptList(rawCheckIns, setCheckIns);
+      decryptList(rawTodayCheckIns, (v) => setTodayCheckIns(v));
+    } else {
+      setCheckIns(rawCheckIns);
+      setTodayCheckIns(rawTodayCheckIns);
+    }
+    return () => { cancelled = true; };
+  }, [rawCheckIns, rawTodayCheckIns, decrypt, hasKey]);
+
+  const myTodayCheckIn = todayCheckIns?.find((c) => c.authorId === activeCouple?.membership?.userId);
+  const partnerTodayCheckIn = todayCheckIns?.find((c) => c.authorId !== activeCouple?.membership?.userId);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -46,15 +79,17 @@ export default function CheckInsScreen() {
 
   const handleCreateCheckIn = useCallback(
     async (data: { mood: string | null; note: string | null; isPrivate: boolean }) => {
-      if (data.mood) {
-        await checkIn(1, data.mood, data.note ?? undefined);
-      }
+      await submitCheckIn({
+        mood: data.mood,
+        note: data.note ? await encrypt(data.note) : data.note,
+        isPrivate: data.isPrivate,
+      });
     },
-    [checkIn],
+    [submitCheckIn, encrypt],
   );
 
-  const todayMood = myMood?.emoji;
-  const partnerTodayMood = partnerMood?.emoji;
+  const todayMood = myTodayCheckIn?.mood;
+  const partnerTodayMood = partnerTodayCheckIn?.mood;
 
   const renderCheckInItem = ({ item, index }: { item: CheckInRecord; index: number }) => (
     <Animated.View entering={FadeInDown.duration(400).delay(index * 60)}>

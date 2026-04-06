@@ -131,12 +131,15 @@ export async function listCheckInsForCouple(
   ctx: QueryCtx,
   coupleId: Id<"couples">,
 ): Promise<CheckInRecord[]> {
-  const rows = (await ctx.db.query("checkIns").collect()) as Array<
+  const rows = (await ctx.db
+    .query("checkIns")
+    .withIndex("by_coupleId", (q: any) => q.eq("coupleId", coupleId))
+    .collect()) as Array<
     Record<string, unknown> & { _id: Id<"checkIns"> }
   >;
   return rows
     .map(toCheckInRecord)
-    .filter((checkIn): checkIn is CheckInRecord => !!checkIn && checkIn.coupleId === coupleId)
+    .filter((checkIn): checkIn is CheckInRecord => !!checkIn)
     .sort(
       (left, right) =>
         right.createdAt - left.createdAt || left._id.localeCompare(right._id),

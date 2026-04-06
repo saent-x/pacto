@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useConvex, useMutation, useQuery } from 'convex/react';
 import { makeFunctionReference } from 'convex/server';
 
 import { useSession } from './useSession';
+import { useEncryption } from './useEncryption';
 import type { JournalEntry } from '@/src/types/database';
 
 type EntryInput = {
@@ -87,6 +88,7 @@ function toJournalEntryRow(entry: JournalEntryDoc): JournalEntry {
 export function useJournal() {
   const { activeCouple, profile } = useSession();
   const convex = useConvex();
+  const { encrypt, decrypt, hasKey } = useEncryption();
   const userId = profile?._id ?? null;
   const rows = useQuery(getJournalEntriesQuery, activeCouple ? {} : 'skip');
   const generateImageUploadUrl = useMutation(generateJournalImageUploadUrlMutation);
@@ -95,35 +97,57 @@ export function useJournal() {
   const deleteJournalEntry = useMutation(deleteJournalEntryMutation);
   const [filter, setFilter] = useState<JournalFilter>('all');
 
-  const allEntries = useMemo(() => (rows ?? []).map(toJournalEntryRow), [rows]);
+  // Decrypt entries asynchronously — existing plaintext passes through unchanged
+  const rawEntries = useMemo(() => (rows ?? []).map(toJournalEntryRow), [rows]);
+  const [allEntries, setAllEntries] = useState<JournalEntry[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function decryptEntries() {
+      const decrypted = await Promise.all(
+        rawEntries.map(async (entry) => ({
+          ...entry,
+          title: entry.title ? await decrypt(entry.title) : entry.title,
+          body: await decrypt(entry.body),
+        })),
+      );
+      if (!cancelled) setAllEntries(decrypted);
+    }
+    if (hasKey) {
+      decryptEntries();
+    } else {
+      setAllEntries(rawEntries);
+    }
+    return () => { cancelled = true; };
+  }, [rawEntries, decrypt, hasKey]);
 
   const create = useCallback(
     async (data: EntryInput) => {
       await createJournalEntry({
-        title: data.title ?? null,
-        body: data.body,
+        title: data.title ? await encrypt(data.title) : null,
+        body: await encrypt(data.body),
         mood: data.mood ?? null,
         isPrivate: data.is_private ?? false,
         entryDate: data.entry_date,
         ...(data.media_storage_ids ? { mediaStorageIds: data.media_storage_ids } : {}),
       });
     },
-    [createJournalEntry],
+    [createJournalEntry, encrypt],
   );
 
   const update = useCallback(
     async (id: string, data: Partial<EntryInput>) => {
       await updateJournalEntry({
         entryId: id,
-        ...(data.title !== undefined ? { title: data.title ?? null } : {}),
-        ...(data.body !== undefined ? { body: data.body } : {}),
+        ...(data.title !== undefined ? { title: data.title ? await encrypt(data.title) : null } : {}),
+        ...(data.body !== undefined ? { body: await encrypt(data.body!) } : {}),
         ...(data.mood !== undefined ? { mood: data.mood ?? null } : {}),
         ...(data.is_private !== undefined ? { isPrivate: data.is_private } : {}),
         ...(data.entry_date !== undefined ? { entryDate: data.entry_date } : {}),
         ...(data.media_storage_ids !== undefined ? { mediaStorageIds: data.media_storage_ids } : {}),
       });
     },
-    [updateJournalEntry],
+    [updateJournalEntry, encrypt],
   );
 
   const remove = useCallback(
