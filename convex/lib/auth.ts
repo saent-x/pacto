@@ -281,10 +281,10 @@ export async function upsertCurrentUser(
 
   if (existing) {
     await ctx.db.patch(existing._id, nextUser);
-    return {
+    return toSessionUser({
       ...existing,
       ...nextUser,
-    };
+    })!;
   }
 
   const _id = await ctx.db.insert("users", {
@@ -292,11 +292,11 @@ export async function upsertCurrentUser(
     createdAt: now,
   });
 
-  return {
+  return toSessionUser({
     _id,
     ...nextUser,
     createdAt: now,
-  };
+  } as SessionUser)!;
 }
 
 export async function resolveActiveCoupleForUser(

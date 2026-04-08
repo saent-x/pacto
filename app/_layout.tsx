@@ -9,24 +9,22 @@ import { useFonts } from 'expo-font';
 import {
   Newsreader_300Light_Italic,
   Newsreader_400Regular,
-  Newsreader_400Regular_Italic,
 } from '@expo-google-fonts/newsreader';
 import {
   DMSans_400Regular,
-  DMSans_400Regular_Italic,
   DMSans_500Medium,
-  DMSans_500Medium_Italic,
   DMSans_600SemiBold,
-  DMSans_700Bold,
-  DMSans_700Bold_Italic,
 } from '@expo-google-fonts/dm-sans';
 
 import { useTheme } from '@/src/lib/theme';
 import { useSession } from '@/src/hooks/useSession';
+import { useColors } from '@/src/hooks/useColors';
 import { AppProviders } from '@/src/providers/AppProviders';
+import { AppSplash } from '@/src/components/ui/AppSplash';
 
 export { ErrorBoundary } from 'expo-router';
 
+// Hide the native splash immediately — AppSplash takes over.
 SplashScreen.preventAutoHideAsync();
 
 function useProtectedRoute() {
@@ -65,37 +63,50 @@ function useProtectedRoute() {
       return;
     }
 
-    if (!inTabsGroup) {
+    // Let the onboarding "created" step (invite-code screen) stay visible
+    // even after the couple exists — the user navigates away manually.
+    const onOnboardingScreen = inAuthGroup && authScreen === 'onboarding';
+
+    if (!inTabsGroup && !onOnboardingScreen) {
       router.replace(route);
     }
   }, [activeCouple, isAuthenticated, isLoading, route, router, segments]);
 }
 
-function RootNavigator({
-  fontsLoaded,
-  markReady,
-}: {
-  fontsLoaded: boolean;
-  markReady: () => void;
-}) {
-  const { isLoading } = useSession();
+function RootNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
+  const { isLoading, route } = useSession();
+  const C = useColors();
+  const hasInitialized = useRef(false);
 
   useProtectedRoute();
 
-  useEffect(() => {
-    if (fontsLoaded && !isLoading) {
-      markReady();
-    }
-  }, [fontsLoaded, isLoading, markReady]);
+  // App is ready when fonts + auth + route are all resolved.
+  const appReady = fontsLoaded && !isLoading && !!route;
 
-  if (!fontsLoaded || isLoading) {
-    return null;
+  if (appReady) {
+    hasInitialized.current = true;
+  }
+
+  // Dismiss native splash on very first render so AppSplash is visible.
+  useEffect(() => {
+    SplashScreen.hideAsync();
+  }, []);
+
+  // Show AppSplash until everything is ready. Uses system fonts so it
+  // renders instantly — no dependency on custom font loading.
+  if (!hasInitialized.current) {
+    return <AppSplash />;
   }
 
   return (
     <>
       <StatusBarWrapper />
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: C.background },
+        }}
+      >
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
       </Stack>
@@ -104,32 +115,18 @@ function RootNavigator({
 }
 
 export default function RootLayout() {
-  const appReadyRef = useRef(false);
-
   const [fontsLoaded] = useFonts({
     Newsreader_300Light_Italic,
     Newsreader_400Regular,
-    Newsreader_400Regular_Italic,
     DMSans_400Regular,
-    DMSans_400Regular_Italic,
     DMSans_500Medium,
-    DMSans_500Medium_Italic,
     DMSans_600SemiBold,
-    DMSans_700Bold,
-    DMSans_700Bold_Italic,
   });
-
-  const markReady = () => {
-    if (!appReadyRef.current) {
-      appReadyRef.current = true;
-      SplashScreen.hideAsync();
-    }
-  };
 
   return (
     <GestureHandlerRootView style={styles.container}>
       <AppProviders>
-        <RootNavigator fontsLoaded={fontsLoaded} markReady={markReady} />
+        <RootNavigator fontsLoaded={fontsLoaded} />
       </AppProviders>
     </GestureHandlerRootView>
   );
@@ -143,5 +140,6 @@ function StatusBarWrapper() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#0F0D0B',
   },
 });

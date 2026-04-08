@@ -1,18 +1,18 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { useState, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useMutation } from 'convex/react';
 import { makeFunctionReference } from 'convex/server';
 import { useColors } from '@/src/hooks/useColors';
-import { useTheme } from '@/src/lib/theme';
 import { useSession } from '@/src/hooks/useSession';
 import { Typography } from '@/src/constants/typography';
 import { Spacing } from '@/src/constants/spacing';
-import { GlassSection, GlassRow } from '@/src/components/ui';
+import { GlassSection, GlassRow, ThemedSheet, BottomSheetTextInput } from '@/src/components/ui';
 
 const createProfileMutation = makeFunctionReference<
   'mutation',
@@ -22,39 +22,24 @@ const createProfileMutation = makeFunctionReference<
 
 export default function EditProfileScreen() {
   const C = useColors();
-  const { mode } = useTheme();
   const router = useRouter();
   const { profile, refetch } = useSession();
   const [displayName, setDisplayName] = useState(profile?.displayName ?? '');
   const updateProfile = useMutation(createProfileMutation);
 
-  const handleEditName = () => {
-    Haptics.selectionAsync();
-    if (Alert.prompt) {
-      Alert.prompt(
-        'Edit Display Name',
-        'Enter your new display name',
-        [
-          { text: 'Cancel', style: 'cancel' as const },
-          {
-            text: 'Save',
-            onPress: async (text?: string) => {
-              if (text?.trim() && text.trim() !== displayName) {
-                try {
-                  await updateProfile({ displayName: text.trim() });
-                  setDisplayName(text.trim());
-                } catch {
-                  Alert.alert('Error', 'Failed to update display name. Please try again.');
-                }
-              }
-            },
-          },
-        ],
-        'plain-text',
-        displayName,
-      );
-    } else {
-      Alert.alert('Coming Soon', 'Display name editing will be available in a future update.');
+  const nameSheetRef = useRef<BottomSheetModal>(null);
+  const [editName, setEditName] = useState(displayName);
+
+  const handleSaveName = async () => {
+    if (!editName.trim()) return;
+    try {
+      await updateProfile({ displayName: editName.trim() });
+      setDisplayName(editName.trim());
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      nameSheetRef.current?.dismiss();
+      await refetch();
+    } catch {
+      Alert.alert('Error', 'Failed to update display name. Please try again.');
     }
   };
 
@@ -62,6 +47,17 @@ export default function EditProfileScreen() {
     Haptics.selectionAsync();
     Alert.alert('Coming Soon', 'Photo editing will be available in a future update.');
   };
+
+  const nameSheetFooter = (
+    <TouchableOpacity
+      onPress={handleSaveName}
+      activeOpacity={0.8}
+      style={[styles.saveBtn, { backgroundColor: C.primary }]}
+    >
+      <Feather name="check" size={18} color={C.ink} />
+      <Text style={[styles.saveBtnText, { color: C.ink }]}>Save Name</Text>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={[styles.screen, { backgroundColor: C.background }]}>
@@ -108,7 +104,11 @@ export default function EditProfileScreen() {
                 label="Display Name"
                 value={displayName || profile?.displayName || '—'}
                 chevron
-                onPress={handleEditName}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setEditName(displayName || profile?.displayName || '');
+                  nameSheetRef.current?.present();
+                }}
               />
               <GlassRow
                 icon="mail"
@@ -126,6 +126,21 @@ export default function EditProfileScreen() {
             </Text>
           </Animated.View>
         </ScrollView>
+
+        {/* Edit Name Sheet */}
+        <ThemedSheet sheetRef={nameSheetRef} snapPoints={['60%']} footer={nameSheetFooter}>
+          <View style={styles.sheetContent}>
+            <Text style={[styles.sheetLabel, { color: C.primary }]}>DISPLAY NAME</Text>
+            <BottomSheetTextInput
+              style={[styles.sheetInput, { color: C.text }]}
+              placeholder="Your display name..."
+              placeholderTextColor={C.fog}
+              value={editName}
+              onChangeText={setEditName}
+              autoFocus
+            />
+          </View>
+        </ThemedSheet>
       </SafeAreaView>
     </View>
   );
@@ -186,5 +201,28 @@ const styles = StyleSheet.create({
     ...Typography.small,
     textAlign: 'center',
     paddingHorizontal: Spacing.xl,
+  },
+  sheetContent: {
+    gap: Spacing.lg,
+  },
+  sheetLabel: {
+    ...Typography.overline,
+    letterSpacing: 3,
+  },
+  sheetInput: {
+    ...Typography.title,
+    padding: 0,
+  },
+  saveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: 16,
+    borderRadius: 14,
+  },
+  saveBtnText: {
+    ...Typography.subheading,
+    fontSize: 15,
   },
 });

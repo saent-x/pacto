@@ -6,12 +6,8 @@ const serifRegular = 'Newsreader_400Regular';
 
 // Body: DM Sans — clean, modern, with full italic + bold-italic support
 const sansFamily = 'DMSans_400Regular';
-const sansItalic = 'DMSans_400Regular_Italic';
 const sansMedium = 'DMSans_500Medium';
-const sansMediumItalic = 'DMSans_500Medium_Italic';
 const sansSemiBold = 'DMSans_600SemiBold';
-const sansBold = 'DMSans_700Bold';
-const sansBoldItalic = 'DMSans_700Bold_Italic';
 
 // Fallbacks for before fonts load
 const serifFallback = Platform.select({ ios: 'Georgia', android: 'serif', default: 'Georgia' });
@@ -118,11 +114,8 @@ export const Typography = {
 
   // Font family references for direct use
   sans: sansFamily,
-  sansItalic,
   sansMedium,
-  sansMediumItalic,
-  sansBold,
-  sansBoldItalic,
+  sansSemiBold,
 
   // Fallbacks
   fallbackSerif: serifFallback,

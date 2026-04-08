@@ -241,7 +241,8 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   emptyContent: {
-    flexGrow: 1,
+    paddingTop: Spacing.lg,
+    paddingHorizontal: Spacing['2xl'],
   },
   separator: {
     height: StyleSheet.hairlineWidth,

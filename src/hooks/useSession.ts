@@ -59,11 +59,20 @@ function useSessionValue(): SessionValue {
     getCurrentSessionUserQuery,
     shouldLoadSession ? {} : 'skip',
   );
-  const isLoading =
-    auth.isPending ||
-    (hasAuthSession && (convexAuth.isLoading || session === undefined));
+  // Convex finished loading but failed to authenticate despite better-auth
+  // having a session — treat as unauthenticated rather than stuck loading.
+  const convexAuthFailed =
+    hasAuthSession && !convexAuth.isLoading && !convexAuth.isAuthenticated;
   const isAuthenticated = hasAuthSession && convexAuth.isAuthenticated;
   const activeCouple = session?.activeCouple ?? null;
+  // Stay loading until we can compute a final route — auth resolution
+  // AND session query (when authenticated). This keeps the splash
+  // visible for the entire duration so there's one clean transition.
+  const isLoading =
+    auth.isPending ||
+    (hasAuthSession &&
+      !convexAuthFailed &&
+      (convexAuth.isLoading || session === undefined));
 
   return {
     isLoading,
