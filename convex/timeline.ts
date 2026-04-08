@@ -4,15 +4,28 @@ import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import type { CoupleRecord } from "./lib/auth";
 import { presenceSummaryValidator, resolveCurrentSession } from "./lib/auth";
-import { requireActiveCouple } from "./lib/permissions";
+import { getActiveCouple } from "./lib/permissions";
 import { listCheckInsForCouple } from "./checkIns";
 import { getDailyVerseForNow } from "./dailyVerse";
 import { listEventsForCouple } from "./events";
 import { listPlansForCouple } from "./plans";
 // rituals removed
-import type { DailyVerse } from "../src/lib/home/dailyVerse";
+import { getCuratedDailyVerse, type DailyVerse } from "../src/lib/home/dailyVerse";
 
 type SharedDoc = Record<string, unknown> & { _id: string };
+
+function emptyHomeView(): HomeView {
+  const dateKey = new Date().toISOString().slice(0, 10);
+  return {
+    hero: null,
+    timeline: [],
+    milestones: [],
+    memories: [],
+    memoryPreview: null,
+    presence: null,
+    dailyVerse: getCuratedDailyVerse(dateKey),
+  };
+}
 type StorageReader = {
   getUrl(storageId: string): Promise<string | null>;
 };
@@ -715,7 +728,11 @@ async function buildHomeView(
   now: number,
   previewDays: number,
 ): Promise<HomeView> {
-  const activeCouple = await requireActiveCouple(ctx);
+  const result = await getActiveCouple(ctx);
+  if (!result) {
+    return emptyHomeView();
+  }
+  const activeCouple = result;
   const session = await resolveCurrentSession(ctx);
   const presence = normalizePresence(session);
   const coupleId = activeCouple.couple._id as Id<"couples">;

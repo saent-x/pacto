@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
   },
   listContent: { paddingBottom: 120 },
-  emptyContent: { flexGrow: 1 },
+  emptyContent: { paddingTop: Spacing.lg, paddingHorizontal: Spacing['2xl'] },
   separator: {
     height: StyleSheet.hairlineWidth,
     marginLeft: 68,

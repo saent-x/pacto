@@ -101,11 +101,13 @@ export default function CoupleSettingsScreen() {
           onPress: async () => {
             try {
               await convex.mutation(leaveCoupleMutation, {});
-              await refetch();
-              router.replace('/(tabs)/more');
             } catch (e: any) {
               Alert.alert('Error', e?.message ?? 'Failed to leave couple.');
+              return;
             }
+            // Refetch session — useProtectedRoute will redirect to
+            // onboarding once activeCouple becomes null.
+            await refetch();
           },
         },
       ],
@@ -174,16 +176,27 @@ export default function CoupleSettingsScreen() {
           </Animated.View>
 
           {showDatePicker && (
-            <DateTimePicker
-              value={anniversaryDate ?? new Date()}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={(_, date) => {
-                if (Platform.OS !== 'ios') setShowDatePicker(false);
-                if (date) handleSaveAnniversary(date);
-              }}
-              themeVariant={mode}
-            />
+            <>
+              <DateTimePicker
+                value={anniversaryDate ?? new Date()}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(_, date) => {
+                  if (Platform.OS !== 'ios') setShowDatePicker(false);
+                  if (date) handleSaveAnniversary(date);
+                }}
+                themeVariant={mode}
+              />
+              {Platform.OS === 'ios' && (
+                <TouchableOpacity
+                  onPress={() => setShowDatePicker(false)}
+                  activeOpacity={0.8}
+                  style={[styles.dateDoneBtn, { backgroundColor: C.primary }]}
+                >
+                  <Text style={[styles.dateDoneBtnText, { color: C.ink }]}>Done</Text>
+                </TouchableOpacity>
+              )}
+            </>
           )}
 
           {/* Invite */}
@@ -339,6 +352,16 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   saveBtnText: {
+    ...Typography.subheading,
+    fontSize: 15,
+  },
+  dateDoneBtn: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    marginHorizontal: Spacing.lg,
+    borderRadius: 14,
+  },
+  dateDoneBtnText: {
     ...Typography.subheading,
     fontSize: 15,
   },

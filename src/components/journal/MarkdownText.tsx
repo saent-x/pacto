@@ -16,11 +16,8 @@ const SYSTEM_FONTS = [
   'DMSans_500Medium',
   'DMSans_500Medium_Italic',
   'DMSans_600SemiBold',
-  'DMSans_700Bold',
-  'DMSans_700Bold_Italic',
   'Newsreader_300Light_Italic',
   'Newsreader_400Regular',
-  'Newsreader_400Regular_Italic',
 ];
 
 /** Strip all markdown/HTML to plain text for preview lines */

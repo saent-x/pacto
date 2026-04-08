@@ -154,10 +154,13 @@ export default function MoreScreen() {
                         onPress: async () => {
                           try {
                             await deleteAccount({});
-                            signOut();
                           } catch {
                             Alert.alert('Error', 'Failed to delete account. Please try again.');
+                            return;
                           }
+                          // Sign out after mutation succeeds to avoid
+                          // reactive queries firing against a deleted user.
+                          await signOut();
                         },
                       },
                     ],

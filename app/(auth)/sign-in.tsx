@@ -44,13 +44,14 @@ export default function SignInScreen() {
         email,
         password,
       });
+      // Navigate immediately — don't wait for reactive auth state.
+      router.replace('/(tabs)/home');
     } catch (error) {
+      setLoading(false);
       Alert.alert(
         'Sign in failed',
         error instanceof Error ? error.message : 'Unable to sign in.',
       );
-    } finally {
-      setLoading(false);
     }
   };
 

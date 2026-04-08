@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0F0D0B"
     },
     "ios": {
       "supportsTablet": true,
@@ -35,6 +35,14 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0F0D0B",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200
+        }
+      ],
       "expo-secure-store",
       "@react-native-community/datetimepicker",
       "expo-font",
@@ -43,7 +51,8 @@
         {
           "cameraPermission": "Coupl needs camera access to scan your partner's encryption key QR code."
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

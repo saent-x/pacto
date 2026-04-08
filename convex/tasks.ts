@@ -1,7 +1,7 @@
 import { mutationGeneric, queryGeneric } from "convex/server";
 import { v } from "convex/values";
 
-import { requireActiveCouple, requireAuthenticatedUser } from "./lib/permissions";
+import { getActiveCouple, requireActiveCouple, requireAuthenticatedUser } from "./lib/permissions";
 
 const taskListRecordValidator = v.object({
   _id: v.string(),
@@ -176,8 +176,9 @@ export const getTaskBoard = queryGeneric({
   returns: taskBoardValidator,
   handler: async (ctx) => {
     const db = ctx.db as unknown as LooseDb;
-    const activeCouple = await requireActiveCouple(ctx);
-    const coupleId = activeCouple.couple._id;
+    const result = await getActiveCouple(ctx);
+    if (!result) return { lists: [], tasks: [] };
+    const coupleId = result.couple._id;
 
     return {
       lists: await listTaskListsForCouple(db, coupleId),

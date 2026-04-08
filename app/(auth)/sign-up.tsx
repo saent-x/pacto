@@ -46,13 +46,14 @@ export default function SignUpScreen() {
         email,
         password,
       });
+      // Navigate immediately — don't wait for reactive auth state to settle.
+      router.replace('/(auth)/onboarding');
     } catch (error) {
+      setLoading(false);
       Alert.alert(
         'Sign up failed',
         error instanceof Error ? error.message : 'Unable to create your account.',
       );
-    } finally {
-      setLoading(false);
     }
   };
 

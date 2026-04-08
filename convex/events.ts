@@ -4,6 +4,7 @@ import type { Id } from "./_generated/dataModel";
 import {
   assertPrivateAccess,
   assertSharedAccess,
+  getActiveCouple,
   requireActiveCouple,
 } from "./lib/permissions";
 
@@ -308,14 +309,15 @@ export const listEvents = queryGeneric({
   },
   returns: v.array(eventRecordValidator),
   handler: async (ctx, args) => {
-    const activeCouple = await requireActiveCouple(ctx);
+    const result = await getActiveCouple(ctx);
+    if (!result) return [];
     const events = await listEventsForCouple(
       ctx,
-      activeCouple.couple._id as Id<"couples">,
+      result.couple._id as Id<"couples">,
     );
 
     return events.filter((event) => {
-      if (event.isPrivate && event.createdBy !== activeCouple.membership.userId) {
+      if (event.isPrivate && event.createdBy !== result.membership.userId) {
         return false;
       }
       if (args.from !== undefined && event.startsAt < args.from) {

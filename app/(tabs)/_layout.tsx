@@ -5,10 +5,18 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useColors } from '@/src/hooks/useColors';
 import { useTheme } from '@/src/lib/theme';
+import { useSession } from '@/src/hooks/useSession';
 
 export default function TabLayout() {
   const C = useColors();
   const { mode } = useTheme();
+  const { activeCouple } = useSession();
+
+  // Don't render tabs (or their queries) when the user has no couple.
+  // Show themed background while useProtectedRoute redirects to onboarding.
+  if (!activeCouple) {
+    return <View style={[StyleSheet.absoluteFill, { backgroundColor: C.background }]} />;
+  }
 
   return (
     <Tabs

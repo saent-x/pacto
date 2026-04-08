@@ -1,7 +1,7 @@
 import { mutationGeneric, queryGeneric } from "convex/server";
 import { v } from "convex/values";
 
-import { requireActiveCouple, requireAuthenticatedUser } from "./lib/permissions";
+import { getActiveCouple, requireActiveCouple, requireAuthenticatedUser } from "./lib/permissions";
 
 type LooseDb = {
   insert(table: string, doc: Record<string, unknown>): Promise<string>;
@@ -97,8 +97,9 @@ export const getReminders = queryGeneric({
   returns: v.array(reminderValidator),
   handler: async (ctx) => {
     const db = ctx.db as unknown as LooseDb;
-    const activeCouple = await requireActiveCouple(ctx);
-    return listRemindersForCouple(db, activeCouple.couple._id);
+    const result = await getActiveCouple(ctx);
+    if (!result) return [];
+    return listRemindersForCouple(db, result.couple._id);
   },
 });
 

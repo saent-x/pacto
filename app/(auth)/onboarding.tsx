@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing['3xl'],
   },
   codeLabel: { ...Typography.overline, marginBottom: Spacing.lg },
-  codeValue: { ...Typography.mono, fontSize: 28, fontWeight: '700', letterSpacing: 6 },
+  codeValue: { ...Typography.mono, fontSize: 34, fontWeight: '700', letterSpacing: 6, lineHeight: 42 },
   codeCopyRow: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
     marginTop: Spacing.xl,

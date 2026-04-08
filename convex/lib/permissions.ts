@@ -16,6 +16,19 @@ export async function requireAuthenticatedUser(ctx: QueryCtx): Promise<SessionUs
   return user;
 }
 
+/** Returns the active couple or null — use in queries so they return
+ *  empty data instead of throwing when the user leaves mid-subscription. */
+export async function getActiveCouple(
+  ctx: QueryCtx,
+): Promise<(ActiveCoupleSummary & { user: SessionUser }) | null> {
+  const { user } = await requireCurrentUser(ctx);
+  if (!user) return null;
+  const activeCouple = await resolveActiveCoupleForUser(ctx, user._id);
+  if (!activeCouple) return null;
+  return { ...activeCouple, user };
+}
+
+/** Throws if no active couple — use in mutations where couple is required. */
 export async function requireActiveCouple(
   ctx: QueryCtx,
 ): Promise<ActiveCoupleSummary> {
