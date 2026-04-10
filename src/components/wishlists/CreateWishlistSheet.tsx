@@ -3,12 +3,11 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ThemedSheet, BottomSheetTextInput } from '@/src/components/ui';
 import { useColors } from '@/src/hooks/useColors';
-import { useTheme } from '@/src/lib/theme';
+import { sheet, useGlass } from '@/src/components/ui/sheetStyles';
 import { Typography } from '@/src/constants/typography';
-import { Spacing, BorderRadius } from '@/src/constants/spacing';
+import { Spacing } from '@/src/constants/spacing';
 
 interface Props {
   sheetRef: React.RefObject<BottomSheetModal | null>;
@@ -18,7 +17,7 @@ interface Props {
 
 export function CreateWishlistSheet({ sheetRef, onSave, wishlist }: Props) {
   const C = useColors();
-  const { mode } = useTheme();
+  const { glassBg, glassBorder } = useGlass();
 
   const [name, setName] = useState(wishlist?.name ?? '');
   const [saving, setSaving] = useState(false);
@@ -26,9 +25,6 @@ export function CreateWishlistSheet({ sheetRef, onSave, wishlist }: Props) {
   const sessionKeyRef = useRef(sessionKey);
 
   const isEdit = !!wishlist;
-
-  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
-  const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
 
   useEffect(() => {
     if (sessionKeyRef.current === sessionKey) {
@@ -65,10 +61,10 @@ export function CreateWishlistSheet({ sheetRef, onSave, wishlist }: Props) {
       onPress={handleSave}
       disabled={saving}
       activeOpacity={0.8}
-      style={[styles.saveBtn, { backgroundColor: C.wishlists }]}
+      style={[sheet.saveBtn, { backgroundColor: C.wishlists }]}
     >
       <Feather name={isEdit ? 'check' : 'plus'} size={18} color={C.ink} />
-      <Text style={[styles.saveBtnText, { color: C.ink }]}>
+      <Text style={[sheet.saveBtnText, { color: C.ink }]}>
         {saving ? 'Saving...' : isEdit ? 'Update' : 'Create List'}
       </Text>
     </TouchableOpacity>
@@ -77,18 +73,17 @@ export function CreateWishlistSheet({ sheetRef, onSave, wishlist }: Props) {
   return (
     <ThemedSheet
       sheetRef={sheetRef}
-      snapPoints={['72%']}
       footer={footer}
     >
-      <Animated.View entering={FadeInDown.duration(300)} style={styles.form}>
-        <View style={styles.header}>
-          <Text style={[styles.sheetLabel, { color: C.wishlists }]}>
+      <View style={sheet.form}>
+        <View style={sheet.dateHeader}>
+          <Text style={[sheet.sheetLabel, { color: C.wishlists }]}>
             {isEdit ? 'EDIT LIST' : 'NEW LIST'}
           </Text>
         </View>
 
         <BottomSheetTextInput
-          style={[styles.titleInput, { color: C.text }]}
+          style={[sheet.titleInput, { color: C.text }]}
           placeholder="Name your list..."
           placeholderTextColor={C.fog}
           value={name}
@@ -102,26 +97,12 @@ export function CreateWishlistSheet({ sheetRef, onSave, wishlist }: Props) {
             {name.trim() || 'Your new list will appear here'}
           </Text>
         </View>
-      </Animated.View>
+      </View>
     </ThemedSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  form: {
-    gap: Spacing.xl,
-  },
-  header: {
-    gap: Spacing.xs,
-  },
-  sheetLabel: {
-    ...Typography.overline,
-    letterSpacing: 3,
-  },
-  titleInput: {
-    ...Typography.title,
-    padding: 0,
-  },
   previewCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -133,17 +114,5 @@ const styles = StyleSheet.create({
   previewText: {
     ...Typography.body,
     flex: 1,
-  },
-  saveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: 16,
-    borderRadius: 14,
-  },
-  saveBtnText: {
-    ...Typography.subheading,
-    fontSize: 15,
   },
 });

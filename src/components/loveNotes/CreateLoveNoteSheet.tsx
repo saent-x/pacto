@@ -1,14 +1,11 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ThemedSheet, BottomSheetTextInput } from '@/src/components/ui';
 import { useColors } from '@/src/hooks/useColors';
-import { useTheme } from '@/src/lib/theme';
-import { Typography } from '@/src/constants/typography';
-import { Spacing, BorderRadius } from '@/src/constants/spacing';
+import { sheet, useGlass } from '@/src/components/ui/sheetStyles';
 
 interface Props {
   sheetRef: React.RefObject<BottomSheetModal | null>;
@@ -18,7 +15,7 @@ interface Props {
 
 export function CreateLoveNoteSheet({ sheetRef, onSave, note }: Props) {
   const C = useColors();
-  const { mode } = useTheme();
+  const { glassBg, glassBorder } = useGlass();
 
   const [body, setBody] = useState(note?.body ?? '');
   const [isPrivate, setIsPrivate] = useState(note?.isPrivate ?? false);
@@ -27,9 +24,6 @@ export function CreateLoveNoteSheet({ sheetRef, onSave, note }: Props) {
   const sessionKeyRef = useRef(sessionKey);
 
   const isEdit = !!note;
-
-  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
-  const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
 
   useEffect(() => {
     if (sessionKeyRef.current === sessionKey) {
@@ -73,10 +67,10 @@ export function CreateLoveNoteSheet({ sheetRef, onSave, note }: Props) {
       onPress={handleSave}
       disabled={saving}
       activeOpacity={0.8}
-      style={[styles.saveBtn, { backgroundColor: C.error }]}
+      style={[sheet.saveBtn, { backgroundColor: C.primary }]}
     >
       <Feather name={isEdit ? 'check' : 'send'} size={18} color={C.ink} />
-      <Text style={[styles.saveBtnText, { color: C.ink }]}>
+      <Text style={[sheet.saveBtnText, { color: C.ink }]}>
         {saving ? 'Saving...' : isEdit ? 'Update' : 'Send Note'}
       </Text>
     </TouchableOpacity>
@@ -85,20 +79,19 @@ export function CreateLoveNoteSheet({ sheetRef, onSave, note }: Props) {
   return (
     <ThemedSheet
       sheetRef={sheetRef}
-      snapPoints={['84%']}
       scrollable
       footer={footer}
     >
-      <Animated.View entering={FadeInDown.duration(300)} style={styles.form}>
-        <View style={styles.header}>
-          <Text style={[styles.sheetLabel, { color: C.primary }]}>
+      <View style={sheet.form}>
+        <View style={sheet.dateHeader}>
+          <Text style={[sheet.sheetLabel, { color: C.primary }]}>
             {isEdit ? 'EDIT NOTE' : 'NEW NOTE'}
           </Text>
         </View>
 
-        <View style={[styles.bodyCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
+        <View style={[sheet.bodyCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
           <BottomSheetTextInput
-            style={[styles.bodyInput, { color: C.text }]}
+            style={[sheet.bodyInput, { color: C.text, minHeight: 120 }]}
             placeholder="Write something sweet..."
             placeholderTextColor={C.fog}
             value={body}
@@ -109,80 +102,23 @@ export function CreateLoveNoteSheet({ sheetRef, onSave, note }: Props) {
           />
         </View>
 
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: C.textTertiary }]}>Visibility</Text>
+        <View style={sheet.section}>
+          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Visibility</Text>
           <TouchableOpacity
             style={[
-              styles.privacyToggle,
+              sheet.privacyToggle,
               { backgroundColor: isPrivate ? C.primaryMuted : glassBg, borderColor: isPrivate ? C.primary : glassBorder },
             ]}
             onPress={togglePrivacy}
             activeOpacity={0.7}
           >
             <Feather name={isPrivate ? 'lock' : 'unlock'} size={16} color={isPrivate ? C.primary : C.fog} />
-            <Text style={[styles.privacyLabel, { color: isPrivate ? C.primary : C.haze }]}>
+            <Text style={[sheet.privacyText, { color: isPrivate ? C.primary : C.haze }]}>
               {isPrivate ? 'Only you' : 'Share with partner'}
             </Text>
           </TouchableOpacity>
         </View>
-      </Animated.View>
+      </View>
     </ThemedSheet>
   );
 }
-
-const styles = StyleSheet.create({
-  form: {
-    gap: Spacing.xl,
-  },
-  header: {
-    gap: Spacing.xs,
-  },
-  sheetLabel: {
-    ...Typography.overline,
-    letterSpacing: 3,
-  },
-  bodyCard: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 14,
-    padding: Spacing.md,
-  },
-  bodyInput: {
-    ...Typography.body,
-    minHeight: 120,
-    lineHeight: 22,
-    textAlignVertical: 'top',
-    padding: 0,
-  },
-  section: {
-    gap: Spacing.md,
-  },
-  sectionTitle: {
-    ...Typography.overline,
-    letterSpacing: 2,
-  },
-  privacyToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: 12,
-    borderRadius: BorderRadius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  privacyLabel: {
-    ...Typography.captionMedium,
-    fontSize: 14,
-  },
-  saveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: 16,
-    borderRadius: 14,
-  },
-  saveBtnText: {
-    ...Typography.subheading,
-    fontSize: 15,
-  },
-});

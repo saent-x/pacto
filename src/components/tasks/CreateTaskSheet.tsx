@@ -6,6 +6,7 @@ import { Feather } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { ThemedSheet, BottomSheetTextInput } from '@/src/components/ui';
+import { sheet, useGlass } from '@/src/components/ui/sheetStyles';
 import { useColors } from '@/src/hooks/useColors';
 import { useSession } from '@/src/hooks/useSession';
 import { useTheme } from '@/src/lib/theme';
@@ -111,8 +112,7 @@ export function CreateTaskSheet({ sheetRef, onSave, task, lists = [], selectedLi
   const sessionKey = task ? `edit:${task.id}` : `create:${selectedListId ?? 'none'}`;
   const sessionKeyRef = useRef(sessionKey);
 
-  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
-  const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const { glassBg, glassBorder } = useGlass();
   const activeBg = C.tasksLight;
 
   useEffect(() => {
@@ -178,29 +178,29 @@ export function CreateTaskSheet({ sheetRef, onSave, task, lists = [], selectedLi
       onPress={handleSave}
       disabled={saving}
       activeOpacity={0.8}
-      style={[styles.saveBtn, { backgroundColor: C.tasks }]}
+      style={[sheet.saveBtn, { backgroundColor: C.tasks }]}
     >
       <Feather name={isEdit ? 'check' : 'plus'} size={18} color={C.ink} />
-      <Text style={[styles.saveBtnText, { color: C.ink }]}>
+      <Text style={[sheet.saveBtnText, { color: C.ink }]}>
         {saving ? 'Saving...' : isEdit ? 'Update Task' : 'Add Task'}
       </Text>
     </TouchableOpacity>
   );
 
   return (
-    <ThemedSheet sheetRef={sheetRef} snapPoints={['84%']} scrollable footer={footer}>
-      <View style={styles.form}>
-        <View style={styles.dateHeader}>
-          <Text style={[styles.sheetLabel, { color: C.tasks }]}>
+    <ThemedSheet sheetRef={sheetRef} scrollable footer={footer}>
+      <View style={sheet.form}>
+        <View style={sheet.dateHeader}>
+          <Text style={[sheet.sheetLabel, { color: C.tasks }]}>
             {isEdit ? 'EDIT TASK' : 'NEW TASK'}
           </Text>
-          <Text style={[styles.dateDisplay, { color: C.primary }]}>
+          <Text style={[sheet.dateDisplay, { color: C.primary }]}>
             {dueDate ? format(dueDate, 'EEEE, MMMM d') : 'No deadline yet'}
           </Text>
         </View>
 
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: C.textTertiary }]}>List</Text>
+        <View style={sheet.section}>
+          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>List</Text>
           {lists.length > 0 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.listRow}>
               {lists.map((list) => {
@@ -236,7 +236,7 @@ export function CreateTaskSheet({ sheetRef, onSave, task, lists = [], selectedLi
         </View>
 
         <BottomSheetTextInput
-          style={[styles.titleInput, { color: C.text }]}
+          style={[sheet.titleInput, { color: C.text }]}
           placeholder="What needs doing?"
           placeholderTextColor={C.fog}
           value={title}
@@ -244,9 +244,9 @@ export function CreateTaskSheet({ sheetRef, onSave, task, lists = [], selectedLi
           autoFocus
         />
 
-        <View style={[styles.bodyCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
+        <View style={[sheet.bodyCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
           <BottomSheetTextInput
-            style={[styles.bodyInput, { color: C.text }]}
+            style={[sheet.bodyInput, { color: C.text }]}
             placeholder="Add details..."
             placeholderTextColor={C.fog}
             value={notes}
@@ -257,18 +257,18 @@ export function CreateTaskSheet({ sheetRef, onSave, task, lists = [], selectedLi
         </View>
 
         {/* Due date */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: C.textTertiary }]}>Due date</Text>
-          <View style={styles.dateRow}>
+        <View style={sheet.section}>
+          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Due date</Text>
+          <View style={sheet.dateRow}>
             <TouchableOpacity
-              style={[styles.glassPill, { backgroundColor: glassBg, borderColor: glassBorder }]}
+              style={[sheet.glassPill, { backgroundColor: glassBg, borderColor: glassBorder }]}
               onPress={() => {
                 Haptics.selectionAsync();
                 setShowDatePicker((current) => !current);
               }}
             >
               <Feather name="calendar" size={15} color={C.tasks} />
-              <Text style={[styles.glassPillText, { color: C.text }]}>
+              <Text style={[sheet.glassPillText, { color: C.text }]}>
                 {dueDate ? format(dueDate, 'MMM d, yyyy') : 'No date'}
               </Text>
             </TouchableOpacity>
@@ -278,7 +278,7 @@ export function CreateTaskSheet({ sheetRef, onSave, task, lists = [], selectedLi
                   Haptics.selectionAsync();
                   setDueDate(null);
                 }}
-                style={[styles.clearBtn, { backgroundColor: glassBg, borderColor: glassBorder }]}
+                style={[sheet.clearBtn, { backgroundColor: glassBg, borderColor: glassBorder }]}
               >
                 <Feather name="x" size={14} color={C.fog} />
               </TouchableOpacity>
@@ -301,16 +301,16 @@ export function CreateTaskSheet({ sheetRef, onSave, task, lists = [], selectedLi
         </View>
 
         {/* Priority */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: C.textTertiary }]}>Priority</Text>
-          <View style={styles.toggleRow}>
+        <View style={sheet.section}>
+          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Priority</Text>
+          <View style={sheet.toggleRow}>
             {PRIORITIES.map((p) => {
               const active = priority === p.value;
               return (
                 <TouchableOpacity
                   key={p.value}
                   style={[
-                    styles.glassToggle,
+                    sheet.glassToggle,
                     { backgroundColor: active ? activeBg : glassBg, borderColor: active ? C.tasks : glassBorder },
                   ]}
                   onPress={() => {
@@ -319,7 +319,7 @@ export function CreateTaskSheet({ sheetRef, onSave, task, lists = [], selectedLi
                   }}
                 >
                   <Feather name={p.icon} size={14} color={active ? C.tasks : C.fog} />
-                  <Text style={[styles.toggleText, { color: active ? C.tasks : C.haze }]}>
+                  <Text style={[sheet.toggleText, { color: active ? C.tasks : C.haze }]}>
                     {p.label}
                   </Text>
                 </TouchableOpacity>
@@ -330,9 +330,9 @@ export function CreateTaskSheet({ sheetRef, onSave, task, lists = [], selectedLi
 
         {/* Assign */}
         {partner && (
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: C.textTertiary }]}>Assign to</Text>
-            <View style={styles.toggleRow}>
+          <View style={sheet.section}>
+            <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Assign to</Text>
+            <View style={sheet.toggleRow}>
               {[
                 { value: null, label: 'Either', icon: 'users' as const },
                 { value: currentUserId, label: 'Me', icon: 'user' as const },
@@ -343,7 +343,7 @@ export function CreateTaskSheet({ sheetRef, onSave, task, lists = [], selectedLi
                   <TouchableOpacity
                     key={opt.label}
                     style={[
-                      styles.glassToggle,
+                      sheet.glassToggle,
                       { backgroundColor: active ? activeBg : glassBg, borderColor: active ? C.tasks : glassBorder },
                     ]}
                     onPress={() => {
@@ -352,7 +352,7 @@ export function CreateTaskSheet({ sheetRef, onSave, task, lists = [], selectedLi
                     }}
                   >
                     <Feather name={opt.icon} size={14} color={active ? C.tasks : C.fog} />
-                    <Text style={[styles.toggleText, { color: active ? C.tasks : C.haze }]}>
+                    <Text style={[sheet.toggleText, { color: active ? C.tasks : C.haze }]}>
                       {opt.label}
                     </Text>
                   </TouchableOpacity>
@@ -368,10 +368,6 @@ export function CreateTaskSheet({ sheetRef, onSave, task, lists = [], selectedLi
 }
 
 const styles = StyleSheet.create({
-  form: { gap: Spacing.lg },
-  dateHeader: { gap: Spacing.xs },
-  sheetLabel: { ...Typography.overline, letterSpacing: 3 },
-  dateDisplay: { ...Typography.overline, letterSpacing: 1.5 },
   listRow: { gap: Spacing.sm, paddingRight: Spacing.md },
   listChip: {
     flexDirection: 'row',
@@ -387,60 +383,4 @@ const styles = StyleSheet.create({
   listChipText: { ...Typography.captionMedium, maxWidth: 120 },
   emptyListHint: { ...Typography.captionMedium },
   selectionHint: { ...Typography.captionMedium, marginTop: 2 },
-  titleInput: { ...Typography.title, padding: 0 },
-  bodyCard: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 14,
-    padding: Spacing.lg,
-  },
-  bodyInput: {
-    ...Typography.body,
-    minHeight: 84,
-    lineHeight: 24,
-    textAlignVertical: 'top',
-    padding: 0,
-  },
-  section: { gap: Spacing.sm },
-  sectionTitle: { ...Typography.overline, letterSpacing: 2 },
-  dateRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  glassPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: 10,
-    borderRadius: BorderRadius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  glassPillText: { ...Typography.captionMedium },
-  clearBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: BorderRadius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  toggleRow: { flexDirection: 'row', gap: Spacing.sm },
-  glassToggle: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: 10,
-    borderRadius: BorderRadius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  toggleText: { ...Typography.captionMedium, fontSize: 13 },
-  saveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: 16,
-    borderRadius: 14,
-  },
-  saveBtnText: { ...Typography.subheading, fontSize: 15 },
 });

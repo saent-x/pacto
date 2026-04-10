@@ -8,8 +8,7 @@ import * as Haptics from 'expo-haptics';
 import { ThemedSheet, BottomSheetTextInput } from '@/src/components/ui';
 import { useColors } from '@/src/hooks/useColors';
 import { useTheme } from '@/src/lib/theme';
-import { Typography } from '@/src/constants/typography';
-import { Spacing, BorderRadius } from '@/src/constants/spacing';
+import { sheet, useGlass } from '@/src/components/ui/sheetStyles';
 
 const ICON_OPTIONS = [
   { emoji: '💍', label: 'Engagement' },
@@ -43,8 +42,7 @@ export function CreateMilestoneSheet({ sheetRef, onSave, milestone }: Props) {
 
   const isEdit = !!milestone;
 
-  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
-  const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const { glassBg, glassBorder } = useGlass();
   const activeBg = C.milestonesLight;
 
   useEffect(() => {
@@ -94,10 +92,10 @@ export function CreateMilestoneSheet({ sheetRef, onSave, milestone }: Props) {
       onPress={handleSave}
       disabled={saving}
       activeOpacity={0.8}
-      style={[styles.saveBtn, { backgroundColor: C.milestones }]}
+      style={[sheet.saveBtn, { backgroundColor: C.milestones }]}
     >
       <Feather name={isEdit ? 'check' : 'flag'} size={18} color={C.ink} />
-      <Text style={[styles.saveBtnText, { color: C.ink }]}>
+      <Text style={[sheet.saveBtnText, { color: C.ink }]}>
         {saving ? 'Saving...' : isEdit ? 'Update Milestone' : 'Save Milestone'}
       </Text>
     </TouchableOpacity>
@@ -106,22 +104,21 @@ export function CreateMilestoneSheet({ sheetRef, onSave, milestone }: Props) {
   return (
     <ThemedSheet
       sheetRef={sheetRef}
-      snapPoints={['78%']}
       scrollable
       footer={footer}
     >
-      <View style={styles.form}>
-        <View style={styles.dateHeader}>
-          <Text style={[styles.sheetLabel, { color: C.milestones }]}>
+      <View style={sheet.form}>
+        <View style={sheet.dateHeader}>
+          <Text style={[sheet.sheetLabel, { color: C.milestones }]}>
             {isEdit ? 'EDIT MILESTONE' : 'NEW MILESTONE'}
           </Text>
-          <Text style={[styles.dateDisplay, { color: C.primary }]}>
+          <Text style={[sheet.dateDisplay, { color: C.primary }]}>
             {format(date, 'EEEE, MMMM d')}
           </Text>
         </View>
 
         <BottomSheetTextInput
-          style={[styles.titleInput, { color: C.text }]}
+          style={[sheet.titleInput, { color: C.text }]}
           placeholder="What's the milestone?"
           placeholderTextColor={C.fog}
           value={title}
@@ -130,18 +127,18 @@ export function CreateMilestoneSheet({ sheetRef, onSave, milestone }: Props) {
         />
 
         {/* Date — glass pill, inline DateTimePicker */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: C.textTertiary }]}>When</Text>
-          <View style={styles.dateRow}>
+        <View style={sheet.section}>
+          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>When</Text>
+          <View style={sheet.dateRow}>
             <TouchableOpacity
-              style={[styles.glassPill, { backgroundColor: glassBg, borderColor: glassBorder }]}
+              style={[sheet.glassPill, { backgroundColor: glassBg, borderColor: glassBorder }]}
               onPress={() => {
                 Haptics.selectionAsync();
                 setShowDatePicker((current) => !current);
               }}
             >
               <Feather name="calendar" size={15} color={C.milestones} />
-              <Text style={[styles.glassPillText, { color: C.text }]}>
+              <Text style={[sheet.glassPillText, { color: C.text }]}>
                 {format(date, 'MMM d, yyyy')}
               </Text>
             </TouchableOpacity>
@@ -163,9 +160,9 @@ export function CreateMilestoneSheet({ sheetRef, onSave, milestone }: Props) {
         </View>
 
         {/* Description — optional, multiline */}
-        <View style={[styles.bodyCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
+        <View style={[sheet.bodyCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
           <BottomSheetTextInput
-            style={[styles.bodyInput, { color: C.text }]}
+            style={[sheet.bodyInput, { color: C.text }]}
             placeholder="Add details..."
             placeholderTextColor={C.fog}
             value={description}
@@ -176,17 +173,17 @@ export function CreateMilestoneSheet({ sheetRef, onSave, milestone }: Props) {
         </View>
 
         {/* Icon picker — horizontal scroll chips with emojis */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: C.textTertiary }]}>Icon</Text>
+        <View style={sheet.section}>
+          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Icon</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.chipRow}>
+            <View style={sheet.chipRow}>
               {ICON_OPTIONS.map((opt) => {
                 const active = icon === opt.emoji;
                 return (
                   <TouchableOpacity
                     key={opt.emoji}
                     style={[
-                      styles.chip,
+                      sheet.chipWithIcon,
                       { backgroundColor: active ? activeBg : glassBg, borderColor: active ? C.milestones : glassBorder },
                     ]}
                     onPress={() => {
@@ -195,7 +192,7 @@ export function CreateMilestoneSheet({ sheetRef, onSave, milestone }: Props) {
                     }}
                   >
                     <Text style={styles.chipEmoji}>{opt.emoji}</Text>
-                    <Text style={[styles.chipText, { color: active ? C.milestones : C.haze }]}>
+                    <Text style={[sheet.chipText, { color: active ? C.milestones : C.haze }]}>
                       {opt.label}
                     </Text>
                   </TouchableOpacity>
@@ -210,89 +207,7 @@ export function CreateMilestoneSheet({ sheetRef, onSave, milestone }: Props) {
 }
 
 const styles = StyleSheet.create({
-  form: {
-    gap: Spacing.xl,
-  },
-  dateHeader: {
-    gap: Spacing.xs,
-  },
-  sheetLabel: {
-    ...Typography.overline,
-    letterSpacing: 3,
-  },
-  dateDisplay: {
-    ...Typography.overline,
-    letterSpacing: 1.5,
-  },
-  titleInput: {
-    ...Typography.title,
-    padding: 0,
-  },
-  bodyCard: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 14,
-    padding: Spacing.md,
-  },
-  bodyInput: {
-    ...Typography.body,
-    minHeight: 72,
-    lineHeight: 22,
-    textAlignVertical: 'top',
-    padding: 0,
-  },
-  section: {
-    gap: Spacing.md,
-  },
-  sectionTitle: {
-    ...Typography.overline,
-    letterSpacing: 2,
-  },
-  dateRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  glassPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  glassPillText: {
-    ...Typography.captionMedium,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
   chipEmoji: {
     fontSize: 16,
-  },
-  chipText: {
-    ...Typography.captionMedium,
-    fontSize: 13,
-  },
-  saveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: 16,
-    borderRadius: 14,
-  },
-  saveBtnText: {
-    ...Typography.subheading,
-    fontSize: 15,
   },
 });

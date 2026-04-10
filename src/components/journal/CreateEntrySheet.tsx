@@ -16,6 +16,7 @@ import {
   TenTapStartKit,
 } from '@10play/tentap-editor';
 import { ThemedSheet, BottomSheetTextInput } from '@/src/components/ui';
+import { useGlass } from '@/src/components/ui/sheetStyles';
 import { MarkdownText } from '@/src/components/journal/MarkdownText';
 import { useColors } from '@/src/hooks/useColors';
 import { useTheme } from '@/src/lib/theme';
@@ -81,8 +82,7 @@ export function CreateEntrySheet({ sheetRef, onSave, onUploadImage, entry, readO
   const sessionKeyRef = useRef(sessionKey);
   const isEdit = !!entry;
 
-  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
-  const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const { glassBg, glassBorder } = useGlass();
   const themeBg = mode === 'dark' ? '#0F0D0B' : '#EDE8E0';
 
   /* ─── TipTap Editor with embedded CSS ─── */
@@ -251,7 +251,7 @@ export function CreateEntrySheet({ sheetRef, onSave, onUploadImage, entry, readO
   /* ═══════════════════════════════════ RENDER ═══════════════════════════════════ */
 
   return (
-    <ThemedSheet sheetRef={sheetRef} snapPoints={['92%']} scrollable footer={footer} onTapBackground={dismiss}>
+    <ThemedSheet sheetRef={sheetRef} scrollable footer={footer} onTapBackground={dismiss}>
       <View style={styles.form}
         onTouchEnd={(e) => {
           // Dismiss keyboard when tapping empty space (gaps, padding)

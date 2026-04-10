@@ -1,14 +1,14 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { ThemedSheet, BottomSheetTextInput } from '@/src/components/ui';
 import { useColors } from '@/src/hooks/useColors';
-import { useTheme } from '@/src/lib/theme';
 import { Typography } from '@/src/constants/typography';
-import { Spacing, BorderRadius } from '@/src/constants/spacing';
+import { Spacing } from '@/src/constants/spacing';
 import { CHECK_IN_MOODS, normalizeCheckInMood } from '@/src/constants/checkInMoods';
+import { sheet, useGlass } from '@/src/components/ui/sheetStyles';
 
 interface Props {
   sheetRef: React.RefObject<BottomSheetModal | null>;
@@ -18,7 +18,6 @@ interface Props {
 
 export function CreateCheckInSheet({ sheetRef, onSave, checkIn }: Props) {
   const C = useColors();
-  const { mode } = useTheme();
   const initialMood = normalizeCheckInMood(checkIn?.mood);
 
   const [mood, setMood] = useState(initialMood ?? '');
@@ -30,8 +29,7 @@ export function CreateCheckInSheet({ sheetRef, onSave, checkIn }: Props) {
 
   const isEdit = !!checkIn;
 
-  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
-  const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const { glassBg, glassBorder } = useGlass();
   const activeBg = C.moodLight;
 
   useEffect(() => {
@@ -73,10 +71,10 @@ export function CreateCheckInSheet({ sheetRef, onSave, checkIn }: Props) {
       onPress={handleSave}
       disabled={saving}
       activeOpacity={0.8}
-      style={[styles.saveBtn, { backgroundColor: C.mood }]}
+      style={[sheet.saveBtn, { backgroundColor: C.mood }]}
     >
       <Feather name={isEdit ? 'check' : 'activity'} size={18} color={C.ink} />
-      <Text style={[styles.saveBtnText, { color: C.ink }]}>
+      <Text style={[sheet.saveBtnText, { color: C.ink }]}>
         {saving ? 'Saving...' : isEdit ? 'Update' : 'Check In'}
       </Text>
     </TouchableOpacity>
@@ -85,17 +83,16 @@ export function CreateCheckInSheet({ sheetRef, onSave, checkIn }: Props) {
   return (
     <ThemedSheet
       sheetRef={sheetRef}
-      snapPoints={['60%']}
       scrollable
       footer={footer}
     >
-      <View style={styles.form}>
-        <Text style={[styles.sheetLabel, { color: C.mood }]}>
+      <View style={sheet.form}>
+        <Text style={[sheet.sheetLabel, { color: C.mood }]}>
           HOW ARE YOU?
         </Text>
 
         {/* Mood grid — circular glass toggles in a row */}
-        <View style={styles.section}>
+        <View style={[sheet.section, { alignItems: 'center' }]}>
           <View style={styles.moodRow}>
             {CHECK_IN_MOODS.map((opt) => {
               const active = mood === opt.id;
@@ -124,9 +121,9 @@ export function CreateCheckInSheet({ sheetRef, onSave, checkIn }: Props) {
         </View>
 
         {/* Note — optional */}
-        <View style={[styles.bodyCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
+        <View style={[sheet.bodyCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
           <BottomSheetTextInput
-            style={[styles.bodyInput, { color: C.text }]}
+            style={[sheet.bodyInput, styles.bodyInput, { color: C.text }]}
             placeholder="Share a thought..."
             placeholderTextColor={C.fog}
             value={note}
@@ -137,10 +134,10 @@ export function CreateCheckInSheet({ sheetRef, onSave, checkIn }: Props) {
         </View>
 
         {/* Privacy toggle */}
-        <View style={styles.section}>
+        <View style={sheet.section}>
           <TouchableOpacity
             style={[
-              styles.privacyToggle,
+              sheet.privacyToggle,
               { backgroundColor: isPrivate ? activeBg : glassBg, borderColor: isPrivate ? C.mood : glassBorder },
             ]}
             onPress={() => {
@@ -149,7 +146,7 @@ export function CreateCheckInSheet({ sheetRef, onSave, checkIn }: Props) {
             }}
           >
             <Feather name={isPrivate ? 'lock' : 'unlock'} size={15} color={isPrivate ? C.mood : C.fog} />
-            <Text style={[styles.privacyText, { color: isPrivate ? C.mood : C.haze }]}>
+            <Text style={[sheet.privacyText, { color: isPrivate ? C.mood : C.haze }]}>
               {isPrivate ? 'Private' : 'Shared'}
             </Text>
           </TouchableOpacity>
@@ -160,17 +157,6 @@ export function CreateCheckInSheet({ sheetRef, onSave, checkIn }: Props) {
 }
 
 const styles = StyleSheet.create({
-  form: {
-    gap: Spacing.xl,
-  },
-  sheetLabel: {
-    ...Typography.overline,
-    letterSpacing: 3,
-  },
-  section: {
-    gap: Spacing.md,
-    alignItems: 'center',
-  },
   moodRow: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -190,42 +176,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     fontSize: 11,
   },
-  bodyCard: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 14,
-    padding: Spacing.md,
-  },
   bodyInput: {
-    ...Typography.body,
     minHeight: 60,
-    lineHeight: 22,
-    textAlignVertical: 'top',
-    padding: 0,
-  },
-  privacyToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  privacyText: {
-    ...Typography.captionMedium,
-    fontSize: 13,
-  },
-  saveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: 16,
-    borderRadius: 14,
-  },
-  saveBtnText: {
-    ...Typography.subheading,
-    fontSize: 15,
   },
 });

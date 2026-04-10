@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, Keyboard, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, Dimensions, Keyboard } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetBackdrop,
@@ -26,17 +26,18 @@ interface ThemedSheetProps {
   onTapBackground?: () => void;
   enableDynamicSizing?: boolean;
   scrollable?: boolean;
+  /** Maximum content height in pixels when dynamic sizing. Defaults to 92% of screen height. */
+  maxDynamicContentSize?: number;
 }
 
 /** Liquid glass background for the sheet */
 function GlassBackground({ style }: { style?: any }) {
   const { mode } = useTheme();
-  const C = useColors();
 
   if (Platform.OS === 'ios') {
     return (
       <BlurView
-        intensity={40}
+        intensity={mode === 'dark' ? 40 : 60}
         tint={mode === 'dark' ? 'dark' : 'light'}
         style={[style, { borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: 'hidden' }]}
       >
@@ -46,7 +47,7 @@ function GlassBackground({ style }: { style?: any }) {
             {
               backgroundColor: mode === 'dark'
                 ? 'rgba(22, 19, 17, 0.6)'
-                : 'rgba(242, 237, 231, 0.55)',
+                : 'rgba(242, 237, 231, 0.88)',
             },
           ]}
         />
@@ -57,7 +58,7 @@ function GlassBackground({ style }: { style?: any }) {
             {
               backgroundColor: mode === 'dark'
                 ? 'rgba(255, 255, 255, 0.06)'
-                : 'rgba(255, 255, 255, 0.4)',
+                : 'rgba(255, 255, 255, 0.5)',
             },
           ]}
         />
@@ -72,7 +73,7 @@ function GlassBackground({ style }: { style?: any }) {
         {
           backgroundColor: mode === 'dark'
             ? 'rgba(27, 23, 21, 0.95)'
-            : 'rgba(242, 237, 231, 0.97)',
+            : 'rgba(242, 237, 231, 0.98)',
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
         },
@@ -89,21 +90,20 @@ export function ThemedSheet({
   footer,
   onDismiss,
   onTapBackground,
-  enableDynamicSizing = false,
+  enableDynamicSizing: enableDynamicSizingProp,
   scrollable = false,
+  maxDynamicContentSize,
 }: ThemedSheetProps) {
   const C = useColors();
   const { mode } = useTheme();
+
+  // Dynamic sizing is the default — sheets fit their content.
+  // Only use fixed snap points when explicitly provided.
+  const useDynamic = enableDynamicSizingProp ?? !snapPointsProp;
   const snapPoints = useMemo(() => snapPointsProp ?? ['50%'], [snapPointsProp]);
 
-  // Force sheet back to snap point when keyboard hides
-  useEffect(() => {
-    const event = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const sub = Keyboard.addListener(event, () => {
-      sheetRef.current?.snapToIndex(0);
-    });
-    return () => sub.remove();
-  }, [sheetRef]);
+  // Cap dynamic sheets at 92% of screen height so they don't overflow.
+  const maxSize = maxDynamicContentSize ?? Dimensions.get('window').height * 0.92;
 
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
@@ -139,9 +139,20 @@ export function ThemedSheet({
   );
 
   const handleDismiss = useCallback(() => {
-    Keyboard.dismiss();
     onDismiss?.();
   }, [onDismiss]);
+
+  // When the keyboard hides, snap the sheet back to its content-fit position.
+  // With enableDynamicSizing the sheet has a single snap index (0) representing
+  // the measured content height. Without this, the sheet stays stuck at the
+  // keyboard-expanded position after the keyboard dismisses.
+  useEffect(() => {
+    const event = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const sub = Keyboard.addListener(event, () => {
+      sheetRef.current?.snapToIndex(0);
+    });
+    return () => sub.remove();
+  }, [sheetRef]);
 
   // Glass handle indicator color
   const handleColor = mode === 'dark'
@@ -151,10 +162,14 @@ export function ThemedSheet({
   return (
     <BottomSheetModal
       ref={sheetRef}
-      snapPoints={enableDynamicSizing ? undefined : snapPoints}
-      enableDynamicSizing={enableDynamicSizing}
+      snapPoints={useDynamic ? undefined : snapPoints}
+      enableDynamicSizing={useDynamic}
+      maxDynamicContentSize={useDynamic ? maxSize : undefined}
       enablePanDownToClose
       enableContentPanningGesture={scrollable}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
       overDragResistanceFactor={6}
       backdropComponent={renderBackdrop}
       backgroundComponent={GlassBackground}

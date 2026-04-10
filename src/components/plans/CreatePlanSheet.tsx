@@ -1,16 +1,16 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Platform, Alert } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { ThemedSheet, BottomSheetTextInput } from '@/src/components/ui';
+import { sheet, useGlass } from '@/src/components/ui/sheetStyles';
 import { useColors } from '@/src/hooks/useColors';
 import { useSession } from '@/src/hooks/useSession';
 import { useTheme } from '@/src/lib/theme';
-import { Typography } from '@/src/constants/typography';
-import { Spacing, BorderRadius } from '@/src/constants/spacing';
+import { Spacing } from '@/src/constants/spacing';
 
 const STATUSES = [
   { label: 'Active', value: 'active' },
@@ -59,8 +59,7 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
 
   const isEdit = !!plan;
 
-  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
-  const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const { glassBg, glassBorder } = useGlass();
   const activeBg = C.plansLight;
 
   useEffect(() => {
@@ -123,10 +122,10 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
       onPress={handleSave}
       disabled={saving}
       activeOpacity={0.8}
-      style={[styles.saveBtn, { backgroundColor: C.plans }]}
+      style={[sheet.saveBtn, { backgroundColor: C.plans }]}
     >
       <Feather name={isEdit ? 'check' : 'clipboard'} size={18} color={C.ink} />
-      <Text style={[styles.saveBtnText, { color: C.ink }]}>
+      <Text style={[sheet.saveBtnText, { color: C.ink }]}>
         {saving ? 'Saving...' : isEdit ? 'Update' : 'Create Plan'}
       </Text>
     </TouchableOpacity>
@@ -135,22 +134,21 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
   return (
     <ThemedSheet
       sheetRef={sheetRef}
-      snapPoints={['92%']}
       scrollable
       footer={footer}
     >
-      <View style={styles.form}>
-        <View style={styles.dateHeader}>
-          <Text style={[styles.sheetLabel, { color: C.plans }]}>
+      <View style={sheet.form}>
+        <View style={sheet.dateHeader}>
+          <Text style={[sheet.sheetLabel, { color: C.plans }]}>
             {isEdit ? 'EDIT PLAN' : 'NEW PLAN'}
           </Text>
-          <Text style={[styles.dateDisplay, { color: C.plans }]}>
+          <Text style={[sheet.dateDisplay, { color: C.primary }]}>
             {targetDate ? format(targetDate, 'EEEE, MMMM d') : format(new Date(), 'EEEE, MMMM d')}
           </Text>
         </View>
 
         <BottomSheetTextInput
-          style={[styles.titleInput, { color: C.text }]}
+          style={[sheet.titleInput, { color: C.text }]}
           placeholder="What's the plan?"
           placeholderTextColor={C.fog}
           value={title}
@@ -158,9 +156,9 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
           autoFocus
         />
 
-        <View style={[styles.bodyCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
+        <View style={[sheet.bodyCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
           <BottomSheetTextInput
-            style={[styles.bodyInput, { color: C.text }]}
+            style={[sheet.bodyInput, { color: C.text }]}
             placeholder="Add details..."
             placeholderTextColor={C.fog}
             value={description}
@@ -171,17 +169,17 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
         </View>
 
         {/* Category — horizontal scroll glass chips */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: C.textTertiary }]}>Category</Text>
+        <View style={sheet.section}>
+          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Category</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.chipRow}>
+            <View style={sheet.chipRow}>
               {CATEGORIES.map((cat) => {
                 const active = category === cat.value;
                 return (
                   <TouchableOpacity
                     key={cat.value}
                     style={[
-                      styles.chip,
+                      sheet.chip,
                       { backgroundColor: active ? activeBg : glassBg, borderColor: active ? C.plans : glassBorder },
                     ]}
                     onPress={() => {
@@ -189,7 +187,7 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
                       setCategory(category === cat.value ? '' : cat.value);
                     }}
                   >
-                    <Text style={[styles.chipText, { color: active ? C.plans : C.haze }]}>
+                    <Text style={[sheet.chipText, { color: active ? C.plans : C.haze }]}>
                       {cat.label}
                     </Text>
                   </TouchableOpacity>
@@ -200,17 +198,17 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
         </View>
 
         {/* Target date — glass pill */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: C.textTertiary }]}>Target date</Text>
+        <View style={sheet.section}>
+          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Target date</Text>
           <TouchableOpacity
-            style={[styles.glassPill, { backgroundColor: glassBg, borderColor: glassBorder }]}
+            style={[sheet.glassPill, { backgroundColor: glassBg, borderColor: glassBorder }]}
             onPress={() => {
               Haptics.selectionAsync();
               setShowDatePicker((current) => !current);
             }}
           >
             <Feather name="calendar" size={15} color={C.plans} />
-            <Text style={[styles.glassPillText, { color: C.text }]}>
+            <Text style={[sheet.glassPillText, { color: C.text }]}>
               {targetDate ? format(targetDate, 'MMM d, yyyy') : 'Set a date'}
             </Text>
           </TouchableOpacity>
@@ -229,12 +227,12 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
         </View>
 
         {/* Budget */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: C.textTertiary }]}>Budget</Text>
-          <View style={styles.amountRow}>
-            <Text style={[styles.currencySign, { color: C.plans }]}>$</Text>
+        <View style={sheet.section}>
+          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Budget</Text>
+          <View style={sheet.amountRow}>
+            <Text style={[sheet.currencySign, { color: C.plans }]}>$</Text>
             <BottomSheetTextInput
-              style={[styles.amountInput, { color: C.text }]}
+              style={[sheet.amountInput, { color: C.text }]}
               placeholder="0.00"
               placeholderTextColor={C.fog}
               value={budget}
@@ -245,17 +243,17 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
         </View>
 
         {/* Status — glass chips */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: C.textTertiary }]}>Status</Text>
+        <View style={sheet.section}>
+          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Status</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.chipRow}>
+            <View style={sheet.chipRow}>
               {STATUSES.map((s) => {
                 const active = status === s.value;
                 return (
                   <TouchableOpacity
                     key={s.value}
                     style={[
-                      styles.chip,
+                      sheet.chip,
                       { backgroundColor: active ? activeBg : glassBg, borderColor: active ? C.plans : glassBorder },
                     ]}
                     onPress={() => {
@@ -263,7 +261,7 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
                       setStatus(s.value);
                     }}
                   >
-                    <Text style={[styles.chipText, { color: active ? C.plans : C.haze }]}>
+                    <Text style={[sheet.chipText, { color: active ? C.plans : C.haze }]}>
                       {s.label}
                     </Text>
                   </TouchableOpacity>
@@ -274,16 +272,16 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
         </View>
 
         {/* Priority — glass toggles */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: C.textTertiary }]}>Priority</Text>
-          <View style={styles.toggleRow}>
+        <View style={sheet.section}>
+          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Priority</Text>
+          <View style={sheet.toggleRow}>
             {PRIORITIES.map((p) => {
               const active = priority === p.value;
               return (
                 <TouchableOpacity
                   key={p.value}
                   style={[
-                    styles.glassToggle,
+                    sheet.glassToggle,
                     { backgroundColor: active ? activeBg : glassBg, borderColor: active ? C.plans : glassBorder },
                   ]}
                   onPress={() => {
@@ -292,7 +290,7 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
                   }}
                 >
                   <Feather name={p.icon} size={14} color={active ? C.plans : C.fog} />
-                  <Text style={[styles.toggleText, { color: active ? C.plans : C.haze }]}>
+                  <Text style={[sheet.toggleText, { color: active ? C.plans : C.haze }]}>
                     {p.label}
                   </Text>
                 </TouchableOpacity>
@@ -302,11 +300,11 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
         </View>
 
         {/* Privacy toggle */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: C.textTertiary }]}>Privacy</Text>
+        <View style={sheet.section}>
+          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Privacy</Text>
           <TouchableOpacity
             style={[
-              styles.glassToggle,
+              sheet.glassToggle,
               { backgroundColor: isPrivate ? activeBg : glassBg, borderColor: isPrivate ? C.plans : glassBorder, flex: 0, paddingHorizontal: Spacing.lg },
             ]}
             onPress={() => {
@@ -315,7 +313,7 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
             }}
           >
             <Feather name={isPrivate ? 'lock' : 'unlock'} size={14} color={isPrivate ? C.plans : C.fog} />
-            <Text style={[styles.toggleText, { color: isPrivate ? C.plans : C.haze }]}>
+            <Text style={[sheet.toggleText, { color: isPrivate ? C.plans : C.haze }]}>
               {isPrivate ? 'Private' : 'Shared'}
             </Text>
           </TouchableOpacity>
@@ -326,120 +324,3 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  form: {
-    gap: Spacing.xl,
-  },
-  dateHeader: {
-    gap: Spacing.xs,
-  },
-  sheetLabel: {
-    ...Typography.overline,
-    letterSpacing: 3,
-  },
-  dateDisplay: {
-    ...Typography.overline,
-    letterSpacing: 1.5,
-  },
-  titleInput: {
-    ...Typography.title,
-    padding: 0,
-  },
-  bodyCard: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 14,
-    padding: Spacing.md,
-  },
-  bodyInput: {
-    ...Typography.body,
-    minHeight: 72,
-    lineHeight: 22,
-    textAlignVertical: 'top',
-    padding: 0,
-  },
-  section: {
-    gap: Spacing.md,
-  },
-  sectionTitle: {
-    ...Typography.overline,
-    letterSpacing: 2,
-  },
-  dateRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  glassPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-    alignSelf: 'flex-start',
-  },
-  glassPillText: {
-    ...Typography.captionMedium,
-  },
-  amountRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  currencySign: {
-    ...Typography.largeTitle,
-    fontSize: 32,
-  },
-  amountInput: {
-    ...Typography.largeTitle,
-    fontSize: 32,
-    padding: 0,
-    flex: 1,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  glassToggle: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  toggleText: {
-    ...Typography.captionMedium,
-    fontSize: 13,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-  },
-  chip: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  chipText: {
-    ...Typography.captionMedium,
-    fontSize: 13,
-  },
-  saveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: 16,
-    borderRadius: 14,
-  },
-  saveBtnText: {
-    ...Typography.subheading,
-    fontSize: 15,
-  },
-});

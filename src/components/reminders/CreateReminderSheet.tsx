@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Platform, Alert } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
@@ -9,8 +9,7 @@ import { ThemedSheet, BottomSheetTextInput } from '@/src/components/ui';
 import { useColors } from '@/src/hooks/useColors';
 import { useSession } from '@/src/hooks/useSession';
 import { useTheme } from '@/src/lib/theme';
-import { Typography } from '@/src/constants/typography';
-import { Spacing, BorderRadius } from '@/src/constants/spacing';
+import { sheet, useGlass } from '@/src/components/ui/sheetStyles';
 import { Reminder } from '@/src/types/database';
 
 const PRIORITIES = [
@@ -50,8 +49,7 @@ export function CreateReminderSheet({ sheetRef, onSave, reminder }: Props) {
 
   const isEdit = !!reminder;
 
-  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
-  const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const { glassBg, glassBorder } = useGlass();
   const activeBg = C.remindersLight;
 
   useEffect(() => {
@@ -111,10 +109,10 @@ export function CreateReminderSheet({ sheetRef, onSave, reminder }: Props) {
       onPress={handleSave}
       disabled={saving}
       activeOpacity={0.8}
-      style={[styles.saveBtn, { backgroundColor: C.reminders }]}
+      style={[sheet.saveBtn, { backgroundColor: C.reminders }]}
     >
       <Feather name={isEdit ? 'check' : 'bell'} size={18} color={C.ink} />
-      <Text style={[styles.saveBtnText, { color: C.ink }]}>
+      <Text style={[sheet.saveBtnText, { color: C.ink }]}>
         {saving ? 'Saving...' : isEdit ? 'Update Reminder' : 'Set Reminder'}
       </Text>
     </TouchableOpacity>
@@ -123,22 +121,21 @@ export function CreateReminderSheet({ sheetRef, onSave, reminder }: Props) {
   return (
     <ThemedSheet
       sheetRef={sheetRef}
-      snapPoints={['96%']}
       scrollable
       footer={footer}
     >
-      <View style={styles.form}>
-        <View style={styles.dateHeader}>
-          <Text style={[styles.sheetLabel, { color: C.reminders }]}>
+      <View style={sheet.form}>
+        <View style={sheet.dateHeader}>
+          <Text style={[sheet.sheetLabel, { color: C.reminders }]}>
             {isEdit ? 'EDIT REMINDER' : 'NEW REMINDER'}
           </Text>
-          <Text style={[styles.dateDisplay, { color: C.primary }]}>
+          <Text style={[sheet.dateDisplay, { color: C.primary }]}>
             {format(dueDate, 'EEEE, MMMM d')}
           </Text>
         </View>
 
         <BottomSheetTextInput
-          style={[styles.titleInput, { color: C.text }]}
+          style={[sheet.titleInput, { color: C.text }]}
           placeholder="What to remember..."
           placeholderTextColor={C.fog}
           value={title}
@@ -146,9 +143,9 @@ export function CreateReminderSheet({ sheetRef, onSave, reminder }: Props) {
           autoFocus
         />
 
-        <View style={[styles.bodyCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
+        <View style={[sheet.bodyCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
           <BottomSheetTextInput
-            style={[styles.bodyInput, { color: C.text }]}
+            style={[sheet.bodyInput, { color: C.text }]}
             placeholder="Add details..."
             placeholderTextColor={C.fog}
             value={description}
@@ -159,11 +156,11 @@ export function CreateReminderSheet({ sheetRef, onSave, reminder }: Props) {
         </View>
 
         {/* When — date/time in glass pills */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: C.textTertiary }]}>When</Text>
-          <View style={styles.dateRow}>
+        <View style={sheet.section}>
+          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>When</Text>
+          <View style={sheet.dateRow}>
             <TouchableOpacity
-              style={[styles.glassPill, { backgroundColor: glassBg, borderColor: glassBorder }]}
+              style={[sheet.glassPill, { backgroundColor: glassBg, borderColor: glassBorder }]}
               onPress={() => {
                 Haptics.selectionAsync();
                 setShowDatePicker((current) => !current);
@@ -171,12 +168,12 @@ export function CreateReminderSheet({ sheetRef, onSave, reminder }: Props) {
               }}
             >
               <Feather name="calendar" size={15} color={C.reminders} />
-              <Text style={[styles.glassPillText, { color: C.text }]}>
+              <Text style={[sheet.glassPillText, { color: C.text }]}>
                 {format(dueDate, 'MMM d, yyyy')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.glassPill, { backgroundColor: glassBg, borderColor: glassBorder }]}
+              style={[sheet.glassPill, { backgroundColor: glassBg, borderColor: glassBorder }]}
               onPress={() => {
                 Haptics.selectionAsync();
                 setShowTimePicker((current) => !current);
@@ -184,7 +181,7 @@ export function CreateReminderSheet({ sheetRef, onSave, reminder }: Props) {
               }}
             >
               <Feather name="clock" size={15} color={C.reminders} />
-              <Text style={[styles.glassPillText, { color: C.text }]}>
+              <Text style={[sheet.glassPillText, { color: C.text }]}>
                 {format(dueDate, 'h:mm a')}
               </Text>
             </TouchableOpacity>
@@ -220,16 +217,16 @@ export function CreateReminderSheet({ sheetRef, onSave, reminder }: Props) {
         </View>
 
         {/* Priority — glass toggles */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: C.textTertiary }]}>Priority</Text>
-          <View style={styles.toggleRow}>
+        <View style={sheet.section}>
+          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Priority</Text>
+          <View style={sheet.toggleRow}>
             {PRIORITIES.map((p) => {
               const active = priority === p.value;
               return (
                 <TouchableOpacity
                   key={p.value}
                   style={[
-                    styles.glassToggle,
+                    sheet.glassToggle,
                     { backgroundColor: active ? activeBg : glassBg, borderColor: active ? C.reminders : glassBorder },
                   ]}
                   onPress={() => {
@@ -238,7 +235,7 @@ export function CreateReminderSheet({ sheetRef, onSave, reminder }: Props) {
                   }}
                 >
                   <Feather name={p.icon} size={14} color={active ? C.reminders : C.fog} />
-                  <Text style={[styles.toggleText, { color: active ? C.reminders : C.haze }]}>
+                  <Text style={[sheet.toggleText, { color: active ? C.reminders : C.haze }]}>
                     {p.label}
                   </Text>
                 </TouchableOpacity>
@@ -248,17 +245,17 @@ export function CreateReminderSheet({ sheetRef, onSave, reminder }: Props) {
         </View>
 
         {/* Category — horizontal scroll glass chips */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: C.textTertiary }]}>Category</Text>
+        <View style={sheet.section}>
+          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Category</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.chipRow}>
+            <View style={sheet.chipRow}>
               {CATEGORIES.map((cat) => {
                 const active = category === cat;
                 return (
                   <TouchableOpacity
                     key={cat}
                     style={[
-                      styles.chip,
+                      sheet.chip,
                       { backgroundColor: active ? activeBg : glassBg, borderColor: active ? C.reminders : glassBorder },
                     ]}
                     onPress={() => {
@@ -266,7 +263,7 @@ export function CreateReminderSheet({ sheetRef, onSave, reminder }: Props) {
                       setCategory(category === cat ? '' : cat);
                     }}
                   >
-                    <Text style={[styles.chipText, { color: active ? C.reminders : C.haze }]}>
+                    <Text style={[sheet.chipText, { color: active ? C.reminders : C.haze }]}>
                       {cat}
                     </Text>
                   </TouchableOpacity>
@@ -277,16 +274,16 @@ export function CreateReminderSheet({ sheetRef, onSave, reminder }: Props) {
         </View>
 
         {/* Recurrence */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: C.textTertiary }]}>Repeat</Text>
-          <View style={styles.chipRow}>
+        <View style={sheet.section}>
+          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Repeat</Text>
+          <View style={sheet.chipRow}>
             {RECURRENCES.map((rec) => {
               const active = recurrence === rec || (!recurrence && rec === 'None');
               return (
                 <TouchableOpacity
                   key={rec}
                   style={[
-                    styles.chip,
+                    sheet.chip,
                     { backgroundColor: active ? activeBg : glassBg, borderColor: active ? C.reminders : glassBorder },
                   ]}
                   onPress={() => {
@@ -294,7 +291,7 @@ export function CreateReminderSheet({ sheetRef, onSave, reminder }: Props) {
                     setRecurrence(rec === 'None' ? '' : rec);
                   }}
                 >
-                  <Text style={[styles.chipText, { color: active ? C.reminders : C.haze }]}>
+                  <Text style={[sheet.chipText, { color: active ? C.reminders : C.haze }]}>
                     {rec}
                   </Text>
                 </TouchableOpacity>
@@ -305,9 +302,9 @@ export function CreateReminderSheet({ sheetRef, onSave, reminder }: Props) {
 
         {/* Assign */}
         {partner && (
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: C.textTertiary }]}>Assign to</Text>
-            <View style={styles.toggleRow}>
+          <View style={sheet.section}>
+            <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Assign to</Text>
+            <View style={sheet.toggleRow}>
               {[
                 { value: null, label: 'Both', icon: 'users' as const },
                 { value: currentUserId, label: 'Me', icon: 'user' as const },
@@ -318,7 +315,7 @@ export function CreateReminderSheet({ sheetRef, onSave, reminder }: Props) {
                   <TouchableOpacity
                     key={opt.label}
                     style={[
-                      styles.glassToggle,
+                      sheet.glassToggle,
                       { backgroundColor: active ? activeBg : glassBg, borderColor: active ? C.reminders : glassBorder },
                     ]}
                     onPress={() => {
@@ -327,7 +324,7 @@ export function CreateReminderSheet({ sheetRef, onSave, reminder }: Props) {
                     }}
                   >
                     <Feather name={opt.icon} size={14} color={active ? C.reminders : C.fog} />
-                    <Text style={[styles.toggleText, { color: active ? C.reminders : C.haze }]}>
+                    <Text style={[sheet.toggleText, { color: active ? C.reminders : C.haze }]}>
                       {opt.label}
                     </Text>
                   </TouchableOpacity>
@@ -342,104 +339,3 @@ export function CreateReminderSheet({ sheetRef, onSave, reminder }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  form: {
-    gap: Spacing.xl,
-  },
-  dateHeader: {
-    gap: Spacing.xs,
-  },
-  sheetLabel: {
-    ...Typography.overline,
-    letterSpacing: 3,
-  },
-  dateDisplay: {
-    ...Typography.overline,
-    letterSpacing: 1.5,
-  },
-  titleInput: {
-    ...Typography.title,
-    padding: 0,
-  },
-  bodyCard: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 14,
-    padding: Spacing.md,
-  },
-  bodyInput: {
-    ...Typography.body,
-    minHeight: 72,
-    lineHeight: 22,
-    textAlignVertical: 'top',
-    padding: 0,
-  },
-  section: {
-    gap: Spacing.md,
-  },
-  sectionTitle: {
-    ...Typography.overline,
-    letterSpacing: 2,
-  },
-  dateRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  glassPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  glassPillText: {
-    ...Typography.captionMedium,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  glassToggle: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  toggleText: {
-    ...Typography.captionMedium,
-    fontSize: 13,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-  },
-  chip: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  chipText: {
-    ...Typography.captionMedium,
-    fontSize: 13,
-  },
-  saveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: 16,
-    borderRadius: 14,
-  },
-  saveBtnText: {
-    ...Typography.subheading,
-    fontSize: 15,
-  },
-});
