@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useConvex, useMutation, useQuery } from 'convex/react';
 import { makeFunctionReference } from 'convex/server';
+import { format } from 'date-fns';
 
 import { useSession } from './useSession';
 
@@ -13,6 +14,7 @@ type MilestoneDoc = {
   icon: string;
   createdBy: string;
   createdAt: number;
+  _creationTime?: number;
 };
 
 type MilestoneInput = {
@@ -62,14 +64,14 @@ export function useMilestones() {
 
   const milestones = useMemo(() => rows ?? [], [rows]);
 
-  const now = Date.now();
+  const today = format(new Date(), 'yyyy-MM-dd');
   const upcoming = useMemo(
-    () => milestones.filter((m) => new Date(m.date).getTime() >= now),
-    [milestones, now],
+    () => milestones.filter((m) => m.date >= today),
+    [milestones, today],
   );
   const past = useMemo(
-    () => milestones.filter((m) => new Date(m.date).getTime() < now),
-    [milestones, now],
+    () => milestones.filter((m) => m.date < today),
+    [milestones, today],
   );
 
   const create = useCallback(

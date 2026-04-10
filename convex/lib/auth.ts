@@ -307,9 +307,12 @@ export async function resolveActiveCoupleForUser(
     .query("memberships")
     .withIndex("by_userId", (q: any) => q.eq("userId", userId))
     .collect()) as MembershipRecord[];
-  const activeMembership = memberships.find(
-    (membership) => membership.status === "active",
-  );
+  const activeMembership = memberships
+    .sort(
+      (left, right) =>
+        right.updatedAt - left.updatedAt || left._id.localeCompare(right._id),
+    )
+    .find((membership) => membership.status === "active");
   if (!activeMembership) {
     return null;
   }

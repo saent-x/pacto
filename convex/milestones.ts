@@ -12,6 +12,7 @@ const milestoneValidator = v.object({
   icon: v.string(),
   createdBy: v.string(),
   createdAt: v.number(),
+  _creationTime: v.optional(v.float64()),
 });
 
 export const listMilestones = queryGeneric({

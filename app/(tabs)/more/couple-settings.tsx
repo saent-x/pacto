@@ -118,7 +118,7 @@ export default function CoupleSettingsScreen() {
     ? anniversaryDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
     : 'Tap to set';
 
-  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
+  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
 
   const nameSheetFooter = (
     <TouchableOpacity

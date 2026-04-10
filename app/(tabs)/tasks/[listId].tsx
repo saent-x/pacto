@@ -31,27 +31,51 @@ export default function TaskListDetailScreen() {
   const { listId } = useLocalSearchParams<{ listId: string }>();
   const currentListId = listId!;
   const { lists } = useTasks();
-  const { tasks, counts, create, update, toggleComplete, remove } = useTaskItems(currentListId);
+  const { tasks, counts, create, update, toggleComplete } = useTaskItems(currentListId);
 
   const sheetRef = useRef<BottomSheetModal>(null);
   const [editingTask, setEditingTask] = useState<Task | undefined>();
   const [quickAdd, setQuickAdd] = useState('');
+  const [pendingTaskIds, setPendingTaskIds] = useState<Record<string, true>>({});
+  const [quickAdding, setQuickAdding] = useState(false);
+  const [savingTask, setSavingTask] = useState(false);
 
   const handleQuickAdd = async () => {
-    if (!quickAdd.trim()) return;
+    if (!quickAdd.trim() || quickAdding) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await create({ title: quickAdd.trim() });
-    setQuickAdd('');
+    setQuickAdding(true);
+    try {
+      await create({ title: quickAdd.trim() });
+      setQuickAdd('');
+    } finally {
+      setQuickAdding(false);
+    }
   };
 
-  const handleToggle = (task: Task) => {
+  const handleToggle = async (task: Task) => {
+    if (pendingTaskIds[task.id]) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    toggleComplete(task);
+    setPendingTaskIds((current) => ({ ...current, [task.id]: true }));
+    try {
+      await toggleComplete(task);
+    } finally {
+      setPendingTaskIds((current) => {
+        const next = { ...current };
+        delete next[task.id];
+        return next;
+      });
+    }
   };
 
   const handleSave = async (data: TaskComposerSaveInput) => {
-    await saveTaskFromListDetail({ editingTask, data, create, update });
-    setEditingTask(undefined);
+    if (savingTask) return;
+    setSavingTask(true);
+    try {
+      await saveTaskFromListDetail({ editingTask, data, create, update });
+      setEditingTask(undefined);
+    } finally {
+      setSavingTask(false);
+    }
   };
 
   const uncompleted = tasks.filter((t) => !t.is_completed);
@@ -60,8 +84,9 @@ export default function TaskListDetailScreen() {
 
   const renderItem = ({ item }: { item: Task }) => (
     <TouchableOpacity
-      style={[styles.taskRow, { borderBottomColor: C.border }]}
+      style={[styles.taskRow, { borderBottomColor: C.border, opacity: pendingTaskIds[item.id] ? 0.6 : 1 }]}
       activeOpacity={0.7}
+      disabled={!!pendingTaskIds[item.id]}
       onLongPress={() => {
         setEditingTask(item);
         sheetRef.current?.present();
@@ -69,6 +94,7 @@ export default function TaskListDetailScreen() {
     >
       <TouchableOpacity
         onPress={() => handleToggle(item)}
+        disabled={!!pendingTaskIds[item.id]}
         style={[
           styles.checkbox,
           { borderColor: item.is_completed ? C.tasks : C.dusk },
@@ -109,7 +135,7 @@ export default function TaskListDetailScreen() {
     <View style={[styles.screen, { backgroundColor: C.background }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: C.surface }]}>
+        <View style={[styles.header, { backgroundColor: C.background }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Feather name="arrow-left" size={20} color={C.text} />
           </TouchableOpacity>
@@ -155,7 +181,7 @@ export default function TaskListDetailScreen() {
           />
 
           {/* Quick add bar */}
-          <View style={[styles.quickAdd, { backgroundColor: C.surface, borderTopColor: C.border }]}>
+          <View style={[styles.quickAdd, { backgroundColor: C.card, borderTopColor: C.border }]}>
             <TextInput
               style={[styles.quickInput, { color: C.text }]}
               placeholder="Add a task..."
@@ -164,11 +190,12 @@ export default function TaskListDetailScreen() {
               onChangeText={setQuickAdd}
               onSubmitEditing={handleQuickAdd}
               returnKeyType="done"
+              editable={!quickAdding}
             />
             <TouchableOpacity
               onPress={handleQuickAdd}
-              disabled={!quickAdd.trim()}
-              style={[styles.quickSend, { opacity: quickAdd.trim() ? 1 : 0.3 }]}
+              disabled={!quickAdd.trim() || quickAdding}
+              style={[styles.quickSend, { opacity: quickAdd.trim() && !quickAdding ? 1 : 0.3 }]}
             >
               <Feather name="arrow-up" size={18} color={C.tasks} />
             </TouchableOpacity>

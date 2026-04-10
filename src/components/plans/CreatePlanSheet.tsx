@@ -47,7 +47,7 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
   const [title, setTitle] = useState(plan?.title ?? '');
   const [description, setDescription] = useState(plan?.description ?? '');
   const [category, setCategory] = useState(plan?.category ?? '');
-  const [targetDate, setTargetDate] = useState(plan?.targetDate ? new Date(plan.targetDate) : null);
+  const [targetDate, setTargetDate] = useState(plan?.targetDate ? new Date(`${plan.targetDate}T00:00:00`) : null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [budget, setBudget] = useState(plan?.budget ? String(plan.budget) : '');
   const [status, setStatus] = useState(plan?.status ?? 'active');
@@ -59,7 +59,7 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
 
   const isEdit = !!plan;
 
-  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
+  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
   const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
   const activeBg = C.plansLight;
 
@@ -72,7 +72,7 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
     setTitle(plan?.title ?? '');
     setDescription(plan?.description ?? '');
     setCategory(plan?.category ?? '');
-    setTargetDate(plan?.targetDate ? new Date(plan.targetDate) : null);
+    setTargetDate(plan?.targetDate ? new Date(`${plan.targetDate}T00:00:00`) : null);
     setShowDatePicker(false);
     setBudget(plan?.budget ? String(plan.budget) : '');
     setStatus(plan?.status ?? 'active');
@@ -92,7 +92,7 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
         title: title.trim(),
         description: description.trim() || null,
         category: category || null,
-        targetDate: targetDate ? targetDate.toISOString() : null,
+        targetDate: targetDate ? format(targetDate, 'yyyy-MM-dd') : null,
         budget: parsedBudget && !isNaN(parsedBudget) ? parsedBudget : null,
         status,
         priority,

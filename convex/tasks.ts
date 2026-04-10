@@ -338,6 +338,81 @@ export const createTask = mutationGeneric({
   },
 });
 
+export const createTaskWithDefaultList = mutationGeneric({
+  args: {
+    title: v.string(),
+    notes: v.optional(v.union(v.string(), v.null())),
+    dueDate: v.optional(v.union(v.string(), v.null())),
+    priority: v.optional(v.number()),
+    assignedTo: v.optional(v.union(v.id("users"), v.null())),
+  },
+  returns: taskRecordValidator,
+  handler: async (ctx, args) => {
+    const db = ctx.db as unknown as LooseDb;
+    const user = await requireAuthenticatedUser(ctx);
+    const activeCouple = await requireActiveCouple(ctx);
+    const coupleId = activeCouple.couple._id;
+    if (args.assignedTo) {
+      const partner = activeCouple.partner;
+      const validUserIds = [activeCouple.membership.userId, partner?._id].filter(Boolean);
+      if (!validUserIds.includes(args.assignedTo)) {
+        throw new Error("Can only assign to couple members.");
+      }
+    }
+
+    const existingLists = await listTaskListsForCouple(db, coupleId);
+    const generalList =
+      existingLists.find((list) => list.name === "General") ?? null;
+    const now = Date.now();
+    const listId =
+      generalList?._id ??
+      (await db.insert("taskLists", {
+        coupleId,
+        name: "General",
+        icon: "list",
+        color: "#7BA08A",
+        sortOrder: existingLists.length,
+        createdBy: user._id,
+        createdAt: now,
+      }));
+    const existingTasks = await listTasksForList(db, listId);
+    const taskId = await db.insert("tasks", {
+      listId,
+      coupleId,
+      title: args.title,
+      notes: args.notes ?? null,
+      isCompleted: false,
+      completedAt: null,
+      completedBy: null,
+      assignedTo: args.assignedTo ?? null,
+      dueDate: args.dueDate ?? null,
+      priority: args.priority ?? 0,
+      sortOrder: existingTasks.length,
+      createdBy: user._id,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return toTaskRecord({
+      _id: taskId,
+      listId,
+      coupleId,
+      title: args.title,
+      notes: args.notes ?? null,
+      isCompleted: false,
+      completedAt: null,
+      completedBy: null,
+      assignedTo: args.assignedTo ?? null,
+      dueDate: args.dueDate ?? null,
+      priority: args.priority ?? 0,
+      sortOrder: existingTasks.length,
+      createdBy: user._id,
+      createdAt: now,
+      updatedAt: now,
+    });
+  },
+});
+
 export const updateTask = mutationGeneric({
   args: {
     taskId: v.id("tasks"),
@@ -362,8 +437,11 @@ export const updateTask = mutationGeneric({
     }
     const existing = await getTaskOrThrow(db, args.taskId, coupleId);
     const nextListId = args.listId ?? existing.listId;
+    let nextSortOrder = existing.sortOrder;
     if (nextListId !== existing.listId) {
       await getTaskListOrThrow(db, nextListId, coupleId);
+      const nextListTasks = await listTasksForList(db, nextListId);
+      nextSortOrder = nextListTasks.length;
     }
     const updates = {
       ...(args.title !== undefined ? { title: args.title } : {}),
@@ -372,6 +450,7 @@ export const updateTask = mutationGeneric({
       ...(args.priority !== undefined ? { priority: args.priority } : {}),
       ...(args.assignedTo !== undefined ? { assignedTo: args.assignedTo ?? null } : {}),
       ...(args.listId !== undefined ? { listId: args.listId } : {}),
+      ...(args.listId !== undefined && nextListId !== existing.listId ? { sortOrder: nextSortOrder } : {}),
       updatedAt: Date.now(),
     };
     await db.patch(args.taskId, updates);

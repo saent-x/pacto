@@ -45,7 +45,7 @@ export function CreateWishlistItemSheet({ sheetRef, onSave, item }: Props) {
 
   const isEdit = !!item;
 
-  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
+  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
   const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
   const activeBg = C.wishlistsLight;
 
@@ -64,13 +64,18 @@ export function CreateWishlistItemSheet({ sheetRef, onSave, item }: Props) {
       Alert.alert('Title required', 'Give your item a name.');
       return;
     }
+    const parsedPrice = price.trim().length > 0 ? Number.parseFloat(price) : null;
+    if (parsedPrice !== null && (!Number.isFinite(parsedPrice) || parsedPrice < 0)) {
+      Alert.alert('Price invalid', 'Enter a valid amount or leave the price blank.');
+      return;
+    }
     setSaving(true);
     try {
       await onSave({
         title: title.trim(),
         description: description.trim() || null,
         url: url.trim() || null,
-        price: price ? parseFloat(price) : null,
+        price: parsedPrice,
         priority,
       });
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

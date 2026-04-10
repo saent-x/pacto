@@ -9,6 +9,7 @@ const wishlistValidator = v.object({
   name: v.string(),
   createdBy: v.string(),
   createdAt: v.number(),
+  _creationTime: v.optional(v.float64()),
 });
 
 const wishlistItemValidator = v.object({
@@ -25,6 +26,7 @@ const wishlistItemValidator = v.object({
   sortOrder: v.number(),
   addedBy: v.string(),
   createdAt: v.number(),
+  _creationTime: v.optional(v.float64()),
 });
 
 export const listWishlists = queryGeneric({

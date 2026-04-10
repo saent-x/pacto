@@ -52,13 +52,13 @@ const dark = {
 
   // Base
   background: '#0F0D0B',
-  surface: '#1B1715',
-  card: '#221E1A',
+  surface: '#171310',
+  card: '#221C18',
   text: '#F2EBE2',
-  textSecondary: '#A89A8C',
-  textTertiary: '#7A6E62',
-  border: '#2E2923',
-  divider: '#2E2923',
+  textSecondary: '#C3B5A6',
+  textTertiary: '#938475',
+  border: '#3A322B',
+  divider: '#342C26',
   white: '#F2EBE2',
   black: '#0F0D0B',
 
@@ -117,14 +117,14 @@ const light = {
   moodLight: 'rgba(106, 94, 154, 0.10)',
 
   // Warm parchment — never pure white
-  background: '#EDE8E0',
-  surface: '#E6E0D8',
-  card: '#F2EDE7',
+  background: '#ECE4D8',
+  surface: '#E2D8CB',
+  card: '#F7F1E9',
   text: '#2C2420',
-  textSecondary: '#6B5F52',
-  textTertiary: '#A89A8C',
-  border: '#D9D2C8',
-  divider: '#D2CAC0',
+  textSecondary: '#5B4F44',
+  textTertiary: '#8D7E70',
+  border: '#C5B5A4',
+  divider: '#BCAA97',
   white: '#F2EDE7',
   black: '#1A1410',
 

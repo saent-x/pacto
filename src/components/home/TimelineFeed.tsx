@@ -24,6 +24,8 @@ function iconForType(type: TimelineItem["type"]): keyof typeof Feather.glyphMap 
       return "bell";
     case "task":
       return "check-square";
+    case "ritual":
+      return "refresh-cw";
     default:
       return "book-open";
   }
@@ -33,7 +35,7 @@ function timeLabel(item: TimelineItem) {
   if (!item.occursAt) {
     return "Anytime";
   }
-  if (item.type === "task" || item.type === "plan") {
+  if (item.type === "task" || item.type === "plan" || item.type === "ritual") {
     return format(item.occursAt, "EEE d MMM");
   }
   return format(item.occursAt, "EEE d MMM, h:mm a");
@@ -44,8 +46,8 @@ export function TimelineFeed({ timeline, isLoading }: Props) {
   const { mode } = useTheme();
   const feedItems = timeline.filter((item) => item.type !== "memory");
 
-  const glassBg = mode === "dark" ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)";
-  const glassBorder = mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
+  const glassBg = mode === "dark" ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.06)";
+  const glassBorder = mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.10)";
 
   return (
     <View style={styles.wrapper}>
@@ -146,20 +148,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 14,
     gap: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: 0,
+    borderRadius: 10,
   },
   taskRow: {
     flexDirection: "row",
     alignItems: "stretch",
     overflow: "hidden",
-    borderRadius: BorderRadius.lg,
+    borderRadius: 10,
     minHeight: 74,
     gap: Spacing.md,
   },
   taskRail: {
     width: 4,
-    borderTopLeftRadius: BorderRadius.lg,
-    borderBottomLeftRadius: BorderRadius.lg,
+    borderTopLeftRadius: 10,
+    borderBottomLeftRadius: 10,
   },
   iconWrap: {
     width: 36,
@@ -195,8 +198,7 @@ const styles = StyleSheet.create({
     ...Typography.caption,
   },
   emptyCard: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: BorderRadius.lg,
+    borderRadius: 10,
     padding: Spacing.xl,
     gap: Spacing.sm,
   },

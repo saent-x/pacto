@@ -20,13 +20,36 @@ export async function getMembershipForUserAndCouple(
   userId: string,
   coupleId: string,
 ): Promise<MembershipRecord | null> {
-  const membership = (await ctx.db
+  const memberships = (await ctx.db
     .query("memberships")
     .withIndex("by_userId_coupleId", (q: any) =>
       q.eq("userId", userId).eq("coupleId", coupleId),
     )
-    .unique()) as MembershipRecord | null;
-  return membership && membership.status === "active" ? membership : null;
+    .collect()) as MembershipRecord[];
+  const membership = memberships
+    .sort(
+      (left, right) =>
+        right.updatedAt - left.updatedAt || left._id.localeCompare(right._id),
+    )
+    .find((item) => item.status === "active");
+  return membership ?? null;
+}
+
+export async function listMembershipsForUserAndCouple(
+  ctx: QueryCtx,
+  userId: string,
+  coupleId: string,
+): Promise<MembershipRecord[]> {
+  const memberships = (await ctx.db
+    .query("memberships")
+    .withIndex("by_userId_coupleId", (q: any) =>
+      q.eq("userId", userId).eq("coupleId", coupleId),
+    )
+    .collect()) as MembershipRecord[];
+  return memberships.sort(
+    (left, right) =>
+      right.updatedAt - left.updatedAt || left._id.localeCompare(right._id),
+  );
 }
 
 export function buildActiveCoupleSummary(

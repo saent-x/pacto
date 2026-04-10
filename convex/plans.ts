@@ -268,9 +268,7 @@ export const updatePlan = mutationGeneric({
       });
     }
 
-    const updatedAt = Date.now();
-    const nextPlan: PlanRecord = {
-      ...existing,
+    const updates = {
       ...(args.title !== undefined ? { title: args.title } : {}),
       ...(args.description !== undefined ? { description: args.description } : {}),
       ...(args.category !== undefined ? { category: args.category } : {}),
@@ -281,14 +279,15 @@ export const updatePlan = mutationGeneric({
       ...(args.budget !== undefined ? { budget: args.budget } : {}),
       ...(args.priority !== undefined ? { priority: args.priority } : {}),
       ...(args.isPrivate !== undefined ? { isPrivate: args.isPrivate } : {}),
-      updatedAt,
+      updatedAt: Date.now(),
     };
 
-    await ctx.db.patch(existing._id, {
-      ...nextPlan,
-    });
+    await ctx.db.patch(existing._id, updates);
 
-    return nextPlan;
+    return {
+      ...existing,
+      ...updates,
+    };
   },
 });
 

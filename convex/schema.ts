@@ -56,7 +56,7 @@ export default defineSchema({
     createdBy: v.id("users"),
     title: v.string(),
     description: v.union(v.string(), v.null()),
-    category: v.string(),
+    category: v.union(v.string(), v.null()),
     targetDate: v.union(v.string(), v.null()),
     budget: v.union(v.number(), v.null()),
     status: v.string(),
@@ -92,7 +92,13 @@ export default defineSchema({
     isPrivate: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_coupleId", ["coupleId"]),
+  })
+    .index("by_coupleId", ["coupleId"])
+    .index("by_coupleId_and_authorId_and_checkInDate", [
+      "coupleId",
+      "authorId",
+      "checkInDate",
+    ]),
   reminders: defineTable({
     coupleId: v.id("couples"),
     createdBy: v.id("users"),
@@ -197,6 +203,7 @@ export default defineSchema({
     title: v.string(),
     amount: v.number(),
     paidBy: v.id("users"),
+    currency: v.optional(v.string()),
     splitType: v.string(),
     splitAmount: v.union(v.number(), v.null()),
     category: v.string(),

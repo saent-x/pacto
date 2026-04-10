@@ -44,6 +44,11 @@ const createWishlistMutation = makeFunctionReference<
   { name: string },
   WishlistDoc
 >('wishlists:createWishlist');
+const updateWishlistMutation = makeFunctionReference<
+  'mutation',
+  { wishlistId: string; name?: string },
+  WishlistDoc
+>('wishlists:updateWishlist');
 const deleteWishlistMutation = makeFunctionReference<
   'mutation',
   { wishlistId: string },
@@ -95,6 +100,7 @@ export function useWishlists() {
   const convex = useConvex();
   const rows = useQuery(listWishlistsQuery, activeCouple ? {} : 'skip');
   const createWishlist = useMutation(createWishlistMutation);
+  const updateWishlist = useMutation(updateWishlistMutation);
   const deleteWishlistFn = useMutation(deleteWishlistMutation);
 
   const wishlists = useMemo(() => rows ?? [], [rows]);
@@ -113,10 +119,18 @@ export function useWishlists() {
     [deleteWishlistFn],
   );
 
+  const update = useCallback(
+    async (id: string, name: string) => {
+      await updateWishlist({ wishlistId: id, name });
+    },
+    [updateWishlist],
+  );
+
   return {
     wishlists,
     isLoading: !!activeCouple && rows === undefined,
     create,
+    update,
     remove,
     refetch: async () => {
       if (!activeCouple) return;

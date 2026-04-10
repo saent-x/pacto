@@ -9,7 +9,7 @@ import { listCheckInsForCouple } from "./checkIns";
 import { getDailyVerseForNow } from "./dailyVerse";
 import { listEventsForCouple } from "./events";
 import { listPlansForCouple } from "./plans";
-// rituals removed
+import { listRitualsForCouple } from "./rituals";
 import { getCuratedDailyVerse, type DailyVerse } from "../src/lib/home/dailyVerse";
 
 type SharedDoc = Record<string, unknown> & { _id: string };
@@ -32,7 +32,7 @@ type StorageReader = {
 
 export type TimelineItem = {
   id: string;
-  type: "event" | "plan" | "reminder" | "task" | "memory";
+  type: "event" | "plan" | "reminder" | "task" | "ritual" | "memory";
   sourceId: string;
   sourceTable: string;
   title: string;
@@ -104,9 +104,9 @@ const timelineItemValidator = v.object({
   type: v.union(
     v.literal("event"),
     v.literal("plan"),
-
     v.literal("reminder"),
     v.literal("task"),
+    v.literal("ritual"),
     v.literal("memory"),
   ),
   sourceId: v.string(),
@@ -181,9 +181,9 @@ const calendarDayValidator = v.object({
     v.union(
       v.literal("event"),
       v.literal("plan"),
-  
       v.literal("reminder"),
       v.literal("task"),
+      v.literal("ritual"),
       v.literal("memory"),
       v.literal("milestone"),
     ),
@@ -243,10 +243,6 @@ function readBoolean(doc: Record<string, unknown>, ...keys: string[]): boolean {
     }
   }
   return false;
-}
-
-function getCoupleId(doc: Record<string, unknown>) {
-  return readString(doc, "coupleId", "couple_id");
 }
 
 function startOfUtcDay(timestamp: number) {
@@ -315,9 +311,15 @@ function normalizePresence(session: Awaited<ReturnType<typeof resolveCurrentSess
   };
 }
 
-async function listSharedDocs(ctx: { db: any }, table: string, coupleId: string) {
-  const rows = (await ctx.db.query(table).collect()) as SharedDoc[];
-  return rows.filter((row) => getCoupleId(row) === coupleId);
+async function listIndexedSharedDocs(
+  ctx: { db: any },
+  table: string,
+  coupleId: string,
+) {
+  return (await ctx.db
+    .query(table)
+    .withIndex("by_coupleId", (q: any) => q.eq("coupleId", coupleId))
+    .collect()) as SharedDoc[];
 }
 
 function isCompleted(doc: Record<string, unknown>) {
@@ -341,20 +343,20 @@ function timelineSort(left: TimelineItem, right: TimelineItem) {
 function buildTimelineItems({
   now,
   previewDays,
-  couple,
   events,
   plans,
   reminders,
   tasks,
+  rituals,
   memories,
 }: {
   now: number;
   previewDays: number;
-  couple: CoupleRecord;
   events: Awaited<ReturnType<typeof listEventsForCouple>>;
   plans: Awaited<ReturnType<typeof listPlansForCouple>>;
   reminders: SharedDoc[];
   tasks: SharedDoc[];
+  rituals: Awaited<ReturnType<typeof listRitualsForCouple>>;
   memories: MemoryPreview[];
 }) {
   const today = toDateString(now);
@@ -409,11 +411,13 @@ function buildTimelineItems({
     if (isCompleted(reminder)) {
       continue;
     }
-    const dueAtRaw = readString(reminder, "dueAt", "due_at");
-    if (!dueAtRaw || dueAtRaw.slice(0, 10) !== today) {
+    const dueAt = readNumber(reminder, "dueAt", "due_at");
+    if (dueAt === null) {
       continue;
     }
-    const dueAt = Date.parse(dueAtRaw);
+    if (!withinPreviewWindow(now, previewDays, dueAt, null)) {
+      continue;
+    }
     items.push({
       id: `reminder:${reminder._id}`,
       type: "reminder",
@@ -433,7 +437,7 @@ function buildTimelineItems({
       continue;
     }
     const dueDate = readString(task, "dueDate", "due_date");
-    if (!dueDate || dueDate !== today) {
+    if (!dueDate || !withinPreviewWindow(now, previewDays, null, dueDate)) {
       continue;
     }
     items.push({
@@ -446,7 +450,30 @@ function buildTimelineItems({
       occursAt: parseDateOnly(dueDate),
       priority: readNumber(task, "priority") ?? 0,
       isPrivate: false,
-      isOverdue: false,
+      isOverdue: dueDate < today,
+    });
+  }
+
+  for (const ritual of rituals) {
+    if (ritual.isPrivate || !ritual.isActive) {
+      continue;
+    }
+    const occursAt = ritual.nextOccurrenceAt ?? parseDateOnly(ritual.dueDate);
+    if (!withinPreviewWindow(now, previewDays, occursAt, ritual.dueDate)) {
+      continue;
+    }
+    items.push({
+      id: `ritual:${ritual._id}`,
+      type: "ritual",
+      sourceId: ritual._id,
+      sourceTable: "rituals",
+      title: ritual.title,
+      subtitle: ritual.description ?? ritual.cadence,
+      occursAt,
+      priority: ritual.priority,
+      isPrivate: ritual.isPrivate,
+      isOverdue:
+        occursAt !== null ? occursAt < now : !!ritual.dueDate && ritual.dueDate < today,
     });
   }
 
@@ -739,16 +766,27 @@ async function buildHomeView(
   const storage = ctx.storage as unknown as StorageReader;
   const dailyVerse = await getDailyVerseForNow(ctx, now);
 
-  const [events, plans, checkIns, reminders, tasks, milestones, journalEntries, loveNotes] =
+  const [
+    events,
+    plans,
+    rituals,
+    checkIns,
+    reminders,
+    tasks,
+    milestones,
+    journalEntries,
+    loveNotes,
+  ] =
     await Promise.all([
       listEventsForCouple(ctx, coupleId),
       listPlansForCouple(ctx, coupleId),
+      listRitualsForCouple(ctx, coupleId),
       listCheckInsForCouple(ctx, coupleId),
-      listSharedDocs(ctx, "reminders", coupleId),
-      listSharedDocs(ctx, "tasks", coupleId),
-      listSharedDocs(ctx, "milestones", coupleId),
-      listSharedDocs(ctx, "journalEntries", coupleId),
-      listSharedDocs(ctx, "loveNotes", coupleId),
+      listIndexedSharedDocs(ctx, "reminders", coupleId),
+      listIndexedSharedDocs(ctx, "tasks", coupleId),
+      listIndexedSharedDocs(ctx, "milestones", coupleId),
+      listIndexedSharedDocs(ctx, "journalEntries", coupleId),
+      listIndexedSharedDocs(ctx, "loveNotes", coupleId),
     ]);
 
   const allMemories = await buildMemoryPreview({
@@ -765,11 +803,11 @@ async function buildHomeView(
   const timeline = buildTimelineItems({
     now,
     previewDays,
-    couple: activeCouple.couple,
     events,
     plans,
     reminders,
     tasks,
+    rituals,
     memories: memoryPreview ? [memoryPreview] : [],
   });
   const hero = selectFeaturedSignal({
@@ -815,7 +853,15 @@ export const getCalendarView = queryGeneric({
     const now = args.now ?? Date.now();
     const selectedDate = args.selectedDate ?? null;
     const month = args.month ?? (selectedDate ? selectedDate.slice(0, 7) : toDateString(now).slice(0, 7));
-    const homeView = await buildHomeView(ctx, now, args.previewDays ?? 30);
+    const monthEnd = new Date(Date.parse(`${month}-01T00:00:00.000Z`));
+    monthEnd.setUTCMonth(monthEnd.getUTCMonth() + 1);
+    monthEnd.setUTCDate(0);
+    const daysUntilMonthEnd = Math.max(30, daysBetween(now, monthEnd.toISOString().slice(0, 10)));
+    const homeView = await buildHomeView(
+      ctx,
+      now,
+      Math.max(args.previewDays ?? 30, daysUntilMonthEnd),
+    );
     const monthStart = new Date(Date.parse(`${month}-01T00:00:00.000Z`));
 
     return {

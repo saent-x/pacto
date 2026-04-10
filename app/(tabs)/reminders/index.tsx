@@ -26,6 +26,22 @@ function toLocalDateKey(value: string) {
   return format(new Date(value), 'yyyy-MM-dd');
 }
 
+function matchesReminderOwnerFilter(
+  reminder: Reminder,
+  filter: Filter,
+  userId: string | null,
+) {
+  if (filter === 'mine') {
+    return reminder.created_by === userId || reminder.assigned_to === userId;
+  }
+
+  if (filter === 'partner') {
+    return reminder.created_by !== userId;
+  }
+
+  return true;
+}
+
 export default function RemindersScreen() {
   const C = useColors();
   const { mode } = useTheme();
@@ -38,18 +54,20 @@ export default function RemindersScreen() {
   const [filter, setFilter] = useState<Filter>('all');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [pendingReminderIds, setPendingReminderIds] = useState<Record<string, true>>({});
   const [refreshing, setRefreshing] = useState(false);
 
   const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.6)';
-  const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+  const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.10)';
 
   const filtered = upcoming.filter((r) => {
     if (selectedDate && toLocalDateKey(r.due_at) !== selectedDate) return false;
-    if (filter === 'mine') return r.created_by === userId || r.assigned_to === userId;
-    if (filter === 'partner') return r.created_by !== userId;
-    return true;
+    return matchesReminderOwnerFilter(r, filter, userId);
   });
-  const filteredCompleted = completed.filter((r) => !selectedDate || toLocalDateKey(r.due_at) === selectedDate);
+  const filteredCompleted = completed.filter((r) => {
+    if (selectedDate && toLocalDateKey(r.due_at) !== selectedDate) return false;
+    return matchesReminderOwnerFilter(r, filter, userId);
+  });
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -83,16 +101,42 @@ export default function RemindersScreen() {
     sheetRef.current?.present();
   };
 
-  const handleToggle = (r: Reminder) => {
+  const handleToggle = async (r: Reminder) => {
+    if (pendingReminderIds[r.id]) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    toggleComplete(r);
+    setPendingReminderIds((current) => ({ ...current, [r.id]: true }));
+    try {
+      await toggleComplete(r);
+    } finally {
+      setPendingReminderIds((current) => {
+        const next = { ...current };
+        delete next[r.id];
+        return next;
+      });
+    }
   };
 
   const handleDelete = (r: Reminder) => {
+    if (pendingReminderIds[r.id]) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     Alert.alert('Delete Reminder', `Remove "${r.title}"?`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => remove(r.id) },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          setPendingReminderIds((current) => ({ ...current, [r.id]: true }));
+          try {
+            await remove(r.id);
+          } finally {
+            setPendingReminderIds((current) => {
+              const next = { ...current };
+              delete next[r.id];
+              return next;
+            });
+          }
+        },
+      },
     ]);
   };
 
@@ -116,6 +160,7 @@ export default function RemindersScreen() {
 
   const renderItem = ({ item }: { item: Reminder }) => {
     const overdue = !item.is_completed && isPast(new Date(item.due_at)) && !isToday(new Date(item.due_at));
+    const isPending = !!pendingReminderIds[item.id];
     return (
       <Swipeable
         renderRightActions={renderSwipeRight(item)}
@@ -125,8 +170,9 @@ export default function RemindersScreen() {
         friction={2}
       >
         <TouchableOpacity
-          style={[styles.reminderRow, { backgroundColor: C.background }]}
+          style={[styles.reminderRow, { backgroundColor: C.background, opacity: isPending ? 0.6 : 1 }]}
           activeOpacity={0.6}
+          disabled={isPending}
           onPress={() => openEdit(item)}
           onLongPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -135,6 +181,7 @@ export default function RemindersScreen() {
         >
           <TouchableOpacity
             onPress={() => handleToggle(item)}
+            disabled={isPending}
             style={[
               styles.checkbox,
               {
@@ -167,7 +214,7 @@ export default function RemindersScreen() {
                 styles.priorityBadge,
                 {
                   backgroundColor:
-                    item.priority === 3 ? C.errorLight : item.priority === 2 ? C.warningLight : 'rgba(255,255,255,0.04)',
+                    item.priority === 3 ? C.errorLight : item.priority === 2 ? C.warningLight : C.primaryMuted,
                 },
               ]}
             >
@@ -189,12 +236,14 @@ export default function RemindersScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: C.background }]}>
-      <SafeAreaView style={[styles.flex, { backgroundColor: C.surface }]} edges={['top']}>
+      <SafeAreaView style={[styles.flex, { backgroundColor: C.background }]} edges={['top']}>
         <MiniDateRail
           title="Reminders"
           selectedDate={selectedDate}
           onSelectDate={setSelectedDate}
           accentColor={C.reminders}
+          onPressAction={openCreate}
+          actionIcon="plus"
           tabs={[
             { value: 'all', label: 'All' },
             { value: 'mine', label: 'Mine' },
@@ -203,7 +252,7 @@ export default function RemindersScreen() {
           selectedTab={filter}
           onSelectTab={(value) => setFilter(value as Filter)}
         />
-        <View style={[styles.header, { backgroundColor: C.surface }]}>
+        <View style={[styles.header, { backgroundColor: C.background }]}>
           <View style={styles.summaryRow}>
             <Text style={[styles.summaryText, { color: C.textTertiary }]}>
               {openCount} open

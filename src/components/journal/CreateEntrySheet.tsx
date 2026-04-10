@@ -9,13 +9,12 @@ import { format } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import {
+  editorHtml,
   RichText,
   useEditorBridge,
   useBridgeState,
   TenTapStartKit,
 } from '@10play/tentap-editor';
-// @ts-ignore — internal build artifact
-import { editorHtml } from '@10play/tentap-editor/src/simpleWebEditor/build/editorHtml';
 import { ThemedSheet, BottomSheetTextInput } from '@/src/components/ui';
 import { MarkdownText } from '@/src/components/journal/MarkdownText';
 import { useColors } from '@/src/hooks/useColors';
@@ -72,14 +71,17 @@ export function CreateEntrySheet({ sheetRef, onSave, onUploadImage, entry, readO
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [mediaItems, setMediaItems] = useState<MediaItem[]>(
-    (entry?.media_urls ?? []).map((uri) => ({ uri })),
+    (entry?.media_urls ?? []).map((uri, index) => ({
+      uri,
+      storageId: entry?.media_storage_ids?.[index],
+    })),
   );
 
   const sessionKey = entry ? `edit:${entry.id}` : 'create';
   const sessionKeyRef = useRef(sessionKey);
   const isEdit = !!entry;
 
-  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
+  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
   const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
   const themeBg = mode === 'dark' ? '#0F0D0B' : '#EDE8E0';
 
@@ -171,7 +173,10 @@ export function CreateEntrySheet({ sheetRef, onSave, onUploadImage, entry, readO
     setTitle(entry?.title ?? '');
     setMood(entry?.mood ?? '');
     setIsPrivate(entry?.is_private ?? false);
-    setMediaItems((entry?.media_urls ?? []).map((uri) => ({ uri })));
+    setMediaItems((entry?.media_urls ?? []).map((uri, index) => ({
+      uri,
+      storageId: entry?.media_storage_ids?.[index],
+    })));
     editor.setContent(entry?.body || '<p></p>');
   }, [entry, sessionKey, editor]);
 
@@ -183,6 +188,10 @@ export function CreateEntrySheet({ sheetRef, onSave, onUploadImage, entry, readO
 
   /* ─── Save ─── */
   const handleSave = useCallback(async () => {
+    if (uploadingImage) {
+      Alert.alert('Upload in progress', 'Wait for the image upload to finish before saving.');
+      return;
+    }
     const html = await editor.getHTML();
     if (isEmptyHtml(html)) {
       Alert.alert('Write something', 'Your entry needs some content.');
@@ -206,7 +215,7 @@ export function CreateEntrySheet({ sheetRef, onSave, onUploadImage, entry, readO
         editor.setContent('<p></p>');
       }
     } finally { setSaving(false); }
-  }, [editor, isEdit, isPrivate, mediaItems, mood, onSave, sheetRef, title, entryDate]);
+  }, [editor, entryDate, isEdit, isPrivate, mediaItems, mood, onSave, sheetRef, title, uploadingImage]);
 
   /* ─── Image upload ─── */
   const handleAddImage = useCallback(async () => {
@@ -230,11 +239,11 @@ export function CreateEntrySheet({ sheetRef, onSave, onUploadImage, entry, readO
 
   /* ─── Footer ─── */
   const footer = !readOnly ? (
-    <TouchableOpacity onPress={handleSave} disabled={saving} activeOpacity={0.8}
+    <TouchableOpacity onPress={handleSave} disabled={saving || uploadingImage} activeOpacity={0.8}
       style={[styles.saveBtn, { backgroundColor: C.journal }]}>
       <Feather name={isEdit ? 'check' : 'feather'} size={18} color={C.ink} />
       <Text style={[styles.saveBtnText, { color: C.ink }]}>
-        {saving ? 'Saving...' : isEdit ? 'Update Entry' : 'Save Entry'}
+        {uploadingImage ? 'Uploading image...' : saving ? 'Saving...' : isEdit ? 'Update Entry' : 'Save Entry'}
       </Text>
     </TouchableOpacity>
   ) : null;

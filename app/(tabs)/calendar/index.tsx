@@ -5,7 +5,7 @@ import { format, parseISO } from "date-fns";
 import { useCallback, useRef, useState } from "react";
 import { Feather } from "@expo/vector-icons";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
-import { useQuery, useMutation } from "convex/react";
+import { useMutation } from "convex/react";
 import { makeFunctionReference } from "convex/server";
 
 import { MiniDateRail } from "@/src/components/calendar/MiniDateRail";
@@ -16,7 +16,6 @@ import { Typography } from "@/src/constants/typography";
 import { useCalendar } from "@/src/hooks/useCalendar";
 import { useColors } from "@/src/hooks/useColors";
 
-const listEventsQuery = makeFunctionReference<"query", { from?: number; to?: number }>("events:listEvents");
 const createEventMutation = makeFunctionReference<"mutation", {}>("events:createEvent");
 
 function formatAgendaTime(occursAt: number | null) {
@@ -32,19 +31,6 @@ export default function CalendarScreen() {
   const sheetRef = useRef<BottomSheetModal>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const events = useQuery(listEventsQuery, {}) as
-    | Array<{
-        _id: string;
-        title: string;
-        description: string | null;
-        startsAt: number;
-        endsAt: number | null;
-        category: string | null;
-        location: string | null;
-        priority: number;
-        isPrivate: boolean;
-      }>
-    | undefined;
   const createEvent = useMutation(createEventMutation) as any;
 
   const selectedDateLabel = calendar.selectedDate
@@ -76,24 +62,9 @@ export default function CalendarScreen() {
     }
   }, [calendar]);
 
-  const convexEventAgenda =
-    events?.map((ev) => ({
-      id: ev._id,
-      type: "event" as const,
-      title: ev.title,
-      subtitle: ev.description,
-      occursAt: ev.startsAt,
-      category: ev.category,
-      location: ev.location,
-      priority: ev.priority,
-      isPrivate: ev.isPrivate,
-    })) ?? [];
-  const mergedAgenda =
-    convexEventAgenda.length > 0 ? convexEventAgenda : calendar.agenda;
-
   return (
     <View style={[styles.screen, { backgroundColor: C.background }]}>
-      <SafeAreaView style={[styles.safe, { backgroundColor: C.surface }]} edges={["top"]}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: C.background }]} edges={["top"]}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -117,7 +88,7 @@ export default function CalendarScreen() {
               <Text style={[styles.sectionEyebrow, { color: C.primary }]}>Selected day</Text>
               <Text style={[styles.sectionTitle, { color: C.text }]}>{selectedDateLabel}</Text>
             </View>
-            {mergedAgenda.length === 0 ? (
+            {calendar.agenda.length === 0 ? (
               <View
                 style={[
                   styles.emptyCard,
@@ -133,33 +104,39 @@ export default function CalendarScreen() {
                 </Text>
               </View>
             ) : (
-              mergedAgenda.map((item) => (
-                <View
-                  key={item.id}
-                  style={[
-                    styles.agendaCard,
-                    { backgroundColor: C.card, borderColor: C.border },
-                  ]}
-                >
-                  <Text style={[styles.agendaMeta, { color: C.primary }]}>
-                    {item.type.toUpperCase()}
-                  </Text>
-                  <Text style={[styles.agendaTitle, { color: C.text }]}>{item.title}</Text>
-                  <Text style={[styles.agendaTime, { color: C.textSecondary }]}>
-                    {formatAgendaTime(item.occursAt)}
-                  </Text>
-                  {item.subtitle ? (
-                    <Text style={[styles.agendaBody, { color: C.textSecondary }]} numberOfLines={2}>
-                      {toPlainMarkdownPreview(item.subtitle)}
+              calendar.agenda.map((item) => {
+                const itemLocation =
+                  typeof (item as { location?: unknown }).location === "string"
+                    ? (item as { location?: string }).location ?? null
+                    : null;
+                return (
+                  <View
+                    key={item.id}
+                    style={[
+                      styles.agendaCard,
+                      { backgroundColor: C.card, borderColor: C.border },
+                    ]}
+                  >
+                    <Text style={[styles.agendaMeta, { color: C.primary }]}>
+                      {item.type.toUpperCase()}
                     </Text>
-                  ) : null}
-                  {"location" in item && item.location ? (
-                    <Text style={[styles.agendaBody, { color: C.textSecondary }]}>
-                      {item.location}
+                    <Text style={[styles.agendaTitle, { color: C.text }]}>{item.title}</Text>
+                    <Text style={[styles.agendaTime, { color: C.textSecondary }]}>
+                      {formatAgendaTime(item.occursAt)}
                     </Text>
-                  ) : null}
-                </View>
-              ))
+                    {item.subtitle ? (
+                      <Text style={[styles.agendaBody, { color: C.textSecondary }]} numberOfLines={2}>
+                        {toPlainMarkdownPreview(item.subtitle)}
+                      </Text>
+                    ) : null}
+                    {itemLocation ? (
+                      <Text style={[styles.agendaBody, { color: C.textSecondary }]}>
+                        {itemLocation}
+                      </Text>
+                    ) : null}
+                  </View>
+                );
+              })
             )}
           </View>
 
@@ -172,7 +149,7 @@ export default function CalendarScreen() {
                     key={milestone.id}
                     style={[
                       styles.countdownCard,
-                      { backgroundColor: C.surface, borderColor: C.border },
+                      { backgroundColor: C.card, borderColor: C.border },
                     ]}
                   >
                     <Text style={[styles.agendaMeta, { color: C.primary }]}>
@@ -202,7 +179,7 @@ export default function CalendarScreen() {
           sheetRef.current?.present();
         }}
       >
-        <Feather name="plus" size={24} color={C.ink} />
+        <Feather name="plus" size={22} color={C.ink} />
       </TouchableOpacity>
 
       <CreateEventSheet sheetRef={sheetRef} onSave={handleSaveEvent} />
@@ -279,10 +256,15 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 100,
     right: Spacing["2xl"],
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
   },
 });

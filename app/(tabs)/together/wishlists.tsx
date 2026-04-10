@@ -14,13 +14,15 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { useColors } from '@/src/hooks/useColors';
 import { useWishlists, useWishlistItems } from '@/src/hooks/useWishlists';
 import { Typography } from '@/src/constants/typography';
 import { Spacing, BorderRadius } from '@/src/constants/spacing';
-import { EmptyState } from '@/src/components/ui';
+import { EmptyState, BrushUnderline } from '@/src/components/ui';
 import { CreateWishlistSheet } from '@/src/components/wishlists/CreateWishlistSheet';
 import { CreateWishlistItemSheet } from '@/src/components/wishlists/CreateWishlistItemSheet';
+import { togetherItemContainerStyle, togetherListContainerStyle } from './_itemStyles';
 
 function getPriorityColor(priority: number, C: ReturnType<typeof useColors>) {
   if (priority >= 3) return C.expenses;
@@ -42,10 +44,11 @@ function formatPrice(price: number | null) {
 export default function WishlistsScreen() {
   const C = useColors();
   const router = useRouter();
-  const { wishlists, isLoading, create, remove, refetch } = useWishlists();
+  const { wishlists, create, update, remove, refetch } = useWishlists();
   const createSheetRef = useRef<BottomSheetModal>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingWishlist, setEditingWishlist] = useState<{ id: string; name: string } | undefined>();
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -58,9 +61,14 @@ export default function WishlistsScreen() {
 
   const handleCreateWishlist = useCallback(
     async (data: { name: string }) => {
+      if (editingWishlist) {
+        await update(editingWishlist.id, data.name);
+        setEditingWishlist(undefined);
+        return;
+      }
       await create(data.name);
     },
-    [create],
+    [create, editingWishlist, update],
   );
 
   const handleDeleteWishlist = useCallback(
@@ -94,37 +102,40 @@ export default function WishlistsScreen() {
     setExpandedId((prev) => (prev === id ? null : id));
   }, []);
 
-  if (!isLoading && wishlists.length === 0) {
+  if (wishlists.length === 0) {
     return (
       <View style={[styles.screen, { backgroundColor: C.background }]}>
         <SafeAreaView style={styles.flex} edges={['top']}>
-          <View style={styles.header}>
+          <View style={[styles.header, { backgroundColor: C.background }]}>
             <TouchableOpacity
               onPress={() => {
                 Haptics.selectionAsync();
                 router.back();
               }}
-              style={styles.backBtn}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              hitSlop={8}
             >
               <Feather name="arrow-left" size={22} color={C.text} />
             </TouchableOpacity>
-            <Text style={[styles.headerTitle, { color: C.text }]}>Wishlists</Text>
-            <View style={{ width: 40 }} />
+            <View style={styles.headerText}>
+              <BrushUnderline color={C.warning} style={styles.userNameBrush}>
+                <Text style={[styles.headerTitle, { color: C.text }]}>Wishlists</Text>
+              </BrushUnderline>
+              <Text style={[styles.headerSubtitle, { color: C.textTertiary }]}>Shared hints, priced clearly</Text>
+            </View>
           </View>
 
-          <EmptyState
-            icon="gift"
-            title="Your wishlists are empty"
-            description="Drop some hints for each other — add things you'd love"
-            actionLabel="Create Wishlist"
-            onAction={() => createSheetRef.current?.present()}
-          />
+          <View style={styles.emptyWrap}>
+            <EmptyState
+              title="Your wishlists are empty"
+              description="Drop some hints for each other — add things you'd love"
+            />
+          </View>
 
           {/* FAB */}
           <TouchableOpacity
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setEditingWishlist(undefined);
               createSheetRef.current?.present();
             }}
             activeOpacity={0.85}
@@ -133,7 +144,7 @@ export default function WishlistsScreen() {
             <Feather name="plus" size={22} color={C.ink} />
           </TouchableOpacity>
 
-          <CreateWishlistSheet sheetRef={createSheetRef} onSave={handleCreateWishlist} />
+          <CreateWishlistSheet sheetRef={createSheetRef} onSave={handleCreateWishlist} wishlist={editingWishlist} />
         </SafeAreaView>
       </View>
     );
@@ -143,23 +154,29 @@ export default function WishlistsScreen() {
     <View style={[styles.screen, { backgroundColor: C.background }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: C.background }]}>
           <TouchableOpacity
             onPress={() => {
               Haptics.selectionAsync();
               router.back();
             }}
-            style={styles.backBtn}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={8}
           >
             <Feather name="arrow-left" size={22} color={C.text} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: C.text }]}>Wishlists</Text>
-          <View style={{ width: 40 }} />
+          <View style={styles.headerText}>
+            <BrushUnderline color={C.warning} style={styles.userNameBrush}>
+              <Text style={[styles.headerTitle, { color: C.text }]}>Wishlists</Text>
+            </BrushUnderline>
+            <Text style={[styles.headerSubtitle, { color: C.textTertiary }]}>Shared hints, priced clearly</Text>
+          </View>
         </View>
 
         <ScrollView
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            togetherListContainerStyle,
+          ]}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />
           }
@@ -172,6 +189,10 @@ export default function WishlistsScreen() {
                 expanded={expandedId === wishlist._id}
                 onToggle={toggleExpand}
                 onDelete={handleDeleteWishlist}
+                onEdit={(nextWishlist) => {
+                  setEditingWishlist({ id: nextWishlist._id, name: nextWishlist.name });
+                  createSheetRef.current?.present();
+                }}
                 colors={C}
               />
             </Animated.View>
@@ -184,6 +205,7 @@ export default function WishlistsScreen() {
         <TouchableOpacity
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setEditingWishlist(undefined);
             createSheetRef.current?.present();
           }}
           activeOpacity={0.85}
@@ -192,7 +214,7 @@ export default function WishlistsScreen() {
           <Feather name="plus" size={22} color={C.ink} />
         </TouchableOpacity>
 
-        <CreateWishlistSheet sheetRef={createSheetRef} onSave={handleCreateWishlist} />
+        <CreateWishlistSheet sheetRef={createSheetRef} onSave={handleCreateWishlist} wishlist={editingWishlist} />
       </SafeAreaView>
     </View>
   );
@@ -207,33 +229,63 @@ type WishlistCardProps = {
   expanded: boolean;
   onToggle: (id: string) => void;
   onDelete: (id: string, name: string) => void;
+  onEdit: (wishlist: { _id: string; name: string; createdBy: string; createdAt: number }) => void;
   colors: ReturnType<typeof useColors>;
 };
 
-function WishlistCard({ wishlist, expanded, onToggle, onDelete, colors: C }: WishlistCardProps) {
+function WishlistCard({ wishlist, expanded, onToggle, onDelete, onEdit, colors: C }: WishlistCardProps) {
+  const row = (
+    <TouchableOpacity
+      onPress={() => onToggle(wishlist._id)}
+      activeOpacity={0.7}
+      style={[
+        togetherItemContainerStyle,
+        styles.wishlistRow,
+        { backgroundColor: C.card },
+      ]}
+    >
+      <View style={styles.wishlistLeft}>
+        <View style={[styles.wishlistIcon, { backgroundColor: C.wishlistsLight }]}>
+          <Feather name="gift" size={18} color={C.wishlists} />
+        </View>
+        <Text style={[styles.wishlistName, { color: C.text }]} numberOfLines={1}>
+          {wishlist.name}
+        </Text>
+      </View>
+
+      <Feather
+        name={expanded ? 'chevron-up' : 'chevron-down'}
+        size={18}
+        color={C.textTertiary}
+      />
+    </TouchableOpacity>
+  );
+
   return (
     <View style={styles.wishlistCard}>
-      <TouchableOpacity
-        onPress={() => onToggle(wishlist._id)}
-        onLongPress={() => onDelete(wishlist._id, wishlist.name)}
-        activeOpacity={0.7}
-        style={[styles.wishlistRow, { backgroundColor: C.card, borderColor: C.border }]}
+      <Swipeable
+        renderLeftActions={() => (
+          <TouchableOpacity
+            style={[styles.swipeAction, { backgroundColor: C.primary }]}
+            onPress={() => onEdit(wishlist)}
+          >
+            <Feather name="edit-3" size={18} color="#fff" />
+          </TouchableOpacity>
+        )}
+        renderRightActions={() => (
+          <TouchableOpacity
+            style={[styles.swipeAction, { backgroundColor: C.error }]}
+            onPress={() => onDelete(wishlist._id, wishlist.name)}
+          >
+            <Feather name="trash-2" size={18} color="#fff" />
+          </TouchableOpacity>
+        )}
+        overshootLeft={false}
+        overshootRight={false}
+        friction={2}
       >
-        <View style={styles.wishlistLeft}>
-          <View style={[styles.wishlistIcon, { backgroundColor: C.wishlistsLight }]}>
-            <Feather name="gift" size={18} color={C.wishlists} />
-          </View>
-          <Text style={[styles.wishlistName, { color: C.text }]} numberOfLines={1}>
-            {wishlist.name}
-          </Text>
-        </View>
-
-        <Feather
-          name={expanded ? 'chevron-up' : 'chevron-down'}
-          size={18}
-          color={C.textTertiary}
-        />
-      </TouchableOpacity>
+        {row}
+      </Swipeable>
 
       {expanded && <WishlistItemsList wishlistId={wishlist._id} colors={C} />}
     </View>
@@ -253,6 +305,7 @@ function WishlistItemsList({
 }) {
   const { items, add, togglePurchased, remove: removeItem } = useWishlistItems(wishlistId);
   const itemSheetRef = useRef<BottomSheetModal>(null);
+  const [pendingItemIds, setPendingItemIds] = useState<Record<string, true>>({});
 
   const handleAddItem = useCallback(
     async (data: {
@@ -275,14 +328,22 @@ function WishlistItemsList({
 
   const handleTogglePurchased = useCallback(
     async (itemId: string) => {
+      if (pendingItemIds[itemId]) return;
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setPendingItemIds((current) => ({ ...current, [itemId]: true }));
       try {
         await togglePurchased(itemId);
       } catch {
         Alert.alert('Error', 'Could not update item.');
+      } finally {
+        setPendingItemIds((current) => {
+          const next = { ...current };
+          delete next[itemId];
+          return next;
+        });
       }
     },
-    [togglePurchased],
+    [pendingItemIds, togglePurchased],
   );
 
   const handleDeleteItem = useCallback(
@@ -297,10 +358,17 @@ function WishlistItemsList({
             text: 'Remove',
             style: 'destructive',
             onPress: async () => {
+              setPendingItemIds((current) => ({ ...current, [itemId]: true }));
               try {
                 await removeItem(itemId);
               } catch {
                 Alert.alert('Error', 'Could not remove item.');
+              } finally {
+                setPendingItemIds((current) => {
+                  const next = { ...current };
+                  delete next[itemId];
+                  return next;
+                });
               }
             },
           },
@@ -321,88 +389,115 @@ function WishlistItemsList({
       ) : (
         items.map((item, i) => (
           <Animated.View key={item._id} entering={FadeInDown.duration(300).delay(i * 40)}>
-            <TouchableOpacity
-              onPress={() => handleTogglePurchased(item._id)}
-              onLongPress={() => handleDeleteItem(item._id, item.title)}
-              activeOpacity={0.7}
-              style={[
-                styles.itemRow,
-                {
-                  backgroundColor: C.card,
-                  borderColor: C.border,
-                  opacity: item.isPurchased ? 0.5 : 1,
-                },
-              ]}
+            {(() => {
+              const isPending = !!pendingItemIds[item._id];
+              return (
+            <Swipeable
+              renderLeftActions={() => (
+                <TouchableOpacity
+                  style={[styles.swipeAction, { backgroundColor: C.wishlists }]}
+                  onPress={() => handleTogglePurchased(item._id)}
+                >
+                  <Feather name="check" size={18} color="#fff" />
+                </TouchableOpacity>
+              )}
+              renderRightActions={() => (
+                <TouchableOpacity
+                  style={[styles.swipeAction, { backgroundColor: C.error }]}
+                  onPress={() => handleDeleteItem(item._id, item.title)}
+                >
+                  <Feather name="trash-2" size={18} color="#fff" />
+                </TouchableOpacity>
+              )}
+              overshootLeft={false}
+              overshootRight={false}
+              friction={2}
             >
-              {/* Purchased indicator */}
-              <View
+              <TouchableOpacity
+                onPress={() => handleTogglePurchased(item._id)}
+                disabled={isPending}
+                activeOpacity={0.7}
                 style={[
-                  styles.itemCheckbox,
+                  togetherItemContainerStyle,
+                  styles.itemRow,
                   {
-                    borderColor: item.isPurchased ? C.wishlists : C.border,
-                    backgroundColor: item.isPurchased ? C.wishlistsLight : 'transparent',
+                    backgroundColor: C.card,
+                    opacity: isPending ? 0.45 : item.isPurchased ? 0.5 : 1,
                   },
                 ]}
               >
-                {item.isPurchased && <Feather name="check" size={12} color={C.wishlists} />}
-              </View>
-
-              {/* Content */}
-              <View style={styles.itemContent}>
-                <View style={styles.itemTitleRow}>
-                  <Text
-                    style={[
-                      styles.itemTitle,
-                      { color: C.text },
-                      item.isPurchased && styles.itemStrikethrough,
-                    ]}
-                    numberOfLines={1}
+                {/* Purchased indicator */}
+                <View
+                  style={[
+                    styles.itemCheckbox,
+                    {
+                      borderColor: item.isPurchased ? C.wishlists : C.border,
+                      backgroundColor: item.isPurchased ? C.wishlistsLight : 'transparent',
+                    },
+                  ]}
                   >
-                    {item.title}
-                  </Text>
-                  {item.price != null && (
+                  {item.isPurchased && <Feather name="check" size={12} color={C.wishlists} />}
+                </View>
+
+                {/* Content */}
+                <View style={styles.itemContent}>
+                  <View style={styles.itemTitleRow}>
                     <Text
                       style={[
-                        styles.itemPrice,
-                        { color: C.textSecondary },
+                        styles.itemTitle,
+                        { color: C.text },
                         item.isPurchased && styles.itemStrikethrough,
                       ]}
+                      numberOfLines={1}
                     >
-                      {formatPrice(item.price)}
+                      {item.title}
                     </Text>
-                  )}
-                </View>
-
-                {item.description ? (
-                  <Text
-                    style={[styles.itemDescription, { color: C.textTertiary }]}
-                    numberOfLines={2}
-                  >
-                    {item.description}
-                  </Text>
-                ) : null}
-
-                <View style={styles.itemMeta}>
-                  {item.priority >= 2 && (
-                    <View
-                      style={[
-                        styles.priorityBadge,
-                        { backgroundColor: getPriorityColor(item.priority, C) + '18' },
-                      ]}
-                    >
+                    {item.price != null && (
                       <Text
-                        style={[styles.priorityText, { color: getPriorityColor(item.priority, C) }]}
+                        style={[
+                          styles.itemPrice,
+                          { color: C.textSecondary },
+                          item.isPurchased && styles.itemStrikethrough,
+                        ]}
                       >
-                        {getPriorityLabel(item.priority)}
+                        {formatPrice(item.price)}
                       </Text>
-                    </View>
-                  )}
-                  {item.isPurchased && (
-                    <Text style={[styles.gotItText, { color: C.wishlists }]}>Got it!</Text>
-                  )}
+                    )}
+                  </View>
+
+                  {item.description ? (
+                    <Text
+                      style={[styles.itemDescription, { color: C.textTertiary }]}
+                      numberOfLines={2}
+                    >
+                      {item.description}
+                    </Text>
+                  ) : null}
+
+                  <View style={styles.itemMeta}>
+                    {item.priority >= 2 && (
+                      <View
+                        style={[
+                          styles.priorityBadge,
+                          { backgroundColor: getPriorityColor(item.priority, C) + '18' },
+                        ]}
+                      >
+                        <Text
+                          style={[styles.priorityText, { color: getPriorityColor(item.priority, C) }]}
+                        >
+                          {getPriorityLabel(item.priority)}
+                        </Text>
+                      </View>
+                    )}
+                    {item.isPurchased && (
+                      <Text style={[styles.gotItText, { color: C.wishlists }]}>Got it!</Text>
+                    )}
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            </Swipeable>
+              );
+            })()}
           </Animated.View>
         ))
       )}
@@ -437,33 +532,35 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: Spacing.md,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 20,
+  headerText: {
+    flex: 1,
+    alignItems: 'flex-start',
+    gap: 2,
+  },
+  userNameBrush: {
+    ...Typography.title,
+    marginTop: 2,
   },
   headerTitle: {
-    ...Typography.heading,
-    fontSize: 20,
+    ...Typography.title,
+    fontSize: 22,
   },
-  fab: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+  headerSubtitle: {
+    ...Typography.small,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
-
   // List
   listContent: {
-    paddingHorizontal: Spacing.lg,
     paddingBottom: 120,
+  },
+  emptyWrap: {
+    paddingHorizontal: Spacing.lg,
+    height: 400,
   },
 
   // Wishlist card
@@ -474,9 +571,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderRadius: BorderRadius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: Spacing.lg,
+    paddingVertical: 14,
   },
   wishlistLeft: {
     flexDirection: 'row',
@@ -498,9 +593,8 @@ const styles = StyleSheet.create({
 
   // Items container
   itemsContainer: {
-    marginLeft: Spacing.xl,
-    paddingLeft: Spacing.lg,
-    borderLeftWidth: StyleSheet.hairlineWidth,
+    paddingLeft: 0,
+    borderLeftWidth: 0,
     paddingTop: Spacing.sm,
     gap: Spacing.sm,
   },
@@ -510,16 +604,13 @@ const styles = StyleSheet.create({
   },
   emptyItemsText: {
     ...Typography.caption,
-    fontStyle: 'italic',
   },
 
   // Item row
   itemRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    borderRadius: BorderRadius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: Spacing.md,
+    paddingVertical: 14,
     gap: Spacing.md,
   },
   itemCheckbox: {
@@ -570,11 +661,11 @@ const styles = StyleSheet.create({
   },
   priorityText: {
     ...Typography.small,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: Typography.captionMedium.fontFamily,
   },
   gotItText: {
     ...Typography.small,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: Typography.captionMedium.fontFamily,
   },
 
   // Add item button
@@ -590,6 +681,11 @@ const styles = StyleSheet.create({
   },
   addItemText: {
     ...Typography.captionMedium,
+  },
+  swipeAction: {
+    width: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   floatingFab: {
     position: 'absolute',

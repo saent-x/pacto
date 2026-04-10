@@ -30,6 +30,7 @@ describe('useWishlists', () => {
     await import('@/src/hooks/useWishlists');
     expect(makeFunctionReference).toHaveBeenCalledWith('wishlists:listWishlists');
     expect(makeFunctionReference).toHaveBeenCalledWith('wishlists:createWishlist');
+    expect(makeFunctionReference).toHaveBeenCalledWith('wishlists:updateWishlist');
     expect(makeFunctionReference).toHaveBeenCalledWith('wishlists:deleteWishlist');
     expect(makeFunctionReference).toHaveBeenCalledWith('wishlists:getWishlistItems');
     expect(makeFunctionReference).toHaveBeenCalledWith('wishlists:addWishlistItem');

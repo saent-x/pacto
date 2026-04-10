@@ -146,6 +146,33 @@ export async function listCheckInsForCouple(
     );
 }
 
+async function listCheckInsForAuthorOnDate(
+  ctx: QueryCtx,
+  coupleId: Id<"couples">,
+  authorId: Id<"users">,
+  checkInDate: string,
+): Promise<CheckInRecord[]> {
+  const rows = (await ctx.db
+    .query("checkIns")
+    .withIndex(
+      "by_coupleId_and_authorId_and_checkInDate",
+      (q: any) =>
+        q.eq("coupleId", coupleId)
+          .eq("authorId", authorId)
+          .eq("checkInDate", checkInDate),
+    )
+    .collect()) as Array<
+    Record<string, unknown> & { _id: Id<"checkIns"> }
+  >;
+  return rows
+    .map(toCheckInRecord)
+    .filter((checkIn): checkIn is CheckInRecord => !!checkIn)
+    .sort(
+      (left, right) =>
+        right.createdAt - left.createdAt || left._id.localeCompare(right._id),
+    );
+}
+
 function toDateString(timestamp: number) {
   return new Date(timestamp).toISOString().slice(0, 10);
 }
@@ -162,26 +189,29 @@ export const submitCheckIn = mutationGeneric({
     const activeCouple = await requireActiveCouple(ctx);
     const now = Date.now();
     const checkInDate = args.checkInDate ?? toDateString(now);
-    const existing = (
-      await listCheckInsForCouple(ctx, activeCouple.couple._id as Id<"couples">)
-    ).find(
-      (checkIn) =>
-        checkIn.authorId === activeCouple.membership.userId &&
-        checkIn.checkInDate === checkInDate,
+    const [existing, ...duplicates] = await listCheckInsForAuthorOnDate(
+      ctx,
+      activeCouple.couple._id as Id<"couples">,
+      activeCouple.membership.userId as Id<"users">,
+      checkInDate,
     );
 
+    for (const duplicate of duplicates) {
+      await ctx.db.delete(duplicate._id);
+    }
+
     if (existing) {
-      const nextCheckIn: CheckInRecord = {
-        ...existing,
-        mood: args.mood ?? existing.mood,
-        note: args.note ?? existing.note,
-        isPrivate: args.isPrivate ?? existing.isPrivate,
+      const updates = {
+        ...(args.mood !== undefined ? { mood: args.mood } : {}),
+        ...(args.note !== undefined ? { note: args.note } : {}),
+        ...(args.isPrivate !== undefined ? { isPrivate: args.isPrivate } : {}),
         updatedAt: now,
       };
-      await ctx.db.patch(existing._id, {
-        ...nextCheckIn,
-      });
-      return nextCheckIn;
+      await ctx.db.patch(existing._id, updates);
+      return {
+        ...existing,
+        ...updates,
+      };
     }
 
     const checkInId = await ctx.db.insert("checkIns", {

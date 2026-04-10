@@ -14,34 +14,46 @@ const serifFallback = Platform.select({ ios: 'Georgia', android: 'serif', defaul
 const sansFallback = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
 
 export const Typography = {
-  // Serif display styles — Newsreader italic, the signature look
-  display: {
+  // Editorial styles — reserved for very selective accent moments
+  editorial: {
     fontFamily: serifFamily,
-    fontSize: 48,
-    lineHeight: 48,
-    letterSpacing: -1.2,
+    fontSize: 24,
+    lineHeight: 32,
+    letterSpacing: -0.6,
     fontStyle: 'italic' as const,
   } as TextStyle,
-  largeTitle: {
+  editorialLargeTitle: {
     fontFamily: serifFamily,
     fontSize: 34,
     lineHeight: 40,
     letterSpacing: -0.3,
     fontStyle: 'italic' as const,
   } as TextStyle,
+
+  // Standard display styles — keep these clean and legible by default
+  display: {
+    fontFamily: serifRegular,
+    fontSize: 48,
+    lineHeight: 48,
+    letterSpacing: -1.2,
+  } as TextStyle,
+  largeTitle: {
+    fontFamily: serifRegular,
+    fontSize: 34,
+    lineHeight: 40,
+    letterSpacing: -0.3,
+  } as TextStyle,
   title: {
-    fontFamily: serifFamily,
+    fontFamily: serifRegular,
     fontSize: 30,
     lineHeight: 36,
     letterSpacing: -0.75,
-    fontStyle: 'italic' as const,
   } as TextStyle,
   heading: {
-    fontFamily: serifFamily,
+    fontFamily: serifRegular,
     fontSize: 24,
     lineHeight: 32,
     letterSpacing: -0.6,
-    fontStyle: 'italic' as const,
   } as TextStyle,
   headingRegular: {
     fontFamily: serifRegular,

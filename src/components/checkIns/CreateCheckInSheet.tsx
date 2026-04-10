@@ -8,16 +8,7 @@ import { useColors } from '@/src/hooks/useColors';
 import { useTheme } from '@/src/lib/theme';
 import { Typography } from '@/src/constants/typography';
 import { Spacing, BorderRadius } from '@/src/constants/spacing';
-
-const MOOD_OPTIONS = [
-  { emoji: '😫', label: 'Struggling' },
-  { emoji: '😔', label: 'Down' },
-  { emoji: '😐', label: 'Okay' },
-  { emoji: '🙂', label: 'Good' },
-  { emoji: '😊', label: 'Happy' },
-  { emoji: '🥰', label: 'Loved' },
-  { emoji: '🤩', label: 'Amazing' },
-];
+import { CHECK_IN_MOODS, normalizeCheckInMood } from '@/src/constants/checkInMoods';
 
 interface Props {
   sheetRef: React.RefObject<BottomSheetModal | null>;
@@ -28,8 +19,9 @@ interface Props {
 export function CreateCheckInSheet({ sheetRef, onSave, checkIn }: Props) {
   const C = useColors();
   const { mode } = useTheme();
+  const initialMood = normalizeCheckInMood(checkIn?.mood);
 
-  const [mood, setMood] = useState(checkIn?.mood ?? '');
+  const [mood, setMood] = useState(initialMood ?? '');
   const [note, setNote] = useState(checkIn?.note ?? '');
   const [isPrivate, setIsPrivate] = useState(checkIn?.isPrivate ?? false);
   const [saving, setSaving] = useState(false);
@@ -38,7 +30,7 @@ export function CreateCheckInSheet({ sheetRef, onSave, checkIn }: Props) {
 
   const isEdit = !!checkIn;
 
-  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
+  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
   const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
   const activeBg = C.moodLight;
 
@@ -48,7 +40,7 @@ export function CreateCheckInSheet({ sheetRef, onSave, checkIn }: Props) {
     }
 
     sessionKeyRef.current = sessionKey;
-    setMood(checkIn?.mood ?? '');
+    setMood(normalizeCheckInMood(checkIn?.mood) ?? '');
     setNote(checkIn?.note ?? '');
     setIsPrivate(checkIn?.isPrivate ?? false);
   }, [checkIn, sessionKey]);
@@ -83,7 +75,7 @@ export function CreateCheckInSheet({ sheetRef, onSave, checkIn }: Props) {
       activeOpacity={0.8}
       style={[styles.saveBtn, { backgroundColor: C.mood }]}
     >
-      <Feather name={isEdit ? 'check' : 'smile'} size={18} color={C.ink} />
+      <Feather name={isEdit ? 'check' : 'activity'} size={18} color={C.ink} />
       <Text style={[styles.saveBtnText, { color: C.ink }]}>
         {saving ? 'Saving...' : isEdit ? 'Update' : 'Check In'}
       </Text>
@@ -105,28 +97,28 @@ export function CreateCheckInSheet({ sheetRef, onSave, checkIn }: Props) {
         {/* Mood grid — circular glass toggles in a row */}
         <View style={styles.section}>
           <View style={styles.moodRow}>
-            {MOOD_OPTIONS.map((opt) => {
-              const active = mood === opt.emoji;
+            {CHECK_IN_MOODS.map((opt) => {
+              const active = mood === opt.id;
               return (
                 <TouchableOpacity
-                  key={opt.emoji}
+                  key={opt.id}
                   style={[
                     styles.moodCircle,
                     { backgroundColor: active ? activeBg : glassBg, borderColor: active ? C.mood : glassBorder },
                   ]}
                   onPress={() => {
                     Haptics.selectionAsync();
-                    setMood(active ? '' : opt.emoji);
+                    setMood(active ? '' : opt.id);
                   }}
                 >
-                  <Text style={styles.moodEmoji}>{opt.emoji}</Text>
+                  <Feather name={opt.icon} size={18} color={active ? C.mood : C.textSecondary} />
                 </TouchableOpacity>
               );
             })}
           </View>
           {mood && (
             <Text style={[styles.moodLabel, { color: C.mood }]}>
-              {MOOD_OPTIONS.find((o) => o.emoji === mood)?.label}
+              {CHECK_IN_MOODS.find((option) => option.id === mood)?.label}
             </Text>
           )}
         </View>
@@ -191,9 +183,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth,
-  },
-  moodEmoji: {
-    fontSize: 22,
   },
   moodLabel: {
     ...Typography.captionMedium,
