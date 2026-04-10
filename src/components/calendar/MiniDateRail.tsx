@@ -1,11 +1,19 @@
-import { eachDayOfInterval, endOfWeek, format, isSameDay, parseISO, startOfWeek, addWeeks } from 'date-fns';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import Animated, { LinearTransition } from 'react-native-reanimated';
+import {
+  eachDayOfInterval,
+  endOfWeek,
+  format,
+  isSameDay,
+  parseISO,
+  startOfWeek,
+  addWeeks,
+} from "date-fns";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
+import Animated, { LinearTransition } from "react-native-reanimated";
 
-import { BorderRadius, Spacing } from '@/src/constants/spacing';
-import { Typography } from '@/src/constants/typography';
-import { useColors } from '@/src/hooks/useColors';
+import { BorderRadius, Spacing } from "@/src/constants/spacing";
+import { Typography } from "@/src/constants/typography";
+import { useColors } from "@/src/hooks/useColors";
 
 type Props = {
   selectedDate: string | null;
@@ -14,7 +22,7 @@ type Props = {
   title?: string;
   helperLabel?: string;
   onPressAction?: () => void;
-  actionIcon?: React.ComponentProps<typeof Feather>['name'];
+  actionIcon?: React.ComponentProps<typeof Feather>["name"];
   showClearAction?: boolean;
   tabs?: Array<{
     value: string;
@@ -33,9 +41,9 @@ export function MiniDateRail({
   onSelectDate,
   accentColor,
   title,
-  helperLabel = 'Filter by date',
+  helperLabel = "Filter by date",
   onPressAction,
-  actionIcon = 'edit-3',
+  actionIcon = "edit-3",
   showClearAction = true,
   tabs,
   selectedTab,
@@ -51,24 +59,30 @@ export function MiniDateRail({
 
   const shiftWeek = (direction: -1 | 1) => {
     const nextDate = addWeeks(referenceDate, direction);
-    onSelectDate(format(nextDate, 'yyyy-MM-dd'));
+    onSelectDate(format(nextDate, "yyyy-MM-dd"));
   };
 
   return (
-    <View style={[styles.shell, { backgroundColor: C.surface, borderColor: C.border }]}>
+    <View
+      style={[
+        styles.shell,
+        { backgroundColor: C.background, borderColor: C.border },
+      ]}
+    >
       <View style={styles.topRow}>
         <View style={styles.titleBlock}>
-          {title ? <Text style={[styles.screenTitle, { color: C.text }]}>{title}</Text> : null}
-          <Text style={[styles.helperLabel, { color: C.textTertiary }]}>{helperLabel}</Text>
+          <Text style={[styles.helperLabel, { color: C.textTertiary }]}>
+            {title}
+          </Text>
         </View>
-        {onPressAction ? (
+        {/*{onPressAction ? (
           <Pressable
             onPress={onPressAction}
             style={[styles.composeBtn, { backgroundColor: C.card, borderColor: C.border }]}
           >
             <Feather name={actionIcon} size={16} color={accentColor} />
           </Pressable>
-        ) : null}
+        ) : null}*/}
       </View>
 
       <View style={styles.monthRow}>
@@ -78,13 +92,16 @@ export function MiniDateRail({
             style={[
               styles.clearPill,
               {
-                backgroundColor: selectedDate ? C.card : C.tasksLight,
+                backgroundColor: selectedDate ? C.card : `${accentColor}18`,
                 borderColor: selectedDate ? C.border : accentColor,
               },
             ]}
           >
             <Text
-              style={[styles.clearLabel, { color: selectedDate ? C.textSecondary : accentColor }]}
+              style={[
+                styles.clearLabel,
+                { color: selectedDate ? C.textSecondary : accentColor },
+              ]}
             >
               All dates
             </Text>
@@ -95,18 +112,29 @@ export function MiniDateRail({
 
         <View style={styles.monthCenter}>
           <View style={styles.monthLabelRow}>
-            <Text style={[styles.monthCaption, { color: accentColor }]}>Week</Text>
-            <Text style={[styles.monthLabel, { color: C.text }]} numberOfLines={1}>
-              {format(referenceDate, 'MMMM yyyy')}
+            <Text style={[styles.monthCaption, { color: accentColor }]}>
+              Week
+            </Text>
+            <Text
+              style={[styles.monthLabel, { color: C.text }]}
+              numberOfLines={1}
+            >
+              {format(referenceDate, "MMMM yyyy")}
             </Text>
           </View>
         </View>
 
         <View style={styles.headerControls}>
-          <Pressable onPress={() => shiftWeek(-1)} style={[styles.arrowBtn, { borderColor: C.border }]}>
+          <Pressable
+            onPress={() => shiftWeek(-1)}
+            style={[styles.arrowBtn, { borderColor: C.border }]}
+          >
             <Feather name="chevron-left" size={16} color={C.textTertiary} />
           </Pressable>
-          <Pressable onPress={() => shiftWeek(1)} style={[styles.arrowBtn, { borderColor: C.border }]}>
+          <Pressable
+            onPress={() => shiftWeek(1)}
+            style={[styles.arrowBtn, { borderColor: C.border }]}
+          >
             <Feather name="chevron-right" size={16} color={C.textTertiary} />
           </Pressable>
         </View>
@@ -132,7 +160,9 @@ export function MiniDateRail({
                 </Text>
                 {active ? (
                   <Animated.View
-                    layout={LinearTransition.springify().damping(18).stiffness(220)}
+                    layout={LinearTransition.springify()
+                      .damping(18)
+                      .stiffness(220)}
                     style={[styles.tabLine, { backgroundColor: accentColor }]}
                   />
                 ) : (
@@ -146,8 +176,10 @@ export function MiniDateRail({
 
       <View style={styles.dayRow}>
         {weekDays.map((day) => {
-          const dateKey = format(day, 'yyyy-MM-dd');
-          const isSelected = selectedDate ? isSameDay(day, parseISO(selectedDate)) : false;
+          const dateKey = format(day, "yyyy-MM-dd");
+          const isSelected = selectedDate
+            ? isSameDay(day, parseISO(selectedDate))
+            : false;
           const isTodayDate = isSameDay(day, new Date());
 
           return (
@@ -162,16 +194,32 @@ export function MiniDateRail({
                 },
               ]}
             >
-              <Text style={[styles.weekday, { color: isSelected ? C.ink : C.textTertiary }]}>
-                {format(day, 'EEE')}
+              <Text
+                style={[
+                  styles.weekday,
+                  { color: isSelected ? C.ink : C.textTertiary },
+                ]}
+              >
+                {format(day, "EEE")}
               </Text>
-              <Text style={[styles.dayNumber, { color: isSelected ? C.ink : C.text }]}>
-                {format(day, 'd')}
+              <Text
+                style={[
+                  styles.dayNumber,
+                  { color: isSelected ? C.ink : C.text },
+                ]}
+              >
+                {format(day, "d")}
               </Text>
               <View
                 style={[
                   styles.todayDot,
-                  { backgroundColor: isTodayDate ? (isSelected ? C.ink : accentColor) : 'transparent' },
+                  {
+                    backgroundColor: isTodayDate
+                      ? isSelected
+                        ? C.ink
+                        : accentColor
+                      : "transparent",
+                  },
                 ]}
               />
             </Pressable>
@@ -188,13 +236,13 @@ const styles = StyleSheet.create({
     borderRadius: 0,
     paddingTop: Spacing.md,
     paddingBottom: Spacing.lg,
-    paddingHorizontal: Spacing['2xl'],
+    paddingHorizontal: Spacing["2xl"],
     gap: Spacing.md,
   },
   topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: Spacing.md,
   },
   titleBlock: {
@@ -202,28 +250,28 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   helperLabel: {
-    ...Typography.small,
-    textTransform: 'uppercase',
+    ...Typography.bodyMedium,
+    textTransform: "uppercase",
     letterSpacing: 1,
   },
   screenTitle: {
     ...Typography.title,
   },
   monthRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: Spacing.md,
   },
   monthCenter: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
     minWidth: 0,
   },
   monthLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "center",
     gap: Spacing.xs,
     minWidth: 0,
   },
@@ -232,8 +280,8 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   headerControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: Spacing.sm,
   },
   composeBtn: {
@@ -241,8 +289,8 @@ const styles = StyleSheet.create({
     height: 34,
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   clearPill: {
     borderWidth: StyleSheet.hairlineWidth,
@@ -255,7 +303,7 @@ const styles = StyleSheet.create({
   },
   clearLabel: {
     ...Typography.small,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 0.8,
   },
   arrowBtn: {
@@ -263,31 +311,31 @@ const styles = StyleSheet.create({
     height: 28,
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   monthLabel: {
     ...Typography.headingRegular,
   },
   dayRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: Spacing.sm,
   },
   tabRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: Spacing.xl,
     borderBottomWidth: StyleSheet.hairlineWidth,
     paddingBottom: Spacing.sm,
   },
   tabButton: {
-    position: 'relative',
+    position: "relative",
     paddingBottom: Spacing.sm,
   },
   tabLabel: {
     ...Typography.captionMedium,
   },
   tabLine: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
@@ -302,13 +350,13 @@ const styles = StyleSheet.create({
     minHeight: 60,
     borderRadius: BorderRadius.md,
     borderWidth: StyleSheet.hairlineWidth,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     gap: 2,
   },
   weekday: {
     ...Typography.small,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 0.8,
   },
   dayNumber: {

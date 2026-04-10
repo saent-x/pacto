@@ -1,25 +1,39 @@
-import { useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, RefreshControl } from 'react-native';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import { FlashList } from '@shopify/flash-list';
-import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { useColors } from '@/src/hooks/useColors';
-import { useSession } from '@/src/hooks/useSession';
-import { useExpenses } from '@/src/hooks/useExpenses';
-import { Typography } from '@/src/constants/typography';
-import { Spacing, BorderRadius } from '@/src/constants/spacing';
-import { EmptyState } from '@/src/components/ui';
-import { CreateExpenseSheet } from '@/src/components/expenses/CreateExpenseSheet';
+import { useState, useCallback, useRef } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  RefreshControl,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import Animated, { FadeInDown } from "react-native-reanimated";
+import { FlashList } from "@shopify/flash-list";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
+import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
+import { useColors } from "@/src/hooks/useColors";
+import { useSession } from "@/src/hooks/useSession";
+import { useExpenses } from "@/src/hooks/useExpenses";
+import { Typography } from "@/src/constants/typography";
+import { Spacing, BorderRadius } from "@/src/constants/spacing";
+import { EmptyState, BrushUnderline } from "@/src/components/ui";
+import { CreateExpenseSheet } from "@/src/components/expenses/CreateExpenseSheet";
+import {
+  togetherItemContainerStyle,
+  togetherListContainerStyle,
+} from "./_itemStyles";
 
 type ExpenseItem = {
   _id: string;
   title: string;
   amount: number;
   paidBy: string;
+  currency: string;
+  splitType: string;
   category: string;
   date: string;
   isSettled: boolean;
@@ -28,33 +42,45 @@ type ExpenseItem = {
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function formatAmount(n: number) {
-  return `$${n.toFixed(2)}`;
+function formatAmount(n: number, currency: string) {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 2,
+    }).format(n);
+  } catch {
+    return `${currency} ${n.toFixed(2)}`;
+  }
 }
 
-function getDaysUntil(dateStr: string) {
-  const now = new Date();
-  const target = new Date(dateStr);
-  const diffMs = target.getTime() - now.getTime();
-  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+function summarizeByCurrency(items: ExpenseItem[]) {
+  return items.reduce<Record<string, number>>((acc, item) => {
+    acc[item.currency] = (acc[item.currency] ?? 0) + item.amount;
+    return acc;
+  }, {});
 }
 
 export default function ExpensesScreen() {
   const C = useColors();
   const router = useRouter();
   const { activeCouple, profile } = useSession();
-  const { unsettled, settled, isLoading, create, settle, refetch } = useExpenses();
+  const { unsettled, settled, create, update, remove, settle, refetch } =
+    useExpenses();
   const sheetRef = useRef<BottomSheetModal>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [settledOpen, setSettledOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<
+    ExpenseItem | undefined
+  >();
 
   const partner = activeCouple?.partner ?? null;
   const currentUserId = profile?._id ?? null;
 
-  const totalUnsettled = unsettled.reduce((sum, e) => sum + e.amount, 0);
+  const unsettledTotals = summarizeByCurrency(unsettled as ExpenseItem[]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -70,19 +96,30 @@ export default function ExpensesScreen() {
       title: string;
       amount: number;
       paidBy: string;
+      currency: string;
       splitType: string;
       category: string;
       date: string;
     }) => {
-      await create({
+      const payload = {
         title: data.title,
         amount: data.amount,
+        paidBy: data.paidBy,
+        currency: data.currency,
         splitType: data.splitType,
         category: data.category,
         date: data.date,
-      });
+      };
+
+      if (editingExpense) {
+        await update(editingExpense._id, payload);
+        setEditingExpense(undefined);
+        return;
+      }
+
+      await create(payload);
     },
-    [create],
+    [create, editingExpense, update],
   );
 
   const handleSettle = useCallback(
@@ -91,27 +128,77 @@ export default function ExpensesScreen() {
       try {
         await settle(id);
       } catch {
-        Alert.alert('Error', 'Could not settle expense.');
+        Alert.alert("Error", "Could not settle expense.");
       }
     },
     [settle],
   );
 
   const getPaidByName = (paidBy: string) => {
-    if (paidBy === currentUserId) return 'You';
-    if (paidBy === partner?._id) return partner?.displayName?.split(' ')[0] ?? 'Partner';
-    return 'Unknown';
+    if (paidBy === currentUserId) return "You";
+    if (paidBy === partner?._id)
+      return partner?.displayName?.split(" ")[0] ?? "Partner";
+    return "Unknown";
   };
+
+  const handleDelete = useCallback(
+    (item: ExpenseItem) => {
+      Alert.alert("Delete expense", `Remove "${item.title}"?`, [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await remove(item._id);
+            } catch {
+              Alert.alert("Error", "Could not delete expense.");
+            }
+          },
+        },
+      ]);
+    },
+    [remove],
+  );
+
+  const openComposer = useCallback((item?: ExpenseItem) => {
+    setEditingExpense(item);
+    sheetRef.current?.present();
+  }, []);
+
+  const renderEditAction = useCallback(
+    (item: ExpenseItem) => () => (
+      <TouchableOpacity
+        style={[styles.swipeAction, { backgroundColor: C.primary }]}
+        onPress={() => openComposer(item)}
+      >
+        <Feather name="edit-3" size={18} color="#fff" />
+      </TouchableOpacity>
+    ),
+    [C.primary, openComposer],
+  );
+
+  const renderDeleteAction = useCallback(
+    (item: ExpenseItem) => () => (
+      <TouchableOpacity
+        style={[styles.swipeAction, { backgroundColor: C.error }]}
+        onPress={() => handleDelete(item)}
+      >
+        <Feather name="trash-2" size={18} color="#fff" />
+      </TouchableOpacity>
+    ),
+    [C.error, handleDelete],
+  );
 
   const getCategoryEmoji = (category: string) => {
     const map: Record<string, string> = {
-      'Date night': '\u{1F37D}\uFE0F',
-      'Our place': '\u{1F3E0}',
-      Trip: '\u2708\uFE0F',
-      Surprise: '\u{1F381}',
-      Groceries: '\u{1F6D2}',
+      "Date night": "\u{1F37D}\uFE0F",
+      "Our place": "\u{1F3E0}",
+      Trip: "\u2708\uFE0F",
+      Surprise: "\u{1F381}",
+      Groceries: "\u{1F6D2}",
     };
-    return map[category] ?? '\u{1F4B0}';
+    return map[category] ?? "\u{1F4B0}";
   };
 
   const headerComponent = (
@@ -119,20 +206,47 @@ export default function ExpensesScreen() {
       {/* Total unsettled */}
       {unsettled.length > 0 && (
         <Animated.View entering={FadeInDown.duration(400).delay(100)}>
-          <View style={[styles.totalCard, { backgroundColor: C.card, borderColor: C.border }]}>
-            <Text style={[styles.totalLabel, { color: C.textTertiary }]}>Unsettled</Text>
-            <Text style={[styles.totalAmount, { color: C.expenses }]}>
-              {formatAmount(totalUnsettled)}
+          <View
+            style={[
+              styles.totalCard,
+              { backgroundColor: C.card, borderColor: C.border },
+            ]}
+          >
+            <Text style={[styles.totalLabel, { color: C.textTertiary }]}>
+              Open balances
             </Text>
+            <View style={styles.totalSummaryList}>
+              {Object.entries(unsettledTotals).map(([currency, total]) => (
+                <View
+                  key={currency}
+                  style={[
+                    styles.totalSummaryChip,
+                    { backgroundColor: C.expensesLight },
+                  ]}
+                >
+                  <Text
+                    style={[styles.totalSummaryCode, { color: C.expenses }]}
+                  >
+                    {currency}
+                  </Text>
+                  <Text style={[styles.totalSummaryValue, { color: C.text }]}>
+                    {formatAmount(total, currency)}
+                  </Text>
+                </View>
+              ))}
+            </View>
             <Text style={[styles.totalSub, { color: C.textTertiary }]}>
-              {unsettled.length} expense{unsettled.length !== 1 ? 's' : ''}
+              {unsettled.length} unsettled item
+              {unsettled.length !== 1 ? "s" : ""} across your shared spending.
             </Text>
           </View>
         </Animated.View>
       )}
 
       {unsettled.length > 0 && (
-        <Text style={[styles.sectionLabel, { color: C.textTertiary }]}>OPEN</Text>
+        <Text style={[styles.sectionLabel, { color: C.textTertiary }]}>
+          OPEN
+        </Text>
       )}
     </View>
   );
@@ -149,11 +263,16 @@ export default function ExpensesScreen() {
             }}
             activeOpacity={0.7}
           >
-            <Text style={[styles.sectionLabel, { color: C.textTertiary, marginBottom: 0 }]}>
+            <Text
+              style={[
+                styles.sectionLabel,
+                { color: C.textTertiary, marginBottom: 0 },
+              ]}
+            >
               SETTLED ({settled.length})
             </Text>
             <Feather
-              name={settledOpen ? 'chevron-up' : 'chevron-down'}
+              name={settledOpen ? "chevron-up" : "chevron-down"}
               size={16}
               color={C.textTertiary}
             />
@@ -167,24 +286,33 @@ export default function ExpensesScreen() {
               >
                 <View
                   style={[
+                    togetherItemContainerStyle,
                     styles.expenseCard,
                     styles.settledCard,
-                    { backgroundColor: C.card, borderColor: C.border, opacity: 0.6 },
+                    { backgroundColor: C.card, opacity: 0.6 },
                   ]}
                 >
                   <View style={styles.cardLeft}>
-                    <Text style={styles.emoji}>{getCategoryEmoji(item.category)}</Text>
+                    <Text style={styles.emoji}>
+                      {getCategoryEmoji(item.category)}
+                    </Text>
                     <View style={styles.cardInfo}>
-                      <Text style={[styles.cardTitle, { color: C.textSecondary }]} numberOfLines={1}>
+                      <Text
+                        style={[styles.cardTitle, { color: C.textSecondary }]}
+                        numberOfLines={1}
+                      >
                         {item.title}
                       </Text>
-                      <Text style={[styles.cardMeta, { color: C.textTertiary }]}>
-                        Paid by {getPaidByName(item.paidBy)} · {formatDate(item.date)}
+                      <Text
+                        style={[styles.cardMeta, { color: C.textTertiary }]}
+                      >
+                        Paid by {getPaidByName(item.paidBy)} ·{" "}
+                        {formatDate(item.date)}
                       </Text>
                     </View>
                   </View>
                   <Text style={[styles.cardAmount, { color: C.textTertiary }]}>
-                    {formatAmount(item.amount)}
+                    {formatAmount(item.amount, item.currency)}
                   </Text>
                 </View>
               </Animated.View>
@@ -196,38 +324,44 @@ export default function ExpensesScreen() {
     </View>
   );
 
-  if (!isLoading && unsettled.length === 0 && settled.length === 0) {
+  if (unsettled.length === 0 && settled.length === 0) {
     return (
       <View style={[styles.screen, { backgroundColor: C.background }]}>
-        <SafeAreaView style={styles.flex} edges={['top']}>
-          <View style={styles.header}>
+        <SafeAreaView style={styles.flex} edges={["top"]}>
+          <View style={[styles.header, { backgroundColor: C.background }]}>
             <TouchableOpacity
               onPress={() => {
                 Haptics.selectionAsync();
                 router.back();
               }}
-              style={styles.backBtn}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              hitSlop={8}
             >
               <Feather name="arrow-left" size={22} color={C.text} />
             </TouchableOpacity>
-            <Text style={[styles.headerTitle, { color: C.text }]}>Our Expenses</Text>
-            <View style={{ width: 40 }} />
+            <View style={styles.headerText}>
+              <BrushUnderline color={C.warning} style={styles.userNameBrush}>
+                <Text style={[styles.headerTitle, { color: C.text }]}>
+                  Our Expenses
+                </Text>
+              </BrushUnderline>
+              <Text style={[styles.headerSubtitle, { color: C.textTertiary }]}>
+                Track what was paid, in the right currency
+              </Text>
+            </View>
           </View>
 
-          <EmptyState
-            icon="dollar-sign"
-            title="No expenses yet"
-            description="Start tracking your adventures together"
-            actionLabel="Add Expense"
-            onAction={() => sheetRef.current?.present()}
-          />
+          <View style={styles.emptyWrap}>
+            <EmptyState
+              title="No expenses yet"
+              description="Start tracking your adventures together"
+            />
+          </View>
 
           {/* FAB */}
           <TouchableOpacity
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              sheetRef.current?.present();
+              openComposer();
             }}
             activeOpacity={0.85}
             style={[styles.floatingFab, { backgroundColor: C.expenses }]}
@@ -235,7 +369,24 @@ export default function ExpensesScreen() {
             <Feather name="plus" size={22} color={C.ink} />
           </TouchableOpacity>
 
-          <CreateExpenseSheet sheetRef={sheetRef} onSave={handleCreate} />
+          <CreateExpenseSheet
+            sheetRef={sheetRef}
+            onSave={handleCreate}
+            expense={
+              editingExpense
+                ? {
+                    id: editingExpense._id,
+                    title: editingExpense.title,
+                    amount: editingExpense.amount,
+                    paidBy: editingExpense.paidBy,
+                    currency: editingExpense.currency,
+                    splitType: editingExpense.splitType,
+                    category: editingExpense.category,
+                    date: editingExpense.date,
+                  }
+                : undefined
+            }
+          />
         </SafeAreaView>
       </View>
     );
@@ -243,69 +394,118 @@ export default function ExpensesScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: C.background }]}>
-      <SafeAreaView style={styles.flex} edges={['top']}>
+      <SafeAreaView style={styles.flex} edges={["top"]}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: C.background }]}>
           <TouchableOpacity
             onPress={() => {
               Haptics.selectionAsync();
               router.back();
             }}
-            style={styles.backBtn}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={8}
           >
             <Feather name="arrow-left" size={22} color={C.text} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: C.text }]}>Our Expenses</Text>
-          <View style={{ width: 40 }} />
+          <View style={styles.headerText}>
+            <BrushUnderline color={C.warning} style={styles.userNameBrush}>
+              <Text style={[styles.headerTitle, { color: C.text }]}>
+                Our Expenses
+              </Text>
+            </BrushUnderline>
+            <Text style={[styles.headerSubtitle, { color: C.textTertiary }]}>
+              Track what was paid, in the right currency
+            </Text>
+          </View>
         </View>
 
         <FlashList
           data={unsettled}
           keyExtractor={(item) => item._id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            togetherListContainerStyle,
+          ]}
           ListHeaderComponent={headerComponent}
           ListFooterComponent={footerComponent}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={C.primary}
+            />
           }
-          renderItem={({ item, index }) => (
-            <Animated.View entering={FadeInDown.duration(400).delay(150 + index * 50)}>
-              <View style={[styles.expenseCard, { backgroundColor: C.card, borderColor: C.border }]}>
+          renderItem={({ item, index }) => {
+            const row = (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => openComposer(item)}
+                style={[
+                  togetherItemContainerStyle,
+                  styles.expenseCard,
+                  { backgroundColor: C.card },
+                ]}
+              >
                 <View style={styles.cardLeft}>
-                  <Text style={styles.emoji}>{getCategoryEmoji(item.category)}</Text>
+                  <Text style={styles.emoji}>
+                    {getCategoryEmoji(item.category)}
+                  </Text>
                   <View style={styles.cardInfo}>
-                    <Text style={[styles.cardTitle, { color: C.text }]} numberOfLines={1}>
+                    <Text
+                      style={[styles.cardTitle, { color: C.text }]}
+                      numberOfLines={1}
+                    >
                       {item.title}
                     </Text>
                     <Text style={[styles.cardMeta, { color: C.textTertiary }]}>
-                      Paid by {getPaidByName(item.paidBy)} · {formatDate(item.date)}
+                      Paid by {getPaidByName(item.paidBy)} ·{" "}
+                      {formatDate(item.date)} · {item.currency}
                     </Text>
                   </View>
                 </View>
                 <View style={styles.cardRight}>
                   <Text style={[styles.cardAmount, { color: C.expenses }]}>
-                    {formatAmount(item.amount)}
+                    {formatAmount(item.amount, item.currency)}
                   </Text>
                   <TouchableOpacity
                     onPress={() => handleSettle(item._id)}
-                    style={[styles.settleBtn, { backgroundColor: C.expensesLight }]}
+                    style={[
+                      styles.settleBtn,
+                      { backgroundColor: C.expensesLight },
+                    ]}
                     hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                   >
                     <Feather name="check" size={14} color={C.expenses} />
-                    <Text style={[styles.settleBtnText, { color: C.expenses }]}>Settle</Text>
+                    <Text style={[styles.settleBtnText, { color: C.expenses }]}>
+                      Settle
+                    </Text>
                   </TouchableOpacity>
                 </View>
-              </View>
-            </Animated.View>
-          )}
+              </TouchableOpacity>
+            );
+
+            return (
+              <Animated.View
+                entering={FadeInDown.duration(400).delay(150 + index * 50)}
+              >
+                <Swipeable
+                  renderLeftActions={renderEditAction(item)}
+                  renderRightActions={renderDeleteAction(item)}
+                  overshootLeft={false}
+                  overshootRight={false}
+                  friction={2}
+                >
+                  {row}
+                </Swipeable>
+              </Animated.View>
+            );
+          }}
         />
 
         {/* FAB */}
         <TouchableOpacity
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            sheetRef.current?.present();
+            openComposer();
           }}
           activeOpacity={0.85}
           style={[styles.floatingFab, { backgroundColor: C.expenses }]}
@@ -313,7 +513,24 @@ export default function ExpensesScreen() {
           <Feather name="plus" size={22} color={C.ink} />
         </TouchableOpacity>
 
-        <CreateExpenseSheet sheetRef={sheetRef} onSave={handleCreate} />
+        <CreateExpenseSheet
+          sheetRef={sheetRef}
+          onSave={handleCreate}
+          expense={
+            editingExpense
+              ? {
+                  id: editingExpense._id,
+                  title: editingExpense.title,
+                  amount: editingExpense.amount,
+                  paidBy: editingExpense.paidBy,
+                  currency: editingExpense.currency,
+                  splitType: editingExpense.splitType,
+                  category: editingExpense.category,
+                  date: editingExpense.date,
+                }
+              : undefined
+          }
+        />
       </SafeAreaView>
     </View>
   );
@@ -323,52 +540,68 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   flex: { flex: 1 },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.md,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 20,
+  headerText: {
+    flex: 1,
+    alignItems: "flex-start",
+    gap: 2,
+  },
+  userNameBrush: {
+    ...Typography.title,
+    marginTop: 2,
   },
   headerTitle: {
-    ...Typography.heading,
-    fontSize: 20,
+    ...Typography.title,
+    fontSize: 22,
   },
-  fab: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+  headerSubtitle: {
+    ...Typography.small,
+    textTransform: "uppercase",
+    letterSpacing: 1,
   },
   listContent: {
-    paddingHorizontal: Spacing.lg,
     paddingBottom: 120,
+  },
+  emptyWrap: {
+    paddingHorizontal: Spacing.lg,
+    height: 400,
   },
 
   // Total card
   totalCard: {
-    borderRadius: BorderRadius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
     padding: Spacing.xl,
-    alignItems: 'center',
-    marginBottom: Spacing['2xl'],
+    alignItems: "flex-start",
+    marginBottom: Spacing["2xl"],
   },
   totalLabel: {
     ...Typography.overline,
     letterSpacing: 2,
     marginBottom: Spacing.xs,
   },
-  totalAmount: {
-    ...Typography.display,
-    fontSize: 40,
-    marginBottom: Spacing.xs,
+  totalSummaryList: {
+    width: "100%",
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  totalSummaryChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: 8,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  totalSummaryCode: {
+    ...Typography.captionMedium,
+    letterSpacing: 0.8,
+  },
+  totalSummaryValue: {
+    ...Typography.subheading,
   },
   totalSub: {
     ...Typography.caption,
@@ -379,24 +612,23 @@ const styles = StyleSheet.create({
     ...Typography.overline,
     letterSpacing: 2,
     marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.lg,
   },
 
   // Expense card
   expenseCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: BorderRadius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: Spacing.lg,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
     marginBottom: Spacing.sm,
   },
   settledCard: {
     marginBottom: Spacing.xs,
   },
   cardLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
     gap: Spacing.md,
   },
@@ -414,7 +646,7 @@ const styles = StyleSheet.create({
     ...Typography.small,
   },
   cardRight: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
     gap: Spacing.xs,
   },
   cardAmount: {
@@ -422,16 +654,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   settleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: BorderRadius.full,
   },
   settleBtnText: {
-    ...Typography.small,
-    fontFamily: 'DMSans_600SemiBold',
+    ...Typography.captionMedium,
   },
 
   // Settled section
@@ -439,21 +670,26 @@ const styles = StyleSheet.create({
     marginTop: Spacing.lg,
   },
   settledToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: Spacing.sm,
     marginBottom: Spacing.md,
   },
+  swipeAction: {
+    width: 72,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   floatingFab: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 100,
     right: 24,
     width: 52,
     height: 52,
     borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,

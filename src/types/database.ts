@@ -62,6 +62,7 @@ export type JournalEntry = {
   mood: string | null;
   is_private: boolean;
   media_urls: string[];
+  media_storage_ids: string[];
   tags: string[];
   entry_date: string;
   created_at: string;

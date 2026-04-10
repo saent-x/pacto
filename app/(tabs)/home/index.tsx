@@ -19,9 +19,15 @@ import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
 import { format } from "date-fns";
 import { MarkdownText } from "@/src/components/journal/MarkdownText";
 import { TimelineFeed } from "@/src/components/home/TimelineFeed";
+import { BrushUnderline } from "@/src/components/ui";
 import { BorderRadius, Spacing } from "@/src/constants/spacing";
+import {
+  CHECK_IN_MOODS,
+  getCheckInMoodMeta,
+} from "@/src/constants/checkInMoods";
 import { Typography } from "@/src/constants/typography";
 import { useColors } from "@/src/hooks/useColors";
+import { useCheckIns } from "@/src/hooks/useCheckIns";
 import { useTheme } from "@/src/lib/theme";
 import { useHomeTimeline, HomeQuickAction } from "@/src/hooks/useHomeTimeline";
 import { useSession } from "@/src/hooks/useSession";
@@ -70,9 +76,14 @@ function AvatarToken({
       }}
     >
       {avatarUrl ? (
-        <Image source={{ uri: avatarUrl }} style={{ width: "100%", height: "100%" }} />
+        <Image
+          source={{ uri: avatarUrl }}
+          style={{ width: "100%", height: "100%" }}
+        />
       ) : (
-        <Text style={{ fontSize: size * 0.38, fontWeight: "600", color }}>{letter}</Text>
+        <Text style={{ fontSize: size * 0.38, fontWeight: "600", color }}>
+          {letter}
+        </Text>
       )}
     </View>
   );
@@ -91,11 +102,13 @@ function DailyVerse({
   const C = useColors();
   return (
     <Animated.View entering={FadeInDown.duration(500).delay(200)}>
-      <View style={styles.verse}>
+      <View style={[styles.verse, {}]}>
         <View style={[styles.verseMark, { backgroundColor: C.primary }]} />
-        <View style={styles.verseBody}>
+        <View style={[styles.verseBody, { backgroundColor: C.card }]}>
           <Text style={[styles.verseText, { color: C.text }]}>"{text}"</Text>
-          <Text style={[styles.verseRef, { color: C.primary }]}>{reference}</Text>
+          <Text style={[styles.verseRef, { color: C.primary }]}>
+            {reference}
+          </Text>
         </View>
       </View>
     </Animated.View>
@@ -106,15 +119,24 @@ function DailyVerse({
 
 type MemoryItem = HomeView["memories"][number];
 
-function SharedMemories({ memories, isLoading }: { memories: MemoryItem[]; isLoading: boolean }) {
+function SharedMemories({
+  memories,
+  isLoading,
+}: {
+  memories: MemoryItem[];
+  isLoading: boolean;
+}) {
   const C = useColors();
   const { mode } = useTheme();
   const memoryRouter = useRouter();
   const [index, setIndex] = useState(0);
 
-  const glassBg = mode === "dark" ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)";
-  const glassBorder = mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
-  const arrowBg = mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
+  const glassBg =
+    mode === "dark" ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.06)";
+  const glassBorder =
+    mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.10)";
+  const arrowBg =
+    mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.10)";
 
   const count = memories.length;
   const current = count > 0 ? memories[Math.min(index, count - 1)] : null;
@@ -137,15 +159,22 @@ function SharedMemories({ memories, isLoading }: { memories: MemoryItem[]; isLoa
       {/* Header */}
       <View style={styles.memoryHeaderRow}>
         <View style={{ gap: 2 }}>
-          <Text style={[styles.memoryEyebrow, { color: C.journal }]}>Shared memories</Text>
-          <Text style={[styles.memoryHeading, { color: C.text }]}>Our story</Text>
+          <Text style={[styles.memoryEyebrow, { color: C.journal }]}>
+            Shared memories
+          </Text>
+          <Text style={[styles.memoryHeading, { color: C.text }]}>
+            Our story
+          </Text>
         </View>
         {count > 1 && (
           <View style={styles.memoryNav}>
             <TouchableOpacity
               onPress={goPrev}
               disabled={index === 0}
-              style={[styles.memoryArrow, { backgroundColor: arrowBg, opacity: index === 0 ? 0.3 : 1 }]}
+              style={[
+                styles.memoryArrow,
+                { backgroundColor: arrowBg, opacity: index === 0 ? 0.3 : 1 },
+              ]}
             >
               <Feather name="chevron-left" size={16} color={C.text} />
             </TouchableOpacity>
@@ -155,7 +184,13 @@ function SharedMemories({ memories, isLoading }: { memories: MemoryItem[]; isLoa
             <TouchableOpacity
               onPress={goNext}
               disabled={index >= count - 1}
-              style={[styles.memoryArrow, { backgroundColor: arrowBg, opacity: index >= count - 1 ? 0.3 : 1 }]}
+              style={[
+                styles.memoryArrow,
+                {
+                  backgroundColor: arrowBg,
+                  opacity: index >= count - 1 ? 0.3 : 1,
+                },
+              ]}
             >
               <Feather name="chevron-right" size={16} color={C.text} />
             </TouchableOpacity>
@@ -165,7 +200,12 @@ function SharedMemories({ memories, isLoading }: { memories: MemoryItem[]; isLoa
 
       {/* Card */}
       {isLoading ? (
-        <View style={[styles.memoryCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
+        <View
+          style={[
+            styles.memoryCard,
+            { backgroundColor: glassBg, borderColor: glassBorder },
+          ]}
+        >
           <Text style={[styles.memoryLoadingText, { color: C.textSecondary }]}>
             Loading shared memories…
           </Text>
@@ -179,10 +219,16 @@ function SharedMemories({ memories, isLoading }: { memories: MemoryItem[]; isLoa
               memoryRouter.push(`/(tabs)/journal/${current.sourceId}` as any);
             }
           }}
-          style={[styles.memoryCard, { backgroundColor: glassBg, borderColor: glassBorder }]}
+          style={[
+            styles.memoryCard,
+            { backgroundColor: glassBg, borderColor: glassBorder },
+          ]}
         >
           <View style={styles.memoryCardHeader}>
-            <Text style={[styles.memoryCardTitle, { color: C.text }]} numberOfLines={1}>
+            <Text
+              style={[styles.memoryCardTitle, { color: C.text }]}
+              numberOfLines={1}
+            >
               {current.title}
             </Text>
             <Text style={[styles.memoryCardDate, { color: C.textTertiary }]}>
@@ -200,17 +246,112 @@ function SharedMemories({ memories, isLoading }: { memories: MemoryItem[]; isLoa
           </View>
         </TouchableOpacity>
       ) : (
-        <View style={[styles.memoryCard, styles.memoryEmpty, { backgroundColor: glassBg, borderColor: glassBorder }]}>
-          <View style={[styles.memoryEmptyIcon, { backgroundColor: C.journalLight }]}>
+        <View
+          style={[
+            styles.memoryCard,
+            styles.memoryEmpty,
+            { backgroundColor: glassBg, borderColor: glassBorder },
+          ]}
+        >
+          <View
+            style={[
+              styles.memoryEmptyIcon,
+              { backgroundColor: C.journalLight },
+            ]}
+          >
             <Feather name="book-open" size={22} color={C.journal} />
           </View>
-          <Text style={[styles.memoryEmptyTitle, { color: C.text }]}>No shared memories yet</Text>
+          <Text style={[styles.memoryEmptyTitle, { color: C.text }]}>
+            No shared memories yet
+          </Text>
           <Text style={[styles.memoryEmptyBody, { color: C.textSecondary }]}>
-            Write a journal entry and keep it shared — it'll appear here for both of you.
+            Write a journal entry and keep it shared — it'll appear here for
+            both of you.
           </Text>
         </View>
       )}
     </View>
+  );
+}
+
+function DailyPulseCard() {
+  const C = useColors();
+  const { myTodayCheckIn, partnerTodayCheckIn, createOrUpdate, isSubmitting } = useCheckIns();
+  const myMood = getCheckInMoodMeta(myTodayCheckIn?.mood);
+  const partnerMood = getCheckInMoodMeta(partnerTodayCheckIn?.mood);
+
+  const handleSelect = useCallback(
+    async (moodId: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      await createOrUpdate({ mood: moodId, note: null, isPrivate: false });
+    },
+    [createOrUpdate],
+  );
+
+  return (
+    <Animated.View entering={FadeInDown.duration(450).delay(240)}>
+      <View style={[styles.pulseCard, { backgroundColor: C.card, borderColor: C.border }]}>
+        <View style={styles.pulseHeader}>
+          <Text style={[styles.pulseEyebrow, { color: C.mood }]}>How are you feeling?</Text>
+          {myMood ? (
+            <Text style={[styles.pulseSelectedLabel, { color: C.text }]}>{myMood.label}</Text>
+          ) : null}
+        </View>
+
+        <View style={styles.pulseMoodRow}>
+          {CHECK_IN_MOODS.map((mood) => {
+            const isMine = myMood?.id === mood.id;
+            const isPartner = partnerMood?.id === mood.id;
+            return (
+              <TouchableOpacity
+                key={mood.id}
+                activeOpacity={0.7}
+                disabled={isSubmitting}
+                onPress={() => handleSelect(mood.id)}
+                style={[styles.pulseMoodItem, isSubmitting && { opacity: 0.55 }]}
+              >
+                <View
+                  style={[
+                    styles.pulseMoodCircle,
+                    {
+                      backgroundColor: isMine ? C.moodLight : isPartner ? C.primaryMuted : C.surface,
+                      borderColor: isMine ? C.mood : isPartner ? C.primary : "transparent",
+                    },
+                  ]}
+                >
+                  <Feather
+                    name={mood.icon}
+                    size={18}
+                    color={isMine ? C.mood : isPartner ? C.primary : C.textTertiary}
+                  />
+                </View>
+                <View style={styles.pulseDotRow}>
+                  {isMine && <View style={[styles.pulseDot, { backgroundColor: C.mood }]} />}
+                  {isPartner && <View style={[styles.pulseDot, { backgroundColor: C.primary }]} />}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <View style={[styles.pulsePartnerRow, { borderColor: C.divider }]}>
+          {partnerMood ? (
+            <>
+              <View style={[styles.pulsePartnerIcon, { backgroundColor: C.primaryMuted }]}>
+                <Feather name={partnerMood.icon} size={12} color={C.primary} />
+              </View>
+              <Text style={[styles.pulsePartnerText, { color: C.textSecondary }]}>
+                Partner is feeling <Text style={{ color: C.text }}>{partnerMood.label.toLowerCase()}</Text>
+              </Text>
+            </>
+          ) : (
+            <Text style={[styles.pulsePartnerText, { color: C.textTertiary }]}>
+              Partner hasn't checked in yet
+            </Text>
+          )}
+        </View>
+      </View>
+    </Animated.View>
   );
 }
 
@@ -225,10 +366,14 @@ function QuickNav({
 }) {
   const C = useColors();
   const { mode } = useTheme();
-  const glassBorder = mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
+  const glassBorder =
+    mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.10)";
 
   return (
-    <Animated.View entering={FadeInDown.duration(400).delay(300)} style={styles.navRow}>
+    <Animated.View
+      entering={FadeInDown.duration(400).delay(300)}
+      style={styles.navRow}
+    >
       {actions.map((a) => (
         <Pressable
           key={a.id}
@@ -252,17 +397,25 @@ function QuickNav({
 
 /* ─── Milestones ─── */
 
-function MilestoneStrip({ milestones }: { milestones: HomeView["milestones"] }) {
+function MilestoneStrip({
+  milestones,
+}: {
+  milestones: HomeView["milestones"];
+}) {
   const C = useColors();
   const { mode } = useTheme();
   if (milestones.length === 0) return null;
 
-  const glassBg = mode === "dark" ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)";
-  const glassBorder = mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
+  const glassBg =
+    mode === "dark" ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.06)";
+  const glassBorder =
+    mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.10)";
 
   return (
     <Animated.View entering={FadeInDown.duration(400).delay(350)}>
-      <Text style={[styles.sectionEyebrow, { color: C.textTertiary }]}>Counting down</Text>
+      <Text style={[styles.sectionEyebrow, { color: C.textTertiary }]}>
+        Counting down
+      </Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -271,12 +424,18 @@ function MilestoneStrip({ milestones }: { milestones: HomeView["milestones"] }) 
         {milestones.map((m) => (
           <View
             key={m.id}
-            style={[styles.milestoneCard, { backgroundColor: glassBg, borderColor: glassBorder }]}
+            style={[
+              styles.milestoneCard,
+              { backgroundColor: glassBg, borderColor: glassBorder },
+            ]}
           >
             <Text style={[styles.milestoneDays, { color: C.primary }]}>
               {m.daysUntil === 0 ? "Today" : `${m.daysUntil}d`}
             </Text>
-            <Text style={[styles.milestoneTitle, { color: C.text }]} numberOfLines={1}>
+            <Text
+              style={[styles.milestoneTitle, { color: C.text }]}
+              numberOfLines={1}
+            >
               {m.title}
             </Text>
           </View>
@@ -315,7 +474,8 @@ export default function HomeScreen() {
     [router],
   );
 
-  const glassBorder = mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
+  const glassBorder =
+    mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.10)";
 
   return (
     <View style={[styles.screen, { backgroundColor: C.background }]}>
@@ -324,22 +484,42 @@ export default function HomeScreen() {
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={C.primary}
+            />
           }
         >
           {/* ─── Header ─── */}
           <Animated.View entering={FadeIn.duration(600)} style={styles.header}>
             <View style={styles.headerTop}>
               <View style={styles.headerLeft}>
-                <Text style={[styles.greeting, { color: C.textTertiary }]}>{getGreeting()}</Text>
-                <Text style={[styles.userName, { color: C.text }]}>
-                  {profile?.displayName ?? "there"}
+                <Text style={[styles.greeting, { color: C.textTertiary }]}>
+                  {getGreeting()}
                 </Text>
+                <BrushUnderline color={C.warning} style={styles.userNameBrush}>
+                  <Text style={[styles.userName, { color: C.text }]}>
+                    {profile?.displayName ?? "there"}
+                  </Text>
+                </BrushUnderline>
               </View>
               <View style={styles.avatarWrap}>
                 <View pointerEvents="none" style={styles.ringsWrap}>
-                  <View style={[styles.ring, styles.ringL, { borderColor: C.primary }]} />
-                  <View style={[styles.ring, styles.ringR, { borderColor: C.primary }]} />
+                  <View
+                    style={[
+                      styles.ring,
+                      styles.ringL,
+                      { borderColor: C.primary },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.ring,
+                      styles.ringR,
+                      { borderColor: C.primary },
+                    ]}
+                  />
                 </View>
                 <View style={styles.avatarStack}>
                   <AvatarToken
@@ -364,9 +544,16 @@ export default function HomeScreen() {
               </View>
             </View>
             {coupleName && (
-              <View style={[styles.coupleTag, { borderColor: glassBorder }]}>
+              <View
+                style={[
+                  styles.coupleTag,
+                  { backgroundColor: C.primaryMuted, borderColor: C.border },
+                ]}
+              >
                 <Feather name="heart" size={10} color={C.primary} />
-                <Text style={[styles.coupleTagText, { color: C.textSecondary }]}>{coupleName}</Text>
+                <Text style={[styles.coupleTagText, { color: C.text }]}>
+                  {coupleName}
+                </Text>
               </View>
             )}
           </Animated.View>
@@ -380,9 +567,14 @@ export default function HomeScreen() {
             />
           ) : null}
 
+          <DailyPulseCard />
+
           {/* ─── Shared Memories ─── */}
           <Animated.View entering={FadeInDown.duration(500).delay(250)}>
-            <SharedMemories memories={home.memories} isLoading={home.isLoading} />
+            <SharedMemories
+              memories={home.memories}
+              isLoading={home.isLoading}
+            />
           </Animated.View>
 
           {/* ─── Quick Nav ─── */}
@@ -393,10 +585,7 @@ export default function HomeScreen() {
 
           {/* ─── Timeline ─── */}
           <Animated.View entering={FadeInDown.duration(400).delay(400)}>
-            <TimelineFeed
-              isLoading={home.isLoading}
-              timeline={home.timeline}
-            />
+            <TimelineFeed isLoading={home.isLoading} timeline={home.timeline} />
           </Animated.View>
         </ScrollView>
       </SafeAreaView>
@@ -434,7 +623,10 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   userName: {
-    ...Typography.largeTitle,
+    ...Typography.editorialLargeTitle,
+  },
+  userNameBrush: {
+    marginTop: 2,
   },
   avatarWrap: {
     position: "relative",
@@ -482,7 +674,6 @@ const styles = StyleSheet.create({
   /* ── Daily Verse ── */
   verse: {
     flexDirection: "row",
-    gap: Spacing.lg,
   },
   verseMark: {
     width: 3,
@@ -491,9 +682,12 @@ const styles = StyleSheet.create({
   verseBody: {
     flex: 1,
     gap: Spacing.sm,
+    padding: Spacing.md,
+    borderTopRightRadius: 10,
+    borderBottomRightRadius: 10,
   },
   verseText: {
-    ...Typography.heading,
+    ...Typography.editorial,
     fontSize: 18,
     lineHeight: 28,
   },
@@ -501,6 +695,72 @@ const styles = StyleSheet.create({
     ...Typography.captionMedium,
     fontSize: 12,
     letterSpacing: 0.5,
+  },
+
+  /* ── Daily pulse ── */
+  pulseCard: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+  },
+  pulseHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  pulseEyebrow: {
+    ...Typography.overline,
+    letterSpacing: 1.5,
+  },
+  pulseSelectedLabel: {
+    ...Typography.captionMedium,
+    fontSize: 13,
+  },
+  pulseMoodRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  pulseMoodItem: {
+    alignItems: "center",
+    gap: 6,
+  },
+  pulseMoodCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pulseDotRow: {
+    flexDirection: "row",
+    gap: 4,
+    height: 6,
+    alignItems: "center",
+  },
+  pulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  pulsePartnerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: Spacing.md,
+  },
+  pulsePartnerIcon: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pulsePartnerText: {
+    ...Typography.caption,
+    fontSize: 12,
   },
 
   /* ── Shared Memories ── */
@@ -538,8 +798,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   memoryCard: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: BorderRadius.xl,
+    borderRadius: 10,
     padding: Spacing.xl,
     gap: Spacing.md,
   },
@@ -602,8 +861,7 @@ const styles = StyleSheet.create({
   },
   navPill: {
     flex: 1,
-    borderRadius: BorderRadius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 10,
     paddingVertical: Spacing.md,
     alignItems: "center",
     gap: 6,
@@ -626,8 +884,7 @@ const styles = StyleSheet.create({
   },
   milestoneCard: {
     width: 110,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: BorderRadius.lg,
+    borderRadius: 10,
     padding: Spacing.lg,
     gap: 4,
   },

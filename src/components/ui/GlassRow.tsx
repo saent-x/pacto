@@ -62,7 +62,7 @@ export function GlassRow({
 
   const dividerColor = mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
   const textColor = destructive ? C.error : C.text;
-  const defaultIconBg = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+  const defaultIconBg = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.10)';
 
   const content = (
     <View style={[styles.row, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: dividerColor }, style]}>

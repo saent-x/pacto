@@ -79,6 +79,17 @@ const createTaskMutation = makeFunctionReference<
   },
   TaskDoc
 >('tasks:createTask');
+const createTaskWithDefaultListMutation = makeFunctionReference<
+  'mutation',
+  {
+    title: string;
+    notes?: string | null;
+    dueDate?: string | null;
+    priority?: number;
+    assignedTo?: string | null;
+  },
+  TaskDoc
+>('tasks:createTaskWithDefaultList');
 const updateTaskMutation = makeFunctionReference<
   'mutation',
   {
@@ -258,6 +269,7 @@ export function useTasks() {
   const createTaskList = useMutation(createTaskListMutation);
   const deleteTaskList = useMutation(deleteTaskListMutation);
   const createTaskMutationFn = useMutation(createTaskMutation);
+  const createTaskWithDefaultListFn = useMutation(createTaskWithDefaultListMutation);
   const updateTaskMutationFn = useMutation(updateTaskMutation);
   const toggleTaskMutationFn = useMutation(toggleTaskMutation);
   const deleteTaskMutationFn = useMutation(deleteTaskMutation);
@@ -315,6 +327,19 @@ export function useTasks() {
     [createTaskMutationFn],
   );
 
+  const createTaskInDefaultList = useCallback(
+    async (data: Omit<TaskCreateInput, 'list_id'>) => {
+      await createTaskWithDefaultListFn({
+        title: data.title,
+        ...(data.notes !== undefined ? { notes: data.notes ?? null } : {}),
+        ...(data.due_date !== undefined ? { dueDate: data.due_date ?? null } : {}),
+        ...(data.priority !== undefined ? { priority: data.priority } : {}),
+        ...(data.assigned_to !== undefined ? { assignedTo: data.assigned_to ?? null } : {}),
+      });
+    },
+    [createTaskWithDefaultListFn],
+  );
+
   const updateTask = useCallback(
     async (id: string, data: TaskUpdateInput) => {
       await updateTaskMutationFn({
@@ -354,6 +379,7 @@ export function useTasks() {
     createList,
     deleteList,
     createTask,
+    createTaskInDefaultList,
     updateTask,
     toggleTask,
     deleteTask,

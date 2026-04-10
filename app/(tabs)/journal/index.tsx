@@ -84,22 +84,22 @@ export default function JournalScreen() {
     return (
       <Animated.View entering={FadeInDown.duration(400)}>
         <Swipeable
-          renderRightActions={() => (
+          renderRightActions={isOwn ? () => (
             <TouchableOpacity
               style={[styles.swipeAction, { backgroundColor: C.error }]}
               onPress={handleDelete}
             >
               <Feather name="trash-2" size={18} color="#fff" />
             </TouchableOpacity>
-          )}
-          renderLeftActions={() => (
+          ) : undefined}
+          renderLeftActions={isOwn ? () => (
             <TouchableOpacity
               style={[styles.swipeAction, { backgroundColor: C.journal }]}
               onPress={() => openEntry(item)}
             >
               <Feather name="edit-3" size={18} color={C.ink} />
             </TouchableOpacity>
-          )}
+          ) : undefined}
           overshootRight={false}
           overshootLeft={false}
           friction={2}
@@ -161,12 +161,14 @@ export default function JournalScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: C.background }]}>
-      <SafeAreaView style={[styles.flex, { backgroundColor: C.surface }]} edges={['top']}>
+      <SafeAreaView style={[styles.flex, { backgroundColor: C.background }]} edges={['top']}>
         <MiniDateRail
           title="Journal"
           selectedDate={selectedDate}
           onSelectDate={setSelectedDate}
           accentColor={C.journal}
+          onPressAction={openCreate}
+          actionIcon="plus"
           tabs={[
             { value: 'all', label: 'All' },
             { value: 'shared', label: 'Shared' },

@@ -33,7 +33,7 @@ export function CreateMilestoneSheet({ sheetRef, onSave, milestone }: Props) {
   const { mode } = useTheme();
 
   const [title, setTitle] = useState(milestone?.title ?? '');
-  const [date, setDate] = useState(milestone?.date ? new Date(milestone.date) : new Date());
+  const [date, setDate] = useState(milestone?.date ? new Date(`${milestone.date}T00:00:00`) : new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [description, setDescription] = useState(milestone?.description ?? '');
   const [icon, setIcon] = useState(milestone?.icon ?? '');
@@ -43,7 +43,7 @@ export function CreateMilestoneSheet({ sheetRef, onSave, milestone }: Props) {
 
   const isEdit = !!milestone;
 
-  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
+  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
   const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
   const activeBg = C.milestonesLight;
 
@@ -54,7 +54,7 @@ export function CreateMilestoneSheet({ sheetRef, onSave, milestone }: Props) {
 
     sessionKeyRef.current = sessionKey;
     setTitle(milestone?.title ?? '');
-    setDate(milestone?.date ? new Date(milestone.date) : new Date());
+    setDate(milestone?.date ? new Date(`${milestone.date}T00:00:00`) : new Date());
     setShowDatePicker(false);
     setDescription(milestone?.description ?? '');
     setIcon(milestone?.icon ?? '');
@@ -69,7 +69,7 @@ export function CreateMilestoneSheet({ sheetRef, onSave, milestone }: Props) {
     try {
       await onSave({
         title: title.trim(),
-        date: date.toISOString(),
+        date: format(date, 'yyyy-MM-dd'),
         description: description.trim() || null,
         icon: icon || '⭐',
       });

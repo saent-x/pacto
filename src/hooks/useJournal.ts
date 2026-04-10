@@ -29,6 +29,7 @@ type JournalEntryDoc = {
   mood: string | null;
   isPrivate: boolean;
   mediaUrls: string[];
+  mediaStorageIds?: string[];
   tags: string[];
   entryDate: string;
   createdAt: number;
@@ -78,6 +79,7 @@ function toJournalEntryRow(entry: JournalEntryDoc): JournalEntry {
     mood: entry.mood,
     is_private: entry.isPrivate,
     media_urls: [...entry.mediaUrls],
+    media_storage_ids: [...(entry.mediaStorageIds ?? [])],
     tags: [...entry.tags],
     entry_date: entry.entryDate,
     created_at: new Date(entry.createdAt).toISOString(),

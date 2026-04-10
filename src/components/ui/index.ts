@@ -8,3 +8,4 @@ export { GlassSection } from './GlassSection';
 export { GlassRow } from './GlassRow';
 export { SegmentedControl } from './SegmentedControl';
 export { ThemedSheet, BottomSheetTextInput } from './BottomSheet';
+export { BrushUnderline } from './BrushUnderline';

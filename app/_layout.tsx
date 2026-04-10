@@ -28,7 +28,7 @@ export { ErrorBoundary } from 'expo-router';
 SplashScreen.preventAutoHideAsync();
 
 function useProtectedRoute() {
-  const segments = useSegments();
+  const segments = useSegments() as string[];
   const router = useRouter();
   const { activeCouple, isAuthenticated, isLoading, route } = useSession();
 

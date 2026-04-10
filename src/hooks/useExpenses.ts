@@ -10,6 +10,7 @@ type ExpenseDoc = {
   title: string;
   amount: number;
   paidBy: string;
+  currency: string;
   splitType: string;
   splitAmount: number | null;
   category: string;
@@ -21,6 +22,8 @@ type ExpenseDoc = {
 type ExpenseInput = {
   title: string;
   amount: number;
+  paidBy?: string;
+  currency?: string;
   splitType?: string;
   splitAmount?: number | null;
   category?: string;
@@ -35,6 +38,8 @@ const createExpenseMutation = makeFunctionReference<
   {
     title: string;
     amount: number;
+    paidBy?: string;
+    currency?: string;
     splitType?: string;
     splitAmount?: number | null;
     category?: string;
@@ -48,6 +53,8 @@ const updateExpenseMutation = makeFunctionReference<
     expenseId: string;
     title?: string;
     amount?: number;
+    paidBy?: string;
+    currency?: string;
     splitType?: string;
     splitAmount?: number | null;
     category?: string;
@@ -90,6 +97,8 @@ export function useExpenses() {
       await createExpense({
         title: data.title,
         amount: data.amount,
+        paidBy: data.paidBy,
+        currency: data.currency,
         splitType: data.splitType,
         splitAmount: data.splitAmount ?? null,
         category: data.category,
@@ -105,6 +114,8 @@ export function useExpenses() {
         expenseId: id,
         ...(data.title !== undefined ? { title: data.title } : {}),
         ...(data.amount !== undefined ? { amount: data.amount } : {}),
+        ...(data.paidBy !== undefined ? { paidBy: data.paidBy } : {}),
+        ...(data.currency !== undefined ? { currency: data.currency } : {}),
         ...(data.splitType !== undefined ? { splitType: data.splitType } : {}),
         ...(data.splitAmount !== undefined ? { splitAmount: data.splitAmount ?? null } : {}),
         ...(data.category !== undefined ? { category: data.category } : {}),

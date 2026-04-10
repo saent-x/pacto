@@ -43,8 +43,8 @@ export default function JournalDetailScreen() {
 
   const sheetRef = useRef<BottomSheetModal>(null);
 
-  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)';
-  const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.06)';
+  const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.10)';
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);

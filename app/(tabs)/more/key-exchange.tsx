@@ -32,8 +32,8 @@ export default function KeyExchangeScreen() {
   const [scanned, setScanned] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
 
-  const glassBg = themeMode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)';
-  const glassBorder = themeMode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+  const glassBg = themeMode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.06)';
+  const glassBorder = themeMode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.10)';
 
   // Load existing key on mount
   useEffect(() => {

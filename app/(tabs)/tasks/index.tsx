@@ -19,12 +19,14 @@ import type { Task } from '@/src/types/database';
 export default function TasksScreen() {
   const C = useColors();
   const insets = useSafeAreaInsets();
-  const { lists, allTasks, isLoading, createList, createTask, updateTask, toggleTask, deleteTask, refetch } = useTasks();
+  const { lists, allTasks, isLoading, createTask, createTaskInDefaultList, updateTask, toggleTask, deleteTask, refetch } = useTasks();
   const sheetRef = useRef<BottomSheetModal>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'done'>('all');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | undefined>();
   const [optimisticCompletion, setOptimisticCompletion] = useState<Record<string, boolean>>({});
+  const [pendingTaskIds, setPendingTaskIds] = useState<Record<string, true>>({});
+  const [savingTask, setSavingTask] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
@@ -69,41 +71,47 @@ export default function TasksScreen() {
   };
 
   const handleSave = async (data: Parameters<typeof createTask>[0]) => {
-    if (editingTask) {
-      await updateTask(editingTask.id, data);
-      setEditingTask(undefined);
-      return;
-    }
-
-    if (data.list_id === AUTO_CREATE_TASK_LIST_ID) {
-      const createdList = await createList({
-        name: 'General',
-        icon: 'list',
-        color: C.tasks,
-      });
-
-      if (!createdList) {
-        throw new Error('List creation failed');
+    if (savingTask) return;
+    setSavingTask(true);
+    try {
+      if (editingTask) {
+        await updateTask(editingTask.id, data);
+        setEditingTask(undefined);
+        return;
       }
 
-      await createTask({
-        ...data,
-        list_id: createdList.id,
-      });
-      return;
-    }
+      if (data.list_id === AUTO_CREATE_TASK_LIST_ID) {
+        await createTaskInDefaultList({
+          title: data.title,
+          notes: data.notes,
+          due_date: data.due_date,
+          priority: data.priority,
+          assigned_to: data.assigned_to,
+        });
+        return;
+      }
 
-    await createTask(data);
+      await createTask(data);
+    } finally {
+      setSavingTask(false);
+    }
   };
 
   const handleToggle = async (item: Task) => {
+    if (pendingTaskIds[item.id]) return;
     const nextValue = !item.is_completed;
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setOptimisticCompletion((current) => ({ ...current, [item.id]: nextValue }));
+    setPendingTaskIds((current) => ({ ...current, [item.id]: true }));
     try {
       await toggleTask(item);
     } finally {
       setOptimisticCompletion((current) => {
+        const next = { ...current };
+        delete next[item.id];
+        return next;
+      });
+      setPendingTaskIds((current) => {
         const next = { ...current };
         delete next[item.id];
         return next;
@@ -117,14 +125,24 @@ export default function TasksScreen() {
   };
 
   const handleDelete = (item: Task) => {
+    if (pendingTaskIds[item.id]) return;
     Alert.alert('Delete task', `Remove "${item.title}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
+          setPendingTaskIds((current) => ({ ...current, [item.id]: true }));
           LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-          await deleteTask(item.id);
+          try {
+            await deleteTask(item.id);
+          } finally {
+            setPendingTaskIds((current) => {
+              const next = { ...current };
+              delete next[item.id];
+              return next;
+            });
+          }
         },
       },
     ]);
@@ -151,12 +169,14 @@ export default function TasksScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: C.background }]}>
-      <SafeAreaView style={[styles.flex, { backgroundColor: C.surface }]} edges={['top']}>
+      <SafeAreaView style={[styles.flex, { backgroundColor: C.background }]} edges={['top']}>
         <MiniDateRail
           title="Tasks"
           selectedDate={selectedDate}
           onSelectDate={setSelectedDate}
           accentColor={C.tasks}
+          onPressAction={openTaskComposer}
+          actionIcon="plus"
           tabs={[
             { value: 'all', label: 'All' },
             { value: 'active', label: 'Active' },
@@ -165,7 +185,7 @@ export default function TasksScreen() {
           selectedTab={filter}
           onSelectTab={(value) => setFilter(value as 'all' | 'active' | 'done')}
         />
-        <View style={[styles.header, { backgroundColor: C.surface }]}>
+        <View style={[styles.header, { backgroundColor: C.background }]}>
           <View style={styles.summaryRow}>
             <Text style={[styles.summaryText, { color: C.textTertiary }]}>
               {openCount} open
@@ -212,6 +232,7 @@ export default function TasksScreen() {
               const dueLabel = item.due_date ? format(new Date(`${item.due_date}T00:00:00`), 'MMM d') : null;
               const listColor = item.list?.color ?? C.tasks;
               const isCompleted = item.is_completed;
+              const isPending = !!pendingTaskIds[item.id];
               const priorityColor =
                 item.priority === 3 ? C.error : item.priority === 2 ? C.warning : C.tasks;
               return (
@@ -225,6 +246,7 @@ export default function TasksScreen() {
                   <TouchableOpacity
                     style={styles.taskWrap}
                     activeOpacity={0.85}
+                    disabled={isPending}
                     onPress={() => {
                       Haptics.selectionAsync();
                       openTaskEditor(item);
@@ -235,12 +257,14 @@ export default function TasksScreen() {
                         styles.taskRow,
                         {
                           backgroundColor: isCompleted ? C.tasksLight : C.card,
+                          opacity: isPending ? 0.6 : 1,
                         },
                       ]}
                     >
                       <View style={[styles.priorityRail, { backgroundColor: item.priority > 0 ? priorityColor : C.dim }]} />
                       <TouchableOpacity
                         onPress={() => handleToggle(item)}
+                        disabled={isPending}
                         style={[
                           styles.checkbox,
                           { borderColor: isCompleted ? C.tasks : C.dusk, backgroundColor: isCompleted ? C.tasks : 'transparent' },

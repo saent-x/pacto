@@ -13,6 +13,7 @@ import {
 } from "./lib/auth";
 import {
   getMembershipForUserAndCouple,
+  listMembershipsForUserAndCouple,
   listActiveMembershipsForCouple,
 } from "./memberships";
 
@@ -150,21 +151,44 @@ export const joinCoupleByInviteCode = mutationGeneric({
       throw new ConvexError("You already belong to this couple.");
     }
 
+    const historicalMemberships = await listMembershipsForUserAndCouple(
+      ctx,
+      user._id,
+      couple._id,
+    );
+    const latestMembership = historicalMemberships[0] ?? null;
+
     const now = Date.now();
     await db.patch(couple._id, {
       inviteCode: null,
       updatedAt: now,
     });
 
-    const membershipId = await db.insert("memberships", {
-      userId: user._id,
-      coupleId: couple._id,
-      role: "partner",
-      status: "active",
-      joinedAt: now,
-      createdAt: now,
-      updatedAt: now,
-    });
+    let membershipId: string;
+    let membershipRole: "creator" | "partner";
+    let membershipCreatedAt: number;
+    if (latestMembership) {
+      membershipId = latestMembership._id;
+      membershipRole = latestMembership.role;
+      membershipCreatedAt = latestMembership.createdAt;
+      await db.patch(membershipId, {
+        status: "active",
+        joinedAt: now,
+        updatedAt: now,
+      });
+    } else {
+      membershipRole = "partner";
+      membershipCreatedAt = now;
+      membershipId = await db.insert("memberships", {
+        userId: user._id,
+        coupleId: couple._id,
+        role: membershipRole,
+        status: "active",
+        joinedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
 
     return {
       couple: toCoupleRecord(
@@ -178,10 +202,10 @@ export const joinCoupleByInviteCode = mutationGeneric({
         _id: membershipId,
         userId: user._id,
         coupleId: couple._id,
-        role: "partner" as const,
+        role: membershipRole,
         status: "active" as const,
         joinedAt: now,
-        createdAt: now,
+        createdAt: membershipCreatedAt,
         updatedAt: now,
       },
       memberCount: activeMembers.length + 1,

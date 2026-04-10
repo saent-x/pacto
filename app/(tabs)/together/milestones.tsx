@@ -7,12 +7,14 @@ import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { FlashList } from '@shopify/flash-list';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { useColors } from '@/src/hooks/useColors';
 import { useMilestones } from '@/src/hooks/useMilestones';
 import { Typography } from '@/src/constants/typography';
 import { Spacing, BorderRadius } from '@/src/constants/spacing';
-import { EmptyState } from '@/src/components/ui';
+import { EmptyState, BrushUnderline } from '@/src/components/ui';
 import { CreateMilestoneSheet } from '@/src/components/milestones/CreateMilestoneSheet';
+import { togetherItemContainerStyle, togetherListContainerStyle } from './_itemStyles';
 
 type MilestoneItem = {
   _id: string;
@@ -25,14 +27,14 @@ type MilestoneItem = {
 };
 
 function formatDate(dateStr: string) {
-  const d = new Date(dateStr);
+  const d = new Date(`${dateStr}T00:00:00`);
   return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
 function getDaysUntil(dateStr: string) {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
-  const target = new Date(dateStr);
+  const target = new Date(`${dateStr}T00:00:00`);
   target.setHours(0, 0, 0, 0);
   const diffMs = target.getTime() - now.getTime();
   return Math.round(diffMs / (1000 * 60 * 60 * 24));
@@ -47,9 +49,10 @@ function getCountdownLabel(days: number) {
 export default function MilestonesScreen() {
   const C = useColors();
   const router = useRouter();
-  const { upcoming, past, isLoading, create, refetch } = useMilestones();
+  const { upcoming, past, create, update, remove, refetch } = useMilestones();
   const sheetRef = useRef<BottomSheetModal>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [editingMilestone, setEditingMilestone] = useState<MilestoneItem | undefined>();
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -62,15 +65,63 @@ export default function MilestonesScreen() {
 
   const handleCreate = useCallback(
     async (data: { title: string; date: string; description: string | null; icon: string }) => {
+      if (editingMilestone) {
+        await update(editingMilestone._id, data);
+        setEditingMilestone(undefined);
+        return;
+      }
       await create(data);
     },
-    [create],
+    [create, editingMilestone, update],
+  );
+
+  const handleDelete = useCallback(
+    (item: MilestoneItem) => {
+      Alert.alert('Delete milestone', `Remove "${item.title}"?`, [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            await remove(item._id);
+          },
+        },
+      ]);
+    },
+    [remove],
+  );
+
+  const renderEditAction = useCallback(
+    (item: MilestoneItem) => () => (
+      <TouchableOpacity
+        style={[styles.swipeAction, { backgroundColor: C.primary }]}
+        onPress={() => {
+          setEditingMilestone(item);
+          sheetRef.current?.present();
+        }}
+      >
+        <Feather name="edit-3" size={18} color="#fff" />
+      </TouchableOpacity>
+    ),
+    [C.primary],
+  );
+
+  const renderDeleteAction = useCallback(
+    (item: MilestoneItem) => () => (
+      <TouchableOpacity
+        style={[styles.swipeAction, { backgroundColor: C.error }]}
+        onPress={() => handleDelete(item)}
+      >
+        <Feather name="trash-2" size={18} color="#fff" />
+      </TouchableOpacity>
+    ),
+    [C.error, handleDelete],
   );
 
   const headerComponent = (
     <View>
       {upcoming.length > 0 && (
-        <Text style={[styles.sectionLabel, { color: C.textTertiary }]}>UPCOMING</Text>
+        <Text style={[styles.sectionLabel, { color: C.textTertiary, paddingHorizontal: Spacing.lg }]}>UPCOMING</Text>
       )}
     </View>
   );
@@ -90,9 +141,10 @@ export default function MilestonesScreen() {
             >
               <View
                 style={[
+                  togetherItemContainerStyle,
                   styles.milestoneCard,
                   styles.pastCard,
-                  { backgroundColor: C.card, borderColor: C.border, opacity: 0.65 },
+                  { backgroundColor: C.card, opacity: 0.65 },
                 ]}
               >
                 <View style={styles.cardLeft}>
@@ -118,37 +170,40 @@ export default function MilestonesScreen() {
     </View>
   );
 
-  if (!isLoading && upcoming.length === 0 && past.length === 0) {
+  if (upcoming.length === 0 && past.length === 0) {
     return (
       <View style={[styles.screen, { backgroundColor: C.background }]}>
         <SafeAreaView style={styles.flex} edges={['top']}>
-          <View style={styles.header}>
+          <View style={[styles.header, { backgroundColor: C.background }]}>
             <TouchableOpacity
               onPress={() => {
                 Haptics.selectionAsync();
                 router.back();
               }}
-              style={styles.backBtn}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              hitSlop={8}
             >
               <Feather name="arrow-left" size={22} color={C.text} />
             </TouchableOpacity>
-            <Text style={[styles.headerTitle, { color: C.text }]}>Milestones</Text>
-            <View style={{ width: 40 }} />
+            <View style={styles.headerText}>
+              <BrushUnderline color={C.warning} style={styles.userNameBrush}>
+                <Text style={[styles.headerTitle, { color: C.text }]}>Milestones</Text>
+              </BrushUnderline>
+              <Text style={[styles.headerSubtitle, { color: C.textTertiary }]}>Shared dates, stored as actual dates</Text>
+            </View>
           </View>
 
-          <EmptyState
-            icon="flag"
-            title="No milestones yet"
-            description="Mark the moments that matter"
-            actionLabel="Add Milestone"
-            onAction={() => sheetRef.current?.present()}
-          />
+          <View style={styles.emptyWrap}>
+            <EmptyState
+              title="No milestones yet"
+              description="Mark the moments that matter"
+            />
+          </View>
 
           {/* FAB */}
           <TouchableOpacity
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setEditingMilestone(undefined);
               sheetRef.current?.present();
             }}
             activeOpacity={0.85}
@@ -157,7 +212,17 @@ export default function MilestonesScreen() {
             <Feather name="plus" size={22} color={C.ink} />
           </TouchableOpacity>
 
-          <CreateMilestoneSheet sheetRef={sheetRef} onSave={handleCreate} />
+          <CreateMilestoneSheet
+            sheetRef={sheetRef}
+            onSave={handleCreate}
+            milestone={editingMilestone ? {
+              id: editingMilestone._id,
+              title: editingMilestone.title,
+              date: editingMilestone.date,
+              description: editingMilestone.description,
+              icon: editingMilestone.icon,
+            } : undefined}
+          />
         </SafeAreaView>
       </View>
     );
@@ -167,25 +232,31 @@ export default function MilestonesScreen() {
     <View style={[styles.screen, { backgroundColor: C.background }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: C.background }]}>
           <TouchableOpacity
             onPress={() => {
               Haptics.selectionAsync();
               router.back();
             }}
-            style={styles.backBtn}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={8}
           >
             <Feather name="arrow-left" size={22} color={C.text} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: C.text }]}>Milestones</Text>
-          <View style={{ width: 40 }} />
+          <View style={styles.headerText}>
+            <BrushUnderline color={C.warning} style={styles.userNameBrush}>
+              <Text style={[styles.headerTitle, { color: C.text }]}>Milestones</Text>
+            </BrushUnderline>
+            <Text style={[styles.headerSubtitle, { color: C.textTertiary }]}>Shared dates, stored as actual dates</Text>
+          </View>
         </View>
 
         <FlashList
           data={upcoming}
           keyExtractor={(item) => item._id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            togetherListContainerStyle,
+          ]}
           ListHeaderComponent={headerComponent}
           ListFooterComponent={footerComponent}
           refreshControl={
@@ -193,38 +264,56 @@ export default function MilestonesScreen() {
           }
           renderItem={({ item, index }) => {
             const days = getDaysUntil(item.date);
-            return (
-              <Animated.View entering={FadeInDown.duration(400).delay(150 + index * 60)}>
-                <View
-                  style={[
-                    styles.milestoneCard,
-                    { backgroundColor: C.card, borderColor: C.border },
-                  ]}
-                >
-                  <View style={styles.cardLeft}>
-                    <View style={[styles.iconRing, { backgroundColor: C.milestonesLight }]}>
-                      <Text style={styles.iconEmoji}>{item.icon || '\u2B50'}</Text>
-                    </View>
-                    <View style={styles.cardInfo}>
-                      <Text style={[styles.cardTitle, { color: C.text }]} numberOfLines={1}>
-                        {item.title}
-                      </Text>
-                      <Text style={[styles.cardMeta, { color: C.textTertiary }]}>
-                        {formatDate(item.date)}
-                      </Text>
-                    </View>
+            const row = (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => {
+                  setEditingMilestone(item);
+                  sheetRef.current?.present();
+                }}
+                style={[
+                  togetherItemContainerStyle,
+                  styles.milestoneCard,
+                  { backgroundColor: C.card },
+                ]}
+              >
+                <View style={styles.cardLeft}>
+                  <View style={[styles.iconRing, { backgroundColor: C.milestonesLight }]}>
+                    <Text style={styles.iconEmoji}>{item.icon || '\u2B50'}</Text>
                   </View>
-                  <View style={styles.countdown}>
-                    <Text
-                      style={[
-                        styles.countdownText,
-                        { color: days <= 7 ? C.milestones : C.textTertiary },
-                      ]}
-                    >
-                      {getCountdownLabel(days)}
+                  <View style={styles.cardInfo}>
+                    <Text style={[styles.cardTitle, { color: C.text }]} numberOfLines={1}>
+                      {item.title}
+                    </Text>
+                    <Text style={[styles.cardMeta, { color: C.textTertiary }]}>
+                      {formatDate(item.date)}
                     </Text>
                   </View>
                 </View>
+                <View style={styles.countdown}>
+                  <Text
+                    style={[
+                      styles.countdownText,
+                      { color: days <= 7 ? C.milestones : C.textTertiary },
+                    ]}
+                  >
+                    {getCountdownLabel(days)}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+
+            return (
+              <Animated.View entering={FadeInDown.duration(400).delay(150 + index * 60)}>
+                <Swipeable
+                  renderLeftActions={renderEditAction(item)}
+                  renderRightActions={renderDeleteAction(item)}
+                  overshootLeft={false}
+                  overshootRight={false}
+                  friction={2}
+                >
+                  {row}
+                </Swipeable>
               </Animated.View>
             );
           }}
@@ -234,6 +323,7 @@ export default function MilestonesScreen() {
         <TouchableOpacity
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setEditingMilestone(undefined);
             sheetRef.current?.present();
           }}
           activeOpacity={0.85}
@@ -242,7 +332,17 @@ export default function MilestonesScreen() {
           <Feather name="plus" size={22} color={C.ink} />
         </TouchableOpacity>
 
-        <CreateMilestoneSheet sheetRef={sheetRef} onSave={handleCreate} />
+        <CreateMilestoneSheet
+          sheetRef={sheetRef}
+          onSave={handleCreate}
+          milestone={editingMilestone ? {
+            id: editingMilestone._id,
+            title: editingMilestone.title,
+            date: editingMilestone.date,
+            description: editingMilestone.description,
+            icon: editingMilestone.icon,
+          } : undefined}
+        />
       </SafeAreaView>
     </View>
   );
@@ -254,31 +354,34 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: Spacing.md,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 20,
+  headerText: {
+    flex: 1,
+    alignItems: 'flex-start',
+    gap: 2,
+  },
+  userNameBrush: {
+    ...Typography.title,
+    marginTop: 2,
   },
   headerTitle: {
-    ...Typography.heading,
-    fontSize: 20,
+    ...Typography.title,
+    fontSize: 22,
   },
-  fab: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+  headerSubtitle: {
+    ...Typography.small,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   listContent: {
-    paddingHorizontal: Spacing.lg,
     paddingBottom: 120,
+  },
+  emptyWrap: {
+    paddingHorizontal: Spacing.lg,
+    height: 400,
   },
 
   // Section labels
@@ -293,9 +396,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderRadius: BorderRadius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: Spacing.lg,
+    paddingVertical: 14,
     marginBottom: Spacing.sm,
   },
   pastCard: {
@@ -338,6 +439,11 @@ const styles = StyleSheet.create({
   // Past section
   pastSection: {
     marginTop: Spacing.lg,
+  },
+  swipeAction: {
+    width: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   floatingFab: {
     position: 'absolute',

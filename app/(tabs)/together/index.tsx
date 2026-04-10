@@ -1,15 +1,22 @@
-import { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
-import { useColors } from '@/src/hooks/useColors';
-import { useSession } from '@/src/hooks/useSession';
-import { useTheme } from '@/src/lib/theme';
-import { Typography } from '@/src/constants/typography';
-import { Spacing, BorderRadius } from '@/src/constants/spacing';
+import { useCallback, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  RefreshControl,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
+import { useColors } from "@/src/hooks/useColors";
+import { useSession } from "@/src/hooks/useSession";
+import { useTheme } from "@/src/lib/theme";
+import { Typography } from "@/src/constants/typography";
+import { Spacing, BorderRadius } from "@/src/constants/spacing";
 
 type FeatureItem = {
   id: string;
@@ -21,15 +28,60 @@ type FeatureItem = {
 };
 
 const FEATURES: FeatureItem[] = [
-  { id: 'love-notes', label: 'Love Notes', subtitle: 'Say something sweet', icon: 'heart', route: '/(tabs)/together/love-notes', accentKey: 'error' },
-  { id: 'check-ins', label: 'Check-ins', subtitle: 'Share how you feel', icon: 'smile', route: '/(tabs)/together/check-ins', accentKey: 'mood' },
-  { id: 'expenses', label: 'Expenses', subtitle: 'Track & settle', icon: 'dollar-sign', route: '/(tabs)/together/expenses', accentKey: 'expenses' },
-  { id: 'wishlists', label: 'Wishlists', subtitle: 'Drop hints', icon: 'gift', route: '/(tabs)/together/wishlists', accentKey: 'wishlists' },
-  { id: 'milestones', label: 'Milestones', subtitle: 'Moments that matter', icon: 'flag', route: '/(tabs)/together/milestones', accentKey: 'milestones' },
-  { id: 'plans', label: 'Plans', subtitle: 'Dream & do', icon: 'map', route: '/(tabs)/together/plans', accentKey: 'plans' },
+  {
+    id: "love-notes",
+    label: "Love Notes",
+    subtitle: "Say something sweet",
+    icon: "heart",
+    route: "/(tabs)/together/love-notes",
+    accentKey: "error",
+  },
+  {
+    id: "check-ins",
+    label: "Check-ins",
+    subtitle: "Share how you feel",
+    icon: "smile",
+    route: "/(tabs)/together/check-ins",
+    accentKey: "mood",
+  },
+  {
+    id: "expenses",
+    label: "Expenses",
+    subtitle: "Track & settle",
+    icon: "dollar-sign",
+    route: "/(tabs)/together/expenses",
+    accentKey: "expenses",
+  },
+  {
+    id: "wishlists",
+    label: "Wishlists",
+    subtitle: "Drop hints",
+    icon: "gift",
+    route: "/(tabs)/together/wishlists",
+    accentKey: "wishlists",
+  },
+  {
+    id: "milestones",
+    label: "Milestones",
+    subtitle: "Moments that matter",
+    icon: "flag",
+    route: "/(tabs)/together/milestones",
+    accentKey: "milestones",
+  },
+  {
+    id: "plans",
+    label: "Plans",
+    subtitle: "Dream & do",
+    icon: "map",
+    route: "/(tabs)/together/plans",
+    accentKey: "plans",
+  },
 ];
 
-function getAccent(key: string, C: ReturnType<typeof useColors>): { fg: string; bg: string } {
+function getAccent(
+  key: string,
+  C: ReturnType<typeof useColors>,
+): { fg: string; bg: string } {
   const map: Record<string, { fg: string; bg: string }> = {
     expenses: { fg: C.expenses, bg: C.expensesLight },
     wishlists: { fg: C.wishlists, bg: C.wishlistsLight },
@@ -48,15 +100,21 @@ export default function TogetherScreen() {
   const router = useRouter();
   const { profile, activeCouple, refetch } = useSession();
   const partner = activeCouple?.partner ?? null;
-  const coupleName = activeCouple?.couple?.name ?? 'Your space';
+  const coupleName = activeCouple?.couple?.name ?? "Your space";
   const [refreshing, setRefreshing] = useState(false);
 
-  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)';
-  const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+  const glassBg =
+    mode === "dark" ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.06)";
+  const glassBorder =
+    mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.10)";
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    try { await refetch(); } finally { setRefreshing(false); }
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
   }, [refetch]);
 
   const navigate = (route: string) => () => {
@@ -66,39 +124,71 @@ export default function TogetherScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: C.background }]}>
-      <SafeAreaView style={styles.flex} edges={['top']}>
+      <SafeAreaView style={styles.flex} edges={["top"]}>
         <ScrollView
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={C.primary}
+            />
           }
         >
           {/* Header */}
           <Animated.View entering={FadeIn.duration(500)} style={styles.header}>
-            <Text style={[styles.greeting, { color: C.textTertiary }]}>Together</Text>
-            <Text style={[styles.title, { color: C.text }]}>{coupleName}</Text>
-            {partner && (
+            {/*<View style={styles.titleBlock}>
+              <Text style={[styles.screenTitle, { color: C.textTertiary }]}>
+                Together
+              </Text>
+            </View>*/}
+
+            <View style={styles.topRow}>
+              <View style={styles.titleBlock}>
+                <Text style={[styles.helperLabel, { color: C.textTertiary }]}>
+                  Together
+                </Text>
+              </View>
+            </View>
+            {/*<Text style={[styles.title, { color: C.text }]}>{coupleName}</Text>*/}
+            {/*{partner && (
               <View style={[styles.coupleTag, { borderColor: glassBorder }]}>
                 <Feather name="heart" size={10} color={C.primary} />
                 <Text style={[styles.coupleTagText, { color: C.textSecondary }]}>
                   {(profile?.displayName?.split(' ')[0] ?? '?')} & {(partner.displayName?.split(' ')[0] ?? '?')}
                 </Text>
               </View>
-            )}
+            )}*/}
           </Animated.View>
 
           {/* Warm intro card */}
           <Animated.View
             entering={FadeInDown.duration(400).delay(60)}
-            style={[styles.introCard, { backgroundColor: C.primaryMuted, borderColor: glassBorder }]}
+            style={[
+              styles.introCard,
+              { backgroundColor: C.primaryMuted, borderColor: glassBorder },
+            ]}
           >
             <Text style={[styles.introText, { color: C.textSecondary }]}>
-              Your shared tools for everyday life together — from love notes to expense tracking.
+              Your shared tools for everyday life together — from love notes to
+              expense tracking.
             </Text>
           </Animated.View>
 
-          {/* Feature Grid — two columns */}
+          <View style={styles.sectionHeader}>
+            <View style={styles.topRow}>
+              <View style={styles.titleBlock}>
+                <Text style={[styles.subHelperLabel, { color: C.textTertiary }]}>
+                  Shared spaces
+                </Text>
+              </View>
+            </View>
+            <Text style={[styles.sectionTitle, { color: C.text }]}>
+              Everything you do together
+            </Text>
+          </View>
+
           <View style={styles.grid}>
             {FEATURES.map((feature, index) => {
               const accent = getAccent(feature.accentKey, C);
@@ -111,13 +201,44 @@ export default function TogetherScreen() {
                   <TouchableOpacity
                     activeOpacity={0.7}
                     onPress={navigate(feature.route)}
-                    style={[styles.card, { backgroundColor: glassBg, borderColor: glassBorder }]}
+                    style={[styles.card, { backgroundColor: C.card }]}
                   >
-                    <View style={[styles.iconCircle, { backgroundColor: accent.bg }]}>
-                      <Feather name={feature.icon} size={20} color={accent.fg} />
+                    <View style={styles.cardLeft}>
+                      <View
+                        style={[
+                          styles.iconCircle,
+                          { backgroundColor: accent.bg },
+                        ]}
+                      >
+                        <Feather
+                          name={feature.icon}
+                          size={18}
+                          color={accent.fg}
+                        />
+                      </View>
+                      <View style={styles.cardCopy}>
+                        <View style={styles.topRow}>
+                          <View style={styles.titleBlock}>
+                            <Text style={[styles.helperLabel, { color: C.text }]}>
+                              {feature.label}
+                            </Text>
+                          </View>
+                        </View>
+                        {/*<Text style={[styles.cardLabel, { color: C.text }]}>
+                          {feature.label}
+                        </Text>*/}
+                        <Text
+                          style={[styles.cardSub, { color: C.textSecondary }]}
+                        >
+                          {feature.subtitle}
+                        </Text>
+                      </View>
                     </View>
-                    <Text style={[styles.cardLabel, { color: C.text }]}>{feature.label}</Text>
-                    <Text style={[styles.cardSub, { color: C.textTertiary }]}>{feature.subtitle}</Text>
+                    <Feather
+                      name="chevron-right"
+                      size={18}
+                      color={C.textTertiary}
+                    />
                   </TouchableOpacity>
                 </Animated.View>
               );
@@ -147,13 +268,34 @@ const styles = StyleSheet.create({
     ...Typography.overline,
     letterSpacing: 2,
   },
+  topRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: Spacing.md,
+  },
+  helperLabel: {
+    ...Typography.bodyMedium,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  subHelperLabel: {
+    ...Typography.small,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  }
+  ,
+  titleBlock: {
+    flex: 1,
+    gap: 2,
+  },
   title: {
     ...Typography.largeTitle,
   },
   coupleTag: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
     gap: Spacing.xs,
     paddingHorizontal: Spacing.md,
     paddingVertical: 5,
@@ -164,6 +306,9 @@ const styles = StyleSheet.create({
   coupleTagText: {
     ...Typography.small,
     letterSpacing: 0.3,
+  },
+  screenTitle: {
+    ...Typography.title,
   },
 
   // Intro
@@ -178,36 +323,53 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  // Grid — 2 columns
+  sectionHeader: {
+    gap: 4,
+  },
+  sectionEyebrow: {
+    ...Typography.overline,
+    letterSpacing: 1.5,
+  },
+  sectionTitle: {
+    ...Typography.headingRegular,
+  },
+
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.md,
+    gap: Spacing.sm,
   },
   gridItem: {
-    width: '47.5%',
+    width: "100%",
   },
   card: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: BorderRadius.xl,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: 10,
     padding: Spacing.lg,
-    gap: Spacing.sm,
-    minHeight: 130,
+    minHeight: 84,
+  },
+  cardLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.md,
+    flex: 1,
   },
   iconCircle: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cardCopy: {
+    flex: 1,
+    gap: 2,
   },
   cardLabel: {
-    ...Typography.subheading,
-    fontSize: 15,
-    marginTop: Spacing.xs,
+    ...Typography.headingRegular,
+    fontSize: 19,
   },
   cardSub: {
-    ...Typography.small,
-    lineHeight: 16,
+    ...Typography.caption,
   },
 });

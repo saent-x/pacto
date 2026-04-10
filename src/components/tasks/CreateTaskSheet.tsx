@@ -111,7 +111,7 @@ export function CreateTaskSheet({ sheetRef, onSave, task, lists = [], selectedLi
   const sessionKey = task ? `edit:${task.id}` : `create:${selectedListId ?? 'none'}`;
   const sessionKeyRef = useRef(sessionKey);
 
-  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
+  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
   const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
   const activeBg = C.tasksLight;
 

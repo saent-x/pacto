@@ -27,7 +27,7 @@ export function CreateWishlistSheet({ sheetRef, onSave, wishlist }: Props) {
 
   const isEdit = !!wishlist;
 
-  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
+  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
   const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
 
   useEffect(() => {

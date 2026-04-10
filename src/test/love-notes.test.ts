@@ -14,6 +14,14 @@ vi.mock('@/src/hooks/useSession', () => ({
   useSession: vi.fn(() => ({ activeCouple: null })),
 }));
 
+vi.mock('@/src/hooks/useEncryption', () => ({
+  useEncryption: vi.fn(() => ({
+    encrypt: vi.fn(async (value: string) => value),
+    decrypt: vi.fn(async (value: string) => value),
+    hasKey: false,
+  })),
+}));
+
 describe('useLoveNotes', () => {
   it('exports the useLoveNotes hook as a function', async () => {
     const { useLoveNotes } = await import('@/src/hooks/useLoveNotes');

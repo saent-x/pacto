@@ -235,4 +235,40 @@ describe("tasks", () => {
     const board = (await runQuery(getTaskBoard, ctx)) as TaskBoardResult;
     expect(board.tasks).toHaveLength(0);
   });
+
+  it("reassigns sort order when moving a task to a different list", async () => {
+    const db = createMemoryDb();
+    const ctx = makeCtx(
+      {
+        tokenIdentifier: "better-auth:user-1",
+        subject: "user-1",
+        issuer: "https://example.convex.site",
+        email: "casey@example.com",
+        name: "Casey",
+      },
+      db,
+    );
+
+    await runMutation(createCouple, ctx, { name: "Casey and Riley" });
+    const homeList = (await runMutation(createTaskList, ctx, { name: "Home" })) as TaskListResult;
+    const travelList = (await runMutation(createTaskList, ctx, { name: "Travel" })) as TaskListResult;
+
+    const movedTask = (await runMutation(createTask, ctx, {
+      listId: homeList._id,
+      title: "Book hotel",
+    })) as TaskResult;
+
+    await runMutation(createTask, ctx, {
+      listId: travelList._id,
+      title: "Renew passport",
+    });
+
+    const updated = (await runMutation(updateTask, ctx, {
+      taskId: movedTask._id,
+      listId: travelList._id,
+    })) as TaskResult;
+
+    expect(updated.listId).toBe(travelList._id);
+    expect(updated.sortOrder).toBe(1);
+  });
 });

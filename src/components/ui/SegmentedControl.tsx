@@ -31,9 +31,9 @@ export function SegmentedControl<T extends string>({
   const { mode } = useTheme();
   const accent = tint || C.primary;
 
-  const trackBg = mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)';
+  const trackBg = mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.10)';
   const thumbBg = mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.85)';
-  const thumbBorder = mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)';
+  const thumbBorder = mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.10)';
 
   return (
     <View style={[styles.track, { backgroundColor: trackBg }]}>

@@ -26,10 +26,19 @@ const CATEGORIES = [
   { label: '\u{1F6D2} Groceries', value: 'Groceries' },
 ];
 
+const CURRENCIES = [
+  { code: 'USD', label: 'US Dollar', symbol: '$' },
+  { code: 'GBP', label: 'British Pound', symbol: '£' },
+  { code: 'EUR', label: 'Euro', symbol: '€' },
+  { code: 'CAD', label: 'Canadian Dollar', symbol: 'CA$' },
+  { code: 'AUD', label: 'Australian Dollar', symbol: 'A$' },
+  { code: 'NGN', label: 'Nigerian Naira', symbol: '₦' },
+];
+
 interface Props {
   sheetRef: React.RefObject<BottomSheetModal | null>;
-  onSave: (data: { title: string; amount: number; paidBy: string; splitType: string; category: string; date: string }) => Promise<void>;
-  expense?: { id: string; title: string; amount: number; paidBy: string; splitType: string; category: string; date: string };
+  onSave: (data: { title: string; amount: number; paidBy: string; currency: string; splitType: string; category: string; date: string }) => Promise<void>;
+  expense?: { id: string; title: string; amount: number; paidBy: string; currency: string; splitType: string; category: string; date: string };
 }
 
 export function CreateExpenseSheet({ sheetRef, onSave, expense }: Props) {
@@ -42,17 +51,19 @@ export function CreateExpenseSheet({ sheetRef, onSave, expense }: Props) {
   const [title, setTitle] = useState(expense?.title ?? '');
   const [amount, setAmount] = useState(expense?.amount ? String(expense.amount) : '');
   const [paidBy, setPaidBy] = useState(expense?.paidBy ?? currentUserId ?? '');
+  const [currency, setCurrency] = useState(expense?.currency ?? 'USD');
   const [splitType, setSplitType] = useState(expense?.splitType ?? '');
   const [category, setCategory] = useState(expense?.category ?? '');
   const [date, setDate] = useState(expense?.date ? new Date(expense.date) : new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [saving, setSaving] = useState(false);
   const sessionKey = expense ? `edit:${expense.id}` : 'create';
   const sessionKeyRef = useRef(sessionKey);
 
   const isEdit = !!expense;
 
-  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
+  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
   const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
   const activeBg = C.expensesLight;
 
@@ -65,10 +76,12 @@ export function CreateExpenseSheet({ sheetRef, onSave, expense }: Props) {
     setTitle(expense?.title ?? '');
     setAmount(expense?.amount ? String(expense.amount) : '');
     setPaidBy(expense?.paidBy ?? currentUserId ?? '');
+    setCurrency(expense?.currency ?? 'USD');
     setSplitType(expense?.splitType ?? '');
     setCategory(expense?.category ?? '');
     setDate(expense?.date ? new Date(expense.date) : new Date());
     setShowDatePicker(false);
+    setShowCurrencyPicker(false);
   }, [expense, sessionKey, currentUserId]);
 
   const handleSave = useCallback(async () => {
@@ -87,9 +100,10 @@ export function CreateExpenseSheet({ sheetRef, onSave, expense }: Props) {
         title: title.trim(),
         amount: parsedAmount,
         paidBy,
-        splitType: splitType || 'split',
-        category: category || 'Date night',
-        date: date.toISOString(),
+        currency,
+        splitType: splitType || 'even',
+        category: category || 'general',
+        date: format(date, 'yyyy-MM-dd'),
       });
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       sheetRef.current?.dismiss();
@@ -97,6 +111,7 @@ export function CreateExpenseSheet({ sheetRef, onSave, expense }: Props) {
         setTitle('');
         setAmount('');
         setPaidBy(currentUserId ?? '');
+        setCurrency('USD');
         setSplitType('');
         setCategory('');
         setDate(new Date());
@@ -107,7 +122,9 @@ export function CreateExpenseSheet({ sheetRef, onSave, expense }: Props) {
     } finally {
       setSaving(false);
     }
-  }, [title, amount, paidBy, splitType, category, date, onSave, isEdit, sheetRef, currentUserId]);
+  }, [title, amount, paidBy, currency, splitType, category, date, onSave, isEdit, sheetRef, currentUserId]);
+
+  const selectedCurrency = CURRENCIES.find((item) => item.code === currency) ?? CURRENCIES[0];
 
   const footer = (
     <TouchableOpacity
@@ -151,7 +168,17 @@ export function CreateExpenseSheet({ sheetRef, onSave, expense }: Props) {
 
         {/* Amount — large input */}
         <View style={styles.amountRow}>
-          <Text style={[styles.currencySign, { color: C.expenses }]}>$</Text>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => {
+              Haptics.selectionAsync();
+              setShowCurrencyPicker((current) => !current);
+            }}
+            style={[styles.currencyPill, { backgroundColor: activeBg, borderColor: C.expenses }]}
+          >
+            <Text style={[styles.currencyCode, { color: C.expenses }]}>{selectedCurrency.code}</Text>
+          </TouchableOpacity>
+          <Text style={[styles.currencySign, { color: C.expenses }]}>{selectedCurrency.symbol}</Text>
           <BottomSheetTextInput
             style={[styles.amountInput, { color: C.text }]}
             placeholder="0.00"
@@ -161,6 +188,30 @@ export function CreateExpenseSheet({ sheetRef, onSave, expense }: Props) {
             keyboardType="decimal-pad"
           />
         </View>
+        {showCurrencyPicker ? (
+          <View style={[styles.currencyMenu, { backgroundColor: glassBg, borderColor: glassBorder }]}>
+            {CURRENCIES.map((option) => {
+              const active = option.code === currency;
+              return (
+                <TouchableOpacity
+                  key={option.code}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setCurrency(option.code);
+                    setShowCurrencyPicker(false);
+                  }}
+                  style={[
+                    styles.currencyOption,
+                    active && { backgroundColor: activeBg },
+                  ]}
+                >
+                  <Text style={[styles.currencyOptionCode, { color: active ? C.expenses : C.text }]}>{option.code}</Text>
+                  <Text style={[styles.currencyOptionLabel, { color: active ? C.expenses : C.textSecondary }]}>{option.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : null}
 
         {/* Paid by — glass toggles */}
         <View style={styles.section}>
@@ -309,6 +360,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.xs,
   },
+  currencyPill: {
+    minWidth: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.full,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  currencyCode: {
+    ...Typography.captionMedium,
+    letterSpacing: 0.8,
+  },
   currencySign: {
     ...Typography.largeTitle,
     fontSize: 42,
@@ -317,6 +381,26 @@ const styles = StyleSheet.create({
     ...Typography.largeTitle,
     fontSize: 42,
     padding: 0,
+    flex: 1,
+  },
+  currencyMenu: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  currencyOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+  },
+  currencyOptionCode: {
+    ...Typography.captionMedium,
+    width: 40,
+  },
+  currencyOptionLabel: {
+    ...Typography.body,
     flex: 1,
   },
   section: {
