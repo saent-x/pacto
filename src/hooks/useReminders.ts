@@ -88,18 +88,25 @@ export function useReminders() {
     async (reminderId: string, input: Partial<ReminderInput>) => {
       const updates: Record<string, unknown> = { updatedAt: Date.now() };
       if (input.title !== undefined) updates.title = input.title;
-      if (input.description !== undefined) updates.description = input.description ?? undefined;
+      if (input.description !== undefined) updates.description = input.description ?? null;
       if (input.due_at !== undefined) updates.dueAt = new Date(input.due_at).getTime();
-      if (input.recurrence !== undefined) updates.recurrence = input.recurrence ?? undefined;
+      if (input.recurrence !== undefined) updates.recurrence = input.recurrence ?? null;
       if (input.priority !== undefined) updates.priority = input.priority;
-      if (input.category !== undefined) updates.category = input.category ?? undefined;
+      if (input.category !== undefined) updates.category = input.category ?? null;
       const txns: any[] = [db.tx.reminders[reminderId].update(updates)];
-      if (input.assigned_to !== undefined && input.assigned_to !== null) {
-        txns.push(db.tx.reminders[reminderId].link({ assignedTo: input.assigned_to }));
+      if (input.assigned_to !== undefined) {
+        if (input.assigned_to === null) {
+          const current = reminders.find((r) => r.id === reminderId);
+          if (current?.assigned_to) {
+            txns.push(db.tx.reminders[reminderId].unlink({ assignedTo: current.assigned_to }));
+          }
+        } else {
+          txns.push(db.tx.reminders[reminderId].link({ assignedTo: input.assigned_to }));
+        }
       }
       await db.transact(txns);
     },
-    [],
+    [reminders],
   );
 
   const remove = useCallback(async (reminderId: string) => {
@@ -118,6 +125,8 @@ export function useReminders() {
       ];
       if (isNowCompleted && userId) {
         txns.push(db.tx.reminders[reminder.id].link({ completedBy: userId }));
+      } else if (reminder.completed_by) {
+        txns.push(db.tx.reminders[reminder.id].unlink({ completedBy: reminder.completed_by }));
       }
       await db.transact(txns);
     },

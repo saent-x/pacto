@@ -2,6 +2,15 @@ import type { ReactNode } from 'react';
 import { createContext, createElement, useContext, useMemo } from 'react';
 import { db } from '@/src/lib/instant';
 
+/**
+ * InstantDB link results may be an array (even for has-one) or a single object.
+ * This helper normalises either shape to a single value.
+ */
+function resolveLink<T>(value: unknown): T | null {
+  if (Array.isArray(value)) return (value[0] as T) ?? null;
+  return (value as T) ?? null;
+}
+
 export type SessionRoute =
   | '/(auth)/sign-in'
   | '/(auth)/onboarding'
@@ -62,8 +71,8 @@ function useSessionValue(): SessionValue {
   );
 
   const activeMembership = membershipData?.memberships?.[0] ?? null;
-  const couple = (activeMembership?.couple as any)?.[0] ?? activeMembership?.couple ?? null;
-  const memberUser = (activeMembership?.user as any)?.[0] ?? activeMembership?.user ?? null;
+  const couple = resolveLink<{ id: string; name: string; anniversary?: string | null; inviteCode?: string | null }>(activeMembership?.couple);
+  const memberUser = resolveLink<{ id: string; email?: string }>(activeMembership?.user);
 
   // Query partner info if we have a couple
   const coupleId = couple?.id ?? null;
@@ -81,15 +90,16 @@ function useSessionValue(): SessionValue {
   const allMembers = coupleData?.memberships ?? [];
   const partner = useMemo(() => {
     if (!user) return null;
-    const partnerMembership = allMembers.find(
-      (m) => ((m.user as any)?.[0]?.id ?? (m.user as any)?.id) !== user.id,
-    );
-    const partnerUser = (partnerMembership?.user as any)?.[0] ?? partnerMembership?.user ?? null;
+    const partnerMembership = allMembers.find((m) => {
+      const linked = resolveLink<{ id: string }>(m.user);
+      return linked?.id !== user.id;
+    });
+    const partnerUser = resolveLink<{ id: string; displayName?: string; email?: string; avatarUrl?: string | null }>(partnerMembership?.user);
     if (!partnerUser) return null;
     return {
       id: partnerUser.id,
-      displayName: (partnerUser as any).displayName ?? partnerUser.email ?? 'Partner',
-      avatarUrl: (partnerUser as any).avatarUrl ?? null,
+      displayName: partnerUser.displayName ?? partnerUser.email ?? 'Partner',
+      avatarUrl: partnerUser.avatarUrl ?? null,
     };
   }, [allMembers, user]);
 
@@ -99,11 +109,12 @@ function useSessionValue(): SessionValue {
 
   const profile = useMemo(() => {
     if (!user) return null;
+    const u = user as { id: string; email?: string; displayName?: string; avatarUrl?: string | null };
     return {
-      id: user.id,
-      displayName: (user as any).displayName ?? user.email ?? '',
-      avatarUrl: (user as any).avatarUrl ?? null,
-      email: user.email ?? '',
+      id: u.id,
+      displayName: u.displayName ?? u.email ?? '',
+      avatarUrl: u.avatarUrl ?? null,
+      email: u.email ?? '',
     };
   }, [user]);
 
@@ -114,7 +125,7 @@ function useSessionValue(): SessionValue {
         id: couple.id,
         name: couple.name,
         anniversary: couple.anniversary ?? null,
-        inviteCode: (couple as any).inviteCode ?? null,
+        inviteCode: couple.inviteCode ?? null,
       },
       membership: {
         id: activeMembership.id,

@@ -172,17 +172,24 @@ export function useTasks() {
     async (taskId: string, input: TaskUpdateInput) => {
       const updates: Record<string, unknown> = { updatedAt: Date.now() };
       if (input.title !== undefined) updates.title = input.title;
-      if (input.notes !== undefined) updates.notes = input.notes ?? undefined;
-      if (input.category !== undefined) updates.category = input.category ?? undefined;
-      if (input.due_date !== undefined) updates.dueDate = input.due_date ?? undefined;
+      if (input.notes !== undefined) updates.notes = input.notes ?? null;
+      if (input.category !== undefined) updates.category = input.category ?? null;
+      if (input.due_date !== undefined) updates.dueDate = input.due_date ?? null;
       if (input.priority !== undefined) updates.priority = input.priority;
       const txns: any[] = [db.tx.tasks[taskId].update(updates)];
-      if (input.assigned_to !== undefined && input.assigned_to !== null) {
-        txns.push(db.tx.tasks[taskId].link({ assignedTo: input.assigned_to }));
+      if (input.assigned_to !== undefined) {
+        if (input.assigned_to === null) {
+          const current = allTasks.find((t) => t.id === taskId);
+          if (current?.assigned_to) {
+            txns.push(db.tx.tasks[taskId].unlink({ assignedTo: current.assigned_to }));
+          }
+        } else {
+          txns.push(db.tx.tasks[taskId].link({ assignedTo: input.assigned_to }));
+        }
       }
       await db.transact(txns);
     },
-    [],
+    [allTasks],
   );
 
   const toggleTask = useCallback(
@@ -197,10 +204,15 @@ export function useTasks() {
       ];
       if (isNowCompleted && userId) {
         txns.push(db.tx.tasks[task.id].link({ completedBy: userId }));
+      } else {
+        const current = allTasks.find((t) => t.id === task.id);
+        if (current?.completed_by) {
+          txns.push(db.tx.tasks[task.id].unlink({ completedBy: current.completed_by }));
+        }
       }
       await db.transact(txns);
     },
-    [userId],
+    [userId, allTasks],
   );
 
   const deleteTask = useCallback(async (taskId: string) => {
@@ -285,17 +297,24 @@ export function useTaskItems(categoryId: string | null) {
     async (taskId: string, input: Partial<{ title: string; notes: string | null; due_date: string | null; priority: number; assigned_to: string | null; category: string }>) => {
       const updates: Record<string, unknown> = { updatedAt: Date.now() };
       if (input.title !== undefined) updates.title = input.title;
-      if (input.notes !== undefined) updates.notes = input.notes ?? undefined;
-      if (input.category !== undefined) updates.category = input.category ?? undefined;
-      if (input.due_date !== undefined) updates.dueDate = input.due_date ?? undefined;
+      if (input.notes !== undefined) updates.notes = input.notes ?? null;
+      if (input.category !== undefined) updates.category = input.category ?? null;
+      if (input.due_date !== undefined) updates.dueDate = input.due_date ?? null;
       if (input.priority !== undefined) updates.priority = input.priority;
       const txns: any[] = [db.tx.tasks[taskId].update(updates)];
-      if (input.assigned_to !== undefined && input.assigned_to !== null) {
-        txns.push(db.tx.tasks[taskId].link({ assignedTo: input.assigned_to }));
+      if (input.assigned_to !== undefined) {
+        if (input.assigned_to === null) {
+          const current = tasks.find((t) => t.id === taskId);
+          if (current?.assigned_to) {
+            txns.push(db.tx.tasks[taskId].unlink({ assignedTo: current.assigned_to }));
+          }
+        } else {
+          txns.push(db.tx.tasks[taskId].link({ assignedTo: input.assigned_to }));
+        }
       }
       await db.transact(txns);
     },
-    [],
+    [tasks],
   );
 
   const toggleComplete = useCallback(
@@ -310,10 +329,15 @@ export function useTaskItems(categoryId: string | null) {
       ];
       if (isNowCompleted && userId) {
         txns.push(db.tx.tasks[task.id].link({ completedBy: userId }));
+      } else {
+        const current = tasks.find((t) => t.id === task.id);
+        if (current?.completed_by) {
+          txns.push(db.tx.tasks[task.id].unlink({ completedBy: current.completed_by }));
+        }
       }
       await db.transact(txns);
     },
-    [userId],
+    [userId, tasks],
   );
 
   return {

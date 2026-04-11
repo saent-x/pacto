@@ -149,9 +149,15 @@ export default function MoreScreen() {
                         style: 'destructive',
                         onPress: async () => {
                           try {
-                            if (user?.id) {
-                              await db.transact(db.tx.$users[user.id].delete());
-                            }
+                            const auth = await db.getAuth();
+                            const token = auth?.refresh_token;
+                            if (!token) throw new Error('No auth token');
+                            const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? '';
+                            const res = await fetch(`${API_BASE}/api/delete-account`, {
+                              method: 'POST',
+                              headers: { Authorization: `Bearer ${token}` },
+                            });
+                            if (!res.ok) throw new Error('Delete failed');
                           } catch {
                             Alert.alert('Error', 'Failed to delete account. Please try again.');
                             return;
