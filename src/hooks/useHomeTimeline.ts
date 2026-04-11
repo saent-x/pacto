@@ -42,7 +42,7 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
 
   const loadView = useCallback(async () => {
     const user = await db.getAuth();
-    const token = (user as any)?._token ?? null;
+    const token = user?.refresh_token ?? null;
     setIsLoading(true);
     const result = await fetchHomeView(token, previewDays);
     setView(result);
@@ -63,7 +63,7 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
     if (warmedDateRef.current === todayKey || !activeCouple) return;
     warmedDateRef.current = todayKey;
     db.getAuth().then((user) => {
-      const token = (user as any)?._token ?? null;
+      const token = user?.refresh_token ?? null;
       if (!token) return;
       fetch(`${API_BASE}/api/daily-verse`, {
         method: 'POST',

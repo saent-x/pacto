@@ -58,6 +58,18 @@ const rules = {
   expenses: coupleScoped,
   milestones: coupleScoped,
 
+  $users: {
+    allow: {
+      view: 'isSelf',
+      create: 'false',
+      update: 'isSelf',
+      delete: 'isSelf',
+    },
+    bind: {
+      isSelf: 'auth.id == data.id',
+    },
+  },
+
   $files: {
     allow: {
       view: 'auth.id != null',

@@ -61,7 +61,7 @@ export function useAuthActions() {
         couples: { $: { where: { inviteCode: inviteCode.trim().toUpperCase() } } },
       });
 
-      const couple = (result as any).couples?.[0] ?? (result as any).data?.couples?.[0];
+      const couple = (result as any).data?.couples?.[0];
       if (!couple) throw new Error('Invalid invite code.');
 
       const membershipId = id();

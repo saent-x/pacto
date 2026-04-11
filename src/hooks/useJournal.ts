@@ -136,8 +136,8 @@ export function useJournal() {
       const response = await fetch(uri);
       const blob = await response.blob();
       const filename = `journal/${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      const file = new File([blob], filename, { type: contentType ?? 'image/jpeg' });
-      const { data: fileData } = await db.storage.uploadFile(filename, file);
+      const uploadBlob = new Blob([blob], { type: contentType ?? 'image/jpeg' });
+      const { data: fileData } = await db.storage.uploadFile(filename, uploadBlob);
       return fileData.id;
     },
     [],

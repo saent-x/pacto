@@ -48,7 +48,7 @@ export function useCalendar() {
 
   const loadView = useCallback(async () => {
     const user = await db.getAuth();
-    const token = (user as any)?._token ?? null;
+    const token = user?.refresh_token ?? null;
     setIsLoading(true);
     const result = await fetchCalendarView(token, month, null);
     setView(result);
