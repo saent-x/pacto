@@ -10,6 +10,15 @@ const db = init({
 });
 
 export async function POST(request: Request) {
+  const token = request.headers.get('Authorization')?.replace('Bearer ', '');
+  if (!token) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+  try {
+    await db.auth.verifyToken(token);
+  } catch {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const now = Date.now();
   const dateKey = new Date(now).toISOString().slice(0, 10);
 

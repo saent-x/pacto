@@ -57,7 +57,7 @@ export async function GET(request: Request) {
   if (!couple) return Response.json(emptyCalendarView(month, selectedDate));
 
   const coupleId = couple.id;
-  const previewDays = Math.max(30, 60);
+  const previewDays = 60;
 
   const data = await (db as any).query({
     events: { $: { where: { 'couple.id': coupleId } } },

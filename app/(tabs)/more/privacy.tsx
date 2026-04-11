@@ -23,7 +23,7 @@ const sections = [
   {
     icon: 'server' as const,
     title: 'Data Storage',
-    body: 'Stored securely on Convex with encrypted connections (TLS). Auth tokens live in your device\u2019s secure keychain \u2014 never in plain storage.',
+    body: 'Stored securely on InstantDB with encrypted connections (TLS). Auth tokens live in your device\u2019s secure keychain \u2014 never in plain storage.',
   },
   {
     icon: 'eye' as const,

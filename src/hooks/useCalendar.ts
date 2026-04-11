@@ -4,6 +4,8 @@ import { db } from '@/src/lib/instant';
 import type { CalendarView } from '@/src/lib/home/types';
 import { formatMonthLabel } from '@/src/lib/home/builders';
 
+const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? '';
+
 function todayString() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -17,7 +19,7 @@ async function fetchCalendarView(
   try {
     const params = new URLSearchParams({ month });
     if (selectedDate) params.set('selectedDate', selectedDate);
-    const res = await fetch(`/api/calendar?${params}`, {
+    const res = await fetch(`${API_BASE}/api/calendar?${params}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) return null;
@@ -36,14 +38,22 @@ export function useCalendar() {
 
   const monthDate = useMemo(() => parseISO(`${month}-01`), [month]);
 
+  const filteredAgenda = useMemo(() => {
+    if (!view?.agenda || !selectedDate) return view?.agenda ?? [];
+    return view.agenda.filter((item) => {
+      if (item.occursAt === null) return false;
+      return new Date(item.occursAt).toISOString().slice(0, 10) === selectedDate;
+    });
+  }, [view?.agenda, selectedDate]);
+
   const loadView = useCallback(async () => {
     const user = await db.getAuth();
     const token = (user as any)?._token ?? null;
     setIsLoading(true);
-    const result = await fetchCalendarView(token, month, selectedDate);
+    const result = await fetchCalendarView(token, month, null);
     setView(result);
     setIsLoading(false);
-  }, [month, selectedDate]);
+  }, [month]);
 
   useEffect(() => {
     loadView();
@@ -71,7 +81,7 @@ export function useCalendar() {
     monthLabel: view?.monthLabel ?? format(monthDate, 'MMMM yyyy'),
     selectedDate: view?.selectedDate ?? selectedDate,
     days: view?.days ?? [],
-    agenda: view?.agenda ?? [],
+    agenda: filteredAgenda,
     milestones: view?.milestones ?? [],
     selectDate,
     goToPreviousMonth: () => {

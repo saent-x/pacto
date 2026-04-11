@@ -7,6 +7,8 @@ import { getCuratedDailyVerse } from '@/src/lib/home/dailyVerse';
 import { useColors } from '@/src/hooks/useColors';
 import { useSession } from '@/src/hooks/useSession';
 
+const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? '';
+
 export type HomeQuickAction = {
   id: string;
   label: string;
@@ -19,7 +21,7 @@ export type HomeQuickAction = {
 async function fetchHomeView(token: string | null, previewDays: number): Promise<HomeView | null> {
   if (!token) return null;
   try {
-    const res = await fetch(`/api/home?previewDays=${previewDays}`, {
+    const res = await fetch(`${API_BASE}/api/home?previewDays=${previewDays}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) return null;
@@ -63,7 +65,7 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
     db.getAuth().then((user) => {
       const token = (user as any)?._token ?? null;
       if (!token) return;
-      fetch('/api/daily-verse', {
+      fetch(`${API_BASE}/api/daily-verse`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       })
