@@ -13,6 +13,7 @@ import type * as betterAuth_auth from "../betterAuth/auth.js";
 import type * as checkIns from "../checkIns.js";
 import type * as couples from "../couples.js";
 import type * as dailyVerse from "../dailyVerse.js";
+import type * as dataExport from "../dataExport.js";
 import type * as events from "../events.js";
 import type * as expenses from "../expenses.js";
 import type * as http from "../http.js";
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   checkIns: typeof checkIns;
   couples: typeof couples;
   dailyVerse: typeof dailyVerse;
+  dataExport: typeof dataExport;
   events: typeof events;
   expenses: typeof expenses;
   http: typeof http;

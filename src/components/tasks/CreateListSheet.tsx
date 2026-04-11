@@ -4,10 +4,10 @@ import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { ThemedSheet, BottomSheetTextInput } from '@/src/components/ui';
+import { sheet, useGlass } from '@/src/components/ui/sheetStyles';
 import { useColors } from '@/src/hooks/useColors';
 import { useTheme } from '@/src/lib/theme';
-import { Typography } from '@/src/constants/typography';
-import { Spacing, BorderRadius } from '@/src/constants/spacing';
+import { Spacing } from '@/src/constants/spacing';
 
 const ICONS = [
   'shopping-cart', 'home', 'heart', 'briefcase', 'book',
@@ -32,7 +32,7 @@ export function CreateListSheet({ sheetRef, onSave }: Props) {
   const [color, setColor] = useState(COLORS[0]);
   const [saving, setSaving] = useState(false);
 
-  const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const { glassBg, glassBorder } = useGlass();
 
   const handleSave = useCallback(async () => {
     if (!name.trim()) {
@@ -60,25 +60,25 @@ export function CreateListSheet({ sheetRef, onSave }: Props) {
       onPress={handleSave}
       disabled={saving}
       activeOpacity={0.8}
-      style={[styles.saveBtn, { backgroundColor: C.tasks }]}
+      style={[sheet.saveBtn, { backgroundColor: C.tasks }]}
     >
       <Feather name="plus" size={18} color={C.ink} />
-      <Text style={[styles.saveBtnText, { color: C.ink }]}>
+      <Text style={[sheet.saveBtnText, { color: C.ink }]}>
         {saving ? 'Creating...' : 'Create List'}
       </Text>
     </TouchableOpacity>
   );
 
   return (
-    <ThemedSheet sheetRef={sheetRef} snapPoints={['72%']} scrollable footer={footer}>
-      <View style={styles.form}>
-        <View style={styles.dateHeader}>
-          <Text style={[styles.sheetLabel, { color: C.tasks }]}>NEW LIST</Text>
-          <Text style={[styles.dateDisplay, { color: C.primary }]}>Shape your shared workflow</Text>
+    <ThemedSheet sheetRef={sheetRef} scrollable footer={footer}>
+      <View style={sheet.form}>
+        <View style={sheet.dateHeader}>
+          <Text style={[sheet.sheetLabel, { color: C.tasks }]}>NEW LIST</Text>
+          <Text style={[sheet.dateDisplay, { color: C.primary }]}>Shape your shared workflow</Text>
         </View>
 
         <BottomSheetTextInput
-          style={[styles.nameInput, { color: C.text }]}
+          style={[sheet.titleInput, { color: C.text }]}
           placeholder="List name"
           placeholderTextColor={C.fog}
           value={name}
@@ -86,8 +86,8 @@ export function CreateListSheet({ sheetRef, onSave }: Props) {
           autoFocus
         />
 
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: C.textTertiary }]}>Icon</Text>
+        <View style={sheet.section}>
+          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Icon</Text>
           <View style={styles.iconGrid}>
             {ICONS.map((ic) => {
               const active = icon === ic;
@@ -97,7 +97,7 @@ export function CreateListSheet({ sheetRef, onSave }: Props) {
                   style={[
                     styles.iconBtn,
                     { borderColor: active ? color : glassBorder },
-                    active ? styles.iconBtnActive : undefined,
+                    active ? { backgroundColor: glassBg } : undefined,
                   ]}
                   onPress={() => {
                     Haptics.selectionAsync();
@@ -111,8 +111,8 @@ export function CreateListSheet({ sheetRef, onSave }: Props) {
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: C.textTertiary }]}>Color</Text>
+        <View style={sheet.section}>
+          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Color</Text>
           <View style={styles.colorRow}>
             {COLORS.map((c) => {
               const active = color === c;
@@ -122,7 +122,10 @@ export function CreateListSheet({ sheetRef, onSave }: Props) {
                   style={[
                     styles.colorSwatch,
                     { backgroundColor: c },
-                    active && styles.colorActive,
+                    active && {
+                      borderWidth: 2.5,
+                      borderColor: mode === 'dark' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.25)',
+                    },
                   ]}
                   onPress={() => {
                     Haptics.selectionAsync();
@@ -142,13 +145,6 @@ export function CreateListSheet({ sheetRef, onSave }: Props) {
 }
 
 const styles = StyleSheet.create({
-  form: { gap: Spacing.lg },
-  dateHeader: { gap: Spacing.xs },
-  sheetLabel: { ...Typography.overline, letterSpacing: 3 },
-  dateDisplay: { ...Typography.overline, letterSpacing: 1.5 },
-  nameInput: { ...Typography.title, padding: 0 },
-  section: { gap: Spacing.md },
-  sectionTitle: { ...Typography.overline, letterSpacing: 2 },
   iconGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -162,9 +158,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconBtnActive: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-  },
   colorRow: {
     flexDirection: 'row',
     gap: Spacing.md,
@@ -176,17 +169,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  colorActive: {
-    borderWidth: 2.5,
-    borderColor: 'rgba(255,255,255,0.35)',
-  },
-  saveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: 16,
-    borderRadius: 14,
-  },
-  saveBtnText: { ...Typography.subheading, fontSize: 15 },
 });
