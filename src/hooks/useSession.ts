@@ -1,16 +1,6 @@
 import type { ReactNode } from 'react';
-import { createContext, createElement, useContext } from 'react';
-import { useConvex, useConvexAuth, useQuery } from 'convex/react';
-import { makeFunctionReference } from 'convex/server';
-
-import type { AppSession } from '@/convex/lib/auth';
-import { authClient } from '@/src/lib/auth-client';
-
-const getCurrentSessionUserQuery = makeFunctionReference<
-  'query',
-  {},
-  AppSession | null
->('users:getCurrentSessionUser');
+import { createContext, createElement, useContext, useMemo } from 'react';
+import { db } from '@/src/lib/instant';
 
 export type SessionRoute =
   | '/(auth)/sign-in'
@@ -21,11 +11,18 @@ type SessionValue = {
   isLoading: boolean;
   isAuthenticated: boolean;
   route: SessionRoute | null;
-  authSession: ReturnType<typeof authClient.useSession>['data'] | null;
-  user: NonNullable<ReturnType<typeof authClient.useSession>['data']>['user'] | null;
-  session: AppSession | null;
-  profile: AppSession['profile'];
-  activeCouple: AppSession['activeCouple'];
+  user: { id: string; email: string } | null;
+  session: {
+    profile: { id: string; displayName: string; avatarUrl: string | null; email: string };
+    activeCouple: {
+      couple: { id: string; name: string; anniversary: string | null };
+      membership: { id: string; userId: string; role: string };
+      memberCount: number;
+      partner: { id: string; displayName: string; avatarUrl: string | null } | null;
+    };
+  } | null;
+  profile: SessionValue['session'] extends null ? null : NonNullable<SessionValue['session']>['profile'];
+  activeCouple: SessionValue['session'] extends null ? null : NonNullable<SessionValue['session']>['activeCouple'];
   refetch: () => Promise<void>;
 };
 
@@ -50,47 +47,102 @@ export function getSessionRoute({
 }
 
 function useSessionValue(): SessionValue {
-  const auth = authClient.useSession();
-  const convex = useConvex();
-  const convexAuth = useConvexAuth();
-  const hasAuthSession = !!auth.data?.session;
-  const shouldLoadSession = convexAuth.isAuthenticated;
-  const session = useQuery(
-    getCurrentSessionUserQuery,
-    shouldLoadSession ? {} : 'skip',
+  const { isLoading: authLoading, user, error } = db.useAuth();
+
+  const { isLoading: membershipLoading, data: membershipData } = db.useQuery(
+    user
+      ? {
+          memberships: {
+            $: { where: { 'user.id': user.id, status: 'active' } },
+            couple: {},
+            user: {},
+          },
+        }
+      : null,
   );
-  // Convex finished loading but failed to authenticate despite better-auth
-  // having a session — treat as unauthenticated rather than stuck loading.
-  const convexAuthFailed =
-    hasAuthSession && !convexAuth.isLoading && !convexAuth.isAuthenticated;
-  const isAuthenticated = hasAuthSession && convexAuth.isAuthenticated;
-  const activeCouple = session?.activeCouple ?? null;
-  // Stay loading until we can compute a final route — auth resolution
-  // AND session query (when authenticated). This keeps the splash
-  // visible for the entire duration so there's one clean transition.
-  const isLoading =
-    auth.isPending ||
-    (hasAuthSession &&
-      !convexAuthFailed &&
-      (convexAuth.isLoading || session === undefined));
+
+  const activeMembership = membershipData?.memberships?.[0] ?? null;
+  const couple = activeMembership?.couple?.[0] ?? null;
+  const memberUser = activeMembership?.user?.[0] ?? null;
+
+  // Query partner info if we have a couple
+  const coupleId = couple?.id ?? null;
+  const { data: coupleData } = db.useQuery(
+    coupleId
+      ? {
+          memberships: {
+            $: { where: { 'couple.id': coupleId, status: 'active' } },
+            user: {},
+          },
+        }
+      : null,
+  );
+
+  const allMembers = coupleData?.memberships ?? [];
+  const partner = useMemo(() => {
+    if (!user) return null;
+    const partnerMembership = allMembers.find(
+      (m) => m.user?.[0]?.id !== user.id,
+    );
+    const partnerUser = partnerMembership?.user?.[0] ?? null;
+    if (!partnerUser) return null;
+    return {
+      id: partnerUser.id,
+      displayName: (partnerUser as any).displayName ?? partnerUser.email ?? 'Partner',
+      avatarUrl: (partnerUser as any).avatarUrl ?? null,
+    };
+  }, [allMembers, user]);
+
+  const isAuthenticated = !!user;
+  const hasActiveCouple = !!couple;
+  const isLoading = authLoading || (isAuthenticated && membershipLoading);
+
+  const profile = useMemo(() => {
+    if (!user) return null;
+    return {
+      id: user.id,
+      displayName: (user as any).displayName ?? user.email ?? '',
+      avatarUrl: (user as any).avatarUrl ?? null,
+      email: user.email ?? '',
+    };
+  }, [user]);
+
+  const activeCouple = useMemo(() => {
+    if (!couple || !activeMembership || !user) return null;
+    return {
+      couple: {
+        id: couple.id,
+        name: couple.name,
+        anniversary: couple.anniversary ?? null,
+      },
+      membership: {
+        id: activeMembership.id,
+        userId: user.id,
+        role: activeMembership.role,
+      },
+      memberCount: allMembers.length,
+      partner,
+    };
+  }, [couple, activeMembership, user, allMembers.length, partner]);
+
+  const session = useMemo(() => {
+    if (!profile || !activeCouple) return null;
+    return { profile, activeCouple };
+  }, [profile, activeCouple]);
 
   return {
     isLoading,
     isAuthenticated,
     route: isLoading
       ? null
-      : getSessionRoute({
-          isAuthenticated,
-          hasActiveCouple: !!activeCouple,
-        }),
-    authSession: auth.data ?? null,
-    user: auth.data?.user ?? null,
-    session: session ?? null,
-    profile: session?.profile ?? null,
+      : getSessionRoute({ isAuthenticated, hasActiveCouple }),
+    user: user ? { id: user.id, email: user.email ?? '' } : null,
+    session,
+    profile,
     activeCouple,
     refetch: async () => {
-      if (!shouldLoadSession) return;
-      await convex.query(getCurrentSessionUserQuery, {});
+      // InstantDB queries are reactive — no manual refetch needed.
+      // This is kept for interface compatibility.
     },
   };
 }
