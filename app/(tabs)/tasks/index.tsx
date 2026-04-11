@@ -168,8 +168,8 @@ export default function TasksScreen() {
   ), [C]);
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.background }]}>
-      <SafeAreaView style={[styles.flex, { backgroundColor: C.background }]} edges={['top']}>
+    <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
+      <SafeAreaView style={[styles.flex, { backgroundColor: C.screenBackground }]} edges={['top']}>
         <MiniDateRail
           title="Tasks"
           selectedDate={selectedDate}

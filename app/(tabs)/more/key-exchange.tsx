@@ -138,7 +138,7 @@ export default function KeyExchangeScreen() {
   // ── Done ──
   if (mode === 'done') {
     return (
-      <View style={[styles.screen, { backgroundColor: C.background }]}>
+      <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
         <SafeAreaView style={styles.centerWrap}>
           <Animated.View entering={ZoomIn.duration(500)} style={[styles.doneRing, { borderColor: C.success, backgroundColor: C.successLight }]}>
             <Feather name="lock" size={28} color={C.success} />
@@ -196,7 +196,7 @@ export default function KeyExchangeScreen() {
   // ── Show QR ──
   if (mode === 'show' && keyValue) {
     return (
-      <View style={[styles.screen, { backgroundColor: C.background }]}>
+      <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
         <SafeAreaView style={styles.flex} edges={['top']}>
           <View style={[styles.header, { borderBottomColor: C.border }]}>
             <TouchableOpacity onPress={() => setMode('choose')} style={styles.backBtn} hitSlop={10}>
@@ -231,7 +231,7 @@ export default function KeyExchangeScreen() {
 
   // ── Choose ──
   return (
-    <View style={[styles.screen, { backgroundColor: C.background }]}>
+    <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
         <View style={[styles.header, { borderBottomColor: C.border }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={10}>

@@ -88,7 +88,7 @@ export default function OnboardingScreen() {
   // ── Choose ──
   if (step === 'choose') {
     return (
-      <View style={[styles.screen, { backgroundColor: C.background }]}>
+      <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
         <SafeAreaView style={styles.flex}>
           <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
             <Animated.View entering={FadeInDown.duration(700)} style={styles.chooseHeader}>
@@ -149,7 +149,7 @@ export default function OnboardingScreen() {
   // ── Create ──
   if (step === 'create') {
     return (
-      <View style={[styles.screen, { backgroundColor: C.background }]}>
+      <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
         <SafeAreaView style={styles.flex}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <Animated.View entering={FadeInDown.duration(400)}>
@@ -190,7 +190,7 @@ export default function OnboardingScreen() {
 
   // ── Created ──
   return (
-    <View style={[styles.screen, { backgroundColor: C.background }]}>
+    <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.flex}>
         <ScrollView contentContainerStyle={[styles.scroll, styles.centeredScroll]} showsVerticalScrollIndicator={false}>
           <Animated.View entering={FadeInDown.duration(700)} style={styles.successHeader}>

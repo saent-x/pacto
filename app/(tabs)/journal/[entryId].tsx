@@ -74,7 +74,7 @@ export default function JournalDetailScreen() {
 
   if (!entry) {
     return (
-      <View style={[styles.screen, { backgroundColor: C.background }]}>
+      <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
         <SafeAreaView style={styles.flex} edges={['top']}>
           <View style={styles.navBar}>
             <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
@@ -92,7 +92,7 @@ export default function JournalDetailScreen() {
   const displayDate = format(new Date(entry.entry_date + 'T00:00:00'), 'EEEE, MMMM d, yyyy');
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.background }]}>
+    <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
         {/* Nav bar */}
         <Animated.View entering={FadeIn.duration(300)} style={styles.navBar}>

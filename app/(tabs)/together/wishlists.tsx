@@ -19,9 +19,11 @@ import { useColors } from '@/src/hooks/useColors';
 import { useWishlists, useWishlistItems } from '@/src/hooks/useWishlists';
 import { Typography } from '@/src/constants/typography';
 import { Spacing, BorderRadius } from '@/src/constants/spacing';
-import { EmptyState, BrushUnderline } from '@/src/components/ui';
+import { MiniDateRail } from '@/src/components/calendar/MiniDateRail';
+import { EmptyState } from '@/src/components/ui';
 import { CreateWishlistSheet } from '@/src/components/wishlists/CreateWishlistSheet';
 import { CreateWishlistItemSheet } from '@/src/components/wishlists/CreateWishlistItemSheet';
+import { matchesSelectedDateForTimestamp } from '@/src/lib/togetherDateFilter';
 import { togetherItemContainerStyle, togetherListContainerStyle } from './_itemStyles';
 
 function getPriorityColor(priority: number, C: ReturnType<typeof useColors>) {
@@ -47,8 +49,12 @@ export default function WishlistsScreen() {
   const { wishlists, create, update, remove, refetch } = useWishlists();
   const createSheetRef = useRef<BottomSheetModal>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingWishlist, setEditingWishlist] = useState<{ id: string; name: string } | undefined>();
+  const visibleWishlists = wishlists.filter((wishlist) =>
+    matchesSelectedDateForTimestamp(wishlist.createdAt, selectedDate),
+  );
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -104,25 +110,18 @@ export default function WishlistsScreen() {
 
   if (wishlists.length === 0) {
     return (
-      <View style={[styles.screen, { backgroundColor: C.background }]}>
+      <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
         <SafeAreaView style={styles.flex} edges={['top']}>
-          <View style={[styles.header, { backgroundColor: C.background }]}>
-            <TouchableOpacity
-              onPress={() => {
-                Haptics.selectionAsync();
-                router.back();
-              }}
-              hitSlop={8}
-            >
-              <Feather name="arrow-left" size={22} color={C.text} />
-            </TouchableOpacity>
-            <View style={styles.headerText}>
-              <BrushUnderline color={C.warning} style={styles.userNameBrush}>
-                <Text style={[styles.headerTitle, { color: C.text }]}>Wishlists</Text>
-              </BrushUnderline>
-              <Text style={[styles.headerSubtitle, { color: C.textTertiary }]}>Shared hints, priced clearly</Text>
-            </View>
-          </View>
+          <MiniDateRail
+            title="Wishlists"
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            accentColor={C.wishlists}
+            onPressLeading={() => {
+              Haptics.selectionAsync();
+              router.replace("/(tabs)/together");
+            }}
+          />
 
           <View style={styles.emptyWrap}>
             <EmptyState
@@ -151,26 +150,18 @@ export default function WishlistsScreen() {
   }
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.background }]}>
+    <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
-        {/* Header */}
-        <View style={[styles.header, { backgroundColor: C.background }]}>
-          <TouchableOpacity
-            onPress={() => {
-              Haptics.selectionAsync();
-              router.back();
-            }}
-            hitSlop={8}
-          >
-            <Feather name="arrow-left" size={22} color={C.text} />
-          </TouchableOpacity>
-          <View style={styles.headerText}>
-            <BrushUnderline color={C.warning} style={styles.userNameBrush}>
-              <Text style={[styles.headerTitle, { color: C.text }]}>Wishlists</Text>
-            </BrushUnderline>
-            <Text style={[styles.headerSubtitle, { color: C.textTertiary }]}>Shared hints, priced clearly</Text>
-          </View>
-        </View>
+        <MiniDateRail
+          title="Wishlists"
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+          accentColor={C.wishlists}
+          onPressLeading={() => {
+            Haptics.selectionAsync();
+            router.replace("/(tabs)/together");
+          }}
+        />
 
         <ScrollView
           contentContainerStyle={[
@@ -182,7 +173,7 @@ export default function WishlistsScreen() {
           }
           showsVerticalScrollIndicator={false}
         >
-          {wishlists.map((wishlist, index) => (
+          {visibleWishlists.length > 0 ? visibleWishlists.map((wishlist, index) => (
             <Animated.View key={wishlist._id} entering={FadeInDown.duration(400).delay(100 + index * 60)}>
               <WishlistCard
                 wishlist={wishlist}
@@ -196,7 +187,14 @@ export default function WishlistsScreen() {
                 colors={C}
               />
             </Animated.View>
-          ))}
+          )) : (
+            <View style={styles.emptyWrap}>
+              <EmptyState
+                title="No wishlists on this date"
+                description="Pick another day or clear the date filter."
+              />
+            </View>
+          )}
 
           <View style={{ height: 120 }} />
         </ScrollView>
@@ -528,32 +526,6 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   flex: { flex: 1 },
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    paddingHorizontal: Spacing['2xl'],
-    paddingVertical: Spacing.md,
-  },
-  headerText: {
-    flex: 1,
-    alignItems: 'flex-start',
-    gap: 2,
-  },
-  userNameBrush: {
-    ...Typography.title,
-    marginTop: 2,
-  },
-  headerTitle: {
-    ...Typography.title,
-    fontSize: 22,
-  },
-  headerSubtitle: {
-    ...Typography.small,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
   // List
   listContent: {
     paddingBottom: 120,

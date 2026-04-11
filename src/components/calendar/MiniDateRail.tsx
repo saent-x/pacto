@@ -20,6 +20,8 @@ type Props = {
   onSelectDate: (date: string | null) => void;
   accentColor: string;
   title?: string;
+  onPressLeading?: () => void;
+  leadingIcon?: React.ComponentProps<typeof Feather>["name"];
   helperLabel?: string;
   onPressAction?: () => void;
   actionIcon?: React.ComponentProps<typeof Feather>["name"];
@@ -41,6 +43,8 @@ export function MiniDateRail({
   onSelectDate,
   accentColor,
   title,
+  onPressLeading,
+  leadingIcon = "arrow-left",
   helperLabel = "Filter by date",
   onPressAction,
   actionIcon = "edit-3",
@@ -70,10 +74,21 @@ export function MiniDateRail({
       ]}
     >
       <View style={styles.topRow}>
-        <View style={styles.titleBlock}>
-          <Text style={[styles.helperLabel, { color: C.textTertiary }]}>
-            {title}
-          </Text>
+        <View style={styles.titleRow}>
+          {onPressLeading ? (
+            <Pressable
+              onPress={onPressLeading}
+              hitSlop={8}
+              style={styles.leadingButton}
+            >
+              <Feather name={leadingIcon} size={20} color={C.text} />
+            </Pressable>
+          ) : null}
+          <View style={styles.titleBlock}>
+            <Text style={[styles.helperLabel, { color: C.textTertiary }]}>
+              {title}
+            </Text>
+          </View>
         </View>
         {/*{onPressAction ? (
           <Pressable
@@ -242,8 +257,19 @@ const styles = StyleSheet.create({
   topRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     gap: Spacing.md,
+  },
+  titleRow: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.md,
+  },
+  leadingButton: {
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
   },
   titleBlock: {
     flex: 1,

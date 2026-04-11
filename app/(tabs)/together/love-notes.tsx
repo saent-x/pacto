@@ -21,9 +21,11 @@ import { useSession } from "@/src/hooks/useSession";
 import { useLoveNotes } from "@/src/hooks/useLoveNotes";
 import { Typography } from "@/src/constants/typography";
 import { BorderRadius, Spacing } from "@/src/constants/spacing";
-import { EmptyState, BrushUnderline } from "@/src/components/ui";
+import { MiniDateRail } from "@/src/components/calendar/MiniDateRail";
+import { EmptyState } from "@/src/components/ui";
 import { toPlainMarkdownPreview } from "@/src/components/journal/MarkdownText";
 import { CreateLoveNoteSheet } from "@/src/components/loveNotes/CreateLoveNoteSheet";
+import { matchesSelectedDateForTimestamp } from "@/src/lib/togetherDateFilter";
 import { togetherItemContainerStyle, togetherListContainerStyle } from "./_itemStyles";
 
 type NoteItem = {
@@ -58,11 +60,15 @@ export default function LoveNotesScreen() {
   const { notes, create, update, remove, refetch } = useLoveNotes();
   const sheetRef = useRef<BottomSheetModal>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [editingNote, setEditingNote] = useState<
     { id: string; body: string; isPrivate: boolean } | undefined
   >();
 
   const currentUserId = profile?._id ?? null;
+  const visibleNotes = notes.filter((note) =>
+    matchesSelectedDateForTimestamp(note.createdAt, selectedDate),
+  );
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -208,29 +214,18 @@ export default function LoveNotesScreen() {
 
   if (notes.length === 0) {
     return (
-      <View style={[styles.screen, { backgroundColor: C.background }]}>
+      <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
         <SafeAreaView style={styles.flex} edges={["top"]}>
-          <View style={[styles.header, { backgroundColor: C.background }]}>
-            <TouchableOpacity
-              onPress={() => {
-                Haptics.selectionAsync();
-                router.back();
-              }}
-              hitSlop={8}
-            >
-              <Feather name="arrow-left" size={22} color={C.text} />
-            </TouchableOpacity>
-            <View style={styles.headerText}>
-              <BrushUnderline color={C.warning} style={styles.userNameBrush}>
-                <Text style={[styles.headerTitle, { color: C.text }]}>
-                  Love Notes
-                </Text>
-              </BrushUnderline>
-              <Text style={[styles.headerSubtitle, { color: C.textTertiary }]}>
-                Shared words worth keeping
-              </Text>
-            </View>
-          </View>
+          <MiniDateRail
+            title="Love Notes"
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            accentColor={C.error}
+            onPressLeading={() => {
+              Haptics.selectionAsync();
+              router.replace("/(tabs)/together");
+            }}
+          />
 
           <View style={styles.emptyWrap}>
             <EmptyState
@@ -261,49 +256,47 @@ export default function LoveNotesScreen() {
   }
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.background }]}>
+    <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.flex} edges={["top"]}>
-        <View style={[styles.header, { backgroundColor: C.background }]}>
-          <TouchableOpacity
-            onPress={() => {
-              Haptics.selectionAsync();
-              router.back();
-            }}
-            hitSlop={8}
-          >
-            <Feather name="arrow-left" size={22} color={C.text} />
-          </TouchableOpacity>
-          <View style={styles.headerText}>
-            <BrushUnderline color={C.warning} style={styles.userNameBrush}>
-              <Text style={[styles.headerTitle, { color: C.text }]}>
-                Love Notes
-              </Text>
-            </BrushUnderline>
-            <Text style={[styles.headerSubtitle, { color: C.textTertiary }]}>
-              Shared words worth keeping
-            </Text>
-          </View>
-        </View>
-
-        <FlashList
-          data={notes}
-          keyExtractor={(item) => item._id}
-          contentContainerStyle={[
-            styles.listContent,
-            togetherListContainerStyle,
-          ]}
-          ItemSeparatorComponent={() => (
-            <View style={[styles.separator, { backgroundColor: C.border }]} />
-          )}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor={C.error}
-            />
-          }
-          renderItem={renderNoteRow}
+        <MiniDateRail
+          title="Love Notes"
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+          accentColor={C.error}
+          onPressLeading={() => {
+            Haptics.selectionAsync();
+            router.replace("/(tabs)/together");
+          }}
         />
+
+        {visibleNotes.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <EmptyState
+              title="No love notes on this date"
+              description="Pick another day or clear the date filter."
+            />
+          </View>
+        ) : (
+          <FlashList
+            data={visibleNotes}
+            keyExtractor={(item) => item._id}
+            contentContainerStyle={[
+              styles.listContent,
+              togetherListContainerStyle,
+            ]}
+            ItemSeparatorComponent={() => (
+              <View style={[styles.separator, { backgroundColor: C.border }]} />
+            )}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                tintColor={C.error}
+              />
+            }
+            renderItem={renderNoteRow}
+          />
+        )}
 
         <TouchableOpacity
           onPress={() => {
@@ -329,31 +322,6 @@ export default function LoveNotesScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   flex: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.md,
-    paddingHorizontal: Spacing["2xl"],
-    paddingVertical: Spacing.md,
-  },
-  headerText: {
-    flex: 1,
-    alignItems: "flex-start",
-    gap: 2,
-  },
-  userNameBrush: {
-    ...Typography.title,
-    marginTop: 2,
-  },
-  headerTitle: {
-    ...Typography.title,
-    fontSize: 22,
-  },
-  headerSubtitle: {
-    ...Typography.small,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
   listContent: {
     // paddingHorizontal: Spacing.lg,
     paddingBottom: 120,

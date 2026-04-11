@@ -56,7 +56,7 @@ export default function SignInScreen() {
   };
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.background }]}>
+    <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       {/* Warm glow in top-right — a subtle radial feel */}
       <View style={[styles.glowTopRight, { backgroundColor: C.primary }]} />
       <View style={[styles.glowBottomLeft, { backgroundColor: C.primary }]} />

@@ -14,7 +14,9 @@ import { useCheckIns, type CheckInRecord } from '@/src/hooks/useCheckIns';
 import { BorderRadius, Spacing } from '@/src/constants/spacing';
 import { getCheckInMoodMeta } from '@/src/constants/checkInMoods';
 import { Typography } from '@/src/constants/typography';
-import { EmptyState, BrushUnderline } from '@/src/components/ui';
+import { MiniDateRail } from '@/src/components/calendar/MiniDateRail';
+import { EmptyState } from '@/src/components/ui';
+import { matchesSelectedDate } from '@/src/lib/togetherDateFilter';
 import { togetherItemContainerStyle, togetherListContainerStyle } from './_itemStyles';
 
 export default function CheckInsScreen() {
@@ -23,6 +25,10 @@ export default function CheckInsScreen() {
   const { activeCouple } = useSession();
   const { checkIns, remove, refetch } = useCheckIns();
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const visibleCheckIns = checkIns
+    .filter((item) => matchesSelectedDate(item.checkInDate, selectedDate))
+    .slice(0, 30);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -119,26 +125,18 @@ export default function CheckInsScreen() {
   };
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.background }]}>
+    <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
-        <View style={[styles.header, { backgroundColor: C.background }]}>
-          <TouchableOpacity
-            onPress={() => {
-              Haptics.selectionAsync();
-              router.back();
-            }}
-            hitSlop={8}
-          >
-            <Feather name="arrow-left" size={22} color={C.text} />
-          </TouchableOpacity>
-          <View style={styles.headerText}>
-            <BrushUnderline color={C.warning} style={styles.userNameBrush}>
-              <Text style={[styles.headerTitle, { color: C.text }]}>Check-Ins</Text>
-            </BrushUnderline>
-            <Text style={[styles.headerSubtitle, { color: C.textTertiary }]}>Recent check-ins</Text>
-          </View>
-        </View>
-        
+        <MiniDateRail
+          title="Check-Ins"
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+          accentColor={C.mood}
+          onPressLeading={() => {
+            Haptics.selectionAsync();
+            router.replace("/(tabs)/together");
+          }}
+        />
 
         <ScrollView
           contentContainerStyle={[
@@ -152,9 +150,9 @@ export default function CheckInsScreen() {
         >
 
           <Animated.View entering={FadeInDown.duration(320).delay(120)} style={styles.historySection}>
-            {checkIns.length > 0 ? (
+            {visibleCheckIns.length > 0 ? (
               <View style={styles.listWrap}>
-                {checkIns.slice(0, 30).map((item, index) => (
+                {visibleCheckIns.map((item, index) => (
                   <View key={item._id}>
                     {renderCheckInItem({ item, index })}
                     <View style={[styles.separator, { backgroundColor: C.border }]} />
@@ -164,8 +162,12 @@ export default function CheckInsScreen() {
             ) : (
               <View style={styles.emptyWrap}>
                 <EmptyState
-                  title="No check-ins yet"
-                  description="Use the home screen card to add the first daily check-in."
+                  title={selectedDate ? 'No check-ins on this date' : 'No check-ins yet'}
+                  description={
+                    selectedDate
+                      ? 'Pick another day or clear the date filter.'
+                      : 'Use the home screen card to add the first daily check-in.'
+                  }
                 />
               </View>
             )}
@@ -179,31 +181,6 @@ export default function CheckInsScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   flex: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    paddingHorizontal: Spacing['2xl'],
-    paddingVertical: Spacing.md,
-  },
-  headerText: {
-    flex: 1,
-    alignItems: 'flex-start',
-    gap: 2,
-  },
-  userNameBrush: {
-    ...Typography.title,
-    marginTop: 2,
-  },
-  headerTitle: {
-    ...Typography.title,
-    fontSize: 22,
-  },
-  headerSubtitle: {
-    ...Typography.small,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
   scrollContent: {
     paddingBottom: 120,
   },

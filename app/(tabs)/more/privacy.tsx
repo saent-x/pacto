@@ -56,7 +56,7 @@ export default function PrivacyPolicyScreen() {
   const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.10)';
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.background }]}>
+    <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
         <View style={[styles.header, { borderBottomColor: C.border }]}>
           <TouchableOpacity

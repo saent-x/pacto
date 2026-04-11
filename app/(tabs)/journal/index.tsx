@@ -160,8 +160,8 @@ export default function JournalScreen() {
   const hasEntries = visibleEntries.length > 0;
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.background }]}>
-      <SafeAreaView style={[styles.flex, { backgroundColor: C.background }]} edges={['top']}>
+    <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
+      <SafeAreaView style={[styles.flex, { backgroundColor: C.screenBackground }]} edges={['top']}>
         <MiniDateRail
           title="Journal"
           selectedDate={selectedDate}

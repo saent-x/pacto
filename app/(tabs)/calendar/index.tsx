@@ -63,8 +63,8 @@ export default function CalendarScreen() {
   }, [calendar]);
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.background }]}>
-      <SafeAreaView style={[styles.safe, { backgroundColor: C.background }]} edges={["top"]}>
+    <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: C.screenBackground }]} edges={["top"]}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}

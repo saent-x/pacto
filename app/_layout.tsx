@@ -104,7 +104,7 @@ function RootNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: C.background },
+          contentStyle: { backgroundColor: C.screenBackground },
         }}
       >
         <Stack.Screen name="(auth)" />

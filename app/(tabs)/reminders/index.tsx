@@ -235,8 +235,8 @@ export default function RemindersScreen() {
   const doneCount = filteredCompleted.length;
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.background }]}>
-      <SafeAreaView style={[styles.flex, { backgroundColor: C.background }]} edges={['top']}>
+    <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
+      <SafeAreaView style={[styles.flex, { backgroundColor: C.screenBackground }]} edges={['top']}>
         <MiniDateRail
           title="Reminders"
           selectedDate={selectedDate}

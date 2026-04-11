@@ -52,6 +52,7 @@ const dark = {
 
   // Base
   background: '#0F0D0B',
+  screenBackground: '#0F0D0B',
   surface: '#171310',
   card: '#221C18',
   text: '#F2EBE2',
@@ -118,6 +119,7 @@ const light = {
 
   // Warm parchment — never pure white
   background: '#ECE4D8',
+  screenBackground: '#ECE4D8',
   surface: '#E2D8CB',
   card: '#F7F1E9',
   text: '#2C2420',

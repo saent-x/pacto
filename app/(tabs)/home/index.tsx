@@ -30,6 +30,10 @@ import { useColors } from "@/src/hooks/useColors";
 import { useCheckIns } from "@/src/hooks/useCheckIns";
 import { useTheme } from "@/src/lib/theme";
 import { useHomeTimeline, HomeQuickAction } from "@/src/hooks/useHomeTimeline";
+import {
+  routeForMilestoneItem,
+  routeForTimelineItem,
+} from "@/src/lib/homeNavigation";
 import { useSession } from "@/src/hooks/useSession";
 import type { HomeView } from "@/convex/timeline";
 
@@ -399,8 +403,10 @@ function QuickNav({
 
 function MilestoneStrip({
   milestones,
+  onPressMilestone,
 }: {
   milestones: HomeView["milestones"];
+  onPressMilestone: (milestone: HomeView["milestones"][number]) => void;
 }) {
   const C = useColors();
   const { mode } = useTheme();
@@ -422,11 +428,17 @@ function MilestoneStrip({
         contentContainerStyle={styles.milestoneScroll}
       >
         {milestones.map((m) => (
-          <View
+          <Pressable
             key={m.id}
-            style={[
+            accessibilityRole="button"
+            onPress={() => onPressMilestone(m)}
+            style={({ pressed }) => [
               styles.milestoneCard,
-              { backgroundColor: glassBg, borderColor: glassBorder },
+              {
+                backgroundColor: glassBg,
+                borderColor: glassBorder,
+                opacity: pressed ? 0.85 : 1,
+              },
             ]}
           >
             <Text style={[styles.milestoneDays, { color: C.primary }]}>
@@ -438,7 +450,7 @@ function MilestoneStrip({
             >
               {m.title}
             </Text>
-          </View>
+          </Pressable>
         ))}
       </ScrollView>
     </Animated.View>
@@ -474,11 +486,29 @@ export default function HomeScreen() {
     [router],
   );
 
+  const handleTimelineItemPress = useCallback(
+    (item: HomeView["timeline"][number]) => {
+      const route = routeForTimelineItem(item);
+      if (!route) return;
+      Haptics.selectionAsync();
+      router.push(route as never);
+    },
+    [router],
+  );
+
+  const handleMilestonePress = useCallback(
+    (milestone: HomeView["milestones"][number]) => {
+      Haptics.selectionAsync();
+      router.push(routeForMilestoneItem(milestone) as never);
+    },
+    [router],
+  );
+
   const glassBorder =
     mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.10)";
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.background }]}>
+    <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.safe} edges={["top"]}>
         <ScrollView
           contentContainerStyle={styles.scroll}
@@ -581,11 +611,18 @@ export default function HomeScreen() {
           <QuickNav actions={home.quickActions} onPress={handleAction} />
 
           {/* ─── Milestones ─── */}
-          <MilestoneStrip milestones={home.milestones} />
+          <MilestoneStrip
+            milestones={home.milestones}
+            onPressMilestone={handleMilestonePress}
+          />
 
           {/* ─── Timeline ─── */}
           <Animated.View entering={FadeInDown.duration(400).delay(400)}>
-            <TimelineFeed isLoading={home.isLoading} timeline={home.timeline} />
+            <TimelineFeed
+              isLoading={home.isLoading}
+              timeline={home.timeline}
+              onPressItem={handleTimelineItemPress}
+            />
           </Animated.View>
         </ScrollView>
       </SafeAreaView>

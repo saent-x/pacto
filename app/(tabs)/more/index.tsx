@@ -42,7 +42,7 @@ export default function MoreScreen() {
   };
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.background }]}>
+    <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
         {/* Profile header */}
         <View style={[styles.profileSection, { backgroundColor: C.background }]}>

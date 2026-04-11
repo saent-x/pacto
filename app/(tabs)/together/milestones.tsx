@@ -12,8 +12,10 @@ import { useColors } from '@/src/hooks/useColors';
 import { useMilestones } from '@/src/hooks/useMilestones';
 import { Typography } from '@/src/constants/typography';
 import { Spacing, BorderRadius } from '@/src/constants/spacing';
-import { EmptyState, BrushUnderline } from '@/src/components/ui';
+import { MiniDateRail } from '@/src/components/calendar/MiniDateRail';
+import { EmptyState } from '@/src/components/ui';
 import { CreateMilestoneSheet } from '@/src/components/milestones/CreateMilestoneSheet';
+import { matchesSelectedDate } from '@/src/lib/togetherDateFilter';
 import { togetherItemContainerStyle, togetherListContainerStyle } from './_itemStyles';
 
 type MilestoneItem = {
@@ -52,7 +54,14 @@ export default function MilestonesScreen() {
   const { upcoming, past, create, update, remove, refetch } = useMilestones();
   const sheetRef = useRef<BottomSheetModal>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [editingMilestone, setEditingMilestone] = useState<MilestoneItem | undefined>();
+  const filteredUpcoming = upcoming.filter((item) =>
+    matchesSelectedDate(item.date, selectedDate),
+  );
+  const filteredPast = past.filter((item) =>
+    matchesSelectedDate(item.date, selectedDate),
+  );
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -120,7 +129,7 @@ export default function MilestonesScreen() {
 
   const headerComponent = (
     <View>
-      {upcoming.length > 0 && (
+      {filteredUpcoming.length > 0 && (
         <Text style={[styles.sectionLabel, { color: C.textTertiary, paddingHorizontal: Spacing['2xl'] }]}>UPCOMING</Text>
       )}
     </View>
@@ -128,13 +137,13 @@ export default function MilestonesScreen() {
 
   const footerComponent = (
     <View>
-      {past.length > 0 && (
+      {filteredPast.length > 0 && (
         <View style={styles.pastSection}>
           <Text style={[styles.sectionLabel, { color: C.textTertiary }]}>
-            PAST ({past.length})
+            PAST ({filteredPast.length})
           </Text>
 
-          {past.map((item, i) => (
+          {filteredPast.map((item, i) => (
             <Animated.View
               key={item._id}
               entering={FadeInDown.duration(300).delay(i * 50)}
@@ -172,25 +181,18 @@ export default function MilestonesScreen() {
 
   if (upcoming.length === 0 && past.length === 0) {
     return (
-      <View style={[styles.screen, { backgroundColor: C.background }]}>
+      <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
         <SafeAreaView style={styles.flex} edges={['top']}>
-          <View style={[styles.header, { backgroundColor: C.background }]}>
-            <TouchableOpacity
-              onPress={() => {
-                Haptics.selectionAsync();
-                router.back();
-              }}
-              hitSlop={8}
-            >
-              <Feather name="arrow-left" size={22} color={C.text} />
-            </TouchableOpacity>
-            <View style={styles.headerText}>
-              <BrushUnderline color={C.warning} style={styles.userNameBrush}>
-                <Text style={[styles.headerTitle, { color: C.text }]}>Milestones</Text>
-              </BrushUnderline>
-              <Text style={[styles.headerSubtitle, { color: C.textTertiary }]}>Shared dates, stored as actual dates</Text>
-            </View>
-          </View>
+          <MiniDateRail
+            title="Milestones"
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            accentColor={C.milestones}
+            onPressLeading={() => {
+              Haptics.selectionAsync();
+              router.replace("/(tabs)/together");
+            }}
+          />
 
           <View style={styles.emptyWrap}>
             <EmptyState
@@ -229,40 +231,40 @@ export default function MilestonesScreen() {
   }
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.background }]}>
+    <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
-        {/* Header */}
-        <View style={[styles.header, { backgroundColor: C.background }]}>
-          <TouchableOpacity
-            onPress={() => {
-              Haptics.selectionAsync();
-              router.back();
-            }}
-            hitSlop={8}
-          >
-            <Feather name="arrow-left" size={22} color={C.text} />
-          </TouchableOpacity>
-          <View style={styles.headerText}>
-            <BrushUnderline color={C.warning} style={styles.userNameBrush}>
-              <Text style={[styles.headerTitle, { color: C.text }]}>Milestones</Text>
-            </BrushUnderline>
-            <Text style={[styles.headerSubtitle, { color: C.textTertiary }]}>Shared dates, stored as actual dates</Text>
-          </View>
-        </View>
+        <MiniDateRail
+          title="Milestones"
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+          accentColor={C.milestones}
+          onPressLeading={() => {
+            Haptics.selectionAsync();
+            router.replace("/(tabs)/together");
+          }}
+        />
 
-        <FlashList
-          data={upcoming}
-          keyExtractor={(item) => item._id}
-          contentContainerStyle={[
-            styles.listContent,
-            togetherListContainerStyle,
-          ]}
-          ListHeaderComponent={headerComponent}
-          ListFooterComponent={footerComponent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />
-          }
-          renderItem={({ item, index }) => {
+        {filteredUpcoming.length === 0 && filteredPast.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <EmptyState
+              title="No milestones on this date"
+              description="Pick another day or clear the date filter."
+            />
+          </View>
+        ) : (
+          <FlashList
+            data={filteredUpcoming}
+            keyExtractor={(item) => item._id}
+            contentContainerStyle={[
+              styles.listContent,
+              togetherListContainerStyle,
+            ]}
+            ListHeaderComponent={headerComponent}
+            ListFooterComponent={footerComponent}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />
+            }
+            renderItem={({ item, index }) => {
             const days = getDaysUntil(item.date);
             const row = (
               <TouchableOpacity
@@ -316,8 +318,9 @@ export default function MilestonesScreen() {
                 </Swipeable>
               </Animated.View>
             );
-          }}
-        />
+            }}
+          />
+        )}
 
         {/* FAB */}
         <TouchableOpacity
@@ -351,31 +354,6 @@ export default function MilestonesScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   flex: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    paddingHorizontal: Spacing['2xl'],
-    paddingVertical: Spacing.md,
-  },
-  headerText: {
-    flex: 1,
-    alignItems: 'flex-start',
-    gap: 2,
-  },
-  userNameBrush: {
-    ...Typography.title,
-    marginTop: 2,
-  },
-  headerTitle: {
-    ...Typography.title,
-    fontSize: 22,
-  },
-  headerSubtitle: {
-    ...Typography.small,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
   listContent: {
     paddingBottom: 120,
   },

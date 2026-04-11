@@ -15,7 +15,7 @@ export default function TabLayout() {
   // Don't render tabs (or their queries) when the user has no couple.
   // Show themed background while useProtectedRoute redirects to onboarding.
   if (!activeCouple) {
-    return <View style={[StyleSheet.absoluteFill, { backgroundColor: C.background }]} />;
+    return <View style={[StyleSheet.absoluteFill, { backgroundColor: C.screenBackground }]} />;
   }
 
   return (

@@ -132,7 +132,7 @@ export default function TaskListDetailScreen() {
   );
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.background }]}>
+    <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
         {/* Header */}
         <View style={[styles.header, { backgroundColor: C.background }]}>

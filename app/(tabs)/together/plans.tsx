@@ -21,8 +21,10 @@ import { useTheme } from "@/src/lib/theme";
 import { usePlans } from "@/src/hooks/usePlans";
 import { Typography } from "@/src/constants/typography";
 import { Spacing, BorderRadius } from "@/src/constants/spacing";
-import { EmptyState, BrushUnderline } from "@/src/components/ui";
+import { MiniDateRail } from "@/src/components/calendar/MiniDateRail";
+import { EmptyState } from "@/src/components/ui";
 import { CreatePlanSheet } from "@/src/components/plans/CreatePlanSheet";
+import { matchesSelectedDate } from "@/src/lib/togetherDateFilter";
 import { togetherItemContainerStyle, togetherListContainerStyle } from "./_itemStyles";
 
 interface PlanRecord {
@@ -60,6 +62,7 @@ export default function PlansScreen() {
   const router = useRouter();
   const sheetRef = useRef<BottomSheetModal>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [editingPlan, setEditingPlan] = useState<PlanRecord | null>(null);
 
   const { plans, isLoading, create, update, remove, refetch } = usePlans();
@@ -157,10 +160,15 @@ export default function PlansScreen() {
 
   const groupedPlans = STATUS_GROUPS.map((group) => ({
     ...group,
-    items: plans?.filter((p) => p.status === group.key) ?? [],
+    items:
+      plans?.filter(
+        (p) =>
+          p.status === group.key &&
+          matchesSelectedDate(p.targetDate, selectedDate),
+      ) ?? [],
   })).filter((g) => g.items.length > 0);
 
-  const hasPlans = plans.length > 0;
+  const hasPlans = groupedPlans.length > 0;
 
   const renderPlanCard = (plan: PlanRecord, index: number) => {
     const pri = PRIORITY_CONFIG[plan.priority];
@@ -251,36 +259,18 @@ export default function PlansScreen() {
   };
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.background }]}>
+    <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.flex} edges={["top"]}>
-        {/* Header */}
-        <View style={[styles.header, { backgroundColor: C.background }]}>
-          <TouchableOpacity
-            onPress={() => {
-              Haptics.selectionAsync();
-              router.back();
-            }}
-            hitSlop={8}
-          >
-            <Feather name="arrow-left" size={22} color={C.text} />
-          </TouchableOpacity>
-          <View style={styles.headerText}>
-            <BrushUnderline color={C.warning} style={styles.userNameBrush}>
-              <Text
-                style={[
-                  styles.headerTitle,
-                  { color: C.text, textDecorationStyle: "solid" },
-                ]}
-              >
-                Plans
-              </Text>
-            </BrushUnderline>
-
-            <Text style={[styles.headerSubtitle, { color: C.textTertiary }]}>
-              Shared ideas with real progress
-            </Text>
-          </View>
-        </View>
+        <MiniDateRail
+          title="Plans"
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+          accentColor={C.plans}
+          onPressLeading={() => {
+            Haptics.selectionAsync();
+            router.replace("/(tabs)/together");
+          }}
+        />
 
         <ScrollView
           contentContainerStyle={[
@@ -319,8 +309,12 @@ export default function PlansScreen() {
             <View style={styles.emptyWrap}>
               <EmptyState
                 icon="clipboard"
-                title="No plans yet"
-                description="No plans yet — dream something up together"
+                title={selectedDate ? "No plans on this date" : "No plans yet"}
+                description={
+                  selectedDate
+                    ? "Pick another day or clear the date filter."
+                    : "No plans yet — dream something up together"
+                }
                 actionLabel="Create Plan"
                 onAction={openCreate}
               />
@@ -368,32 +362,6 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   flex: { flex: 1 },
 
-  // Header
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.md,
-    paddingHorizontal: Spacing["2xl"],
-    paddingVertical: Spacing.md,
-  },
-  userNameBrush: {
-    ...Typography.title,
-    marginTop: 2,
-  },
-  headerText: {
-    flex: 1,
-    alignItems: "flex-start",
-    gap: 2,
-  },
-  headerTitle: {
-    ...Typography.title,
-    fontSize: 22,
-  },
-  headerSubtitle: {
-    ...Typography.small,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
   topRow: {
     flexDirection: "row",
     alignItems: "center",

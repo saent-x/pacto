@@ -77,7 +77,7 @@ export default function InviteScreen() {
 
   if (joined) {
     return (
-      <View style={[styles.screen, { backgroundColor: C.background }]}>
+      <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
         <SafeAreaView style={styles.successWrap}>
           <Animated.View entering={ZoomIn.duration(500)} style={[styles.successRing, { borderColor: C.primary, backgroundColor: C.primaryMuted }]}>
             <Feather name="heart" size={32} color={C.primary} />
@@ -107,7 +107,7 @@ export default function InviteScreen() {
   }
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.background }]}>
+    <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.flex}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
           <View style={styles.content}>

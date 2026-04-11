@@ -20,8 +20,10 @@ import { useSession } from "@/src/hooks/useSession";
 import { useExpenses } from "@/src/hooks/useExpenses";
 import { Typography } from "@/src/constants/typography";
 import { Spacing, BorderRadius } from "@/src/constants/spacing";
-import { EmptyState, BrushUnderline } from "@/src/components/ui";
+import { MiniDateRail } from "@/src/components/calendar/MiniDateRail";
+import { EmptyState } from "@/src/components/ui";
 import { CreateExpenseSheet } from "@/src/components/expenses/CreateExpenseSheet";
+import { matchesSelectedDate } from "@/src/lib/togetherDateFilter";
 import {
   togetherItemContainerStyle,
   togetherListContainerStyle,
@@ -72,6 +74,7 @@ export default function ExpensesScreen() {
     useExpenses();
   const sheetRef = useRef<BottomSheetModal>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [settledOpen, setSettledOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<
     ExpenseItem | undefined
@@ -79,8 +82,14 @@ export default function ExpensesScreen() {
 
   const partner = activeCouple?.partner ?? null;
   const currentUserId = profile?._id ?? null;
+  const filteredUnsettled = unsettled.filter((item) =>
+    matchesSelectedDate(item.date, selectedDate),
+  );
+  const filteredSettled = settled.filter((item) =>
+    matchesSelectedDate(item.date, selectedDate),
+  );
 
-  const unsettledTotals = summarizeByCurrency(unsettled as ExpenseItem[]);
+  const unsettledTotals = summarizeByCurrency(filteredUnsettled as ExpenseItem[]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -204,7 +213,7 @@ export default function ExpensesScreen() {
   const headerComponent = (
     <View>
       {/* Total unsettled */}
-      {unsettled.length > 0 && (
+      {filteredUnsettled.length > 0 && (
         <Animated.View entering={FadeInDown.duration(400).delay(100)}>
           <View
             style={[
@@ -236,14 +245,14 @@ export default function ExpensesScreen() {
               ))}
             </View>
             <Text style={[styles.totalSub, { color: C.textTertiary }]}>
-              {unsettled.length} unsettled item
-              {unsettled.length !== 1 ? "s" : ""} across your shared spending.
+              {filteredUnsettled.length} unsettled item
+              {filteredUnsettled.length !== 1 ? "s" : ""} across your shared spending.
             </Text>
           </View>
         </Animated.View>
       )}
 
-      {unsettled.length > 0 && (
+      {filteredUnsettled.length > 0 && (
         <Text style={[styles.sectionLabel, { color: C.textTertiary }]}>
           OPEN
         </Text>
@@ -253,7 +262,7 @@ export default function ExpensesScreen() {
 
   const footerComponent = (
     <View>
-      {settled.length > 0 && (
+      {filteredSettled.length > 0 && (
         <View style={styles.settledSection}>
           <TouchableOpacity
             style={styles.settledToggle}
@@ -269,7 +278,7 @@ export default function ExpensesScreen() {
                 { color: C.textTertiary, marginBottom: 0 },
               ]}
             >
-              SETTLED ({settled.length})
+              SETTLED ({filteredSettled.length})
             </Text>
             <Feather
               name={settledOpen ? "chevron-up" : "chevron-down"}
@@ -279,7 +288,7 @@ export default function ExpensesScreen() {
           </TouchableOpacity>
 
           {settledOpen &&
-            settled.map((item, i) => (
+            filteredSettled.map((item, i) => (
               <Animated.View
                 key={item._id}
                 entering={FadeInDown.duration(300).delay(i * 50)}
@@ -326,29 +335,18 @@ export default function ExpensesScreen() {
 
   if (unsettled.length === 0 && settled.length === 0) {
     return (
-      <View style={[styles.screen, { backgroundColor: C.background }]}>
+      <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
         <SafeAreaView style={styles.flex} edges={["top"]}>
-          <View style={[styles.header, { backgroundColor: C.background }]}>
-            <TouchableOpacity
-              onPress={() => {
-                Haptics.selectionAsync();
-                router.back();
-              }}
-              hitSlop={8}
-            >
-              <Feather name="arrow-left" size={22} color={C.text} />
-            </TouchableOpacity>
-            <View style={styles.headerText}>
-              <BrushUnderline color={C.warning} style={styles.userNameBrush}>
-                <Text style={[styles.headerTitle, { color: C.text }]}>
-                  Our Expenses
-                </Text>
-              </BrushUnderline>
-              <Text style={[styles.headerSubtitle, { color: C.textTertiary }]}>
-                Track what was paid, in the right currency
-              </Text>
-            </View>
-          </View>
+          <MiniDateRail
+            title="Our Expenses"
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            accentColor={C.expenses}
+            onPressLeading={() => {
+              Haptics.selectionAsync();
+              router.replace("/(tabs)/together");
+            }}
+          />
 
           <View style={styles.emptyWrap}>
             <EmptyState
@@ -393,48 +391,44 @@ export default function ExpensesScreen() {
   }
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.background }]}>
+    <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.flex} edges={["top"]}>
-        {/* Header */}
-        <View style={[styles.header, { backgroundColor: C.background }]}>
-          <TouchableOpacity
-            onPress={() => {
-              Haptics.selectionAsync();
-              router.back();
-            }}
-            hitSlop={8}
-          >
-            <Feather name="arrow-left" size={22} color={C.text} />
-          </TouchableOpacity>
-          <View style={styles.headerText}>
-            <BrushUnderline color={C.warning} style={styles.userNameBrush}>
-              <Text style={[styles.headerTitle, { color: C.text }]}>
-                Our Expenses
-              </Text>
-            </BrushUnderline>
-            <Text style={[styles.headerSubtitle, { color: C.textTertiary }]}>
-              Track what was paid, in the right currency
-            </Text>
-          </View>
-        </View>
+        <MiniDateRail
+          title="Our Expenses"
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+          accentColor={C.expenses}
+          onPressLeading={() => {
+            Haptics.selectionAsync();
+            router.replace("/(tabs)/together");
+          }}
+        />
 
-        <FlashList
-          data={unsettled}
-          keyExtractor={(item) => item._id}
-          contentContainerStyle={[
-            styles.listContent,
-            togetherListContainerStyle,
-          ]}
-          ListHeaderComponent={headerComponent}
-          ListFooterComponent={footerComponent}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor={C.primary}
+        {filteredUnsettled.length === 0 && filteredSettled.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <EmptyState
+              title="No expenses on this date"
+              description="Pick another day or clear the date filter."
             />
-          }
-          renderItem={({ item, index }) => {
+          </View>
+        ) : (
+          <FlashList
+            data={filteredUnsettled}
+            keyExtractor={(item) => item._id}
+            contentContainerStyle={[
+              styles.listContent,
+              togetherListContainerStyle,
+            ]}
+            ListHeaderComponent={headerComponent}
+            ListFooterComponent={footerComponent}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                tintColor={C.primary}
+              />
+            }
+            renderItem={({ item, index }) => {
             const row = (
               <TouchableOpacity
                 activeOpacity={0.8}
@@ -498,8 +492,9 @@ export default function ExpensesScreen() {
                 </Swipeable>
               </Animated.View>
             );
-          }}
-        />
+            }}
+          />
+        )}
 
         {/* FAB */}
         <TouchableOpacity
@@ -539,31 +534,6 @@ export default function ExpensesScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   flex: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.md,
-    paddingHorizontal: Spacing["2xl"],
-    paddingVertical: Spacing.md,
-  },
-  headerText: {
-    flex: 1,
-    alignItems: "flex-start",
-    gap: 2,
-  },
-  userNameBrush: {
-    ...Typography.title,
-    marginTop: 2,
-  },
-  headerTitle: {
-    ...Typography.title,
-    fontSize: 22,
-  },
-  headerSubtitle: {
-    ...Typography.small,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
   listContent: {
     paddingBottom: 120,
   },
