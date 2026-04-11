@@ -1,38 +1,53 @@
-import { useMemo, useState } from "react";
-import { addMonths, format, parseISO } from "date-fns";
-import { useConvex, useQuery } from "convex/react";
-import { makeFunctionReference } from "convex/server";
-
-import type { CalendarView } from "@/convex/timeline";
-
-const getCalendarViewQuery = makeFunctionReference<
-  "query",
-  {
-    month?: string;
-    selectedDate?: string;
-    previewDays?: number;
-    now?: number;
-  },
-  CalendarView
->("timeline:getCalendarView");
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { addMonths, format, parseISO } from 'date-fns';
+import { db } from '@/src/lib/instant';
+import type { CalendarView } from '@/src/lib/home/types';
+import { formatMonthLabel } from '@/src/lib/home/builders';
 
 function todayString() {
   return new Date().toISOString().slice(0, 10);
 }
 
+async function fetchCalendarView(
+  token: string | null,
+  month: string,
+  selectedDate: string | null,
+): Promise<CalendarView | null> {
+  if (!token) return null;
+  try {
+    const params = new URLSearchParams({ month });
+    if (selectedDate) params.set('selectedDate', selectedDate);
+    const res = await fetch(`/api/calendar?${params}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 export function useCalendar() {
   const initialDate = todayString();
-  const convex = useConvex();
   const [selectedDate, setSelectedDate] = useState<string | null>(initialDate);
   const [month, setMonth] = useState(initialDate.slice(0, 7));
-
-  const view = useQuery(getCalendarViewQuery, {
-    month,
-    ...(selectedDate ? { selectedDate } : {}),
-    previewDays: 30,
-  });
+  const [view, setView] = useState<CalendarView | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const monthDate = useMemo(() => parseISO(`${month}-01`), [month]);
+
+  const loadView = useCallback(async () => {
+    const user = await db.getAuth();
+    const token = (user as any)?._token ?? null;
+    setIsLoading(true);
+    const result = await fetchCalendarView(token, month, selectedDate);
+    setView(result);
+    setIsLoading(false);
+  }, [month, selectedDate]);
+
+  useEffect(() => {
+    loadView();
+  }, [loadView]);
 
   const selectDate = (nextDate: string | null) => {
     if (!nextDate) {
@@ -51,31 +66,25 @@ export function useCalendar() {
   };
 
   return {
-    isLoading: view === undefined,
+    isLoading,
     month: view?.month ?? month,
-    monthLabel: view?.monthLabel ?? format(monthDate, "MMMM yyyy"),
+    monthLabel: view?.monthLabel ?? format(monthDate, 'MMMM yyyy'),
     selectedDate: view?.selectedDate ?? selectedDate,
     days: view?.days ?? [],
     agenda: view?.agenda ?? [],
     milestones: view?.milestones ?? [],
     selectDate,
     goToPreviousMonth: () => {
-      setMonthAndSelection(format(addMonths(monthDate, -1), "yyyy-MM"));
+      setMonthAndSelection(format(addMonths(monthDate, -1), 'yyyy-MM'));
     },
     goToNextMonth: () => {
-      setMonthAndSelection(format(addMonths(monthDate, 1), "yyyy-MM"));
+      setMonthAndSelection(format(addMonths(monthDate, 1), 'yyyy-MM'));
     },
     goToToday: () => {
       const today = todayString();
       setSelectedDate(today);
       setMonth(today.slice(0, 7));
     },
-    refetch: async () => {
-      await convex.query(getCalendarViewQuery, {
-        month,
-        ...(selectedDate ? { selectedDate } : {}),
-        previewDays: 30,
-      });
-    },
+    refetch: loadView,
   };
 }
