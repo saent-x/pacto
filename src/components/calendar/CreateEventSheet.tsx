@@ -1,21 +1,14 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Platform, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Platform, Alert } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import * as Haptics from 'expo-haptics';
-import { ThemedSheet, BottomSheetTextInput } from '@/src/components/ui';
+import { ThemedSheet, BottomSheetTextInput, OptionSelect } from '@/src/components/ui';
 import { useColors } from '@/src/hooks/useColors';
-import { useSession } from '@/src/hooks/useSession';
 import { useTheme } from '@/src/lib/theme';
 import { sheet, useGlass } from '@/src/components/ui/sheetStyles';
-
-const PRIORITIES = [
-  { value: 1, label: 'Low', icon: 'minus' as const },
-  { value: 2, label: 'Med', icon: 'alert-circle' as const },
-  { value: 3, label: 'High', icon: 'alert-triangle' as const },
-];
 
 const CATEGORIES = [
   { label: '\u{1F495} Date night', value: 'Date night' },
@@ -29,13 +22,12 @@ const CATEGORIES = [
 interface Props {
   sheetRef: React.RefObject<BottomSheetModal | null>;
   onSave: (data: { title: string; description: string | null; startsAt: number; endsAt: number | null; category: string | null; location: string | null; priority: number; isPrivate: boolean }) => Promise<void>;
-  event?: { id: string; title: string; description: string | null; startsAt: number; endsAt: number | null; category: string | null; location: string | null; priority: number; isPrivate: boolean };
+  event?: { id: string; title: string; description: string | null; startsAt: number; endsAt: number | null; category: string | null };
 }
 
 export function CreateEventSheet({ sheetRef, onSave, event }: Props) {
   const C = useColors();
   const { mode } = useTheme();
-  const { activeCouple, profile } = useSession();
 
   const [title, setTitle] = useState(event?.title ?? '');
   const [description, setDescription] = useState(event?.description ?? '');
@@ -46,9 +38,6 @@ export function CreateEventSheet({ sheetRef, onSave, event }: Props) {
   const [showEndDate, setShowEndDate] = useState(false);
   const [showEndTime, setShowEndTime] = useState(false);
   const [category, setCategory] = useState(event?.category ?? '');
-  const [location, setLocation] = useState(event?.location ?? '');
-  const [priority, setPriority] = useState(event?.priority ?? 0);
-  const [isPrivate, setIsPrivate] = useState(event?.isPrivate ?? false);
   const [saving, setSaving] = useState(false);
   const sessionKey = event ? `edit:${event.id}` : 'create';
   const sessionKeyRef = useRef(sessionKey);
@@ -56,7 +45,6 @@ export function CreateEventSheet({ sheetRef, onSave, event }: Props) {
   const isEdit = !!event;
 
   const { glassBg, glassBorder } = useGlass();
-  const activeBg = C.primaryMuted;
 
   useEffect(() => {
     if (sessionKeyRef.current === sessionKey) {
@@ -73,9 +61,6 @@ export function CreateEventSheet({ sheetRef, onSave, event }: Props) {
     setShowEndDate(false);
     setShowEndTime(false);
     setCategory(event?.category ?? '');
-    setLocation(event?.location ?? '');
-    setPriority(event?.priority ?? 0);
-    setIsPrivate(event?.isPrivate ?? false);
   }, [event, sessionKey]);
 
   const handleSave = useCallback(async () => {
@@ -91,9 +76,9 @@ export function CreateEventSheet({ sheetRef, onSave, event }: Props) {
         startsAt: startsAt.getTime(),
         endsAt: endsAt ? endsAt.getTime() : null,
         category: category || null,
-        location: location.trim() || null,
-        priority,
-        isPrivate,
+        location: null,
+        priority: 0,
+        isPrivate: false,
       });
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       sheetRef.current?.dismiss();
@@ -103,9 +88,6 @@ export function CreateEventSheet({ sheetRef, onSave, event }: Props) {
         setStartsAt(new Date());
         setEndsAt(null);
         setCategory('');
-        setLocation('');
-        setPriority(0);
-        setIsPrivate(false);
       }
     } catch (error) {
       console.warn('[Coupl] Save event failed:', error);
@@ -113,7 +95,7 @@ export function CreateEventSheet({ sheetRef, onSave, event }: Props) {
     } finally {
       setSaving(false);
     }
-  }, [title, description, startsAt, endsAt, category, location, priority, isPrivate, onSave, isEdit, sheetRef]);
+  }, [title, description, startsAt, endsAt, category, onSave, isEdit, sheetRef]);
 
   const closeAllPickers = () => {
     setShowStartDate(false);
@@ -297,96 +279,16 @@ export function CreateEventSheet({ sheetRef, onSave, event }: Props) {
           )}
         </View>
 
-        {/* Category — horizontal scroll glass chips */}
+        {/* Category */}
         <View style={sheet.section}>
           <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Category</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={sheet.chipRow}>
-              {CATEGORIES.map((cat) => {
-                const active = category === cat.value;
-                return (
-                  <TouchableOpacity
-                    key={cat.value}
-                    style={[
-                      sheet.chip,
-                      { backgroundColor: active ? activeBg : glassBg, borderColor: active ? C.primary : glassBorder },
-                    ]}
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      setCategory(category === cat.value ? '' : cat.value);
-                    }}
-                  >
-                    <Text style={[sheet.chipText, { color: active ? C.primary : C.haze }]}>
-                      {cat.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </ScrollView>
-        </View>
-
-        {/* Location */}
-        <View style={sheet.section}>
-          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Location</Text>
-          <View style={[sheet.inputCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
-            <Feather name="map-pin" size={15} color={C.fog} />
-            <BottomSheetTextInput
-              style={[sheet.fieldInput, { color: C.text }]}
-              placeholder="Where?"
-              placeholderTextColor={C.fog}
-              value={location}
-              onChangeText={setLocation}
-            />
-          </View>
-        </View>
-
-        {/* Priority — glass toggles */}
-        <View style={sheet.section}>
-          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Priority</Text>
-          <View style={sheet.toggleRow}>
-            {PRIORITIES.map((p) => {
-              const active = priority === p.value;
-              return (
-                <TouchableOpacity
-                  key={p.value}
-                  style={[
-                    sheet.glassToggle,
-                    { backgroundColor: active ? activeBg : glassBg, borderColor: active ? C.primary : glassBorder },
-                  ]}
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    setPriority(priority === p.value ? 0 : p.value);
-                  }}
-                >
-                  <Feather name={p.icon} size={14} color={active ? C.primary : C.fog} />
-                  <Text style={[sheet.toggleText, { color: active ? C.primary : C.haze }]}>
-                    {p.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Privacy toggle */}
-        <View style={sheet.section}>
-          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Privacy</Text>
-          <TouchableOpacity
-            style={[
-              sheet.privacyToggle,
-              { backgroundColor: isPrivate ? activeBg : glassBg, borderColor: isPrivate ? C.primary : glassBorder },
-            ]}
-            onPress={() => {
-              Haptics.selectionAsync();
-              setIsPrivate((prev) => !prev);
-            }}
-          >
-            <Feather name={isPrivate ? 'lock' : 'unlock'} size={14} color={isPrivate ? C.primary : C.fog} />
-            <Text style={[sheet.privacyText, { color: isPrivate ? C.primary : C.haze }]}>
-              {isPrivate ? 'Private' : 'Shared'}
-            </Text>
-          </TouchableOpacity>
+          <OptionSelect
+            options={CATEGORIES.map((c) => ({ value: c.value, label: c.label }))}
+            selected={category}
+            onSelect={setCategory}
+            accentColor={C.primary}
+            accentBg={C.primaryMuted}
+          />
         </View>
 
       </View>

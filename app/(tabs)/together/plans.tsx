@@ -345,10 +345,6 @@ export default function PlansScreen() {
                   description: editingPlan.description,
                   category: editingPlan.category,
                   targetDate: editingPlan.targetDate,
-                  budget: editingPlan.budget,
-                  status: editingPlan.status,
-                  priority: editingPlan.priority,
-                  isPrivate: editingPlan.isPrivate,
                 }
               : undefined
           }

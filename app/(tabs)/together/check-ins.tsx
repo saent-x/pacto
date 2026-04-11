@@ -149,6 +149,7 @@ export default function CheckInsScreen() {
           }
         >
 
+          <Text style={[styles.sectionLabel, { color: C.textTertiary }]}>HISTORY</Text>
           <Animated.View entering={FadeInDown.duration(320).delay(120)} style={styles.historySection}>
             {visibleCheckIns.length > 0 ? (
               <View style={styles.listWrap}>
@@ -211,8 +212,9 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     ...Typography.overline,
-    letterSpacing: 2.4,
-    marginBottom: Spacing.xs,
+    letterSpacing: 2,
+    paddingHorizontal: Spacing['2xl'],
+    marginVertical: Spacing.md,
   },
   listWrap: {
     paddingBottom: Spacing['2xl'],

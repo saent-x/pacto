@@ -104,11 +104,13 @@ function DailyVerse({
   source: "remote" | "fallback";
 }) {
   const C = useColors();
+  const { mode } = useTheme();
+  const verseBg = mode === "dark" ? C.card : "rgba(184, 90, 66, 0.05)";
   return (
     <Animated.View entering={FadeInDown.duration(500).delay(200)}>
       <View style={[styles.verse, {}]}>
         <View style={[styles.verseMark, { backgroundColor: C.primary }]} />
-        <View style={[styles.verseBody, { backgroundColor: C.card }]}>
+        <View style={[styles.verseBody, { backgroundColor: verseBg }]}>
           <Text style={[styles.verseText, { color: C.text }]}>"{text}"</Text>
           <Text style={[styles.verseRef, { color: C.primary }]}>
             {reference}
@@ -280,9 +282,12 @@ function SharedMemories({
 
 function DailyPulseCard() {
   const C = useColors();
+  const { mode } = useTheme();
   const { myTodayCheckIn, partnerTodayCheckIn, createOrUpdate, isSubmitting } = useCheckIns();
   const myMood = getCheckInMoodMeta(myTodayCheckIn?.mood);
   const partnerMood = getCheckInMoodMeta(partnerTodayCheckIn?.mood);
+
+  const pulseBg = mode === "dark" ? C.card : "rgba(106, 94, 154, 0.06)";
 
   const handleSelect = useCallback(
     async (moodId: string) => {
@@ -294,7 +299,7 @@ function DailyPulseCard() {
 
   return (
     <Animated.View entering={FadeInDown.duration(450).delay(240)}>
-      <View style={[styles.pulseCard, { backgroundColor: C.card, borderColor: C.border }]}>
+      <View style={[styles.pulseCard, { backgroundColor: pulseBg, borderColor: C.border }]}>
         <View style={styles.pulseHeader}>
           <Text style={[styles.pulseEyebrow, { color: C.mood }]}>How are you feeling?</Text>
           {myMood ? (
@@ -318,8 +323,8 @@ function DailyPulseCard() {
                   style={[
                     styles.pulseMoodCircle,
                     {
-                      backgroundColor: isMine ? C.moodLight : isPartner ? C.primaryMuted : C.surface,
-                      borderColor: isMine ? C.mood : isPartner ? C.primary : "transparent",
+                      backgroundColor: isMine ? C.moodLight : isPartner ? C.primaryMuted : mode === "dark" ? C.surface : "rgba(0,0,0,0.06)",
+                      borderColor: isMine ? C.mood : isPartner ? C.primary : mode === "dark" ? "transparent" : "rgba(0,0,0,0.08)",
                     },
                   ]}
                 >

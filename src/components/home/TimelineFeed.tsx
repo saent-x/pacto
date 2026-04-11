@@ -50,7 +50,7 @@ export function TimelineFeed({ timeline, isLoading, onPressItem }: Props) {
   const glassBg = mode === "dark" ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.06)";
   const glassBorder = mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.10)";
   const timelineRowBg =
-    mode === "dark" ? "rgba(255,255,255,0.035)" : "rgba(0,0,0,0.02)";
+    mode === "dark" ? "rgba(255,255,255,0.035)" : "rgba(0,0,0,0.05)";
 
   return (
     <View style={styles.wrapper}>
@@ -162,13 +162,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     gap: Spacing.md,
     borderBottomWidth: 0,
-    borderRadius: 10,
+    borderRadius: 0,
   },
   taskRow: {
     flexDirection: "row",
     alignItems: "stretch",
     overflow: "hidden",
-    borderRadius: 10,
+    borderRadius: 0,
     minHeight: 60,
     paddingRight: Spacing.lg,
     gap: Spacing.md,

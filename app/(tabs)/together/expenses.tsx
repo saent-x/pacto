@@ -479,7 +479,9 @@ export default function ExpensesScreen() {
 
             return (
               <Animated.View
+                key={item._id}
                 entering={FadeInDown.duration(400).delay(150 + index * 50)}
+                style={{ marginBottom: Spacing.sm }}
               >
                 <Swipeable
                   renderLeftActions={renderEditAction(item)}
@@ -581,8 +583,8 @@ const styles = StyleSheet.create({
   sectionLabel: {
     ...Typography.overline,
     letterSpacing: 2,
-    marginBottom: Spacing.md,
-    paddingHorizontal: Spacing["2xl"],
+    paddingHorizontal: Spacing['2xl'],
+    marginVertical: Spacing.md,
   },
 
   // Expense card
@@ -591,7 +593,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 14,
-    marginBottom: Spacing.sm,
   },
   settledCard: {
     marginBottom: Spacing.xs,
