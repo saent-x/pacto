@@ -62,7 +62,7 @@ export function useMilestones() {
       const updates: Record<string, unknown> = {};
       if (input.title !== undefined) updates.title = input.title;
       if (input.date !== undefined) updates.date = input.date;
-      if (input.description !== undefined) updates.description = input.description ?? undefined;
+      if (input.description !== undefined) updates.description = input.description ?? null;
       if (input.icon !== undefined) updates.icon = input.icon;
       await db.transact(db.tx.milestones[milestoneId].update(updates));
     },

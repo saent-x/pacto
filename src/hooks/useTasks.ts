@@ -191,7 +191,7 @@ export function useTasks() {
       const txns: any[] = [
         db.tx.tasks[task.id].update({
           isCompleted: isNowCompleted,
-          completedAt: isNowCompleted ? Date.now() : undefined,
+          completedAt: isNowCompleted ? Date.now() : null,
           updatedAt: Date.now(),
         }),
       ];
@@ -304,7 +304,7 @@ export function useTaskItems(categoryId: string | null) {
       const txns: any[] = [
         db.tx.tasks[task.id].update({
           isCompleted: isNowCompleted,
-          completedAt: isNowCompleted ? Date.now() : undefined,
+          completedAt: isNowCompleted ? Date.now() : null,
           updatedAt: Date.now(),
         }),
       ];

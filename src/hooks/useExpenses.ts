@@ -68,7 +68,7 @@ export function useExpenses() {
       if (input.amount !== undefined) updates.amount = input.amount;
       if (input.currency !== undefined) updates.currency = input.currency;
       if (input.splitType !== undefined) updates.splitType = input.splitType;
-      if (input.splitAmount !== undefined) updates.splitAmount = input.splitAmount ?? undefined;
+      if (input.splitAmount !== undefined) updates.splitAmount = input.splitAmount ?? null;
       if (input.category !== undefined) updates.category = input.category;
       if (input.date !== undefined) updates.date = input.date;
       const txns: any[] = [db.tx.expenses[expenseId].update(updates)];

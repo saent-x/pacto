@@ -93,8 +93,8 @@ export function useCheckIns() {
         if (existing) {
           await db.transact(
             db.tx.checkIns[existing.id].update({
-              mood: input.mood ?? undefined,
-              note: input.note ? await encrypt(input.note) : undefined,
+              mood: input.mood ?? null,
+              note: input.note ? await encrypt(input.note) : null,
               isPrivate: input.isPrivate,
               updatedAt: now,
             }),

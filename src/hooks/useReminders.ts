@@ -109,16 +109,17 @@ export function useReminders() {
   const toggleComplete = useCallback(
     async (reminder: Reminder) => {
       const isNowCompleted = !reminder.is_completed;
-      await db.transact(
+      const txns: any[] = [
         db.tx.reminders[reminder.id].update({
           isCompleted: isNowCompleted,
-          completedAt: isNowCompleted ? Date.now() : undefined,
+          completedAt: isNowCompleted ? Date.now() : null,
           updatedAt: Date.now(),
         }),
-      );
+      ];
       if (isNowCompleted && userId) {
-        await db.transact(db.tx.reminders[reminder.id].link({ completedBy: userId }));
+        txns.push(db.tx.reminders[reminder.id].link({ completedBy: userId }));
       }
+      await db.transact(txns);
     },
     [userId],
   );

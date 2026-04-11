@@ -78,7 +78,7 @@ export function useAuthActions() {
           })
           .link({ user: user.id, couple: couple.id }),
         db.tx.couples[couple.id].update({
-          inviteCode: undefined,
+          inviteCode: null,
           updatedAt: now,
         }),
       ]);

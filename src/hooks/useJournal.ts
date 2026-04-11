@@ -109,9 +109,9 @@ export function useJournal() {
   const update = useCallback(
     async (entryId: string, input: Partial<EntryInput> & { mediaUrls?: string[]; media_urls?: string[] }) => {
       const updates: Record<string, unknown> = { updatedAt: Date.now() };
-      if (input.title !== undefined) updates.title = input.title ? await encrypt(input.title) : undefined;
+      if (input.title !== undefined) updates.title = input.title ? await encrypt(input.title) : null;
       if (input.body !== undefined) updates.body = await encrypt(input.body!);
-      if (input.mood !== undefined) updates.mood = input.mood ?? undefined;
+      if (input.mood !== undefined) updates.mood = input.mood ?? null;
       if (input.is_private !== undefined) updates.isPrivate = input.is_private;
       if (input.entry_date !== undefined) updates.entryDate = input.entry_date;
       const urls = input.mediaUrls ?? input.media_urls;

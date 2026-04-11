@@ -58,10 +58,10 @@ export function usePlans(statuses?: string[]) {
     async (planId: string, input: Partial<PlanInput>) => {
       const updates: Record<string, unknown> = { updatedAt: Date.now() };
       if (input.title !== undefined) updates.title = input.title;
-      if (input.description !== undefined) updates.description = input.description ?? undefined;
-      if (input.category !== undefined) updates.category = input.category ?? undefined;
-      if (input.targetDate !== undefined) updates.targetDate = input.targetDate ?? undefined;
-      if (input.budget !== undefined) updates.budget = input.budget ?? undefined;
+      if (input.description !== undefined) updates.description = input.description ?? null;
+      if (input.category !== undefined) updates.category = input.category ?? null;
+      if (input.targetDate !== undefined) updates.targetDate = input.targetDate ?? null;
+      if (input.budget !== undefined) updates.budget = input.budget ?? null;
       if (input.status !== undefined) updates.status = input.status;
       if (input.priority !== undefined) updates.priority = input.priority;
       if (input.isPrivate !== undefined) updates.isPrivate = input.isPrivate;

@@ -97,9 +97,9 @@ export function useWishlistItems(wishlistId: string | null) {
     async (itemId: string, input: Partial<WishlistItemInput>) => {
       const updates: Record<string, unknown> = {};
       if (input.title !== undefined) updates.title = input.title;
-      if (input.description !== undefined) updates.description = input.description ?? undefined;
-      if (input.url !== undefined) updates.url = input.url ?? undefined;
-      if (input.price !== undefined) updates.price = input.price ?? undefined;
+      if (input.description !== undefined) updates.description = input.description ?? null;
+      if (input.url !== undefined) updates.url = input.url ?? null;
+      if (input.price !== undefined) updates.price = input.price ?? null;
       if (input.priority !== undefined) updates.priority = input.priority;
       await db.transact(db.tx.wishlistItems[itemId].update(updates));
     },
