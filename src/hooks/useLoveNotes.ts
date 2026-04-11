@@ -1,55 +1,26 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useConvex, useMutation, useQuery } from 'convex/react';
-import { makeFunctionReference } from 'convex/server';
-
+import { db, id } from '@/src/lib/instant';
 import { useSession } from './useSession';
 import { useEncryption } from './useEncryption';
-
-type LoveNoteDoc = {
-  _id: string;
-  coupleId: string;
-  authorId: string;
-  body: string;
-  isPrivate: boolean;
-  createdAt: number;
-  updatedAt: number;
-};
 
 type LoveNoteInput = {
   body: string;
   isPrivate?: boolean;
 };
 
-const listLoveNotesQuery = makeFunctionReference<'query', {}, LoveNoteDoc[]>(
-  'loveNotes:listLoveNotes',
-);
-const createLoveNoteMutation = makeFunctionReference<
-  'mutation',
-  { body: string; isPrivate?: boolean },
-  LoveNoteDoc
->('loveNotes:createLoveNote');
-const updateLoveNoteMutation = makeFunctionReference<
-  'mutation',
-  { noteId: string; body?: string; isPrivate?: boolean },
-  LoveNoteDoc
->('loveNotes:updateLoveNote');
-const deleteLoveNoteMutation = makeFunctionReference<
-  'mutation',
-  { noteId: string },
-  null
->('loveNotes:deleteLoveNote');
-
 export function useLoveNotes() {
-  const { activeCouple } = useSession();
-  const convex = useConvex();
+  const { activeCouple, user } = useSession();
+  const coupleId = activeCouple?.couple?.id ?? null;
   const { encrypt, decrypt, hasKey } = useEncryption();
-  const rows = useQuery(listLoveNotesQuery, activeCouple ? {} : 'skip');
-  const createLoveNote = useMutation(createLoveNoteMutation);
-  const updateLoveNoteFn = useMutation(updateLoveNoteMutation);
-  const deleteLoveNote = useMutation(deleteLoveNoteMutation);
 
-  const rawNotes = useMemo(() => rows ?? [], [rows]);
-  const [notes, setNotes] = useState<LoveNoteDoc[]>([]);
+  const { data, isLoading: queryLoading } = db.useQuery(
+    coupleId
+      ? { loveNotes: { $: { where: { 'couple.id': coupleId } } } }
+      : null,
+  );
+
+  const rawNotes = useMemo(() => data?.loveNotes ?? [], [data?.loveNotes]);
+  const [notes, setNotes] = useState<typeof rawNotes>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -67,46 +38,50 @@ export function useLoveNotes() {
     } else {
       setNotes(rawNotes);
     }
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [rawNotes, decrypt, hasKey]);
 
   const create = useCallback(
-    async (data: LoveNoteInput) => {
-      await createLoveNote({
-        body: await encrypt(data.body),
-        isPrivate: data.isPrivate,
-      });
+    async (input: LoveNoteInput) => {
+      if (!coupleId || !user) return;
+      const noteId = id();
+      const now = Date.now();
+      await db.transact(
+        db.tx.loveNotes[noteId]
+          .update({
+            body: await encrypt(input.body),
+            isPrivate: input.isPrivate ?? false,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .link({ couple: coupleId, author: user.id }),
+      );
     },
-    [createLoveNote, encrypt],
+    [coupleId, user, encrypt],
   );
 
   const update = useCallback(
-    async (id: string, data: Partial<LoveNoteInput>) => {
-      await updateLoveNoteFn({
-        noteId: id,
-        ...(data.body !== undefined ? { body: await encrypt(data.body!) } : {}),
-        ...(data.isPrivate !== undefined ? { isPrivate: data.isPrivate } : {}),
-      });
+    async (noteId: string, input: Partial<LoveNoteInput>) => {
+      const updates: Record<string, unknown> = { updatedAt: Date.now() };
+      if (input.body !== undefined) updates.body = await encrypt(input.body);
+      if (input.isPrivate !== undefined) updates.isPrivate = input.isPrivate;
+      await db.transact(db.tx.loveNotes[noteId].update(updates));
     },
-    [updateLoveNoteFn, encrypt],
+    [encrypt],
   );
 
-  const remove = useCallback(
-    async (id: string) => {
-      await deleteLoveNote({ noteId: id });
-    },
-    [deleteLoveNote],
-  );
+  const remove = useCallback(async (noteId: string) => {
+    await db.transact(db.tx.loveNotes[noteId].delete());
+  }, []);
 
   return {
     notes,
-    isLoading: !!activeCouple && rows === undefined,
+    isLoading: !!coupleId && queryLoading,
     create,
     update,
     remove,
-    refetch: async () => {
-      if (!activeCouple) return;
-      await convex.query(listLoveNotesQuery, {});
-    },
+    refetch: async () => {},
   };
 }

@@ -1,21 +1,7 @@
 import { useCallback, useMemo } from 'react';
-import { useConvex, useMutation, useQuery } from 'convex/react';
-import { makeFunctionReference } from 'convex/server';
 import { format } from 'date-fns';
-
+import { db, id } from '@/src/lib/instant';
 import { useSession } from './useSession';
-
-type MilestoneDoc = {
-  _id: string;
-  coupleId: string;
-  title: string;
-  date: string;
-  description: string | null;
-  icon: string;
-  createdBy: string;
-  createdAt: number;
-  _creationTime?: number;
-};
 
 type MilestoneInput = {
   title: string;
@@ -24,45 +10,17 @@ type MilestoneInput = {
   icon?: string;
 };
 
-const listMilestonesQuery = makeFunctionReference<'query', {}, MilestoneDoc[]>(
-  'milestones:listMilestones',
-);
-const createMilestoneMutation = makeFunctionReference<
-  'mutation',
-  {
-    title: string;
-    date: string;
-    description?: string | null;
-    icon?: string;
-  },
-  MilestoneDoc
->('milestones:createMilestone');
-const updateMilestoneMutation = makeFunctionReference<
-  'mutation',
-  {
-    milestoneId: string;
-    title?: string;
-    date?: string;
-    description?: string | null;
-    icon?: string;
-  },
-  MilestoneDoc
->('milestones:updateMilestone');
-const deleteMilestoneMutation = makeFunctionReference<
-  'mutation',
-  { milestoneId: string },
-  null
->('milestones:deleteMilestone');
-
 export function useMilestones() {
-  const { activeCouple } = useSession();
-  const convex = useConvex();
-  const rows = useQuery(listMilestonesQuery, activeCouple ? {} : 'skip');
-  const createMilestone = useMutation(createMilestoneMutation);
-  const updateMilestoneFn = useMutation(updateMilestoneMutation);
-  const deleteMilestone = useMutation(deleteMilestoneMutation);
+  const { activeCouple, user } = useSession();
+  const coupleId = activeCouple?.couple?.id ?? null;
 
-  const milestones = useMemo(() => rows ?? [], [rows]);
+  const { data, isLoading: queryLoading } = db.useQuery(
+    coupleId
+      ? { milestones: { $: { where: { 'couple.id': coupleId } } } }
+      : null,
+  );
+
+  const milestones = useMemo(() => data?.milestones ?? [], [data?.milestones]);
 
   const today = format(new Date(), 'yyyy-MM-dd');
   const upcoming = useMemo(
@@ -75,48 +33,48 @@ export function useMilestones() {
   );
 
   const create = useCallback(
-    async (data: MilestoneInput) => {
-      await createMilestone({
-        title: data.title,
-        date: data.date,
-        description: data.description ?? null,
-        icon: data.icon,
-      });
+    async (input: MilestoneInput) => {
+      if (!coupleId || !user) return;
+      const milestoneId = id();
+      await db.transact(
+        db.tx.milestones[milestoneId]
+          .update({
+            title: input.title,
+            date: input.date,
+            description: input.description ?? undefined,
+            icon: input.icon ?? '🎉',
+            createdAt: Date.now(),
+          })
+          .link({ couple: coupleId, createdBy: user.id }),
+      );
     },
-    [createMilestone],
+    [coupleId, user],
   );
 
   const update = useCallback(
-    async (id: string, data: Partial<MilestoneInput>) => {
-      await updateMilestoneFn({
-        milestoneId: id,
-        ...(data.title !== undefined ? { title: data.title } : {}),
-        ...(data.date !== undefined ? { date: data.date } : {}),
-        ...(data.description !== undefined ? { description: data.description ?? null } : {}),
-        ...(data.icon !== undefined ? { icon: data.icon } : {}),
-      });
+    async (milestoneId: string, input: Partial<MilestoneInput>) => {
+      const updates: Record<string, unknown> = {};
+      if (input.title !== undefined) updates.title = input.title;
+      if (input.date !== undefined) updates.date = input.date;
+      if (input.description !== undefined) updates.description = input.description ?? undefined;
+      if (input.icon !== undefined) updates.icon = input.icon;
+      await db.transact(db.tx.milestones[milestoneId].update(updates));
     },
-    [updateMilestoneFn],
+    [],
   );
 
-  const remove = useCallback(
-    async (id: string) => {
-      await deleteMilestone({ milestoneId: id });
-    },
-    [deleteMilestone],
-  );
+  const remove = useCallback(async (milestoneId: string) => {
+    await db.transact(db.tx.milestones[milestoneId].delete());
+  }, []);
 
   return {
     milestones,
     upcoming,
     past,
-    isLoading: !!activeCouple && rows === undefined,
+    isLoading: !!coupleId && queryLoading,
     create,
     update,
     remove,
-    refetch: async () => {
-      if (!activeCouple) return;
-      await convex.query(listMilestonesQuery, {});
-    },
+    refetch: async () => {},
   };
 }

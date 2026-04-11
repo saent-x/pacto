@@ -1,26 +1,6 @@
 import { useCallback, useMemo } from 'react';
-import { useConvex, useMutation, useQuery } from 'convex/react';
-import { makeFunctionReference } from 'convex/server';
-
+import { db, id } from '@/src/lib/instant';
 import { useSession } from './useSession';
-
-type PlanDoc = {
-  _id: string;
-  coupleId: string;
-  createdBy: string;
-  title: string;
-  description: string | null;
-  category: string | null;
-  targetDate: string | null;
-  status: string;
-  notes: string | null;
-  coverImageUrl: string | null;
-  budget: number | null;
-  priority: number;
-  isPrivate: boolean;
-  createdAt: number;
-  updatedAt: number;
-};
 
 export type PlanInput = {
   title: string;
@@ -33,103 +13,73 @@ export type PlanInput = {
   isPrivate?: boolean;
 };
 
-const listPlansQuery = makeFunctionReference<'query', { statuses?: string[] }, PlanDoc[]>(
-  'plans:listPlans',
-);
-const createPlanMutation = makeFunctionReference<
-  'mutation',
-  {
-    title: string;
-    description?: string | null;
-    category?: string | null;
-    targetDate?: string | null;
-    budget?: number | null;
-    status?: string;
-    priority?: number;
-    isPrivate?: boolean;
-  },
-  PlanDoc
->('plans:createPlan');
-const updatePlanMutation = makeFunctionReference<
-  'mutation',
-  {
-    planId: string;
-    title?: string;
-    description?: string | null;
-    category?: string | null;
-    targetDate?: string | null;
-    budget?: number | null;
-    status?: string;
-    priority?: number;
-    isPrivate?: boolean;
-  },
-  PlanDoc
->('plans:updatePlan');
-const deletePlanMutation = makeFunctionReference<
-  'mutation',
-  { planId: string },
-  null
->('plans:deletePlan');
-
 export function usePlans(statuses?: string[]) {
-  const { activeCouple } = useSession();
-  const convex = useConvex();
-  const rows = useQuery(listPlansQuery, activeCouple ? { ...(statuses ? { statuses } : {}) } : 'skip');
-  const createPlan = useMutation(createPlanMutation);
-  const updatePlan = useMutation(updatePlanMutation);
-  const deletePlan = useMutation(deletePlanMutation);
+  const { activeCouple, user } = useSession();
+  const coupleId = activeCouple?.couple?.id ?? null;
 
-  const plans = useMemo(() => rows ?? [], [rows]);
+  const { data, isLoading: queryLoading } = db.useQuery(
+    coupleId
+      ? { plans: { $: { where: { 'couple.id': coupleId } } } }
+      : null,
+  );
+
+  const plans = useMemo(() => {
+    const raw = data?.plans ?? [];
+    if (!statuses || statuses.length === 0) return raw;
+    return raw.filter((p) => statuses.includes(p.status));
+  }, [data?.plans, statuses]);
 
   const create = useCallback(
-    async (data: PlanInput) => {
-      await createPlan({
-        title: data.title,
-        description: data.description ?? null,
-        category: data.category ?? null,
-        targetDate: data.targetDate ?? null,
-        budget: data.budget ?? null,
-        status: data.status,
-        priority: data.priority,
-        isPrivate: data.isPrivate,
-      });
+    async (input: PlanInput) => {
+      if (!coupleId || !user) return;
+      const planId = id();
+      const now = Date.now();
+      await db.transact(
+        db.tx.plans[planId]
+          .update({
+            title: input.title,
+            description: input.description ?? undefined,
+            category: input.category ?? undefined,
+            targetDate: input.targetDate ?? undefined,
+            budget: input.budget ?? undefined,
+            status: input.status ?? 'active',
+            priority: input.priority ?? 0,
+            isPrivate: input.isPrivate ?? false,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .link({ couple: coupleId, createdBy: user.id }),
+      );
     },
-    [createPlan],
+    [coupleId, user],
   );
 
   const update = useCallback(
-    async (planId: string, data: Partial<PlanInput>) => {
-      await updatePlan({
-        planId,
-        ...(data.title !== undefined ? { title: data.title } : {}),
-        ...(data.description !== undefined ? { description: data.description ?? null } : {}),
-        ...(data.category !== undefined ? { category: data.category ?? null } : {}),
-        ...(data.targetDate !== undefined ? { targetDate: data.targetDate ?? null } : {}),
-        ...(data.budget !== undefined ? { budget: data.budget ?? null } : {}),
-        ...(data.status !== undefined ? { status: data.status } : {}),
-        ...(data.priority !== undefined ? { priority: data.priority } : {}),
-        ...(data.isPrivate !== undefined ? { isPrivate: data.isPrivate } : {}),
-      });
+    async (planId: string, input: Partial<PlanInput>) => {
+      const updates: Record<string, unknown> = { updatedAt: Date.now() };
+      if (input.title !== undefined) updates.title = input.title;
+      if (input.description !== undefined) updates.description = input.description ?? undefined;
+      if (input.category !== undefined) updates.category = input.category ?? undefined;
+      if (input.targetDate !== undefined) updates.targetDate = input.targetDate ?? undefined;
+      if (input.budget !== undefined) updates.budget = input.budget ?? undefined;
+      if (input.status !== undefined) updates.status = input.status;
+      if (input.priority !== undefined) updates.priority = input.priority;
+      if (input.isPrivate !== undefined) updates.isPrivate = input.isPrivate;
+      await db.transact(db.tx.plans[planId].update(updates));
     },
-    [updatePlan],
+    [],
   );
 
-  const remove = useCallback(
-    async (planId: string) => {
-      await deletePlan({ planId });
-    },
-    [deletePlan],
-  );
+  const remove = useCallback(async (planId: string) => {
+    await db.transact(db.tx.plans[planId].delete());
+  }, []);
 
   return {
     plans,
-    isLoading: !!activeCouple && rows === undefined,
+    isLoading: !!coupleId && queryLoading,
     create,
     update,
     remove,
-    refetch: async () => {
-      if (!activeCouple) return;
-      await convex.query(listPlansQuery, { ...(statuses ? { statuses } : {}) });
-    },
+    refetch: async () => {},
   };
 }
