@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { format } from 'date-fns';
-import { useConvex, useMutation, useQuery } from 'convex/react';
-import { makeFunctionReference } from 'convex/server';
-
+import { db, id } from '@/src/lib/instant';
 import { useEncryption } from './useEncryption';
 import { useSession } from './useSession';
 
 export type CheckInRecord = {
-  _id: string;
+  id: string;
   authorId: string;
   mood: string | null;
   note: string | null;
@@ -16,30 +14,39 @@ export type CheckInRecord = {
   createdAt: number;
 };
 
-const getCheckInsQuery = makeFunctionReference<'query', { checkInDate?: string }, CheckInRecord[]>(
-  'checkIns:getCheckIns',
-);
-const submitCheckInMutation = makeFunctionReference<
-  'mutation',
-  { mood?: string | null; note?: string | null; isPrivate?: boolean; checkInDate?: string },
-  CheckInRecord
->('checkIns:submitCheckIn');
-const deleteCheckInMutation = makeFunctionReference<'mutation', { checkInId: string }, null>(
-  'checkIns:deleteCheckIn',
-);
-
 export function getLocalDateKey(date: Date = new Date()) {
   return format(date, 'yyyy-MM-dd');
 }
 
 export function useCheckIns() {
-  const convex = useConvex();
-  const { activeCouple } = useSession();
+  const { activeCouple, user } = useSession();
+  const coupleId = activeCouple?.couple?.id ?? null;
+  const userId = user?.id ?? null;
   const { encrypt, decrypt, hasKey } = useEncryption();
   const today = getLocalDateKey();
-  const rawCheckIns = useQuery(getCheckInsQuery, activeCouple ? {} : 'skip');
-  const submitCheckIn = useMutation(submitCheckInMutation);
-  const deleteCheckIn = useMutation(deleteCheckInMutation);
+
+  const { data, isLoading: queryLoading } = db.useQuery(
+    coupleId
+      ? {
+          checkIns: {
+            $: { where: { 'couple.id': coupleId } },
+            author: {},
+          },
+        }
+      : null,
+  );
+
+  const rawCheckIns = useMemo<CheckInRecord[]>(() => {
+    return (data?.checkIns ?? []).map((c) => ({
+      id: c.id,
+      authorId: c.author?.[0]?.id ?? '',
+      mood: c.mood ?? null,
+      note: c.note ?? null,
+      isPrivate: c.isPrivate,
+      checkInDate: c.checkInDate,
+      createdAt: c.createdAt,
+    }));
+  }, [data?.checkIns]);
 
   const [checkIns, setCheckIns] = useState<CheckInRecord[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,11 +54,7 @@ export function useCheckIns() {
 
   useEffect(() => {
     let cancelled = false;
-
-    async function decryptRecords(
-      items: CheckInRecord[] | undefined,
-    ) {
-      if (!items) return;
+    async function decryptRecords(items: CheckInRecord[]) {
       const decrypted = await Promise.all(
         items.map(async (item) => ({
           ...item,
@@ -60,62 +63,84 @@ export function useCheckIns() {
       );
       if (!cancelled) setCheckIns(decrypted);
     }
-
     if (hasKey) {
       void decryptRecords(rawCheckIns);
     } else {
-      setCheckIns(rawCheckIns ?? []);
+      setCheckIns(rawCheckIns);
     }
-
     return () => {
       cancelled = true;
     };
   }, [decrypt, hasKey, rawCheckIns]);
 
   const createOrUpdate = useCallback(
-    async (data: { mood: string | null; note: string | null; isPrivate: boolean; checkInDate?: string }) => {
-      if (submittingRef.current) return;
+    async (input: {
+      mood: string | null;
+      note: string | null;
+      isPrivate: boolean;
+      checkInDate?: string;
+    }) => {
+      if (!coupleId || !userId || submittingRef.current) return;
       submittingRef.current = true;
       setIsSubmitting(true);
       try {
-        await submitCheckIn({
-          mood: data.mood,
-          note: data.note ? await encrypt(data.note) : data.note,
-          isPrivate: data.isPrivate,
-          checkInDate: data.checkInDate ?? today,
-        });
+        const dateKey = input.checkInDate ?? today;
+        // Find existing check-in for this user+date to upsert
+        const existing = checkIns.find(
+          (c) => c.authorId === userId && c.checkInDate === dateKey,
+        );
+        const now = Date.now();
+        if (existing) {
+          await db.transact(
+            db.tx.checkIns[existing.id].update({
+              mood: input.mood ?? undefined,
+              note: input.note ? await encrypt(input.note) : undefined,
+              isPrivate: input.isPrivate,
+              updatedAt: now,
+            }),
+          );
+        } else {
+          const checkInId = id();
+          await db.transact(
+            db.tx.checkIns[checkInId]
+              .update({
+                mood: input.mood ?? undefined,
+                note: input.note ? await encrypt(input.note) : undefined,
+                checkInDate: dateKey,
+                isPrivate: input.isPrivate,
+                createdAt: now,
+                updatedAt: now,
+              })
+              .link({ couple: coupleId, author: userId }),
+          );
+        }
       } finally {
         submittingRef.current = false;
         setIsSubmitting(false);
       }
     },
-    [encrypt, submitCheckIn, today],
+    [coupleId, userId, encrypt, today, checkIns],
   );
 
-  const remove = useCallback(
-    async (checkInId: string) => {
-      await deleteCheckIn({ checkInId });
-    },
-    [deleteCheckIn],
-  );
+  const remove = useCallback(async (checkInId: string) => {
+    await db.transact(db.tx.checkIns[checkInId].delete());
+  }, []);
 
   const myTodayCheckIn = useMemo(
     () =>
       checkIns.find(
         (record) =>
-          record.checkInDate === today &&
-          record.authorId === activeCouple?.membership?.userId,
+          record.checkInDate === today && record.authorId === userId,
       ) ?? null,
-    [activeCouple?.membership?.userId, checkIns, today],
+    [userId, checkIns, today],
   );
   const partnerTodayCheckIn = useMemo(
     () =>
       checkIns.find(
         (record) =>
-          record.checkInDate === today &&
-          record.authorId !== activeCouple?.membership?.userId,
+          record.checkInDate === today && record.authorId !== userId,
       ) ?? null,
-    [activeCouple?.membership?.userId, checkIns, today],
+    [userId, checkIns, today],
   );
 
   return {
@@ -124,13 +149,10 @@ export function useCheckIns() {
     todayCheckIns: checkIns.filter((record) => record.checkInDate === today),
     myTodayCheckIn,
     partnerTodayCheckIn,
-    isLoading: !!activeCouple && rawCheckIns === undefined,
+    isLoading: !!coupleId && queryLoading,
     isSubmitting,
     createOrUpdate,
     remove,
-    refetch: async () => {
-      if (!activeCouple) return;
-      await convex.query(getCheckInsQuery, {});
-    },
+    refetch: async () => {},
   };
 }

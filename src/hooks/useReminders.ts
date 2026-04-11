@@ -1,7 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { useConvex, useMutation, useQuery } from 'convex/react';
-import { makeFunctionReference } from 'convex/server';
-
+import { db, id } from '@/src/lib/instant';
 import { useSession } from './useSession';
 import type { Reminder } from '@/src/types/database';
 
@@ -15,146 +13,128 @@ type ReminderInput = {
   assigned_to?: string | null;
 };
 
-type ReminderDoc = {
-  _id: string;
-  coupleId: string;
-  createdBy: string;
-  assignedTo: string | null;
-  title: string;
-  description: string | null;
-  dueAt: number;
-  recurrence: string | null;
-  isCompleted: boolean;
-  completedAt: number | null;
-  completedBy: string | null;
-  priority: number;
-  category: string | null;
-  createdAt: number;
-  updatedAt: number;
-};
-
-const getRemindersQuery = makeFunctionReference<'query', {}, ReminderDoc[]>('reminders:getReminders');
-const createReminderMutation = makeFunctionReference<
-  'mutation',
-  {
-    title: string;
-    description?: string | null;
-    dueAt: number;
-    recurrence?: string | null;
-    priority?: number;
-    category?: string | null;
-    assignedTo?: string | null;
-  },
-  ReminderDoc
->('reminders:createReminder');
-const updateReminderMutation = makeFunctionReference<
-  'mutation',
-  {
-    reminderId: string;
-    title?: string;
-    description?: string | null;
-    dueAt?: number;
-    recurrence?: string | null;
-    priority?: number;
-    category?: string | null;
-    assignedTo?: string | null;
-  },
-  ReminderDoc
->('reminders:updateReminder');
-const toggleReminderMutation = makeFunctionReference<'mutation', { reminderId: string }, ReminderDoc>('reminders:toggleReminder');
-const deleteReminderMutation = makeFunctionReference<'mutation', { reminderId: string }, null>('reminders:deleteReminder');
-
-function toReminderRow(reminder: ReminderDoc): Reminder {
+function toReminderRow(reminder: any): Reminder {
   return {
-    id: reminder._id,
-    couple_id: reminder.coupleId,
-    created_by: reminder.createdBy,
-    assigned_to: reminder.assignedTo,
+    id: reminder.id,
+    couple_id: reminder.couple?.[0]?.id ?? '',
+    created_by: reminder.createdBy?.[0]?.id ?? '',
+    assigned_to: reminder.assignedTo?.[0]?.id ?? null,
     title: reminder.title,
-    description: reminder.description,
+    description: reminder.description ?? null,
     due_at: new Date(reminder.dueAt).toISOString(),
-    recurrence: reminder.recurrence,
+    recurrence: reminder.recurrence ?? null,
     is_completed: reminder.isCompleted,
-    completed_at: reminder.completedAt === null ? null : new Date(reminder.completedAt).toISOString(),
-    completed_by: reminder.completedBy,
+    completed_at: reminder.completedAt == null ? null : new Date(reminder.completedAt).toISOString(),
+    completed_by: reminder.completedBy?.[0]?.id ?? null,
     priority: reminder.priority,
-    category: reminder.category,
+    category: reminder.category ?? null,
     created_at: new Date(reminder.createdAt).toISOString(),
     updated_at: new Date(reminder.updatedAt).toISOString(),
   };
 }
 
 export function useReminders() {
-  const { activeCouple } = useSession();
-  const convex = useConvex();
-  const rows = useQuery(getRemindersQuery, activeCouple ? {} : 'skip');
-  const createReminder = useMutation(createReminderMutation);
-  const updateReminderFn = useMutation(updateReminderMutation);
-  const toggleReminder = useMutation(toggleReminderMutation);
-  const deleteReminder = useMutation(deleteReminderMutation);
+  const { activeCouple, user } = useSession();
+  const coupleId = activeCouple?.couple?.id ?? null;
+  const userId = user?.id ?? null;
 
-  const reminders = useMemo(() => (rows ?? []).map(toReminderRow), [rows]);
+  const { data, isLoading: queryLoading } = db.useQuery(
+    coupleId
+      ? {
+          reminders: {
+            $: { where: { 'couple.id': coupleId }, order: { dueAt: 'asc' } },
+            couple: {},
+            createdBy: {},
+            assignedTo: {},
+            completedBy: {},
+          },
+        }
+      : null,
+  );
+
+  const reminders = useMemo(
+    () => (data?.reminders ?? []).map(toReminderRow),
+    [data?.reminders],
+  );
 
   const create = useCallback(
-    async (data: ReminderInput) => {
-      await createReminder({
-        title: data.title,
-        description: data.description ?? null,
-        dueAt: new Date(data.due_at).getTime(),
-        recurrence: data.recurrence ?? null,
-        priority: data.priority ?? 0,
-        category: data.category ?? null,
-        assignedTo: data.assigned_to ?? null,
-      });
+    async (input: ReminderInput) => {
+      if (!coupleId || !userId) return;
+      const reminderId = id();
+      const now = Date.now();
+      const txn = db.tx.reminders[reminderId]
+        .update({
+          title: input.title,
+          description: input.description ?? undefined,
+          dueAt: new Date(input.due_at).getTime(),
+          recurrence: input.recurrence ?? undefined,
+          isCompleted: false,
+          priority: input.priority ?? 0,
+          category: input.category ?? undefined,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .link({ couple: coupleId, createdBy: userId });
+      const txns: any[] = [txn];
+      if (input.assigned_to) {
+        txns.push(db.tx.reminders[reminderId].link({ assignedTo: input.assigned_to }));
+      }
+      await db.transact(txns);
     },
-    [createReminder],
+    [coupleId, userId],
   );
 
   const update = useCallback(
-    async (id: string, data: Partial<ReminderInput>) => {
-      await updateReminderFn({
-        reminderId: id,
-        ...(data.title !== undefined ? { title: data.title } : {}),
-        ...(data.description !== undefined ? { description: data.description ?? null } : {}),
-        ...(data.due_at !== undefined ? { dueAt: new Date(data.due_at).getTime() } : {}),
-        ...(data.recurrence !== undefined ? { recurrence: data.recurrence ?? null } : {}),
-        ...(data.priority !== undefined ? { priority: data.priority } : {}),
-        ...(data.category !== undefined ? { category: data.category ?? null } : {}),
-        ...(data.assigned_to !== undefined ? { assignedTo: data.assigned_to ?? null } : {}),
-      });
+    async (reminderId: string, input: Partial<ReminderInput>) => {
+      const updates: Record<string, unknown> = { updatedAt: Date.now() };
+      if (input.title !== undefined) updates.title = input.title;
+      if (input.description !== undefined) updates.description = input.description ?? undefined;
+      if (input.due_at !== undefined) updates.dueAt = new Date(input.due_at).getTime();
+      if (input.recurrence !== undefined) updates.recurrence = input.recurrence ?? undefined;
+      if (input.priority !== undefined) updates.priority = input.priority;
+      if (input.category !== undefined) updates.category = input.category ?? undefined;
+      const txns: any[] = [db.tx.reminders[reminderId].update(updates)];
+      if (input.assigned_to !== undefined) {
+        txns.push(db.tx.reminders[reminderId].link({ assignedTo: input.assigned_to }));
+      }
+      await db.transact(txns);
     },
-    [updateReminderFn],
+    [],
   );
 
-  const remove = useCallback(
-    async (id: string) => {
-      await deleteReminder({ reminderId: id });
-    },
-    [deleteReminder],
-  );
+  const remove = useCallback(async (reminderId: string) => {
+    await db.transact(db.tx.reminders[reminderId].delete());
+  }, []);
 
   const toggleComplete = useCallback(
     async (reminder: Reminder) => {
-      await toggleReminder({ reminderId: reminder.id });
+      const isNowCompleted = !reminder.is_completed;
+      await db.transact(
+        db.tx.reminders[reminder.id].update({
+          isCompleted: isNowCompleted,
+          completedAt: isNowCompleted ? Date.now() : undefined,
+          updatedAt: Date.now(),
+        }),
+      );
+      if (isNowCompleted && userId) {
+        await db.transact(db.tx.reminders[reminder.id].link({ completedBy: userId }));
+      }
     },
-    [toggleReminder],
+    [userId],
   );
 
-  const upcoming = reminders.filter((reminder) => !reminder.is_completed);
-  const completed = reminders.filter((reminder) => reminder.is_completed);
+  const upcoming = reminders.filter((r) => !r.is_completed);
+  const completed = reminders.filter((r) => r.is_completed);
 
   return {
     reminders,
     upcoming,
     completed,
-    isLoading: !!activeCouple && rows === undefined,
+    isLoading: !!coupleId && queryLoading,
     create,
     update,
     remove,
     toggleComplete,
-    refetch: async () => {
-      if (!activeCouple) return;
-      await convex.query(getRemindersQuery, {});
-    },
+    refetch: async () => {},
   };
 }
