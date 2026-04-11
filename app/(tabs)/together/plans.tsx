@@ -304,7 +304,7 @@ export default function PlansScreen() {
                   entering={FadeInDown.duration(400).delay(groupIdx * 100)}
                   style={styles.groupSection}
                 >
-                  <Text style={[styles.groupLabel, { color: C.textTertiary,paddingHorizontal: Spacing.lg }]}>
+                  <Text style={[styles.groupLabel, { color: C.textTertiary, paddingHorizontal: Spacing['2xl'] }]}>
                     {group.label.toUpperCase()}
                   </Text>
                   <View style={styles.groupCards}>
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.md,
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing["2xl"],
     paddingVertical: Spacing.md,
   },
   userNameBrush: {

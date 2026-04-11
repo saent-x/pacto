@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   flex: { flex: 1 },
   content: {
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing['2xl'],
     paddingTop: Spacing.xl,
     paddingBottom: 120,
   },
@@ -187,6 +187,7 @@ const styles = StyleSheet.create({
 
   // Profile
   profileSection: {
+    paddingHorizontal: Spacing['2xl'],
     paddingTop: Spacing['2xl'],
     paddingBottom: Spacing.xl,
     overflow: 'hidden',

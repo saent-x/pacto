@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Feather } from '@expo/vector-icons';
+import { format } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { ThemedSheet, BottomSheetTextInput } from '@/src/components/ui';
 import { useColors } from '@/src/hooks/useColors';
@@ -87,9 +88,14 @@ export function CreateCheckInSheet({ sheetRef, onSave, checkIn }: Props) {
       footer={footer}
     >
       <View style={sheet.form}>
-        <Text style={[sheet.sheetLabel, { color: C.mood }]}>
-          HOW ARE YOU?
-        </Text>
+        <View style={sheet.dateHeader}>
+          <Text style={[sheet.sheetLabel, { color: C.mood }]}>
+            {isEdit ? 'EDIT CHECK-IN' : 'NEW CHECK-IN'}
+          </Text>
+          <Text style={[sheet.dateDisplay, { color: C.primary }]}>
+            {format(new Date(), 'EEEE, MMMM d')}
+          </Text>
+        </View>
 
         {/* Mood grid — circular glass toggles in a row */}
         <View style={[sheet.section, { alignItems: 'center' }]}>

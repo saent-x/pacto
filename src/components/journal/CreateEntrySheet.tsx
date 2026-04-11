@@ -240,9 +240,9 @@ export function CreateEntrySheet({ sheetRef, onSave, onUploadImage, entry, readO
   /* ─── Footer ─── */
   const footer = !readOnly ? (
     <TouchableOpacity onPress={handleSave} disabled={saving || uploadingImage} activeOpacity={0.8}
-      style={[styles.saveBtn, { backgroundColor: C.journal }]}>
+      style={[sheet.saveBtn, { backgroundColor: C.journal }]}>
       <Feather name={isEdit ? 'check' : 'feather'} size={18} color={C.ink} />
-      <Text style={[styles.saveBtnText, { color: C.ink }]}>
+      <Text style={[sheet.saveBtnText, { color: C.ink }]}>
         {uploadingImage ? 'Uploading image...' : saving ? 'Saving...' : isEdit ? 'Update Entry' : 'Save Entry'}
       </Text>
     </TouchableOpacity>
@@ -271,7 +271,7 @@ export function CreateEntrySheet({ sheetRef, onSave, onUploadImage, entry, readO
 
         {/* Title */}
         <BottomSheetTextInput
-          style={[styles.titleInput, { color: C.text }]}
+          style={[sheet.titleInput, { color: C.text }]}
           placeholder="Give it a title..."
           placeholderTextColor={C.fog}
           value={title}
@@ -280,15 +280,15 @@ export function CreateEntrySheet({ sheetRef, onSave, onUploadImage, entry, readO
         />
 
         {/* ─── Images ─── */}
-        <Pressable onPress={dismiss} style={styles.section}>
+        <Pressable onPress={dismiss} style={sheet.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: C.textTertiary }]}>Images</Text>
+            <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Images</Text>
             {!readOnly && (
               <TouchableOpacity activeOpacity={0.8} onPress={() => void handleAddImage()}
-                style={[styles.addMediaBtn, { backgroundColor: glassBg, borderColor: glassBorder }]}>
+                style={[sheet.glassPill, styles.addMediaBtn, { backgroundColor: glassBg, borderColor: glassBorder }]}>
                 {uploadingImage ? <ActivityIndicator size="small" color={C.journal} /> : (
                   <><Feather name="image" size={15} color={C.journal} />
-                  <Text style={[styles.addMediaText, { color: C.journal }]}>Add</Text></>
+                  <Text style={[sheet.glassPillText, { color: C.journal }]}>Add</Text></>
                 )}
               </TouchableOpacity>
             )}
@@ -313,7 +313,7 @@ export function CreateEntrySheet({ sheetRef, onSave, onUploadImage, entry, readO
         </Pressable>
 
         {/* ─── Editor ─── */}
-        <View style={styles.section}
+        <View style={sheet.section}
           onTouchEnd={(e) => { if (e.target === e.currentTarget) dismiss(); }}>
           {/* Toolbar */}
           {!readOnly && (
@@ -335,7 +335,7 @@ export function CreateEntrySheet({ sheetRef, onSave, onUploadImage, entry, readO
           )}
 
           {/* Editor body */}
-          <View style={[styles.bodyCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
+          <View style={[sheet.bodyCard, styles.bodyCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
             {readOnly ? (
               entry?.body && !isEmptyHtml(entry.body) ? (
                 <MarkdownText value={entry.body} />
@@ -350,8 +350,8 @@ export function CreateEntrySheet({ sheetRef, onSave, onUploadImage, entry, readO
         </View>
 
         {/* ─── Mood ─── */}
-        <Pressable onPress={dismiss} style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: C.textTertiary }]}>Mood</Text>
+        <Pressable onPress={dismiss} style={sheet.section}>
+          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Mood</Text>
           <View style={styles.moodRow}>
             {MOODS.map((m) => {
               const active = mood === m.icon;
@@ -397,9 +397,6 @@ export function CreateEntrySheet({ sheetRef, onSave, onUploadImage, entry, readO
 /* ═══════════════════════════════════ STYLES ═══════════════════════════════════ */
 
 const styles = StyleSheet.create({
-  titleInput: { ...Typography.title, padding: 0 },
-
-  section: { gap: Spacing.md },
   toolbar: {
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 14,
@@ -434,13 +431,9 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
-  sectionTitle: { ...Typography.overline, letterSpacing: 2 },
   addMediaBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    borderWidth: StyleSheet.hairlineWidth, borderRadius: BorderRadius.full,
-    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
+    paddingVertical: 8,
   },
-  addMediaText: { ...Typography.captionMedium },
   mediaRow: { gap: Spacing.md },
   mediaWrap: { position: 'relative' },
   mediaThumb: {
@@ -472,10 +465,4 @@ const styles = StyleSheet.create({
   privacyText: { flex: 1 },
   privacyLabel: { ...Typography.bodyMedium },
   privacyHint: { ...Typography.small },
-
-  saveBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: Spacing.sm, paddingVertical: 16, borderRadius: 14,
-  },
-  saveBtnText: { ...Typography.subheading, fontSize: 15 },
 });

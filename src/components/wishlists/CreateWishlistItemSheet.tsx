@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Feather } from '@expo/vector-icons';
+import { format } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { ThemedSheet, BottomSheetTextInput } from '@/src/components/ui';
 import { useColors } from '@/src/hooks/useColors';
@@ -107,9 +108,14 @@ export function CreateWishlistItemSheet({ sheetRef, onSave, item }: Props) {
   return (
     <ThemedSheet sheetRef={sheetRef} scrollable footer={footer}>
       <View style={sheet.form}>
-        <Text style={[sheet.sheetLabel, { color: C.wishlists }]}>
-          {isEdit ? 'EDIT ITEM' : 'DROP A HINT'}
-        </Text>
+        <View style={sheet.dateHeader}>
+          <Text style={[sheet.sheetLabel, { color: C.wishlists }]}>
+            {isEdit ? 'EDIT ITEM' : 'DROP A HINT'}
+          </Text>
+          <Text style={[sheet.dateDisplay, { color: C.primary }]}>
+            {format(new Date(), 'EEEE, MMMM d')}
+          </Text>
+        </View>
 
         <BottomSheetTextInput
           style={[sheet.titleInput, { color: C.text }]}

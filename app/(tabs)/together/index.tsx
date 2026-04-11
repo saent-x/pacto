@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   flex: { flex: 1 },
   scroll: {
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing['2xl'],
     paddingBottom: 120,
     gap: Spacing.xl,
   },

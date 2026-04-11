@@ -121,7 +121,7 @@ export default function MilestonesScreen() {
   const headerComponent = (
     <View>
       {upcoming.length > 0 && (
-        <Text style={[styles.sectionLabel, { color: C.textTertiary, paddingHorizontal: Spacing.lg }]}>UPCOMING</Text>
+        <Text style={[styles.sectionLabel, { color: C.textTertiary, paddingHorizontal: Spacing['2xl'] }]}>UPCOMING</Text>
       )}
     </View>
   );
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing['2xl'],
     paddingVertical: Spacing.md,
   },
   headerText: {
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   emptyWrap: {
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing['2xl'],
     height: 400,
   },
 

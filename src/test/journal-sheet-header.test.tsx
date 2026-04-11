@@ -12,7 +12,7 @@ const { act } = TestRenderer;
 
 vi.mock('@/src/components/ui', () => ({
   ThemedSheet: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
-  BottomSheetTextInput: () => null,
+  BottomSheetTextInput: (props: any) => <input {...props} />,
 }));
 
 vi.mock('@/src/hooks/useColors', () => ({
@@ -89,6 +89,26 @@ describe('CreateEntrySheet header', () => {
 
     expect(StyleSheet.flatten(date.props.style)).toMatchObject(
       StyleSheet.flatten(sheet.dateDisplay),
+    );
+  });
+
+  it('uses the shared bottom-sheet title input style', () => {
+    let tree: any;
+
+    act(() => {
+      tree = TestRenderer.create(
+        <CreateEntrySheet
+          sheetRef={{ current: null }}
+          onSave={vi.fn(async () => {})}
+        />,
+      );
+    });
+
+    const titleInput = tree.root.findByProps({ placeholder: 'Give it a title...' });
+
+    expect(titleInput.props.style[0]).toBe(sheet.titleInput);
+    expect(StyleSheet.flatten(titleInput.props.style)).toMatchObject(
+      StyleSheet.flatten(sheet.titleInput),
     );
   });
 });

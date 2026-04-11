@@ -533,7 +533,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing['2xl'],
     paddingVertical: Spacing.md,
   },
   headerText: {
@@ -559,7 +559,7 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   emptyWrap: {
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing['2xl'],
     height: 400,
   },
 
