@@ -1,4 +1,4 @@
-import type { HomeView, TimelineItem } from "@/convex/timeline";
+import type { HomeView, TimelineItem } from "@/src/lib/home/types";
 
 import { Feather } from "@expo/vector-icons";
 import { format } from "date-fns";

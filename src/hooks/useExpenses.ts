@@ -20,11 +20,14 @@ export function useExpenses() {
 
   const { data, isLoading: queryLoading } = db.useQuery(
     coupleId
-      ? { expenses: { $: { where: { 'couple.id': coupleId } } } }
+      ? { expenses: { $: { where: { 'couple.id': coupleId } }, paidBy: {} } }
       : null,
   );
 
-  const expenses = useMemo(() => data?.expenses ?? [], [data?.expenses]);
+  const expenses = useMemo(() => (data?.expenses ?? []).map((e) => ({
+    ...e,
+    paidBy: (e.paidBy as any)?.[0]?.id ?? (e.paidBy as any)?.id ?? '',
+  })), [data?.expenses]);
   const unsettled = useMemo(
     () => expenses.filter((e) => !e.isSettled),
     [expenses],

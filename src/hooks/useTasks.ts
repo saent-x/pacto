@@ -177,7 +177,7 @@ export function useTasks() {
       if (input.due_date !== undefined) updates.dueDate = input.due_date ?? undefined;
       if (input.priority !== undefined) updates.priority = input.priority;
       const txns: any[] = [db.tx.tasks[taskId].update(updates)];
-      if (input.assigned_to !== undefined) {
+      if (input.assigned_to !== undefined && input.assigned_to !== null) {
         txns.push(db.tx.tasks[taskId].link({ assignedTo: input.assigned_to }));
       }
       await db.transact(txns);
@@ -211,6 +211,7 @@ export function useTasks() {
     allTasks,
     taskFeed,
     getTaskFeed,
+    lists: [] as { id: string; name: string; icon?: string | null; color: string }[],
     isLoading: !!coupleId && queryLoading,
     createTask,
     createTaskInDefaultList: createTask,
@@ -218,5 +219,109 @@ export function useTasks() {
     toggleTask,
     deleteTask,
     refetch: async () => {},
+  };
+}
+
+/**
+ * Returns tasks for a specific category (formerly "list").
+ */
+export function useTaskItems(categoryId: string | null) {
+  const { activeCouple, user } = useSession();
+  const coupleId = activeCouple?.couple?.id ?? null;
+  const userId = user?.id ?? null;
+
+  const { data, isLoading: queryLoading } = db.useQuery(
+    coupleId && categoryId
+      ? {
+          tasks: {
+            $: { where: { 'couple.id': coupleId, category: categoryId } },
+            couple: {},
+            createdBy: {},
+            assignedTo: {},
+            completedBy: {},
+          },
+        }
+      : null,
+  );
+
+  const tasks = useMemo(
+    () => (data?.tasks ?? []).map(toTaskRow),
+    [data?.tasks],
+  );
+
+  const counts = useMemo(() => {
+    const completed = tasks.filter((t) => t.is_completed).length;
+    return { total: tasks.length, completed };
+  }, [tasks]);
+
+  const create = useCallback(
+    async (input: { title: string; notes?: string | null; due_date?: string | null; priority?: number; assigned_to?: string | null }) => {
+      if (!coupleId || !userId || !categoryId) return;
+      const taskId = id();
+      const now = Date.now();
+      const txn = db.tx.tasks[taskId]
+        .update({
+          title: input.title,
+          notes: input.notes ?? undefined,
+          category: categoryId,
+          isCompleted: false,
+          priority: input.priority ?? 0,
+          sortOrder: tasks.length,
+          dueDate: input.due_date ?? undefined,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .link({ couple: coupleId, createdBy: userId });
+      const txns: any[] = [txn];
+      if (input.assigned_to) {
+        txns.push(db.tx.tasks[taskId].link({ assignedTo: input.assigned_to }));
+      }
+      await db.transact(txns);
+    },
+    [coupleId, userId, categoryId, tasks.length],
+  );
+
+  const update = useCallback(
+    async (taskId: string, input: Partial<{ title: string; notes: string | null; due_date: string | null; priority: number; assigned_to: string | null; category: string }>) => {
+      const updates: Record<string, unknown> = { updatedAt: Date.now() };
+      if (input.title !== undefined) updates.title = input.title;
+      if (input.notes !== undefined) updates.notes = input.notes ?? undefined;
+      if (input.category !== undefined) updates.category = input.category ?? undefined;
+      if (input.due_date !== undefined) updates.dueDate = input.due_date ?? undefined;
+      if (input.priority !== undefined) updates.priority = input.priority;
+      const txns: any[] = [db.tx.tasks[taskId].update(updates)];
+      if (input.assigned_to !== undefined && input.assigned_to !== null) {
+        txns.push(db.tx.tasks[taskId].link({ assignedTo: input.assigned_to }));
+      }
+      await db.transact(txns);
+    },
+    [],
+  );
+
+  const toggleComplete = useCallback(
+    async (task: Pick<Task, 'id' | 'is_completed'>) => {
+      const isNowCompleted = !task.is_completed;
+      const txns: any[] = [
+        db.tx.tasks[task.id].update({
+          isCompleted: isNowCompleted,
+          completedAt: isNowCompleted ? Date.now() : undefined,
+          updatedAt: Date.now(),
+        }),
+      ];
+      if (isNowCompleted && userId) {
+        txns.push(db.tx.tasks[task.id].link({ completedBy: userId }));
+      }
+      await db.transact(txns);
+    },
+    [userId],
+  );
+
+  return {
+    tasks,
+    counts,
+    isLoading: !!coupleId && !!categoryId && queryLoading,
+    create,
+    update,
+    toggleComplete,
   };
 }

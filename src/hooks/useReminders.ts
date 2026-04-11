@@ -94,7 +94,7 @@ export function useReminders() {
       if (input.priority !== undefined) updates.priority = input.priority;
       if (input.category !== undefined) updates.category = input.category ?? undefined;
       const txns: any[] = [db.tx.reminders[reminderId].update(updates)];
-      if (input.assigned_to !== undefined) {
+      if (input.assigned_to !== undefined && input.assigned_to !== null) {
         txns.push(db.tx.reminders[reminderId].link({ assignedTo: input.assigned_to }));
       }
       await db.transact(txns);

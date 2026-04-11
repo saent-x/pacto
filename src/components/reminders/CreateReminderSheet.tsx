@@ -32,7 +32,7 @@ export function CreateReminderSheet({ sheetRef, onSave, reminder }: Props) {
   const { mode } = useTheme();
   const { activeCouple, profile } = useSession();
   const partner = activeCouple?.partner ?? null;
-  const currentUserId = profile?._id ?? null;
+  const currentUserId = profile?.id ?? null;
 
   const [title, setTitle] = useState(reminder?.title ?? '');
   const [description, setDescription] = useState(reminder?.description ?? '');
@@ -308,7 +308,7 @@ export function CreateReminderSheet({ sheetRef, onSave, reminder }: Props) {
               {[
                 { value: null, label: 'Both', icon: 'users' as const },
                 { value: currentUserId, label: 'Me', icon: 'user' as const },
-                { value: partner._id, label: partner.displayName?.split(' ')[0] ?? 'Partner', icon: 'heart' as const },
+                { value: partner.id, label: partner.displayName?.split(' ')[0] ?? 'Partner', icon: 'heart' as const },
               ].map((opt) => {
                 const active = assignedTo === opt.value;
                 return (

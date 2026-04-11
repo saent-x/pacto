@@ -40,7 +40,7 @@ export async function GET(request: Request) {
   }
   if (!user) return Response.json(emptyHomeView());
 
-  const { memberships } = await db.query({
+  const { memberships } = await (db as any).query({
     memberships: {
       $: { where: { 'user.id': user.id, status: 'active' } },
       couple: {},
@@ -48,8 +48,8 @@ export async function GET(request: Request) {
     },
   });
 
-  const activeMembership = memberships[0];
-  const couple = activeMembership?.couple?.[0];
+  const activeMembership = (memberships as any[])[0];
+  const couple = activeMembership?.couple?.[0] ?? activeMembership?.couple;
   if (!couple) return Response.json(emptyHomeView());
 
   const coupleId = couple.id;
@@ -57,7 +57,7 @@ export async function GET(request: Request) {
   const previewDays = Number(url.searchParams.get('previewDays') ?? '7');
   const now = Date.now();
 
-  const data = await db.query({
+  const data = await (db as any).query({
     events: { $: { where: { 'couple.id': coupleId } } },
     plans: { $: { where: { 'couple.id': coupleId } } },
     rituals: { $: { where: { 'couple.id': coupleId } } },
@@ -65,22 +65,22 @@ export async function GET(request: Request) {
     reminders: { $: { where: { 'couple.id': coupleId } } },
     tasks: { $: { where: { 'couple.id': coupleId } } },
     milestones: { $: { where: { 'couple.id': coupleId } } },
-    journalEntries: { $: { where: { 'couple.id': coupleId } }, media: {} },
+    journalEntries: { $: { where: { 'couple.id': coupleId } } },
     loveNotes: { $: { where: { 'couple.id': coupleId } } },
   });
 
   // Resolve partner
-  const { memberships: allMembers } = await db.query({
+  const { memberships: allMembers } = await (db as any).query({
     memberships: {
       $: { where: { 'couple.id': coupleId, status: 'active' } },
       user: {},
     },
   });
 
-  const partnerMembership = allMembers.find(
-    (m) => m.user?.[0]?.id !== user!.id,
+  const partnerMembership = (allMembers as any[]).find(
+    (m: any) => (m.user?.[0]?.id ?? m.user?.id) !== user!.id,
   );
-  const partnerUser = partnerMembership?.user?.[0];
+  const partnerUser = partnerMembership?.user?.[0] ?? partnerMembership?.user ?? null;
 
   const presence: PresenceInfo = {
     coupleId,

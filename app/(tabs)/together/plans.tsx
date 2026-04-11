@@ -28,12 +28,12 @@ import { matchesSelectedDate } from "@/src/lib/togetherDateFilter";
 import { togetherItemContainerStyle, togetherListContainerStyle } from "./_itemStyles";
 
 interface PlanRecord {
-  _id: string;
+  id: string;
   title: string;
-  description: string | null;
-  category: string | null;
-  targetDate: string | null;
-  budget: number | null;
+  description?: string | null;
+  category?: string | null;
+  targetDate?: string | null;
+  budget?: number | null;
   status: string;
   priority: number;
   isPrivate: boolean;
@@ -91,7 +91,7 @@ export default function PlansScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              await remove(plan._id);
+              await remove(plan.id);
             } catch {
               Alert.alert("Error", "Could not delete plan.");
             }
@@ -114,7 +114,7 @@ export default function PlansScreen() {
       isPrivate: boolean;
     }) => {
       if (editingPlan) {
-        await update(editingPlan._id, data);
+        await update(editingPlan.id, data);
         setEditingPlan(null);
         return;
       }
@@ -242,7 +242,7 @@ export default function PlansScreen() {
 
     return (
       <Animated.View
-        key={plan._id}
+        key={plan.id}
         entering={FadeInDown.duration(400).delay(index * 60)}
       >
         <Swipeable
@@ -340,12 +340,12 @@ export default function PlansScreen() {
           plan={
             editingPlan
               ? {
-                  id: editingPlan._id,
+                  id: editingPlan.id,
                   title: editingPlan.title,
-                  description: editingPlan.description,
-                  category: editingPlan.category,
-                  targetDate: editingPlan.targetDate,
-                  budget: editingPlan.budget,
+                  description: editingPlan.description ?? null,
+                  category: editingPlan.category ?? null,
+                  targetDate: editingPlan.targetDate ?? null,
+                  budget: editingPlan.budget ?? null,
                   status: editingPlan.status,
                   priority: editingPlan.priority,
                   isPrivate: editingPlan.isPrivate,

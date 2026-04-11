@@ -12,7 +12,7 @@ import { useSession } from '@/src/hooks/useSession';
 import { useTheme } from '@/src/lib/theme';
 import { Typography } from '@/src/constants/typography';
 import { Spacing, BorderRadius } from '@/src/constants/spacing';
-import { Task, TaskList } from '@/src/types/database';
+import { Task } from '@/src/types/database';
 
 const PRIORITIES = [
   { value: 1, label: 'Low', icon: 'minus' as const },
@@ -20,8 +20,8 @@ const PRIORITIES = [
   { value: 3, label: 'High', icon: 'alert-triangle' as const },
 ];
 
-type TaskComposerList = Pick<TaskList, 'id' | 'name' | 'icon' | 'color'>;
-type TaskComposerTask = Pick<Task, 'title' | 'notes' | 'due_date' | 'priority' | 'assigned_to' | 'list_id'>;
+type TaskComposerList = { id: string; name: string; icon?: string | null; color: string };
+type TaskComposerTask = Pick<Task, 'title' | 'notes' | 'due_date' | 'priority' | 'assigned_to' | 'category'>;
 export const AUTO_CREATE_TASK_LIST_ID = '__auto_create_first_list__';
 
 export type TaskComposerSaveInput = {
@@ -30,7 +30,7 @@ export type TaskComposerSaveInput = {
   due_date: string | null;
   priority: number;
   assigned_to: string | null;
-  list_id: string;
+  category: string;
 };
 
 function getDefaultDueDate() {
@@ -47,7 +47,7 @@ export function buildTaskComposerState({
   selectedListId?: string | null;
 }) {
   const resolvedListId =
-    task?.list_id ??
+    task?.category ??
     selectedListId ??
     (lists.length === 0 ? AUTO_CREATE_TASK_LIST_ID : lists[0]?.id ?? null);
   const selectedList = lists.find((list) => list.id === resolvedListId) ?? null;
@@ -94,7 +94,7 @@ export function CreateTaskSheet({ sheetRef, onSave, task, lists = [], selectedLi
   const { mode } = useTheme();
   const { activeCouple, profile } = useSession();
   const partner = activeCouple?.partner ?? null;
-  const currentUserId = profile?._id ?? null;
+  const currentUserId = profile?.id ?? null;
 
   const initialState = buildTaskComposerState({ task, lists, selectedListId });
   const initialSelectedListId = initialState.selectedListId;
@@ -152,7 +152,7 @@ export function CreateTaskSheet({ sheetRef, onSave, task, lists = [], selectedLi
         due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : null,
         priority,
         assigned_to: assignedTo,
-        list_id: listId,
+        category: listId,
       });
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       sheetRef.current?.dismiss();
@@ -336,7 +336,7 @@ export function CreateTaskSheet({ sheetRef, onSave, task, lists = [], selectedLi
               {[
                 { value: null, label: 'Either', icon: 'users' as const },
                 { value: currentUserId, label: 'Me', icon: 'user' as const },
-                { value: partner._id, label: partner.displayName?.split(' ')[0] ?? 'Partner', icon: 'heart' as const },
+                { value: partner.id, label: partner.displayName?.split(' ')[0] ?? 'Partner', icon: 'heart' as const },
               ].map((opt) => {
                 const active = assignedTo === opt.value;
                 return (

@@ -33,7 +33,7 @@ export default function JournalScreen() {
   const C = useColors();
   const router = useRouter();
   const { profile } = useSession();
-  const userId = profile?._id ?? null;
+  const userId = profile?.id ?? null;
   const { entries, isLoading, filter, setFilter, create, update, remove, refetch, uploadJournalImage } = useJournal();
 
   const sheetRef = useRef<BottomSheetModal>(null);

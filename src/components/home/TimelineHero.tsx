@@ -1,4 +1,4 @@
-import type { HomeView } from "@/convex/timeline";
+import type { HomeView } from "@/src/lib/home/types";
 import type { HomeQuickAction } from "@/src/hooks/useHomeTimeline";
 
 import { Feather } from "@expo/vector-icons";

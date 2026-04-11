@@ -1,4 +1,4 @@
-import type { MilestoneStripItem, TimelineItem } from "@/convex/timeline";
+import type { MilestoneStripItem, TimelineItem } from "@/src/lib/home/types";
 
 export function routeForTimelineItem(item: TimelineItem): string | null {
   switch (item.type) {

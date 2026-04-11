@@ -100,6 +100,7 @@ const _schema = i.schema({
       mood: i.string().optional(),
       isPrivate: i.boolean(),
       tags: i.json(),
+      mediaUrls: i.json().optional(),
       entryDate: i.string(),
       createdAt: i.number(),
       updatedAt: i.number(),
@@ -238,11 +239,7 @@ const _schema = i.schema({
       forward: { on: 'journalEntries', has: 'one', label: 'author' },
       reverse: { on: '$users', has: 'many', label: 'journalEntries' },
     },
-    journalMedia: {
-      forward: { on: 'journalEntries', has: 'many', label: 'media' },
-      reverse: { on: '$files', has: 'one', label: 'journalEntry' },
-    },
-    loveNoteCouple: {
+loveNoteCouple: {
       forward: { on: 'loveNotes', has: 'one', label: 'couple' },
       reverse: { on: 'couples', has: 'many', label: 'loveNotes' },
     },

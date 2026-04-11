@@ -17,7 +17,7 @@ import {
 
 export function useEncryption() {
   const { activeCouple } = useSession();
-  const coupleId = activeCouple?.couple?._id ?? null;
+  const coupleId = activeCouple?.couple?.id ?? null;
   const [hasKey, setHasKey] = useState(false);
 
   useEffect(() => {

@@ -16,11 +16,17 @@ export function useWishlists() {
 
   const { data, isLoading: queryLoading } = db.useQuery(
     coupleId
-      ? { wishlists: { $: { where: { 'couple.id': coupleId } } } }
+      ? { wishlists: { $: { where: { 'couple.id': coupleId } }, createdBy: {} } }
       : null,
   );
 
-  const wishlists = useMemo(() => data?.wishlists ?? [], [data?.wishlists]);
+  const wishlists = useMemo(
+    () => (data?.wishlists ?? []).map((w) => ({
+      ...w,
+      createdBy: (w.createdBy as any)?.[0]?.id ?? (w.createdBy as any)?.id ?? '',
+    })),
+    [data?.wishlists],
+  );
 
   const create = useCallback(
     async (name: string) => {

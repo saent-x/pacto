@@ -15,11 +15,17 @@ export function useLoveNotes() {
 
   const { data, isLoading: queryLoading } = db.useQuery(
     coupleId
-      ? { loveNotes: { $: { where: { 'couple.id': coupleId } } } }
+      ? { loveNotes: { $: { where: { 'couple.id': coupleId } }, author: {} } }
       : null,
   );
 
-  const rawNotes = useMemo(() => data?.loveNotes ?? [], [data?.loveNotes]);
+  const rawNotes = useMemo(
+    () => (data?.loveNotes ?? []).map((n) => ({
+      ...n,
+      authorId: (n.author as any)?.[0]?.id ?? (n.author as any)?.id ?? '',
+    })),
+    [data?.loveNotes],
+  );
   const [notes, setNotes] = useState<typeof rawNotes>([]);
 
   useEffect(() => {

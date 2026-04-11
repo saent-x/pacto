@@ -47,7 +47,7 @@ export default function CheckInsScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            await remove(item._id);
+            await remove(item.id);
           },
         },
       ]);
@@ -153,7 +153,7 @@ export default function CheckInsScreen() {
             {visibleCheckIns.length > 0 ? (
               <View style={styles.listWrap}>
                 {visibleCheckIns.map((item, index) => (
-                  <View key={item._id}>
+                  <View key={item.id}>
                     {renderCheckInItem({ item, index })}
                     <View style={[styles.separator, { backgroundColor: C.border }]} />
                   </View>

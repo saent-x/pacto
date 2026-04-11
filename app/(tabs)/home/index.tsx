@@ -35,7 +35,7 @@ import {
   routeForTimelineItem,
 } from "@/src/lib/homeNavigation";
 import { useSession } from "@/src/hooks/useSession";
-import type { HomeView } from "@/convex/timeline";
+import type { HomeView } from "@/src/lib/home/types";
 
 /* ─── Helpers ─── */
 
@@ -427,7 +427,7 @@ function MilestoneStrip({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.milestoneScroll}
       >
-        {milestones.map((m) => (
+        {(milestones as HomeView["milestones"]).map((m) => (
           <Pressable
             key={m.id}
             accessibilityRole="button"

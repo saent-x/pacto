@@ -57,11 +57,11 @@ export function useAuthActions() {
     joinCoupleByInviteCode: async (inviteCode: string) => {
       if (!user) throw new Error('Not authenticated');
 
-      const { couples } = await db.queryOnce({
+      const result = await db.queryOnce({
         couples: { $: { where: { inviteCode: inviteCode.trim().toUpperCase() } } },
       });
 
-      const couple = couples[0];
+      const couple = (result as any).couples?.[0] ?? (result as any).data?.couples?.[0];
       if (!couple) throw new Error('Invalid invite code.');
 
       const membershipId = id();

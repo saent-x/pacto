@@ -47,26 +47,26 @@ export async function GET(request: Request) {
   }
   if (!user) return Response.json(emptyCalendarView(month, selectedDate));
 
-  const { memberships } = await db.query({
+  const { memberships } = await (db as any).query({
     memberships: {
       $: { where: { 'user.id': user.id, status: 'active' } },
       couple: {},
     },
   });
-  const couple = memberships[0]?.couple?.[0];
+  const couple = (memberships as any[])[0]?.couple?.[0] ?? (memberships as any[])[0]?.couple;
   if (!couple) return Response.json(emptyCalendarView(month, selectedDate));
 
   const coupleId = couple.id;
   const previewDays = Math.max(30, 60);
 
-  const data = await db.query({
+  const data = await (db as any).query({
     events: { $: { where: { 'couple.id': coupleId } } },
     plans: { $: { where: { 'couple.id': coupleId } } },
     rituals: { $: { where: { 'couple.id': coupleId } } },
     reminders: { $: { where: { 'couple.id': coupleId } } },
     tasks: { $: { where: { 'couple.id': coupleId } } },
     milestones: { $: { where: { 'couple.id': coupleId } } },
-    journalEntries: { $: { where: { 'couple.id': coupleId } }, media: {} },
+    journalEntries: { $: { where: { 'couple.id': coupleId } } },
     loveNotes: { $: { where: { 'couple.id': coupleId } } },
   });
 

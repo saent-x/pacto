@@ -19,10 +19,10 @@ import { matchesSelectedDate } from '@/src/lib/togetherDateFilter';
 import { togetherItemContainerStyle, togetherListContainerStyle } from './_itemStyles';
 
 type MilestoneItem = {
-  _id: string;
+  id: string;
   title: string;
   date: string;
-  description: string | null;
+  description?: string | null;
   icon: string;
   createdBy: string;
   createdAt: number;
@@ -75,7 +75,7 @@ export default function MilestonesScreen() {
   const handleCreate = useCallback(
     async (data: { title: string; date: string; description: string | null; icon: string }) => {
       if (editingMilestone) {
-        await update(editingMilestone._id, data);
+        await update(editingMilestone.id, data);
         setEditingMilestone(undefined);
         return;
       }
@@ -92,7 +92,7 @@ export default function MilestonesScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            await remove(item._id);
+            await remove(item.id);
           },
         },
       ]);
@@ -145,7 +145,7 @@ export default function MilestonesScreen() {
 
           {filteredPast.map((item, i) => (
             <Animated.View
-              key={item._id}
+              key={item.id}
               entering={FadeInDown.duration(300).delay(i * 50)}
             >
               <View
@@ -218,10 +218,10 @@ export default function MilestonesScreen() {
             sheetRef={sheetRef}
             onSave={handleCreate}
             milestone={editingMilestone ? {
-              id: editingMilestone._id,
+              id: editingMilestone.id,
               title: editingMilestone.title,
               date: editingMilestone.date,
-              description: editingMilestone.description,
+              description: editingMilestone.description ?? null,
               icon: editingMilestone.icon,
             } : undefined}
           />
@@ -254,7 +254,7 @@ export default function MilestonesScreen() {
         ) : (
           <FlashList
             data={filteredUpcoming}
-            keyExtractor={(item) => item._id}
+            keyExtractor={(item) => item.id}
             contentContainerStyle={[
               styles.listContent,
               togetherListContainerStyle,
@@ -339,10 +339,10 @@ export default function MilestonesScreen() {
           sheetRef={sheetRef}
           onSave={handleCreate}
           milestone={editingMilestone ? {
-            id: editingMilestone._id,
+            id: editingMilestone.id,
             title: editingMilestone.title,
             date: editingMilestone.date,
-            description: editingMilestone.description,
+            description: editingMilestone.description ?? null,
             icon: editingMilestone.icon,
           } : undefined}
         />

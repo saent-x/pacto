@@ -16,11 +16,17 @@ export function useMilestones() {
 
   const { data, isLoading: queryLoading } = db.useQuery(
     coupleId
-      ? { milestones: { $: { where: { 'couple.id': coupleId } } } }
+      ? { milestones: { $: { where: { 'couple.id': coupleId } }, createdBy: {} } }
       : null,
   );
 
-  const milestones = useMemo(() => data?.milestones ?? [], [data?.milestones]);
+  const milestones = useMemo(
+    () => (data?.milestones ?? []).map((m) => ({
+      ...m,
+      createdBy: (m.createdBy as any)?.[0]?.id ?? (m.createdBy as any)?.id ?? '',
+    })),
+    [data?.milestones],
+  );
 
   const today = format(new Date(), 'yyyy-MM-dd');
   const upcoming = useMemo(

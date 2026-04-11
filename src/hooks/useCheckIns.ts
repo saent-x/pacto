@@ -39,7 +39,7 @@ export function useCheckIns() {
   const rawCheckIns = useMemo<CheckInRecord[]>(() => {
     return (data?.checkIns ?? []).map((c) => ({
       id: c.id,
-      authorId: c.author?.[0]?.id ?? '',
+      authorId: (c.author as any)?.[0]?.id ?? (c.author as any)?.id ?? '',
       mood: c.mood ?? null,
       note: c.note ?? null,
       isPrivate: c.isPrivate,

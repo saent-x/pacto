@@ -28,7 +28,7 @@ function toJournalEntryRow(entry: any): JournalEntry {
     body: entry.body,
     mood: entry.mood ?? null,
     is_private: entry.isPrivate,
-    media_urls: (entry.media ?? []).map((f: any) => f.url).filter(Boolean),
+    media_urls: Array.isArray(entry.mediaUrls) ? entry.mediaUrls : [],
     tags: Array.isArray(entry.tags) ? entry.tags : [],
     entry_date: entry.entryDate,
     created_at: new Date(entry.createdAt).toISOString(),
@@ -50,7 +50,6 @@ export function useJournal() {
             $: { where: { 'couple.id': coupleId } },
             couple: {},
             author: {},
-            media: {},
           },
         }
       : null,
@@ -85,7 +84,7 @@ export function useJournal() {
   }, [rawEntries, decrypt, hasKey]);
 
   const create = useCallback(
-    async (input: EntryInput & { mediaFileIds?: string[] }) => {
+    async (input: EntryInput & { mediaUrls?: string[]; media_urls?: string[] }) => {
       if (!coupleId || !userId) return;
       const entryId = id();
       const now = Date.now();
@@ -96,52 +95,35 @@ export function useJournal() {
           mood: input.mood ?? undefined,
           isPrivate: input.is_private ?? false,
           tags: [],
+          mediaUrls: input.mediaUrls ?? input.media_urls ?? [],
           entryDate: input.entry_date,
           createdAt: now,
           updatedAt: now,
         })
         .link({ couple: coupleId, author: userId });
-      const txns: any[] = [txn];
-      if (input.mediaFileIds?.length) {
-        txns.push(
-          db.tx.journalEntries[entryId].link({ media: input.mediaFileIds }),
-        );
-      }
-      await db.transact(txns);
+      await db.transact(txn);
     },
     [coupleId, userId, encrypt],
   );
 
   const update = useCallback(
-    async (entryId: string, input: Partial<EntryInput> & { mediaFileIds?: string[] }) => {
+    async (entryId: string, input: Partial<EntryInput> & { mediaUrls?: string[]; media_urls?: string[] }) => {
       const updates: Record<string, unknown> = { updatedAt: Date.now() };
       if (input.title !== undefined) updates.title = input.title ? await encrypt(input.title) : undefined;
       if (input.body !== undefined) updates.body = await encrypt(input.body!);
       if (input.mood !== undefined) updates.mood = input.mood ?? undefined;
       if (input.is_private !== undefined) updates.isPrivate = input.is_private;
       if (input.entry_date !== undefined) updates.entryDate = input.entry_date;
-      const txns: any[] = [db.tx.journalEntries[entryId].update(updates)];
-      if (input.mediaFileIds?.length) {
-        txns.push(
-          db.tx.journalEntries[entryId].link({ media: input.mediaFileIds }),
-        );
-      }
-      await db.transact(txns);
+      const urls = input.mediaUrls ?? input.media_urls;
+      if (urls !== undefined) updates.mediaUrls = urls;
+      await db.transact(db.tx.journalEntries[entryId].update(updates));
     },
     [encrypt],
   );
 
   const remove = useCallback(async (entryId: string) => {
-    // Delete linked media files first
-    const mediaToDelete = data?.journalEntries
-      ?.find((e: any) => e.id === entryId)
-      ?.media ?? [];
-    const txns: any[] = mediaToDelete.map((file: any) =>
-      db.tx.$files[file.id].delete(),
-    );
-    txns.push(db.tx.journalEntries[entryId].delete());
-    await db.transact(txns);
-  }, [data?.journalEntries]);
+    await db.transact(db.tx.journalEntries[entryId].delete());
+  }, []);
 
   const entries = allEntries.filter((entry) => {
     if (filter === 'shared') return !entry.is_private;

@@ -5,8 +5,8 @@ import { format, parseISO } from "date-fns";
 import { useCallback, useRef, useState } from "react";
 import { Feather } from "@expo/vector-icons";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
-import { useMutation } from "convex/react";
-import { makeFunctionReference } from "convex/server";
+import { db, id } from "@/src/lib/instant";
+import { useSession } from "@/src/hooks/useSession";
 
 import { MiniDateRail } from "@/src/components/calendar/MiniDateRail";
 import { CreateEventSheet } from "@/src/components/calendar/CreateEventSheet";
@@ -15,8 +15,6 @@ import { BorderRadius, Spacing } from "@/src/constants/spacing";
 import { Typography } from "@/src/constants/typography";
 import { useCalendar } from "@/src/hooks/useCalendar";
 import { useColors } from "@/src/hooks/useColors";
-
-const createEventMutation = makeFunctionReference<"mutation", {}>("events:createEvent");
 
 function formatAgendaTime(occursAt: number | null) {
   if (!occursAt) {
@@ -28,10 +26,9 @@ function formatAgendaTime(occursAt: number | null) {
 export default function CalendarScreen() {
   const C = useColors();
   const calendar = useCalendar();
+  const { activeCouple, user } = useSession();
   const sheetRef = useRef<BottomSheetModal>(null);
   const [refreshing, setRefreshing] = useState(false);
-
-  const createEvent = useMutation(createEventMutation) as any;
 
   const selectedDateLabel = calendar.selectedDate
     ? format(parseISO(calendar.selectedDate), "EEEE, d MMMM")
@@ -48,10 +45,29 @@ export default function CalendarScreen() {
       priority: number;
       isPrivate: boolean;
     }) => {
-      await createEvent(data);
+      const coupleId = activeCouple?.couple?.id ?? null;
+      if (!coupleId || !user) return;
+      const eventId = id();
+      const now = Date.now();
+      await db.transact(
+        db.tx.events[eventId]
+          .update({
+            title: data.title,
+            description: data.description ?? undefined,
+            startsAt: data.startsAt,
+            endsAt: data.endsAt ?? undefined,
+            category: data.category ?? undefined,
+            location: data.location ?? undefined,
+            priority: data.priority,
+            isPrivate: data.isPrivate,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .link({ couple: coupleId, createdBy: user.id }),
+      );
       await calendar.refetch();
     },
-    [createEvent, calendar],
+    [activeCouple, user, calendar],
   );
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);

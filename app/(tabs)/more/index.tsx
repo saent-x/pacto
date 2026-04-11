@@ -5,8 +5,7 @@ import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { useMutation } from 'convex/react';
-import { makeFunctionReference } from 'convex/server';
+import { db } from '@/src/lib/instant';
 import { useColors } from '@/src/hooks/useColors';
 import { useTheme } from '@/src/lib/theme';
 import { useSession } from '@/src/hooks/useSession';
@@ -15,15 +14,12 @@ import { Typography } from '@/src/constants/typography';
 import { Spacing } from '@/src/constants/spacing';
 import { GlassSection, GlassRow, SegmentedControl } from '@/src/components/ui';
 
-const deleteAccountMutation = makeFunctionReference<'mutation', {}, null>('users:deleteAccount');
-
 export default function MoreScreen() {
   const C = useColors();
   const { mode, toggle } = useTheme();
   const { signOut } = useAuthActions();
-  const { profile, activeCouple, refetch } = useSession();
+  const { profile, activeCouple, refetch, user } = useSession();
   const router = useRouter();
-  const deleteAccount = useMutation(deleteAccountMutation);
   const couple = activeCouple?.couple ?? null;
   const partner = activeCouple?.partner ?? null;
   const [refreshing, setRefreshing] = useState(false);
@@ -153,12 +149,14 @@ export default function MoreScreen() {
                         style: 'destructive',
                         onPress: async () => {
                           try {
-                            await deleteAccount({});
+                            if (user?.id) {
+                              await db.transact(db.tx.$users[user.id].delete());
+                            }
                           } catch {
                             Alert.alert('Error', 'Failed to delete account. Please try again.');
                             return;
                           }
-                          // Sign out after mutation succeeds to avoid
+                          // Sign out after deletion to avoid
                           // reactive queries firing against a deleted user.
                           await signOut();
                         },

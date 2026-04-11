@@ -203,7 +203,7 @@ export function buildMemoryPreviews({
       title: entry.title ?? 'Shared memory',
       body: entry.body ?? '',
       createdAt: entry.createdAt ?? 0,
-      mediaUrls: (entry.media ?? []).map((f: any) => f.url).filter(Boolean),
+      mediaUrls: Array.isArray(entry.mediaUrls) ? entry.mediaUrls : [],
     });
   }
 

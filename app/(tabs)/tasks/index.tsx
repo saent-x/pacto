@@ -19,7 +19,8 @@ import type { Task } from '@/src/types/database';
 export default function TasksScreen() {
   const C = useColors();
   const insets = useSafeAreaInsets();
-  const { lists, allTasks, isLoading, createTask, createTaskInDefaultList, updateTask, toggleTask, deleteTask, refetch } = useTasks();
+  const { allTasks, isLoading, createTask, createTaskInDefaultList, updateTask, toggleTask, deleteTask, refetch } = useTasks();
+  const lists: { id: string; name: string; icon?: string | null; color: string }[] = [];
   const sheetRef = useRef<BottomSheetModal>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'done'>('all');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -47,7 +48,7 @@ export default function TasksScreen() {
     value: filter,
     onChange: setFilter,
   });
-  const feedState = useMemo(() => buildTaskFeedViewState(lists, allTasks, filter), [allTasks, filter, lists]);
+  const feedState = useMemo(() => buildTaskFeedViewState(allTasks, filter), [allTasks, filter]);
   const taskFeed = useMemo(
     () =>
       feedState.items.map((item) =>
@@ -70,7 +71,7 @@ export default function TasksScreen() {
     sheetRef.current?.present();
   };
 
-  const handleSave = async (data: Parameters<typeof createTask>[0]) => {
+  const handleSave = async (data: { title: string; notes: string | null; due_date: string | null; priority: number; assigned_to: string | null; category: string }) => {
     if (savingTask) return;
     setSavingTask(true);
     try {
@@ -80,7 +81,7 @@ export default function TasksScreen() {
         return;
       }
 
-      if (data.list_id === AUTO_CREATE_TASK_LIST_ID) {
+      if (data.category === AUTO_CREATE_TASK_LIST_ID) {
         await createTaskInDefaultList({
           title: data.title,
           notes: data.notes,
@@ -230,7 +231,6 @@ export default function TasksScreen() {
             {...tabSwipe.panHandlers}
             renderItem={({ item }) => {
               const dueLabel = item.due_date ? format(new Date(`${item.due_date}T00:00:00`), 'MMM d') : null;
-              const listColor = item.list?.color ?? C.tasks;
               const isCompleted = item.is_completed;
               const isPending = !!pendingTaskIds[item.id];
               const priorityColor =
@@ -276,11 +276,11 @@ export default function TasksScreen() {
                       </TouchableOpacity>
                       <View style={styles.taskBody}>
                         <View style={styles.kickerRow}>
-                          {item.list ? (
+                          {item.category ? (
                             <View style={[styles.listBadge, { backgroundColor: C.card, borderColor: C.border }]}>
-                              <View style={[styles.listDot, { backgroundColor: listColor }]} />
+                              <View style={[styles.listDot, { backgroundColor: C.tasks }]} />
                               <Text style={[styles.listMetaText, { color: C.textTertiary }]} numberOfLines={1}>
-                                {item.list.name}
+                                {item.category}
                               </Text>
                             </View>
                           ) : null}

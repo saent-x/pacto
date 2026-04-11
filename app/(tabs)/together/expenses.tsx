@@ -30,11 +30,11 @@ import {
 } from "./_itemStyles";
 
 type ExpenseItem = {
-  _id: string;
+  id: string;
   title: string;
   amount: number;
   paidBy: string;
-  currency: string;
+  currency?: string;
   splitType: string;
   category: string;
   date: string;
@@ -61,7 +61,8 @@ function formatAmount(n: number, currency: string) {
 
 function summarizeByCurrency(items: ExpenseItem[]) {
   return items.reduce<Record<string, number>>((acc, item) => {
-    acc[item.currency] = (acc[item.currency] ?? 0) + item.amount;
+    const cur = item.currency ?? 'USD';
+    acc[cur] = (acc[cur] ?? 0) + item.amount;
     return acc;
   }, {});
 }
@@ -81,7 +82,7 @@ export default function ExpensesScreen() {
   >();
 
   const partner = activeCouple?.partner ?? null;
-  const currentUserId = profile?._id ?? null;
+  const currentUserId = profile?.id ?? null;
   const filteredUnsettled = unsettled.filter((item) =>
     matchesSelectedDate(item.date, selectedDate),
   );
@@ -121,7 +122,7 @@ export default function ExpensesScreen() {
       };
 
       if (editingExpense) {
-        await update(editingExpense._id, payload);
+        await update(editingExpense.id, payload);
         setEditingExpense(undefined);
         return;
       }
@@ -145,7 +146,7 @@ export default function ExpensesScreen() {
 
   const getPaidByName = (paidBy: string) => {
     if (paidBy === currentUserId) return "You";
-    if (paidBy === partner?._id)
+    if (paidBy === partner?.id)
       return partner?.displayName?.split(" ")[0] ?? "Partner";
     return "Unknown";
   };
@@ -159,7 +160,7 @@ export default function ExpensesScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              await remove(item._id);
+              await remove(item.id);
             } catch {
               Alert.alert("Error", "Could not delete expense.");
             }
@@ -290,7 +291,7 @@ export default function ExpensesScreen() {
           {settledOpen &&
             filteredSettled.map((item, i) => (
               <Animated.View
-                key={item._id}
+                key={item.id}
                 entering={FadeInDown.duration(300).delay(i * 50)}
               >
                 <View
@@ -321,7 +322,7 @@ export default function ExpensesScreen() {
                     </View>
                   </View>
                   <Text style={[styles.cardAmount, { color: C.textTertiary }]}>
-                    {formatAmount(item.amount, item.currency)}
+                    {formatAmount(item.amount, item.currency ?? 'USD')}
                   </Text>
                 </View>
               </Animated.View>
@@ -373,11 +374,11 @@ export default function ExpensesScreen() {
             expense={
               editingExpense
                 ? {
-                    id: editingExpense._id,
+                    id: editingExpense.id,
                     title: editingExpense.title,
                     amount: editingExpense.amount,
                     paidBy: editingExpense.paidBy,
-                    currency: editingExpense.currency,
+                    currency: editingExpense.currency ?? 'USD',
                     splitType: editingExpense.splitType,
                     category: editingExpense.category,
                     date: editingExpense.date,
@@ -414,7 +415,7 @@ export default function ExpensesScreen() {
         ) : (
           <FlashList
             data={filteredUnsettled}
-            keyExtractor={(item) => item._id}
+            keyExtractor={(item) => item.id}
             contentContainerStyle={[
               styles.listContent,
               togetherListContainerStyle,
@@ -458,10 +459,10 @@ export default function ExpensesScreen() {
                 </View>
                 <View style={styles.cardRight}>
                   <Text style={[styles.cardAmount, { color: C.expenses }]}>
-                    {formatAmount(item.amount, item.currency)}
+                    {formatAmount(item.amount, item.currency ?? 'USD')}
                   </Text>
                   <TouchableOpacity
-                    onPress={() => handleSettle(item._id)}
+                    onPress={() => handleSettle(item.id)}
                     style={[
                       styles.settleBtn,
                       { backgroundColor: C.expensesLight },
@@ -514,11 +515,11 @@ export default function ExpensesScreen() {
           expense={
             editingExpense
               ? {
-                  id: editingExpense._id,
+                  id: editingExpense.id,
                   title: editingExpense.title,
                   amount: editingExpense.amount,
                   paidBy: editingExpense.paidBy,
-                  currency: editingExpense.currency,
+                  currency: editingExpense.currency ?? 'USD',
                   splitType: editingExpense.splitType,
                   category: editingExpense.category,
                   date: editingExpense.date,

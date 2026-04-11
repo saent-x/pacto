@@ -46,7 +46,7 @@ export default function RemindersScreen() {
   const C = useColors();
   const { mode } = useTheme();
   const { profile } = useSession();
-  const userId = profile?._id ?? null;
+  const userId = profile?.id ?? null;
   const { upcoming, completed, isLoading, create, update, toggleComplete, remove, refetch } = useReminders();
 
   const sheetRef = useRef<BottomSheetModal>(null);

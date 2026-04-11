@@ -29,7 +29,7 @@ import { matchesSelectedDateForTimestamp } from "@/src/lib/togetherDateFilter";
 import { togetherItemContainerStyle, togetherListContainerStyle } from "./_itemStyles";
 
 type NoteItem = {
-  _id: string;
+  id: string;
   authorId: string;
   body: string;
   isPrivate: boolean;
@@ -65,7 +65,7 @@ export default function LoveNotesScreen() {
     { id: string; body: string; isPrivate: boolean } | undefined
   >();
 
-  const currentUserId = profile?._id ?? null;
+  const currentUserId = profile?.id ?? null;
   const visibleNotes = notes.filter((note) =>
     matchesSelectedDateForTimestamp(note.createdAt, selectedDate),
   );
@@ -100,7 +100,7 @@ export default function LoveNotesScreen() {
   const openComposer = useCallback((note?: NoteItem) => {
     setEditingNote(
       note
-        ? { id: note._id, body: note.body, isPrivate: note.isPrivate }
+        ? { id: note.id, body: note.body, isPrivate: note.isPrivate }
         : undefined,
     );
     sheetRef.current?.present();
@@ -114,7 +114,7 @@ export default function LoveNotesScreen() {
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            await remove(note._id);
+            await remove(note.id);
           },
         },
       ]);
@@ -279,7 +279,7 @@ export default function LoveNotesScreen() {
         ) : (
           <FlashList
             data={visibleNotes}
-            keyExtractor={(item) => item._id}
+            keyExtractor={(item) => item.id}
             contentContainerStyle={[
               styles.listContent,
               togetherListContainerStyle,

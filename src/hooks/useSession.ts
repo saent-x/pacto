@@ -15,7 +15,7 @@ type SessionValue = {
   session: {
     profile: { id: string; displayName: string; avatarUrl: string | null; email: string };
     activeCouple: {
-      couple: { id: string; name: string; anniversary: string | null };
+      couple: { id: string; name: string; anniversary: string | null; inviteCode?: string | null };
       membership: { id: string; userId: string; role: string };
       memberCount: number;
       partner: { id: string; displayName: string; avatarUrl: string | null } | null;
@@ -62,8 +62,8 @@ function useSessionValue(): SessionValue {
   );
 
   const activeMembership = membershipData?.memberships?.[0] ?? null;
-  const couple = activeMembership?.couple?.[0] ?? null;
-  const memberUser = activeMembership?.user?.[0] ?? null;
+  const couple = (activeMembership?.couple as any)?.[0] ?? activeMembership?.couple ?? null;
+  const memberUser = (activeMembership?.user as any)?.[0] ?? activeMembership?.user ?? null;
 
   // Query partner info if we have a couple
   const coupleId = couple?.id ?? null;
@@ -82,9 +82,9 @@ function useSessionValue(): SessionValue {
   const partner = useMemo(() => {
     if (!user) return null;
     const partnerMembership = allMembers.find(
-      (m) => m.user?.[0]?.id !== user.id,
+      (m) => ((m.user as any)?.[0]?.id ?? (m.user as any)?.id) !== user.id,
     );
-    const partnerUser = partnerMembership?.user?.[0] ?? null;
+    const partnerUser = (partnerMembership?.user as any)?.[0] ?? partnerMembership?.user ?? null;
     if (!partnerUser) return null;
     return {
       id: partnerUser.id,
@@ -114,6 +114,7 @@ function useSessionValue(): SessionValue {
         id: couple.id,
         name: couple.name,
         anniversary: couple.anniversary ?? null,
+        inviteCode: (couple as any).inviteCode ?? null,
       },
       membership: {
         id: activeMembership.id,
@@ -138,8 +139,8 @@ function useSessionValue(): SessionValue {
       : getSessionRoute({ isAuthenticated, hasActiveCouple }),
     user: user ? { id: user.id, email: user.email ?? '' } : null,
     session,
-    profile,
-    activeCouple,
+    profile: profile as SessionValue['profile'],
+    activeCouple: activeCouple as SessionValue['activeCouple'],
     refetch: async () => {
       // InstantDB queries are reactive — no manual refetch needed.
       // This is kept for interface compatibility.

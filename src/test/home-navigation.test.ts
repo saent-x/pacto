@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { MilestoneStripItem, TimelineItem } from "@/convex/timeline";
+import type { MilestoneStripItem, TimelineItem } from "@/src/lib/home/types";
 import {
   routeForMilestoneItem,
   routeForTimelineItem,

@@ -33,7 +33,7 @@ export default function JournalDetailScreen() {
   const router = useRouter();
   const { entryId } = useLocalSearchParams<{ entryId: string }>();
   const { profile } = useSession();
-  const userId = profile?._id ?? null;
+  const userId = profile?.id ?? null;
   const { entries, update, remove, uploadJournalImage, refetch } = useJournal();
   const [refreshing, setRefreshing] = useState(false);
 

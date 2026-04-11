@@ -54,7 +54,7 @@ export default function OnboardingScreen() {
 
       // Auto-generate encryption key for the new couple
       try {
-        const coupleId = result.couple._id;
+        const coupleId = result.couple.id;
         const keyBase64 = await generateCoupleKey();
         await storeCoupleKey(coupleId, keyBase64);
       } catch {

@@ -1,4 +1,4 @@
-import type { CalendarDay } from "@/convex/timeline";
+import type { CalendarDay } from "@/src/lib/home/types";
 
 import { Feather } from "@expo/vector-icons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
