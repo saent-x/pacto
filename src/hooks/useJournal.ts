@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useConvex, useMutation, useQuery } from 'convex/react';
-import { makeFunctionReference } from 'convex/server';
-
+import { db, id } from '@/src/lib/instant';
 import { useSession } from './useSession';
 import { useEncryption } from './useEncryption';
 import type { JournalEntry } from '@/src/types/database';
@@ -12,7 +10,6 @@ type EntryInput = {
   mood?: string | null;
   is_private?: boolean;
   entry_date: string;
-  media_storage_ids?: string[];
 };
 
 type JournalImageUploadInput = {
@@ -20,67 +17,19 @@ type JournalImageUploadInput = {
   contentType?: string;
 };
 
-type JournalEntryDoc = {
-  _id: string;
-  coupleId: string;
-  authorId: string;
-  title: string | null;
-  body: string;
-  mood: string | null;
-  isPrivate: boolean;
-  mediaUrls: string[];
-  mediaStorageIds?: string[];
-  tags: string[];
-  entryDate: string;
-  createdAt: number;
-  updatedAt: number;
-};
-
 export type JournalFilter = 'all' | 'shared' | 'private';
 
-const getJournalEntriesQuery = makeFunctionReference<'query', {}, JournalEntryDoc[]>('journalEntries:getJournalEntries');
-const generateJournalImageUploadUrlMutation = makeFunctionReference<'mutation', {}, string>(
-  'journalEntries:generateJournalImageUploadUrl',
-);
-const createJournalEntryMutation = makeFunctionReference<
-  'mutation',
-  {
-    title?: string | null;
-    body: string;
-    mood?: string | null;
-    isPrivate?: boolean;
-    entryDate: string;
-    mediaStorageIds?: string[];
-  },
-  JournalEntryDoc
->('journalEntries:createJournalEntry');
-const updateJournalEntryMutation = makeFunctionReference<
-  'mutation',
-  {
-    entryId: string;
-    title?: string | null;
-    body?: string;
-    mood?: string | null;
-    isPrivate?: boolean;
-    entryDate?: string;
-    mediaStorageIds?: string[];
-  },
-  JournalEntryDoc
->('journalEntries:updateJournalEntry');
-const deleteJournalEntryMutation = makeFunctionReference<'mutation', { entryId: string }, null>('journalEntries:deleteJournalEntry');
-
-function toJournalEntryRow(entry: JournalEntryDoc): JournalEntry {
+function toJournalEntryRow(entry: any): JournalEntry {
   return {
-    id: entry._id,
-    couple_id: entry.coupleId,
-    author_id: entry.authorId,
-    title: entry.title,
+    id: entry.id,
+    couple_id: entry.couple?.[0]?.id ?? '',
+    author_id: entry.author?.[0]?.id ?? '',
+    title: entry.title ?? null,
     body: entry.body,
-    mood: entry.mood,
+    mood: entry.mood ?? null,
     is_private: entry.isPrivate,
-    media_urls: [...entry.mediaUrls],
-    media_storage_ids: [...(entry.mediaStorageIds ?? [])],
-    tags: [...entry.tags],
+    media_urls: (entry.media ?? []).map((f: any) => f.url).filter(Boolean),
+    tags: Array.isArray(entry.tags) ? entry.tags : [],
     entry_date: entry.entryDate,
     created_at: new Date(entry.createdAt).toISOString(),
     updated_at: new Date(entry.updatedAt).toISOString(),
@@ -88,19 +37,29 @@ function toJournalEntryRow(entry: JournalEntryDoc): JournalEntry {
 }
 
 export function useJournal() {
-  const { activeCouple, profile } = useSession();
-  const convex = useConvex();
+  const { activeCouple, user } = useSession();
+  const coupleId = activeCouple?.couple?.id ?? null;
+  const userId = user?.id ?? null;
   const { encrypt, decrypt, hasKey } = useEncryption();
-  const userId = profile?._id ?? null;
-  const rows = useQuery(getJournalEntriesQuery, activeCouple ? {} : 'skip');
-  const generateImageUploadUrl = useMutation(generateJournalImageUploadUrlMutation);
-  const createJournalEntry = useMutation(createJournalEntryMutation);
-  const updateJournalEntry = useMutation(updateJournalEntryMutation);
-  const deleteJournalEntry = useMutation(deleteJournalEntryMutation);
   const [filter, setFilter] = useState<JournalFilter>('all');
 
-  // Decrypt entries asynchronously — existing plaintext passes through unchanged
-  const rawEntries = useMemo(() => (rows ?? []).map(toJournalEntryRow), [rows]);
+  const { data, isLoading: queryLoading } = db.useQuery(
+    coupleId
+      ? {
+          journalEntries: {
+            $: { where: { 'couple.id': coupleId } },
+            couple: {},
+            author: {},
+            media: {},
+          },
+        }
+      : null,
+  );
+
+  const rawEntries = useMemo(
+    () => (data?.journalEntries ?? []).map(toJournalEntryRow),
+    [data?.journalEntries],
+  );
   const [allEntries, setAllEntries] = useState<JournalEntry[]>([]);
 
   useEffect(() => {
@@ -120,44 +79,69 @@ export function useJournal() {
     } else {
       setAllEntries(rawEntries);
     }
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [rawEntries, decrypt, hasKey]);
 
   const create = useCallback(
-    async (data: EntryInput) => {
-      await createJournalEntry({
-        title: data.title ? await encrypt(data.title) : null,
-        body: await encrypt(data.body),
-        mood: data.mood ?? null,
-        isPrivate: data.is_private ?? false,
-        entryDate: data.entry_date,
-        ...(data.media_storage_ids ? { mediaStorageIds: data.media_storage_ids } : {}),
-      });
+    async (input: EntryInput & { mediaFileIds?: string[] }) => {
+      if (!coupleId || !userId) return;
+      const entryId = id();
+      const now = Date.now();
+      const txn = db.tx.journalEntries[entryId]
+        .update({
+          title: input.title ? await encrypt(input.title) : undefined,
+          body: await encrypt(input.body),
+          mood: input.mood ?? undefined,
+          isPrivate: input.is_private ?? false,
+          tags: [],
+          entryDate: input.entry_date,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .link({ couple: coupleId, author: userId });
+      const txns: any[] = [txn];
+      if (input.mediaFileIds?.length) {
+        txns.push(
+          db.tx.journalEntries[entryId].link({ media: input.mediaFileIds }),
+        );
+      }
+      await db.transact(txns);
     },
-    [createJournalEntry, encrypt],
+    [coupleId, userId, encrypt],
   );
 
   const update = useCallback(
-    async (id: string, data: Partial<EntryInput>) => {
-      await updateJournalEntry({
-        entryId: id,
-        ...(data.title !== undefined ? { title: data.title ? await encrypt(data.title) : null } : {}),
-        ...(data.body !== undefined ? { body: await encrypt(data.body!) } : {}),
-        ...(data.mood !== undefined ? { mood: data.mood ?? null } : {}),
-        ...(data.is_private !== undefined ? { isPrivate: data.is_private } : {}),
-        ...(data.entry_date !== undefined ? { entryDate: data.entry_date } : {}),
-        ...(data.media_storage_ids !== undefined ? { mediaStorageIds: data.media_storage_ids } : {}),
-      });
+    async (entryId: string, input: Partial<EntryInput> & { mediaFileIds?: string[] }) => {
+      const updates: Record<string, unknown> = { updatedAt: Date.now() };
+      if (input.title !== undefined) updates.title = input.title ? await encrypt(input.title) : undefined;
+      if (input.body !== undefined) updates.body = await encrypt(input.body!);
+      if (input.mood !== undefined) updates.mood = input.mood ?? undefined;
+      if (input.is_private !== undefined) updates.isPrivate = input.is_private;
+      if (input.entry_date !== undefined) updates.entryDate = input.entry_date;
+      const txns: any[] = [db.tx.journalEntries[entryId].update(updates)];
+      if (input.mediaFileIds?.length) {
+        txns.push(
+          db.tx.journalEntries[entryId].link({ media: input.mediaFileIds }),
+        );
+      }
+      await db.transact(txns);
     },
-    [updateJournalEntry, encrypt],
+    [encrypt],
   );
 
-  const remove = useCallback(
-    async (id: string) => {
-      await deleteJournalEntry({ entryId: id });
-    },
-    [deleteJournalEntry],
-  );
+  const remove = useCallback(async (entryId: string) => {
+    // Delete linked media files first
+    const mediaToDelete = data?.journalEntries
+      ?.find((e: any) => e.id === entryId)
+      ?.media ?? [];
+    const txns: any[] = mediaToDelete.map((file: any) =>
+      db.tx.$files[file.id].delete(),
+    );
+    txns.push(db.tx.journalEntries[entryId].delete());
+    await db.transact(txns);
+  }, [data?.journalEntries]);
 
   const entries = allEntries.filter((entry) => {
     if (filter === 'shared') return !entry.is_private;
@@ -165,45 +149,28 @@ export function useJournal() {
     return true;
   });
 
-  const getImageUploadUrl = useCallback(async () => {
-    return await generateImageUploadUrl({});
-  }, [generateImageUploadUrl]);
-
   const uploadJournalImage = useCallback(
     async ({ uri, contentType }: JournalImageUploadInput) => {
-      const uploadUrl = await getImageUploadUrl();
       const response = await fetch(uri);
       const blob = await response.blob();
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: contentType ? { 'Content-Type': contentType } : undefined,
-        body: blob,
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error('Failed to upload journal image.');
-      }
-
-      const result = (await uploadResponse.json()) as { storageId: string };
-      return result.storageId;
+      const filename = `journal/${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const file = new File([blob], filename, { type: contentType ?? 'image/jpeg' });
+      const { data: fileData } = await db.storage.uploadFile(filename, file);
+      return fileData.id;
     },
-    [getImageUploadUrl],
+    [],
   );
 
   return {
     entries,
     allEntries,
-    isLoading: !!activeCouple && rows === undefined,
+    isLoading: !!coupleId && queryLoading,
     filter,
     setFilter,
     create,
     update,
     remove,
-    getImageUploadUrl,
     uploadJournalImage,
-    refetch: async () => {
-      if (!activeCouple) return;
-      await convex.query(getJournalEntriesQuery, {});
-    },
+    refetch: async () => {},
   };
 }
