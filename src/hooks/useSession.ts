@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { createContext, createElement, useContext, useMemo } from 'react';
+import { createContext, createElement, useContext, useEffect, useMemo } from 'react';
 import { db } from '@/src/lib/instant';
 
 /**
@@ -57,6 +57,13 @@ export function getSessionRoute({
 
 function useSessionValue(): SessionValue {
   const { isLoading: authLoading, user, error } = db.useAuth();
+
+  // Auto sign-out on stale/invalid token (e.g. "Record not found: app-user")
+  useEffect(() => {
+    if (error && !authLoading && !user) {
+      db.auth.signOut();
+    }
+  }, [error, authLoading, user]);
 
   const { isLoading: membershipLoading, data: membershipData } = db.useQuery(
     user
