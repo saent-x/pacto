@@ -10,6 +10,7 @@ import { useSession } from "@/src/hooks/useSession";
 
 import { MiniDateRail } from "@/src/components/calendar/MiniDateRail";
 import { CreateEventSheet } from "@/src/components/calendar/CreateEventSheet";
+import { EmptyState } from "@/src/components/ui";
 import { toPlainMarkdownPreview } from "@/src/components/journal/MarkdownText";
 import { BorderRadius, Spacing } from "@/src/constants/spacing";
 import { Typography } from "@/src/constants/typography";
@@ -105,19 +106,11 @@ export default function CalendarScreen() {
               <Text style={[styles.sectionTitle, { color: C.text }]}>{selectedDateLabel}</Text>
             </View>
             {calendar.agenda.length === 0 ? (
-              <View
-                style={[
-                  styles.emptyCard,
-                  { backgroundColor: C.card, borderColor: C.border },
-                ]}
-              >
-                <Text style={[styles.emptyTitle, { color: C.text }]}>
-                  Nothing scheduled
-                </Text>
-                <Text style={[styles.emptyBody, { color: C.textSecondary }]}>
-                  This day is clear. Shared items will appear here as soon as they land on the
-                  timeline.
-                </Text>
+              <View style={styles.emptyWrap}>
+                <EmptyState
+                  title="Nothing scheduled"
+                  description="This day is clear. Shared items will appear here as soon as they land on the timeline."
+                />
               </View>
             ) : (
               calendar.agenda.map((item) => {
@@ -228,17 +221,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...Typography.heading,
   },
-  emptyCard: {
-    borderWidth: 1,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.xl,
-    gap: Spacing.sm,
-  },
-  emptyTitle: {
-    ...Typography.subheading,
-  },
-  emptyBody: {
-    ...Typography.body,
+  emptyWrap: {
+    paddingTop: Spacing['2xl'],
+    justifyContent: 'center',
   },
   agendaCard: {
     borderWidth: 1,

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -183,23 +183,30 @@ export default function MilestonesScreen() {
     return (
       <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
         <SafeAreaView style={styles.flex} edges={['top']}>
-          <MiniDateRail
-            title="Milestones"
-            selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
-            accentColor={C.milestones}
-            onPressLeading={() => {
-              Haptics.selectionAsync();
-              router.replace("/(tabs)/together");
-            }}
-          />
-
-          <View style={styles.emptyWrap}>
-            <EmptyState
-              title="No milestones yet"
-              description="Mark the moments that matter"
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.milestones} />
+            }
+          >
+            <MiniDateRail
+              title="Milestones"
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              accentColor={C.milestones}
+              onPressLeading={() => {
+                Haptics.selectionAsync();
+                router.replace("/(tabs)/together");
+              }}
             />
-          </View>
+
+            <View style={styles.emptyWrap}>
+              <EmptyState
+                title="No milestones yet"
+                description="Mark the moments that matter"
+              />
+            </View>
+          </ScrollView>
 
           {/* FAB */}
           <TouchableOpacity
@@ -233,24 +240,30 @@ export default function MilestonesScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
-        <MiniDateRail
-          title="Milestones"
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          accentColor={C.milestones}
-          onPressLeading={() => {
-            Haptics.selectionAsync();
-            router.replace("/(tabs)/together");
-          }}
-        />
-
         {filteredUpcoming.length === 0 && filteredPast.length === 0 ? (
-          <View style={styles.emptyWrap}>
-            <EmptyState
-              title="No milestones on this date"
-              description="Pick another day or clear the date filter."
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.milestones} />
+            }
+          >
+            <MiniDateRail
+              title="Milestones"
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              accentColor={C.milestones}
+              onPressLeading={() => {
+                Haptics.selectionAsync();
+                router.replace("/(tabs)/together");
+              }}
             />
-          </View>
+            <View style={styles.emptyWrap}>
+              <EmptyState
+                title="No milestones on this date"
+                description="Pick another day or clear the date filter."
+              />
+            </View>
+          </ScrollView>
         ) : (
           <FlashList
             data={filteredUpcoming}
@@ -259,7 +272,21 @@ export default function MilestonesScreen() {
               styles.listContent,
               togetherListContainerStyle,
             ]}
-            ListHeaderComponent={headerComponent}
+            ListHeaderComponent={
+              <>
+                <MiniDateRail
+                  title="Milestones"
+                  selectedDate={selectedDate}
+                  onSelectDate={setSelectedDate}
+                  accentColor={C.milestones}
+                  onPressLeading={() => {
+                    Haptics.selectionAsync();
+                    router.replace("/(tabs)/together");
+                  }}
+                />
+                {headerComponent}
+              </>
+            }
             ListFooterComponent={footerComponent}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />

@@ -112,23 +112,30 @@ export default function WishlistsScreen() {
     return (
       <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
         <SafeAreaView style={styles.flex} edges={['top']}>
-          <MiniDateRail
-            title="Wishlists"
-            selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
-            accentColor={C.wishlists}
-            onPressLeading={() => {
-              Haptics.selectionAsync();
-              router.replace("/(tabs)/together");
-            }}
-          />
-
-          <View style={styles.emptyWrap}>
-            <EmptyState
-              title="Your wishlists are empty"
-              description="Drop some hints for each other — add things you'd love"
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.wishlists} />
+            }
+          >
+            <MiniDateRail
+              title="Wishlists"
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              accentColor={C.wishlists}
+              onPressLeading={() => {
+                Haptics.selectionAsync();
+                router.replace("/(tabs)/together");
+              }}
             />
-          </View>
+
+            <View style={styles.emptyWrap}>
+              <EmptyState
+                title="Your wishlists are empty"
+                description="Drop some hints for each other — add things you'd love"
+              />
+            </View>
+          </ScrollView>
 
           {/* FAB */}
           <TouchableOpacity
@@ -152,27 +159,26 @@ export default function WishlistsScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
-        <MiniDateRail
-          title="Wishlists"
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          accentColor={C.wishlists}
-          onPressLeading={() => {
-            Haptics.selectionAsync();
-            router.replace("/(tabs)/together");
-          }}
-        />
-
         <ScrollView
           contentContainerStyle={[
             styles.listContent,
             togetherListContainerStyle,
           ]}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.wishlists} />
           }
           showsVerticalScrollIndicator={false}
         >
+          <MiniDateRail
+            title="Wishlists"
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            accentColor={C.wishlists}
+            onPressLeading={() => {
+              Haptics.selectionAsync();
+              router.replace("/(tabs)/together");
+            }}
+          />
           {visibleWishlists.length > 0 && (
             <Text style={[styles.sectionLabel, { color: C.textTertiary }]}>YOUR LISTS</Text>
           )}

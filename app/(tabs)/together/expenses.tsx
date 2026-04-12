@@ -3,6 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
+  ScrollView,
   TouchableOpacity,
   Alert,
   RefreshControl,
@@ -338,23 +339,30 @@ export default function ExpensesScreen() {
     return (
       <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
         <SafeAreaView style={styles.flex} edges={["top"]}>
-          <MiniDateRail
-            title="Our Expenses"
-            selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
-            accentColor={C.expenses}
-            onPressLeading={() => {
-              Haptics.selectionAsync();
-              router.replace("/(tabs)/together");
-            }}
-          />
-
-          <View style={styles.emptyWrap}>
-            <EmptyState
-              title="No expenses yet"
-              description="Start tracking your adventures together"
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.expenses} />
+            }
+          >
+            <MiniDateRail
+              title="Our Expenses"
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              accentColor={C.expenses}
+              onPressLeading={() => {
+                Haptics.selectionAsync();
+                router.replace("/(tabs)/together");
+              }}
             />
-          </View>
+
+            <View style={styles.emptyWrap}>
+              <EmptyState
+                title="No expenses yet"
+                description="Start tracking your adventures together"
+              />
+            </View>
+          </ScrollView>
 
           {/* FAB */}
           <TouchableOpacity
@@ -394,24 +402,30 @@ export default function ExpensesScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.flex} edges={["top"]}>
-        <MiniDateRail
-          title="Our Expenses"
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          accentColor={C.expenses}
-          onPressLeading={() => {
-            Haptics.selectionAsync();
-            router.replace("/(tabs)/together");
-          }}
-        />
-
         {filteredUnsettled.length === 0 && filteredSettled.length === 0 ? (
-          <View style={styles.emptyWrap}>
-            <EmptyState
-              title="No expenses on this date"
-              description="Pick another day or clear the date filter."
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.expenses} />
+            }
+          >
+            <MiniDateRail
+              title="Our Expenses"
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              accentColor={C.expenses}
+              onPressLeading={() => {
+                Haptics.selectionAsync();
+                router.replace("/(tabs)/together");
+              }}
             />
-          </View>
+            <View style={styles.emptyWrap}>
+              <EmptyState
+                title="No expenses on this date"
+                description="Pick another day or clear the date filter."
+              />
+            </View>
+          </ScrollView>
         ) : (
           <FlashList
             data={filteredUnsettled}
@@ -420,7 +434,21 @@ export default function ExpensesScreen() {
               styles.listContent,
               togetherListContainerStyle,
             ]}
-            ListHeaderComponent={headerComponent}
+            ListHeaderComponent={
+              <>
+                <MiniDateRail
+                  title="Our Expenses"
+                  selectedDate={selectedDate}
+                  onSelectDate={setSelectedDate}
+                  accentColor={C.expenses}
+                  onPressLeading={() => {
+                    Haptics.selectionAsync();
+                    router.replace("/(tabs)/together");
+                  }}
+                />
+                {headerComponent}
+              </>
+            }
             ListFooterComponent={footerComponent}
             refreshControl={
               <RefreshControl

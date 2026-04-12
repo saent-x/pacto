@@ -171,33 +171,6 @@ export default function TasksScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={[styles.flex, { backgroundColor: C.screenBackground }]} edges={['top']}>
-        <MiniDateRail
-          title="Tasks"
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          accentColor={C.tasks}
-          onPressAction={openTaskComposer}
-          actionIcon="plus"
-          tabs={[
-            { value: 'all', label: 'All' },
-            { value: 'active', label: 'Active' },
-            { value: 'done', label: 'Done' },
-          ]}
-          selectedTab={filter}
-          onSelectTab={(value) => setFilter(value as 'all' | 'active' | 'done')}
-        />
-        <View style={[styles.header, { backgroundColor: C.background }]}>
-          <View style={styles.summaryRow}>
-            <Text style={[styles.summaryText, { color: C.textTertiary }]}>
-              {openCount} open
-            </Text>
-            <View style={[styles.summaryDivider, { backgroundColor: C.border }]} />
-            <Text style={[styles.summaryText, { color: C.textTertiary }]}>
-              {doneCount} done
-            </Text>
-          </View>
-        </View>
-
         {!isLoading && (feedState.emptyState || visibleTaskFeed.length === 0) ? (
           <ScrollView
             contentContainerStyle={styles.emptyContent}
@@ -207,6 +180,21 @@ export default function TasksScreen() {
             showsVerticalScrollIndicator={false}
             {...tabSwipe.panHandlers}
           >
+            <MiniDateRail
+              title="Tasks"
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              accentColor={C.tasks}
+              onPressAction={openTaskComposer}
+              actionIcon="plus"
+              tabs={[
+                { value: 'all', label: 'All' },
+                { value: 'active', label: 'Active' },
+                { value: 'done', label: 'Done' },
+              ]}
+              selectedTab={filter}
+              onSelectTab={(value) => setFilter(value as 'all' | 'active' | 'done')}
+            />
             <EmptyState
               icon="check-square"
               title={selectedDate && visibleTaskFeed.length === 0 ? 'No tasks on this date' : feedState.emptyState?.title ?? 'No tasks yet'}
@@ -220,8 +208,39 @@ export default function TasksScreen() {
             />
           </ScrollView>
         ) : (
+          <>
           <FlatList
             data={visibleTaskFeed}
+            ListHeaderComponent={
+              <>
+                <MiniDateRail
+                  title="Tasks"
+                  selectedDate={selectedDate}
+                  onSelectDate={setSelectedDate}
+                  accentColor={C.tasks}
+                  onPressAction={openTaskComposer}
+                  actionIcon="plus"
+                  tabs={[
+                    { value: 'all', label: 'All' },
+                    { value: 'active', label: 'Active' },
+                    { value: 'done', label: 'Done' },
+                  ]}
+                  selectedTab={filter}
+                  onSelectTab={(value) => setFilter(value as 'all' | 'active' | 'done')}
+                />
+                <View style={[styles.header, { backgroundColor: C.background }]}>
+                  <View style={styles.summaryRow}>
+                    <Text style={[styles.summaryText, { color: C.textTertiary }]}>
+                      {openCount} open
+                    </Text>
+                    <View style={[styles.summaryDivider, { backgroundColor: C.border }]} />
+                    <Text style={[styles.summaryText, { color: C.textTertiary }]}>
+                      {doneCount} done
+                    </Text>
+                  </View>
+                </View>
+              </>
+            }
             keyExtractor={(item) => item.id}
             contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 120 }]}
             refreshControl={
@@ -312,6 +331,7 @@ export default function TasksScreen() {
               );
             }}
           />
+          </>
         )}
 
         {/* FAB */}
@@ -366,8 +386,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xl,
   },
   emptyContent: {
-    paddingTop: Spacing.lg,
-    paddingHorizontal: Spacing['2xl'],
+    paddingBottom: Spacing.xl,
   },
   separator: {
     height: StyleSheet.hairlineWidth,

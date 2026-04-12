@@ -3,6 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
+  ScrollView,
   TouchableOpacity,
   Alert,
   RefreshControl,
@@ -216,23 +217,30 @@ export default function LoveNotesScreen() {
     return (
       <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
         <SafeAreaView style={styles.flex} edges={["top"]}>
-          <MiniDateRail
-            title="Love Notes"
-            selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
-            accentColor={C.error}
-            onPressLeading={() => {
-              Haptics.selectionAsync();
-              router.replace("/(tabs)/together");
-            }}
-          />
-
-          <View style={styles.emptyWrap}>
-            <EmptyState
-              title="No notes yet"
-              description="Leave a note for each other and it will show up here."
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.error} />
+            }
+          >
+            <MiniDateRail
+              title="Love Notes"
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              accentColor={C.error}
+              onPressLeading={() => {
+                Haptics.selectionAsync();
+                router.replace("/(tabs)/together");
+              }}
             />
-          </View>
+
+            <View style={styles.emptyWrap}>
+              <EmptyState
+                title="No notes yet"
+                description="Leave a note for each other and it will show up here."
+              />
+            </View>
+          </ScrollView>
 
           <TouchableOpacity
             onPress={() => {
@@ -258,24 +266,30 @@ export default function LoveNotesScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.flex} edges={["top"]}>
-        <MiniDateRail
-          title="Love Notes"
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          accentColor={C.error}
-          onPressLeading={() => {
-            Haptics.selectionAsync();
-            router.replace("/(tabs)/together");
-          }}
-        />
-
         {visibleNotes.length === 0 ? (
-          <View style={styles.emptyWrap}>
-            <EmptyState
-              title="No love notes on this date"
-              description="Pick another day or clear the date filter."
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.error} />
+            }
+          >
+            <MiniDateRail
+              title="Love Notes"
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              accentColor={C.error}
+              onPressLeading={() => {
+                Haptics.selectionAsync();
+                router.replace("/(tabs)/together");
+              }}
             />
-          </View>
+            <View style={styles.emptyWrap}>
+              <EmptyState
+                title="No love notes on this date"
+                description="Pick another day or clear the date filter."
+              />
+            </View>
+          </ScrollView>
         ) : (
           <FlashList
             data={visibleNotes}
@@ -285,7 +299,19 @@ export default function LoveNotesScreen() {
               togetherListContainerStyle,
             ]}
             ListHeaderComponent={
-              <Text style={[styles.sectionLabel, { color: C.textTertiary }]}>ALL NOTES</Text>
+              <>
+                <MiniDateRail
+                  title="Love Notes"
+                  selectedDate={selectedDate}
+                  onSelectDate={setSelectedDate}
+                  accentColor={C.error}
+                  onPressLeading={() => {
+                    Haptics.selectionAsync();
+                    router.replace("/(tabs)/together");
+                  }}
+                />
+                <Text style={[styles.sectionLabel, { color: C.textTertiary }]}>ALL NOTES</Text>
+              </>
             }
             ItemSeparatorComponent={() => (
               <View style={[styles.separator, { backgroundColor: C.border }]} />

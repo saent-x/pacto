@@ -602,6 +602,9 @@ export default function HomeScreen() {
             />
           ) : null}
 
+          {/* ─── Quick Nav ─── */}
+          <QuickNav actions={home.quickActions} onPress={handleAction} />
+
           <DailyPulseCard />
 
           {/* ─── Shared Memories ─── */}
@@ -611,9 +614,6 @@ export default function HomeScreen() {
               isLoading={home.isLoading}
             />
           </Animated.View>
-
-          {/* ─── Quick Nav ─── */}
-          <QuickNav actions={home.quickActions} onPress={handleAction} />
 
           {/* ─── Milestones ─── */}
           <MilestoneStrip

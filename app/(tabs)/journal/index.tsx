@@ -162,21 +162,6 @@ export default function JournalScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={[styles.flex, { backgroundColor: C.screenBackground }]} edges={['top']}>
-        <MiniDateRail
-          title="Journal"
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          accentColor={C.journal}
-          onPressAction={openCreate}
-          actionIcon="plus"
-          tabs={[
-            { value: 'all', label: 'All' },
-            { value: 'shared', label: 'Shared' },
-            { value: 'private', label: 'Private' },
-          ]}
-          selectedTab={filter}
-          onSelectTab={(value) => setFilter(value as JournalFilter)}
-        />
         {!hasEntries && !isLoading ? (
           <ScrollView
             contentContainerStyle={styles.emptyContent}
@@ -186,6 +171,21 @@ export default function JournalScreen() {
             showsVerticalScrollIndicator={false}
             {...tabSwipe.panHandlers}
           >
+            <MiniDateRail
+              title="Journal"
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              accentColor={C.journal}
+              onPressAction={openCreate}
+              actionIcon="plus"
+              tabs={[
+                { value: 'all', label: 'All' },
+                { value: 'shared', label: 'Shared' },
+                { value: 'private', label: 'Private' },
+              ]}
+              selectedTab={filter}
+              onSelectTab={(value) => setFilter(value as JournalFilter)}
+            />
             <EmptyState
               icon="book-open"
               title="Your journal is empty"
@@ -200,6 +200,23 @@ export default function JournalScreen() {
             renderItem={renderItem}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
+            ListHeaderComponent={
+              <MiniDateRail
+                title="Journal"
+                selectedDate={selectedDate}
+                onSelectDate={setSelectedDate}
+                accentColor={C.journal}
+                onPressAction={openCreate}
+                actionIcon="plus"
+                tabs={[
+                  { value: 'all', label: 'All' },
+                  { value: 'shared', label: 'Shared' },
+                  { value: 'private', label: 'Private' },
+                ]}
+                selectedTab={filter}
+                onSelectTab={(value) => setFilter(value as JournalFilter)}
+              />
+            }
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.journal} />
             }
@@ -243,8 +260,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   emptyContent: {
-    paddingTop: Spacing.lg,
-    paddingHorizontal: Spacing['2xl'],
+    paddingBottom: Spacing.xl,
   },
   separator: {
     height: StyleSheet.hairlineWidth,

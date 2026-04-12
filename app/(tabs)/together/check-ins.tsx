@@ -127,17 +127,6 @@ export default function CheckInsScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
-        <MiniDateRail
-          title="Check-Ins"
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          accentColor={C.mood}
-          onPressLeading={() => {
-            Haptics.selectionAsync();
-            router.replace("/(tabs)/together");
-          }}
-        />
-
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
@@ -148,31 +137,43 @@ export default function CheckInsScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.mood} />
           }
         >
+          <MiniDateRail
+            title="Check-Ins"
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            accentColor={C.mood}
+            onPressLeading={() => {
+              Haptics.selectionAsync();
+              router.replace("/(tabs)/together");
+            }}
+          />
 
-          <Text style={[styles.sectionLabel, { color: C.textTertiary }]}>HISTORY</Text>
-          <Animated.View entering={FadeInDown.duration(320).delay(120)} style={styles.historySection}>
-            {visibleCheckIns.length > 0 ? (
-              <View style={styles.listWrap}>
-                {visibleCheckIns.map((item, index) => (
-                  <View key={item.id}>
-                    {renderCheckInItem({ item, index })}
-                    <View style={[styles.separator, { backgroundColor: C.border }]} />
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <View style={styles.emptyWrap}>
-                <EmptyState
-                  title={selectedDate ? 'No check-ins on this date' : 'No check-ins yet'}
-                  description={
-                    selectedDate
-                      ? 'Pick another day or clear the date filter.'
-                      : 'Use the home screen card to add the first daily check-in.'
-                  }
-                />
-              </View>
-            )}
-          </Animated.View>
+          {visibleCheckIns.length > 0 ? (
+            <>
+              <Text style={[styles.sectionLabel, { color: C.textTertiary }]}>HISTORY</Text>
+              <Animated.View entering={FadeInDown.duration(320).delay(120)} style={styles.historySection}>
+                <View style={styles.listWrap}>
+                  {visibleCheckIns.map((item, index) => (
+                    <View key={item.id}>
+                      {renderCheckInItem({ item, index })}
+                      <View style={[styles.separator, { backgroundColor: C.border }]} />
+                    </View>
+                  ))}
+                </View>
+              </Animated.View>
+            </>
+          ) : (
+            <View style={styles.emptyWrap}>
+              <EmptyState
+                title={selectedDate ? 'No check-ins on this date' : 'No check-ins yet'}
+                description={
+                  selectedDate
+                    ? 'Pick another day or clear the date filter.'
+                    : 'Use the home screen card to add the first daily check-in.'
+                }
+              />
+            </View>
+          )}
         </ScrollView>
       </SafeAreaView>
     </View>

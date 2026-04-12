@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ViewStyle,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -74,7 +75,10 @@ export function Input({
         />
         {rightIcon && (
           <TouchableOpacity
-            onPress={onRightIconPress}
+            onPress={() => {
+              Haptics.selectionAsync();
+              onRightIconPress?.();
+            }}
             style={styles.iconRight}
             disabled={!onRightIconPress}
           >

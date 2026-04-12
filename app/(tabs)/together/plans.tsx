@@ -261,17 +261,6 @@ export default function PlansScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.flex} edges={["top"]}>
-        <MiniDateRail
-          title="Plans"
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          accentColor={C.plans}
-          onPressLeading={() => {
-            Haptics.selectionAsync();
-            router.replace("/(tabs)/together");
-          }}
-        />
-
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
@@ -286,6 +275,16 @@ export default function PlansScreen() {
             />
           }
         >
+          <MiniDateRail
+            title="Plans"
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            accentColor={C.plans}
+            onPressLeading={() => {
+              Haptics.selectionAsync();
+              router.replace("/(tabs)/together");
+            }}
+          />
           {hasPlans ? (
             <View style={styles.groupsWrap}>
               {groupedPlans.map((group, groupIdx) => (

@@ -65,6 +65,14 @@ function useSessionValue(): SessionValue {
     }
   }, [error, authLoading, user]);
 
+  // Query the $users record for displayName / avatarUrl (not on auth object)
+  const { data: selfData } = db.useQuery(
+    user ? { $users: { $: { where: { id: user.id } } } } : null,
+  );
+  const selfRecord = selfData?.$users?.[0] as
+    | { id: string; displayName?: string; avatarUrl?: string | null }
+    | undefined;
+
   const { isLoading: membershipLoading, data: membershipData } = db.useQuery(
     user
       ? {
@@ -79,7 +87,6 @@ function useSessionValue(): SessionValue {
 
   const activeMembership = membershipData?.memberships?.[0] ?? null;
   const couple = resolveLink<{ id: string; name: string; anniversary?: string | null; inviteCode?: string | null }>(activeMembership?.couple);
-  const memberUser = resolveLink<{ id: string; email?: string }>(activeMembership?.user);
 
   // Query partner info if we have a couple
   const coupleId = couple?.id ?? null;
@@ -116,14 +123,13 @@ function useSessionValue(): SessionValue {
 
   const profile = useMemo(() => {
     if (!user) return null;
-    const u = user as { id: string; email?: string; displayName?: string; avatarUrl?: string | null };
     return {
-      id: u.id,
-      displayName: u.displayName ?? u.email ?? '',
-      avatarUrl: u.avatarUrl ?? null,
-      email: u.email ?? '',
+      id: user.id,
+      displayName: selfRecord?.displayName ?? user.email ?? '',
+      avatarUrl: selfRecord?.avatarUrl ?? null,
+      email: user.email ?? '',
     };
-  }, [user]);
+  }, [user, selfRecord]);
 
   const activeCouple = useMemo(() => {
     if (!couple || !activeMembership || !user) return null;
