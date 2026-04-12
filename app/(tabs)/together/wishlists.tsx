@@ -540,8 +540,8 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   emptyWrap: {
-    paddingHorizontal: Spacing['2xl'],
-    height: 400,
+    paddingTop: Spacing['2xl'],
+    justifyContent: 'center',
   },
 
   // Wishlist card

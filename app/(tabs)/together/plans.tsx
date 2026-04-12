@@ -453,7 +453,8 @@ const styles = StyleSheet.create({
 
   // Empty
   emptyWrap: {
-    height: 400,
+    paddingTop: Spacing['2xl'],
+    justifyContent: 'center',
   },
   swipeAction: {
     width: 72,

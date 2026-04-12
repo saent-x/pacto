@@ -369,8 +369,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   emptyWrap: {
-    paddingHorizontal: Spacing["2xl"],
-    height: 400,
+    paddingTop: Spacing['2xl'],
+    justifyContent: 'center',
   },
   topRow: {
     flexDirection: "row",

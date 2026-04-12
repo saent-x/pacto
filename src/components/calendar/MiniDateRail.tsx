@@ -111,7 +111,7 @@ export function MiniDateRail({
             style={[
               styles.clearPill,
               {
-                backgroundColor: selectedDate ? pillBg : `${accentColor}18`,
+                backgroundColor: selectedDate ? pillBg : accentColor,
                 borderColor: selectedDate ? C.border : accentColor,
               },
             ]}
@@ -119,7 +119,7 @@ export function MiniDateRail({
             <Text
               style={[
                 styles.clearLabel,
-                { color: selectedDate ? C.textSecondary : accentColor },
+                { color: selectedDate ? C.textSecondary : C.ink },
               ]}
             >
               All dates

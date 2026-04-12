@@ -259,6 +259,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyWrap: {
-    height: 400,
+    paddingTop: Spacing['2xl'],
+    justifyContent: 'center',
   },
 });

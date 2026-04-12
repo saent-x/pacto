@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useColors } from '@/src/hooks/useColors';
 import { Typography } from '@/src/constants/typography';
-import { Spacing, BorderRadius } from '@/src/constants/spacing';
+import { Spacing } from '@/src/constants/spacing';
 
 interface EmptyStateProps {
   icon?: string;
@@ -21,14 +21,9 @@ export function EmptyState({
   const C = useColors();
 
   return (
-    <View
-      style={[
-        styles.card,
-        { backgroundColor: C.card, borderColor: C.border },
-      ]}
-    >
-      <Text style={[styles.title, { color: C.text }]}>{title}</Text>
-      <Text style={[styles.body, { color: C.textSecondary }]}>
+    <View style={styles.card}>
+      <Text style={[styles.title, { color: C.textSecondary }]}>{title}</Text>
+      <Text style={[styles.body, { color: C.textTertiary }]}>
         {description}
       </Text>
     </View>
@@ -37,15 +32,17 @@ export function EmptyState({
 
 const styles = StyleSheet.create({
   card: {
-    borderWidth: 1,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.xl,
+    paddingVertical: Spacing['2xl'],
+    paddingHorizontal: Spacing.xl,
+    alignItems: 'center',
     gap: Spacing.sm,
   },
   title: {
     ...Typography.subheading,
+    textAlign: 'center',
   },
   body: {
     ...Typography.body,
+    textAlign: 'center',
   },
 });

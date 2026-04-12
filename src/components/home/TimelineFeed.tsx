@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     ...Typography.caption,
   },
   emptyCard: {
-    borderRadius: 10,
+    borderRadius: 0,
     padding: Spacing.xl,
     gap: Spacing.sm,
   },
