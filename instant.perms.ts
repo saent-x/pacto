@@ -1,18 +1,16 @@
 import type { InstantRules } from '@instantdb/react-native';
 
-const isMemberBind = {
-  isMember:
-    "data.ref('couple.id') in auth.ref('$user.memberships.couple.id')",
-};
-
 const coupleScoped = {
   allow: {
-    view: 'isMember',
-    create: 'isMember',
-    update: 'isMember',
-    delete: 'isMember',
+    view: 'isCoupleMember',
+    create: 'isCoupleMember',
+    update: 'isCoupleMember',
+    delete: 'isCoupleMember',
   },
-  bind: isMemberBind,
+  bind: {
+    isCoupleMember:
+      "auth.id in data.ref('couple.memberships.user.id')",
+  },
 };
 
 const rules = {
@@ -24,8 +22,7 @@ const rules = {
       delete: 'false',
     },
     bind: {
-      isMember:
-        "data.id in auth.ref('$user.memberships.couple.id')",
+      isMember: "auth.id in data.ref('memberships.user.id')",
     },
   },
 
@@ -39,7 +36,7 @@ const rules = {
     bind: {
       isSelf: "auth.id == data.ref('user.id')",
       isCouplemate:
-        "data.ref('couple.id') in auth.ref('$user.memberships.couple.id')",
+        "auth.id in data.ref('couple.memberships.user.id')",
     },
   },
 
