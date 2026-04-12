@@ -43,15 +43,12 @@ export function OrbitalRings({ variant }: OrbitalRingsProps) {
       };
     }
     // approaching: start apart, drift together, drift apart
-    const startX = -40;
-    const endX = -6;
-    const startY = -14;
-    const endY = 0;
     const t = progress.value;
+    const curveOffset = Math.sin(t * Math.PI) * 12;
     return {
       transform: [
-        { translateX: startX + (endX - startX) * t },
-        { translateY: startY + (endY - startY) * t },
+        { translateX: -40 + 34 * t },
+        { translateY: -14 + 14 * t + curveOffset },
       ],
     };
   });
@@ -66,15 +63,12 @@ export function OrbitalRings({ variant }: OrbitalRingsProps) {
         ],
       };
     }
-    const startX = 40;
-    const endX = 6;
-    const startY = 14;
-    const endY = 0;
     const t = progress.value;
+    const curveOffset = Math.sin(t * Math.PI) * -12;
     return {
       transform: [
-        { translateX: startX + (endX - startX) * t },
-        { translateY: startY + (endY - startY) * t },
+        { translateX: 40 - 34 * t },
+        { translateY: 14 - 14 * t + curveOffset },
       ],
     };
   });
