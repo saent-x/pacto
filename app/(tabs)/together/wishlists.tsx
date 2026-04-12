@@ -173,6 +173,9 @@ export default function WishlistsScreen() {
           }
           showsVerticalScrollIndicator={false}
         >
+          {visibleWishlists.length > 0 && (
+            <Text style={[styles.sectionLabel, { color: C.textTertiary }]}>YOUR LISTS</Text>
+          )}
           {visibleWishlists.length > 0 ? visibleWishlists.map((wishlist, index) => (
             <Animated.View key={wishlist.id} entering={FadeInDown.duration(400).delay(100 + index * 60)}>
               <WishlistCard
@@ -525,6 +528,12 @@ function WishlistItemsList({
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   flex: { flex: 1 },
+  sectionLabel: {
+    ...Typography.overline,
+    letterSpacing: 2,
+    paddingHorizontal: Spacing['2xl'],
+    marginVertical: Spacing.md,
+  },
 
   // List
   listContent: {

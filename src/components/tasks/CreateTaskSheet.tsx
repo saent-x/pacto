@@ -5,7 +5,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import * as Haptics from 'expo-haptics';
-import { ThemedSheet, BottomSheetTextInput } from '@/src/components/ui';
+import { ThemedSheet, BottomSheetTextInput, OptionSelect } from '@/src/components/ui';
 import { sheet, useGlass } from '@/src/components/ui/sheetStyles';
 import { useColors } from '@/src/hooks/useColors';
 import { useSession } from '@/src/hooks/useSession';
@@ -113,7 +113,6 @@ export function CreateTaskSheet({ sheetRef, onSave, task, lists = [], selectedLi
   const sessionKeyRef = useRef(sessionKey);
 
   const { glassBg, glassBorder } = useGlass();
-  const activeBg = C.tasksLight;
 
   useEffect(() => {
     if (sessionKeyRef.current === sessionKey) {
@@ -303,62 +302,31 @@ export function CreateTaskSheet({ sheetRef, onSave, task, lists = [], selectedLi
         {/* Priority */}
         <View style={sheet.section}>
           <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Priority</Text>
-          <View style={sheet.toggleRow}>
-            {PRIORITIES.map((p) => {
-              const active = priority === p.value;
-              return (
-                <TouchableOpacity
-                  key={p.value}
-                  style={[
-                    sheet.glassToggle,
-                    { backgroundColor: active ? activeBg : glassBg, borderColor: active ? C.tasks : glassBorder },
-                  ]}
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    setPriority(priority === p.value ? 0 : p.value);
-                  }}
-                >
-                  <Feather name={p.icon} size={14} color={active ? C.tasks : C.fog} />
-                  <Text style={[sheet.toggleText, { color: active ? C.tasks : C.haze }]}>
-                    {p.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          <OptionSelect
+            options={PRIORITIES.map((p) => ({ value: String(p.value), label: p.label, icon: p.icon }))}
+            selected={priority === 0 ? '' : String(priority)}
+            onSelect={(val) => setPriority(val ? Number(val) : 0)}
+            accentColor={C.tasks}
+            accentBg={C.tasksLight}
+          />
         </View>
 
         {/* Assign */}
         {partner && (
           <View style={sheet.section}>
             <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Assign to</Text>
-            <View style={sheet.toggleRow}>
-              {[
-                { value: null, label: 'Either', icon: 'users' as const },
-                { value: currentUserId, label: 'Me', icon: 'user' as const },
-                { value: partner.id, label: partner.displayName?.split(' ')[0] ?? 'Partner', icon: 'heart' as const },
-              ].map((opt) => {
-                const active = assignedTo === opt.value;
-                return (
-                  <TouchableOpacity
-                    key={opt.label}
-                    style={[
-                      sheet.glassToggle,
-                      { backgroundColor: active ? activeBg : glassBg, borderColor: active ? C.tasks : glassBorder },
-                    ]}
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      setAssignedTo(opt.value);
-                    }}
-                  >
-                    <Feather name={opt.icon} size={14} color={active ? C.tasks : C.fog} />
-                    <Text style={[sheet.toggleText, { color: active ? C.tasks : C.haze }]}>
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <OptionSelect
+              options={[
+                { value: 'either', label: 'Either', icon: 'users' },
+                { value: currentUserId ?? '', label: 'Me', icon: 'user' },
+                { value: partner.id, label: partner.displayName?.split(' ')[0] ?? 'Partner', icon: 'heart' },
+              ]}
+              selected={assignedTo ?? 'either'}
+              onSelect={(val) => setAssignedTo(val === 'either' ? null : val)}
+              accentColor={C.tasks}
+              accentBg={C.tasksLight}
+              allowDeselect={false}
+            />
           </View>
         )}
 

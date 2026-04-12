@@ -75,12 +75,12 @@ const light = {
   primaryMuted: 'rgba(184, 90, 66, 0.07)',
   primaryVivid: '#C96B54',
 
-  // Toned-down warm neutrals — not stark white anywhere
-  ink: '#F2EDE7',
-  coal: '#EDE8E2',
-  night: '#E8E2DA',
-  dark: '#E2DBD2',
-  dim: '#D9D2C8',
+  // Clean warm neutrals
+  ink: '#FAFAFA',
+  coal: '#F5F5F4',
+  night: '#EFEFEC',
+  dark: '#E8E5E0',
+  dim: '#DDD9D3',
   muted: '#CCC4B8',
   dusk: '#A89A8C',
   fog: '#8A7E72',
@@ -117,20 +117,20 @@ const light = {
   mood: '#6A5E9A',
   moodLight: 'rgba(106, 94, 154, 0.10)',
 
-  // Warm parchment — never pure white
-  background: '#ECE4D8',
-  screenBackground: '#ECE4D8',
-  surface: '#E2D8CB',
-  card: '#F7F1E9',
-  text: '#2C2420',
+  // Clean white base
+  background: '#FFFFFF',
+  screenBackground: '#FFFFFF',
+  surface: '#F7F5F2',
+  card: '#F5F2ED',
+  text: '#1A1410',
   textSecondary: '#5B4F44',
   textTertiary: '#8D7E70',
-  border: '#C5B5A4',
-  divider: '#BCAA97',
-  white: '#F2EDE7',
+  border: '#E0D8CE',
+  divider: '#EAE4DC',
+  white: '#FFFFFF',
   black: '#1A1410',
 
-  gradientWarm: ['#E6DED4', '#EDE8E0'],
+  gradientWarm: ['#F7F5F2', '#FFFFFF'],
   gradientGold: ['rgba(184, 90, 66, 0.04)', 'rgba(184, 90, 66, 0)'],
 };
 

@@ -14,6 +14,7 @@ import Animated, { LinearTransition } from "react-native-reanimated";
 import { BorderRadius, Spacing } from "@/src/constants/spacing";
 import { Typography } from "@/src/constants/typography";
 import { useColors } from "@/src/hooks/useColors";
+import { useTheme } from "@/src/lib/theme";
 
 type Props = {
   selectedDate: string | null;
@@ -54,6 +55,9 @@ export function MiniDateRail({
   onSelectTab,
 }: Props) {
   const C = useColors();
+  const { mode } = useTheme();
+  const shellBg = mode === "dark" ? C.background : C.surface;
+  const pillBg = mode === "dark" ? C.card : C.background;
   const referenceDate = selectedDate ? parseISO(selectedDate) : new Date();
   const weekStart = startOfWeek(referenceDate, { weekStartsOn: 1 });
   const weekDays = eachDayOfInterval({
@@ -70,7 +74,7 @@ export function MiniDateRail({
     <View
       style={[
         styles.shell,
-        { backgroundColor: C.background, borderColor: C.border },
+        { backgroundColor: shellBg, borderColor: C.border },
       ]}
     >
       <View style={styles.topRow}>
@@ -107,7 +111,7 @@ export function MiniDateRail({
             style={[
               styles.clearPill,
               {
-                backgroundColor: selectedDate ? C.card : `${accentColor}18`,
+                backgroundColor: selectedDate ? pillBg : `${accentColor}18`,
                 borderColor: selectedDate ? C.border : accentColor,
               },
             ]}

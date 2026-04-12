@@ -284,6 +284,9 @@ export default function LoveNotesScreen() {
               styles.listContent,
               togetherListContainerStyle,
             ]}
+            ListHeaderComponent={
+              <Text style={[styles.sectionLabel, { color: C.textTertiary }]}>ALL NOTES</Text>
+            }
             ItemSeparatorComponent={() => (
               <View style={[styles.separator, { backgroundColor: C.border }]} />
             )}
@@ -322,6 +325,12 @@ export default function LoveNotesScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   flex: { flex: 1 },
+  sectionLabel: {
+    ...Typography.overline,
+    letterSpacing: 2,
+    paddingHorizontal: Spacing['2xl'],
+    marginVertical: Spacing.md,
+  },
   listContent: {
     // paddingHorizontal: Spacing.lg,
     paddingBottom: 120,

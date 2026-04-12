@@ -24,16 +24,6 @@ import { Typography } from '@/src/constants/typography';
 import { Spacing, BorderRadius } from '@/src/constants/spacing';
 import { JournalEntry } from '@/src/types/database';
 
-/* ─── Constants ─── */
-
-const MOODS = [
-  { icon: 'sun' as const, label: 'Great', color: '#8AAF7B' },
-  { icon: 'cloud' as const, label: 'Good', color: '#7BA0AF' },
-  { icon: 'minus' as const, label: 'Okay', color: '#D4A054' },
-  { icon: 'cloud-drizzle' as const, label: 'Low', color: '#B08090' },
-  { icon: 'cloud-lightning' as const, label: 'Rough', color: '#C96B5A' },
-];
-
 type ToolbarItem = {
   id: string;
   icon: React.ComponentProps<typeof Feather>['name'];
@@ -66,7 +56,6 @@ export function CreateEntrySheet({ sheetRef, onSave, onUploadImage, entry, readO
   const { mode } = useTheme();
 
   const [title, setTitle] = useState(entry?.title ?? '');
-  const [mood, setMood] = useState(entry?.mood ?? '');
   const [isPrivate, setIsPrivate] = useState(entry?.is_private ?? false);
   const [entryDate] = useState(entry?.entry_date ?? format(new Date(), 'yyyy-MM-dd'));
   const [saving, setSaving] = useState(false);
@@ -170,7 +159,6 @@ export function CreateEntrySheet({ sheetRef, onSave, onUploadImage, entry, readO
     if (sessionKeyRef.current === sessionKey) return;
     sessionKeyRef.current = sessionKey;
     setTitle(entry?.title ?? '');
-    setMood(entry?.mood ?? '');
     setIsPrivate(entry?.is_private ?? false);
     setMediaItems((entry?.media_urls ?? []).map((uri) => ({
       uri,
@@ -202,18 +190,18 @@ export function CreateEntrySheet({ sheetRef, onSave, onUploadImage, entry, readO
       await onSave({
         title: title.trim() || null,
         body: html,
-        mood: mood || null,
+        mood: null,
         is_private: isPrivate,
         entry_date: entryDate,
         media_urls: mediaRefs,
       });
       sheetRef.current?.dismiss();
       if (!isEdit) {
-        setTitle(''); setMood(''); setIsPrivate(false); setMediaItems([]);
+        setTitle(''); setIsPrivate(false); setMediaItems([]);
         editor.setContent('<p></p>');
       }
     } finally { setSaving(false); }
-  }, [editor, entryDate, isEdit, isPrivate, mediaItems, mood, onSave, sheetRef, title, uploadingImage]);
+  }, [editor, entryDate, isEdit, isPrivate, mediaItems, onSave, sheetRef, title, uploadingImage]);
 
   /* ─── Image upload ─── */
   const handleAddImage = useCallback(async () => {
@@ -347,27 +335,6 @@ export function CreateEntrySheet({ sheetRef, onSave, onUploadImage, entry, readO
           </View>
         </View>
 
-        {/* ─── Mood ─── */}
-        <Pressable onPress={dismiss} style={sheet.section}>
-          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Mood</Text>
-          <View style={styles.moodRow}>
-            {MOODS.map((m) => {
-              const active = mood === m.icon;
-              return (
-                <TouchableOpacity key={m.label} disabled={readOnly}
-                  style={[styles.moodPill, {
-                    backgroundColor: active ? m.color + '15' : glassBg,
-                    borderColor: active ? m.color : glassBorder,
-                  }]}
-                  onPress={() => { dismiss(); Haptics.selectionAsync(); setMood(mood === m.icon ? '' : m.icon); }}>
-                  <Feather name={m.icon} size={15} color={active ? m.color : C.fog} />
-                  <Text style={[styles.moodLabel, { color: active ? m.color : C.haze }]}>{m.label}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </Pressable>
-
         {/* ─── Privacy ─── */}
         {!readOnly && (
           <Pressable onPress={dismiss}
@@ -443,14 +410,6 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   hint: { ...Typography.small },
-
-  moodRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  moodPill: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.full, borderWidth: StyleSheet.hairlineWidth,
-  },
-  moodLabel: { ...Typography.captionMedium, fontSize: 13 },
 
   privacyRow: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.md,

@@ -1,11 +1,11 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Platform, Alert } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import * as Haptics from 'expo-haptics';
-import { ThemedSheet, BottomSheetTextInput } from '@/src/components/ui';
+import { ThemedSheet, BottomSheetTextInput, OptionSelect } from '@/src/components/ui';
 import { useColors } from '@/src/hooks/useColors';
 import { useTheme } from '@/src/lib/theme';
 import { sheet, useGlass } from '@/src/components/ui/sheetStyles';
@@ -43,7 +43,6 @@ export function CreateMilestoneSheet({ sheetRef, onSave, milestone }: Props) {
   const isEdit = !!milestone;
 
   const { glassBg, glassBorder } = useGlass();
-  const activeBg = C.milestonesLight;
 
   useEffect(() => {
     if (sessionKeyRef.current === sessionKey) {
@@ -172,42 +171,18 @@ export function CreateMilestoneSheet({ sheetRef, onSave, milestone }: Props) {
           />
         </View>
 
-        {/* Icon picker — horizontal scroll chips with emojis */}
+        {/* Icon picker */}
         <View style={sheet.section}>
           <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Icon</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={sheet.chipRow}>
-              {ICON_OPTIONS.map((opt) => {
-                const active = icon === opt.emoji;
-                return (
-                  <TouchableOpacity
-                    key={opt.emoji}
-                    style={[
-                      sheet.chipWithIcon,
-                      { backgroundColor: active ? activeBg : glassBg, borderColor: active ? C.milestones : glassBorder },
-                    ]}
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      setIcon(active ? '' : opt.emoji);
-                    }}
-                  >
-                    <Text style={styles.chipEmoji}>{opt.emoji}</Text>
-                    <Text style={[sheet.chipText, { color: active ? C.milestones : C.haze }]}>
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </ScrollView>
+          <OptionSelect
+            options={ICON_OPTIONS.map((opt) => ({ value: opt.emoji, label: `${opt.emoji} ${opt.label}` }))}
+            selected={icon}
+            onSelect={setIcon}
+            accentColor={C.milestones}
+            accentBg={C.milestonesLight}
+          />
         </View>
       </View>
     </ThemedSheet>
   );
 }
-
-const styles = StyleSheet.create({
-  chipEmoji: {
-    fontSize: 16,
-  },
-});

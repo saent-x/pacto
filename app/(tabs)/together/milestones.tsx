@@ -130,7 +130,7 @@ export default function MilestonesScreen() {
   const headerComponent = (
     <View>
       {filteredUpcoming.length > 0 && (
-        <Text style={[styles.sectionLabel, { color: C.textTertiary, paddingHorizontal: Spacing['2xl'] }]}>UPCOMING</Text>
+        <Text style={[styles.sectionLabel, { color: C.textTertiary }]}>UPCOMING</Text>
       )}
     </View>
   );
@@ -306,7 +306,7 @@ export default function MilestonesScreen() {
             );
 
             return (
-              <Animated.View entering={FadeInDown.duration(400).delay(150 + index * 60)}>
+              <Animated.View key={item.id} entering={FadeInDown.duration(400).delay(150 + index * 60)} style={{ marginBottom: Spacing.sm }}>
                 <Swipeable
                   renderLeftActions={renderEditAction(item)}
                   renderRightActions={renderDeleteAction(item)}
@@ -366,7 +366,8 @@ const styles = StyleSheet.create({
   sectionLabel: {
     ...Typography.overline,
     letterSpacing: 2,
-    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing['2xl'],
+    marginVertical: Spacing.md,
   },
 
   // Milestone card
@@ -375,7 +376,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 14,
-    marginBottom: Spacing.sm,
   },
   pastCard: {
     marginBottom: Spacing.xs,

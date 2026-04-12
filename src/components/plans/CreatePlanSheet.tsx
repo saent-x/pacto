@@ -1,29 +1,14 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Platform, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Platform, Alert } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import * as Haptics from 'expo-haptics';
-import { ThemedSheet, BottomSheetTextInput } from '@/src/components/ui';
+import { ThemedSheet, BottomSheetTextInput, OptionSelect } from '@/src/components/ui';
 import { sheet, useGlass } from '@/src/components/ui/sheetStyles';
 import { useColors } from '@/src/hooks/useColors';
-import { useSession } from '@/src/hooks/useSession';
 import { useTheme } from '@/src/lib/theme';
-import { Spacing } from '@/src/constants/spacing';
-
-const STATUSES = [
-  { label: 'Active', value: 'active' },
-  { label: 'In progress', value: 'in_progress' },
-  { label: 'Completed', value: 'completed' },
-  { label: 'On hold', value: 'on_hold' },
-];
-
-const PRIORITIES = [
-  { value: 1, label: 'Low', icon: 'minus' as const },
-  { value: 2, label: 'Med', icon: 'alert-circle' as const },
-  { value: 3, label: 'High', icon: 'alert-triangle' as const },
-];
 
 const CATEGORIES = [
   { label: '\u2708\uFE0F Trip', value: 'Trip' },
@@ -36,23 +21,18 @@ const CATEGORIES = [
 interface Props {
   sheetRef: React.RefObject<BottomSheetModal | null>;
   onSave: (data: { title: string; description: string | null; category: string | null; targetDate: string | null; budget: number | null; status: string; priority: number; isPrivate: boolean }) => Promise<void>;
-  plan?: { id: string; title: string; description: string | null; category: string | null; targetDate: string | null; budget: number | null; status: string; priority: number; isPrivate: boolean };
+  plan?: { id: string; title: string; description: string | null; category: string | null; targetDate: string | null };
 }
 
 export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
   const C = useColors();
   const { mode } = useTheme();
-  const { activeCouple, profile } = useSession();
 
   const [title, setTitle] = useState(plan?.title ?? '');
   const [description, setDescription] = useState(plan?.description ?? '');
   const [category, setCategory] = useState(plan?.category ?? '');
   const [targetDate, setTargetDate] = useState(plan?.targetDate ? new Date(`${plan.targetDate}T00:00:00`) : null);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [budget, setBudget] = useState(plan?.budget ? String(plan.budget) : '');
-  const [status, setStatus] = useState(plan?.status ?? 'active');
-  const [priority, setPriority] = useState(plan?.priority ?? 0);
-  const [isPrivate, setIsPrivate] = useState(plan?.isPrivate ?? false);
   const [saving, setSaving] = useState(false);
   const sessionKey = plan ? `edit:${plan.id}` : 'create';
   const sessionKeyRef = useRef(sessionKey);
@@ -73,10 +53,6 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
     setCategory(plan?.category ?? '');
     setTargetDate(plan?.targetDate ? new Date(`${plan.targetDate}T00:00:00`) : null);
     setShowDatePicker(false);
-    setBudget(plan?.budget ? String(plan.budget) : '');
-    setStatus(plan?.status ?? 'active');
-    setPriority(plan?.priority ?? 0);
-    setIsPrivate(plan?.isPrivate ?? false);
   }, [plan, sessionKey]);
 
   const handleSave = useCallback(async () => {
@@ -86,16 +62,15 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
     }
     setSaving(true);
     try {
-      const parsedBudget = budget ? parseFloat(budget) : null;
       await onSave({
         title: title.trim(),
         description: description.trim() || null,
         category: category || null,
         targetDate: targetDate ? format(targetDate, 'yyyy-MM-dd') : null,
-        budget: parsedBudget && !isNaN(parsedBudget) ? parsedBudget : null,
-        status,
-        priority,
-        isPrivate,
+        budget: null,
+        status: 'active',
+        priority: 0,
+        isPrivate: false,
       });
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       sheetRef.current?.dismiss();
@@ -104,10 +79,6 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
         setDescription('');
         setCategory('');
         setTargetDate(null);
-        setBudget('');
-        setStatus('active');
-        setPriority(0);
-        setIsPrivate(false);
       }
     } catch (error) {
       console.warn('[Coupl] Save plan failed:', error);
@@ -115,7 +86,7 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
     } finally {
       setSaving(false);
     }
-  }, [title, description, category, targetDate, budget, status, priority, isPrivate, onSave, isEdit, sheetRef]);
+  }, [title, description, category, targetDate, onSave, isEdit, sheetRef]);
 
   const footer = (
     <TouchableOpacity
@@ -168,33 +139,16 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
           />
         </View>
 
-        {/* Category — horizontal scroll glass chips */}
+        {/* Category */}
         <View style={sheet.section}>
           <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Category</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={sheet.chipRow}>
-              {CATEGORIES.map((cat) => {
-                const active = category === cat.value;
-                return (
-                  <TouchableOpacity
-                    key={cat.value}
-                    style={[
-                      sheet.chip,
-                      { backgroundColor: active ? activeBg : glassBg, borderColor: active ? C.plans : glassBorder },
-                    ]}
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      setCategory(category === cat.value ? '' : cat.value);
-                    }}
-                  >
-                    <Text style={[sheet.chipText, { color: active ? C.plans : C.haze }]}>
-                      {cat.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </ScrollView>
+          <OptionSelect
+            options={CATEGORIES.map((c) => ({ value: c.value, label: c.label }))}
+            selected={category}
+            onSelect={setCategory}
+            accentColor={C.plans}
+            accentBg={activeBg}
+          />
         </View>
 
         {/* Target date — glass pill */}
@@ -224,99 +178,6 @@ export function CreatePlanSheet({ sheetRef, onSave, plan }: Props) {
               themeVariant={mode}
             />
           )}
-        </View>
-
-        {/* Budget */}
-        <View style={sheet.section}>
-          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Budget</Text>
-          <View style={sheet.amountRow}>
-            <Text style={[sheet.currencySign, { color: C.plans }]}>$</Text>
-            <BottomSheetTextInput
-              style={[sheet.amountInput, { color: C.text }]}
-              placeholder="0.00"
-              placeholderTextColor={C.fog}
-              value={budget}
-              onChangeText={setBudget}
-              keyboardType="decimal-pad"
-            />
-          </View>
-        </View>
-
-        {/* Status — glass chips */}
-        <View style={sheet.section}>
-          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Status</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={sheet.chipRow}>
-              {STATUSES.map((s) => {
-                const active = status === s.value;
-                return (
-                  <TouchableOpacity
-                    key={s.value}
-                    style={[
-                      sheet.chip,
-                      { backgroundColor: active ? activeBg : glassBg, borderColor: active ? C.plans : glassBorder },
-                    ]}
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      setStatus(s.value);
-                    }}
-                  >
-                    <Text style={[sheet.chipText, { color: active ? C.plans : C.haze }]}>
-                      {s.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </ScrollView>
-        </View>
-
-        {/* Priority — glass toggles */}
-        <View style={sheet.section}>
-          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Priority</Text>
-          <View style={sheet.toggleRow}>
-            {PRIORITIES.map((p) => {
-              const active = priority === p.value;
-              return (
-                <TouchableOpacity
-                  key={p.value}
-                  style={[
-                    sheet.glassToggle,
-                    { backgroundColor: active ? activeBg : glassBg, borderColor: active ? C.plans : glassBorder },
-                  ]}
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    setPriority(priority === p.value ? 0 : p.value);
-                  }}
-                >
-                  <Feather name={p.icon} size={14} color={active ? C.plans : C.fog} />
-                  <Text style={[sheet.toggleText, { color: active ? C.plans : C.haze }]}>
-                    {p.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Privacy toggle */}
-        <View style={sheet.section}>
-          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Privacy</Text>
-          <TouchableOpacity
-            style={[
-              sheet.glassToggle,
-              { backgroundColor: isPrivate ? activeBg : glassBg, borderColor: isPrivate ? C.plans : glassBorder, flex: 0, paddingHorizontal: Spacing.lg },
-            ]}
-            onPress={() => {
-              Haptics.selectionAsync();
-              setIsPrivate((prev) => !prev);
-            }}
-          >
-            <Feather name={isPrivate ? 'lock' : 'unlock'} size={14} color={isPrivate ? C.plans : C.fog} />
-            <Text style={[sheet.toggleText, { color: isPrivate ? C.plans : C.haze }]}>
-              {isPrivate ? 'Private' : 'Shared'}
-            </Text>
-          </TouchableOpacity>
         </View>
 
       </View>

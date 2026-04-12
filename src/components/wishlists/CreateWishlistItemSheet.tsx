@@ -8,19 +8,11 @@ import { ThemedSheet, BottomSheetTextInput } from '@/src/components/ui';
 import { useColors } from '@/src/hooks/useColors';
 import { sheet, useGlass } from '@/src/components/ui/sheetStyles';
 
-const PRIORITIES = [
-  { value: 1, label: 'Low', icon: 'minus' as const },
-  { value: 2, label: 'Med', icon: 'alert-circle' as const },
-  { value: 3, label: 'High', icon: 'alert-triangle' as const },
-];
-
 interface WishlistItem {
   id: string;
   title: string;
-  description: string | null;
   url: string | null;
   price: number | null;
-  priority: number;
 }
 
 interface Props {
@@ -34,10 +26,8 @@ export function CreateWishlistItemSheet({ sheetRef, onSave, item }: Props) {
   const { glassBg, glassBorder } = useGlass();
 
   const [title, setTitle] = useState(item?.title ?? '');
-  const [description, setDescription] = useState(item?.description ?? '');
   const [url, setUrl] = useState(item?.url ?? '');
   const [price, setPrice] = useState(item?.price != null ? String(item.price) : '');
-  const [priority, setPriority] = useState(item?.priority ?? 0);
   const [saving, setSaving] = useState(false);
   const sessionKey = item ? `edit:${item.id}` : 'create';
   const sessionKeyRef = useRef(sessionKey);
@@ -50,10 +40,8 @@ export function CreateWishlistItemSheet({ sheetRef, onSave, item }: Props) {
     if (sessionKeyRef.current === sessionKey) return;
     sessionKeyRef.current = sessionKey;
     setTitle(item?.title ?? '');
-    setDescription(item?.description ?? '');
     setUrl(item?.url ?? '');
     setPrice(item?.price != null ? String(item.price) : '');
-    setPriority(item?.priority ?? 0);
   }, [item, sessionKey]);
 
   const handleSave = useCallback(async () => {
@@ -70,26 +58,24 @@ export function CreateWishlistItemSheet({ sheetRef, onSave, item }: Props) {
     try {
       await onSave({
         title: title.trim(),
-        description: description.trim() || null,
+        description: null,
         url: url.trim() || null,
         price: parsedPrice,
-        priority,
+        priority: 0,
       });
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       sheetRef.current?.dismiss();
       if (!isEdit) {
         setTitle('');
-        setDescription('');
         setUrl('');
         setPrice('');
-        setPriority(0);
       }
     } catch (error) {
       Alert.alert('Save failed', 'Try again.');
     } finally {
       setSaving(false);
     }
-  }, [title, description, url, price, priority, onSave, isEdit, sheetRef]);
+  }, [title, url, price, onSave, isEdit, sheetRef]);
 
   const footer = (
     <TouchableOpacity
@@ -126,18 +112,6 @@ export function CreateWishlistItemSheet({ sheetRef, onSave, item }: Props) {
           autoFocus
         />
 
-        <View style={[sheet.bodyCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
-          <BottomSheetTextInput
-            style={[sheet.bodyInput, { color: C.text }]}
-            placeholder="Add a note..."
-            placeholderTextColor={C.fog}
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            textAlignVertical="top"
-          />
-        </View>
-
         <View style={sheet.section}>
           <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Link</Text>
           <View style={[sheet.inputCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
@@ -169,32 +143,6 @@ export function CreateWishlistItemSheet({ sheetRef, onSave, item }: Props) {
           </View>
         </View>
 
-        <View style={sheet.section}>
-          <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Priority</Text>
-          <View style={sheet.toggleRow}>
-            {PRIORITIES.map((p) => {
-              const active = priority === p.value;
-              return (
-                <TouchableOpacity
-                  key={p.value}
-                  style={[
-                    sheet.glassToggle,
-                    { backgroundColor: active ? activeBg : glassBg, borderColor: active ? C.wishlists : glassBorder },
-                  ]}
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    setPriority(priority === p.value ? 0 : p.value);
-                  }}
-                >
-                  <Feather name={p.icon} size={14} color={active ? C.wishlists : C.fog} />
-                  <Text style={[sheet.toggleText, { color: active ? C.wishlists : C.haze }]}>
-                    {p.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
       </View>
     </ThemedSheet>
   );

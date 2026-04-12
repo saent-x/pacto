@@ -1,11 +1,11 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Alert } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import * as Haptics from 'expo-haptics';
-import { ThemedSheet, BottomSheetTextInput } from '@/src/components/ui';
+import { ThemedSheet, BottomSheetTextInput, OptionSelect } from '@/src/components/ui';
 import { sheet, useGlass } from '@/src/components/ui/sheetStyles';
 import { useColors } from '@/src/hooks/useColors';
 import { useSession } from '@/src/hooks/useSession';
@@ -212,93 +212,44 @@ export function CreateExpenseSheet({ sheetRef, onSave, expense }: Props) {
           </View>
         ) : null}
 
-        {/* Paid by — glass toggles */}
+        {/* Paid by */}
         <View style={sheet.section}>
           <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Paid by</Text>
-          <View style={sheet.toggleRow}>
-            {[
-              { value: currentUserId ?? '', label: 'Me', icon: 'user' as const },
+          <OptionSelect
+            options={[
+              { value: currentUserId ?? '', label: 'Me', icon: 'user' },
               ...(partner ? [{ value: partner.id, label: partner.displayName?.split(' ')[0] ?? 'Partner', icon: 'heart' as const }] : []),
-            ].map((opt) => {
-              const active = paidBy === opt.value;
-              return (
-                <TouchableOpacity
-                  key={opt.value}
-                  style={[
-                    sheet.glassToggle,
-                    { backgroundColor: active ? activeBg : glassBg, borderColor: active ? C.expenses : glassBorder },
-                  ]}
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    setPaidBy(opt.value);
-                  }}
-                >
-                  <Feather name={opt.icon} size={14} color={active ? C.expenses : C.fog} />
-                  <Text style={[sheet.toggleText, { color: active ? C.expenses : C.haze }]}>
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+            ]}
+            selected={paidBy}
+            onSelect={setPaidBy}
+            accentColor={C.expenses}
+            accentBg={C.expensesLight}
+            allowDeselect={false}
+          />
         </View>
 
-        {/* Split type — glass chips */}
+        {/* Split type */}
         <View style={sheet.section}>
           <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Split</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={sheet.chipRow}>
-              {SPLIT_TYPES.map((s) => {
-                const active = splitType === s.value;
-                return (
-                  <TouchableOpacity
-                    key={s.value}
-                    style={[
-                      sheet.chip,
-                      { backgroundColor: active ? activeBg : glassBg, borderColor: active ? C.expenses : glassBorder },
-                    ]}
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      setSplitType(splitType === s.value ? '' : s.value);
-                    }}
-                  >
-                    <Text style={[sheet.chipText, { color: active ? C.expenses : C.haze }]}>
-                      {s.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </ScrollView>
+          <OptionSelect
+            options={SPLIT_TYPES.map((s) => ({ value: s.value, label: s.label }))}
+            selected={splitType}
+            onSelect={setSplitType}
+            accentColor={C.expenses}
+            accentBg={C.expensesLight}
+          />
         </View>
 
-        {/* Category — horizontal scroll glass chips */}
+        {/* Category */}
         <View style={sheet.section}>
           <Text style={[sheet.sectionTitle, { color: C.textTertiary }]}>Category</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={sheet.chipRow}>
-              {CATEGORIES.map((cat) => {
-                const active = category === cat.value;
-                return (
-                  <TouchableOpacity
-                    key={cat.value}
-                    style={[
-                      sheet.chip,
-                      { backgroundColor: active ? activeBg : glassBg, borderColor: active ? C.expenses : glassBorder },
-                    ]}
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      setCategory(category === cat.value ? '' : cat.value);
-                    }}
-                  >
-                    <Text style={[sheet.chipText, { color: active ? C.expenses : C.haze }]}>
-                      {cat.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </ScrollView>
+          <OptionSelect
+            options={CATEGORIES.map((c) => ({ value: c.value, label: c.label }))}
+            selected={category}
+            onSelect={setCategory}
+            accentColor={C.expenses}
+            accentBg={C.expensesLight}
+          />
         </View>
 
         {/* Date — glass pill */}
