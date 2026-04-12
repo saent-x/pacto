@@ -1,5 +1,5 @@
 // src/components/ui/ConfettiBurst.tsx
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, useWindowDimensions } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -90,6 +90,13 @@ export function ConfettiBurst({
   const defaultColors = [C.primary as string, C.error as string, C.cream as string];
   const particleColors = colorsProp ?? defaultColors;
 
+  // Clean up invisible particle nodes after animation completes
+  const [visible, setVisible] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(false), duration + 300);
+    return () => clearTimeout(timer);
+  }, [duration]);
+
   const particles = useMemo<ParticleConfig[]>(() => {
     const result: ParticleConfig[] = [];
     const centerX = width / 2;
@@ -110,6 +117,8 @@ export function ConfettiBurst({
     return result;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  if (!visible) return null;
 
   return (
     <Animated.View style={styles.overlay} pointerEvents="none">

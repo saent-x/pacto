@@ -19,6 +19,7 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   withDelay,
+  withSequence,
   Easing,
 } from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
@@ -82,15 +83,13 @@ export default function OnboardingScreen() {
       setStep('created');
 
       // Trigger pulse ring animation after ZoomIn lands
-      pulseOpacity.value = 0.4;
-      pulseScale.value = 1;
-      pulseOpacity.value = withDelay(
-        600,
-        withTiming(0, { duration: 800, easing: Easing.out(Easing.ease) }),
+      pulseOpacity.value = withSequence(
+        withTiming(0.4, { duration: 0 }),
+        withDelay(600, withTiming(0, { duration: 800, easing: Easing.out(Easing.ease) })),
       );
-      pulseScale.value = withDelay(
-        600,
-        withTiming(100 / 56, { duration: 800, easing: Easing.out(Easing.ease) }),
+      pulseScale.value = withSequence(
+        withTiming(1, { duration: 0 }),
+        withDelay(600, withTiming(100 / 56, { duration: 800, easing: Easing.out(Easing.ease) })),
       );
     } catch (error) {
       Alert.alert(
