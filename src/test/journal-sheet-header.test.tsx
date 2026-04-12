@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { describe, expect, it, vi } from 'vitest';
+import { format } from 'date-fns';
 
 import { sheet } from '@/src/components/ui/sheetStyles';
 import { CreateEntrySheet } from '@/src/components/journal/CreateEntrySheet';
@@ -83,7 +84,8 @@ describe('CreateEntrySheet header', () => {
     });
 
     const label = tree.root.findByProps({ children: 'NEW ENTRY' });
-    const date = tree.root.findByProps({ children: 'Saturday, April 11' });
+    const todayLabel = format(new Date(), 'EEEE, MMMM d');
+    const date = tree.root.findByProps({ children: todayLabel });
     expect(label.props.style[0]).toBe(sheet.sheetLabel);
     expect(date.props.style[0]).toBe(sheet.dateDisplay);
 
