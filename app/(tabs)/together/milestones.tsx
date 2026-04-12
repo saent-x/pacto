@@ -16,7 +16,7 @@ import { MiniDateRail } from '@/src/components/calendar/MiniDateRail';
 import { EmptyState } from '@/src/components/ui';
 import { CreateMilestoneSheet } from '@/src/components/milestones/CreateMilestoneSheet';
 import { matchesSelectedDate } from '@/src/lib/togetherDateFilter';
-import { togetherItemContainerStyle, togetherListContainerStyle } from './_itemStyles';
+import { togetherItemContainerStyle, togetherListContainerStyle } from '@/src/constants/togetherStyles';
 
 type MilestoneItem = {
   id: string;

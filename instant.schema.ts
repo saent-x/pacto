@@ -4,7 +4,7 @@ const _schema = i.schema({
   entities: {
     $users: i.entity({
       email: i.string().unique().indexed(),
-      displayName: i.string(),
+      displayName: i.string().optional(),
       avatarUrl: i.string().optional(),
       preferences: i.json().optional(),
     }),
@@ -256,8 +256,8 @@ loveNoteCouple: {
       reverse: { on: '$users', has: 'many', label: 'createdWishlists' },
     },
     wishlistItemWishlist: {
-      forward: { on: 'wishlistItems', has: 'one', label: 'wishlist' },
-      reverse: { on: 'wishlists', has: 'many', label: 'items', onDelete: 'cascade' },
+      forward: { on: 'wishlistItems', has: 'one', label: 'wishlist', onDelete: 'cascade' },
+      reverse: { on: 'wishlists', has: 'many', label: 'items' },
     },
     wishlistItemCouple: {
       forward: { on: 'wishlistItems', has: 'one', label: 'couple' },

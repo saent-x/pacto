@@ -17,7 +17,7 @@ import { Typography } from '@/src/constants/typography';
 import { MiniDateRail } from '@/src/components/calendar/MiniDateRail';
 import { EmptyState } from '@/src/components/ui';
 import { matchesSelectedDate } from '@/src/lib/togetherDateFilter';
-import { togetherItemContainerStyle, togetherListContainerStyle } from './_itemStyles';
+import { togetherItemContainerStyle, togetherListContainerStyle } from '@/src/constants/togetherStyles';
 
 export default function CheckInsScreen() {
   const C = useColors();

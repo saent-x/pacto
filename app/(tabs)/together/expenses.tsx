@@ -27,7 +27,7 @@ import { matchesSelectedDate } from "@/src/lib/togetherDateFilter";
 import {
   togetherItemContainerStyle,
   togetherListContainerStyle,
-} from "./_itemStyles";
+} from "@/src/constants/togetherStyles";
 
 type ExpenseItem = {
   id: string;

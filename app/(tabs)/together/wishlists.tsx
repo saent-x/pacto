@@ -24,7 +24,7 @@ import { EmptyState } from '@/src/components/ui';
 import { CreateWishlistSheet } from '@/src/components/wishlists/CreateWishlistSheet';
 import { CreateWishlistItemSheet } from '@/src/components/wishlists/CreateWishlistItemSheet';
 import { matchesSelectedDateForTimestamp } from '@/src/lib/togetherDateFilter';
-import { togetherItemContainerStyle, togetherListContainerStyle } from './_itemStyles';
+import { togetherItemContainerStyle, togetherListContainerStyle } from '@/src/constants/togetherStyles';
 
 function getPriorityColor(priority: number, C: ReturnType<typeof useColors>) {
   if (priority >= 3) return C.expenses;

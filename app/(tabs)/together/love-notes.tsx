@@ -26,7 +26,7 @@ import { EmptyState } from "@/src/components/ui";
 import { toPlainMarkdownPreview } from "@/src/components/journal/MarkdownText";
 import { CreateLoveNoteSheet } from "@/src/components/loveNotes/CreateLoveNoteSheet";
 import { matchesSelectedDateForTimestamp } from "@/src/lib/togetherDateFilter";
-import { togetherItemContainerStyle, togetherListContainerStyle } from "./_itemStyles";
+import { togetherItemContainerStyle, togetherListContainerStyle } from "@/src/constants/togetherStyles";
 
 type NoteItem = {
   id: string;
