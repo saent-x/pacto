@@ -25,15 +25,15 @@ import { MiniDateRail } from "@/src/components/calendar/MiniDateRail";
 import { EmptyState } from "@/src/components/ui";
 import { CreatePlanSheet } from "@/src/components/plans/CreatePlanSheet";
 import { matchesSelectedDate } from "@/src/lib/togetherDateFilter";
-import { togetherItemContainerStyle, togetherListContainerStyle } from "./_itemStyles";
+import { togetherItemContainerStyle, togetherListContainerStyle } from "@/src/constants/togetherStyles";
 
 interface PlanRecord {
-  _id: string;
+  id: string;
   title: string;
-  description: string | null;
-  category: string | null;
-  targetDate: string | null;
-  budget: number | null;
+  description?: string | null;
+  category?: string | null;
+  targetDate?: string | null;
+  budget?: number | null;
   status: string;
   priority: number;
   isPrivate: boolean;
@@ -91,7 +91,7 @@ export default function PlansScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              await remove(plan._id);
+              await remove(plan.id);
             } catch {
               Alert.alert("Error", "Could not delete plan.");
             }
@@ -114,7 +114,7 @@ export default function PlansScreen() {
       isPrivate: boolean;
     }) => {
       if (editingPlan) {
-        await update(editingPlan._id, data);
+        await update(editingPlan.id, data);
         setEditingPlan(null);
         return;
       }
@@ -242,7 +242,7 @@ export default function PlansScreen() {
 
     return (
       <Animated.View
-        key={plan._id}
+        key={plan.id}
         entering={FadeInDown.duration(400).delay(index * 60)}
       >
         <Swipeable
@@ -261,17 +261,6 @@ export default function PlansScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.flex} edges={["top"]}>
-        <MiniDateRail
-          title="Plans"
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          accentColor={C.plans}
-          onPressLeading={() => {
-            Haptics.selectionAsync();
-            router.replace("/(tabs)/together");
-          }}
-        />
-
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
@@ -286,6 +275,16 @@ export default function PlansScreen() {
             />
           }
         >
+          <MiniDateRail
+            title="Plans"
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            accentColor={C.plans}
+            onPressLeading={() => {
+              Haptics.selectionAsync();
+              router.replace("/(tabs)/together");
+            }}
+          />
           {hasPlans ? (
             <View style={styles.groupsWrap}>
               {groupedPlans.map((group, groupIdx) => (
@@ -340,11 +339,11 @@ export default function PlansScreen() {
           plan={
             editingPlan
               ? {
-                  id: editingPlan._id,
+                  id: editingPlan.id,
                   title: editingPlan.title,
-                  description: editingPlan.description,
-                  category: editingPlan.category,
-                  targetDate: editingPlan.targetDate,
+                  description: editingPlan.description ?? null,
+                  category: editingPlan.category ?? null,
+                  targetDate: editingPlan.targetDate ?? null,
                 }
               : undefined
           }
@@ -453,7 +452,8 @@ const styles = StyleSheet.create({
 
   // Empty
   emptyWrap: {
-    height: 400,
+    paddingTop: Spacing['2xl'],
+    justifyContent: 'center',
   },
   swipeAction: {
     width: 72,

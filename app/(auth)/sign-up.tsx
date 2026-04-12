@@ -24,29 +24,39 @@ import { useAuthActions } from '@/src/hooks/useAuthActions';
 export default function SignUpScreen() {
   const C = useColors();
   const router = useRouter();
-  const { signUp } = useAuthActions();
+  const { sendMagicCode, signInWithMagicCode } = useAuthActions();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
+  const [step, setStep] = useState<'email' | 'code'>('email');
   const [loading, setLoading] = useState(false);
   const compact = height < 820;
 
-  const handleSignUp = async () => {
-    if (!name.trim() || !email.trim() || !password) {
-      Alert.alert('Missing details', 'Enter your name, email, and password.');
+  const handleSendCode = async () => {
+    if (!email.trim()) {
+      Alert.alert('Missing email', 'Enter your email to get started.');
       return;
     }
-
     try {
       setLoading(true);
-      await signUp({
-        name,
-        email,
-        password,
-      });
-      // Navigate immediately — don't wait for reactive auth state to settle.
+      await sendMagicCode(email);
+      setStep('code');
+    } catch (error) {
+      Alert.alert('Error', error instanceof Error ? error.message : 'Unable to send code.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignUp = async () => {
+    if (!code.trim()) {
+      Alert.alert('Missing code', 'Enter the code sent to your email.');
+      return;
+    }
+    try {
+      setLoading(true);
+      await signInWithMagicCode({ email, code });
       router.replace('/(auth)/onboarding');
     } catch (error) {
       setLoading(false);
@@ -56,6 +66,8 @@ export default function SignUpScreen() {
       );
     }
   };
+
+  const handleSubmit = step === 'email' ? handleSendCode : handleSignUp;
 
   return (
     <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
@@ -116,16 +128,6 @@ export default function SignUpScreen() {
 
               <View style={[styles.fieldGroup, compact ? styles.fieldGroupCompact : undefined]}>
                 <Input
-                  label="Name"
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="How should we address you?"
-                  autoCapitalize="words"
-                  textContentType="name"
-                  returnKeyType="next"
-                  leftIcon={<Feather name="user" size={16} color={C.fog} />}
-                />
-                <Input
                   label="Email"
                   value={email}
                   onChangeText={setEmail}
@@ -134,30 +136,32 @@ export default function SignUpScreen() {
                   autoCorrect={false}
                   keyboardType="email-address"
                   textContentType="emailAddress"
-                  returnKeyType="next"
+                  returnKeyType={step === 'email' ? 'done' : 'next'}
+                  editable={step === 'email'}
                   leftIcon={<Feather name="mail" size={16} color={C.fog} />}
                 />
-                <Input
-                  label="Password"
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Create a password"
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  textContentType="newPassword"
-                  returnKeyType="done"
-                  leftIcon={<Feather name="lock" size={16} color={C.fog} />}
-                />
+                {step === 'code' && (
+                  <Input
+                    label="Magic Code"
+                    value={code}
+                    onChangeText={setCode}
+                    placeholder="Enter the code from your email"
+                    autoCapitalize="characters"
+                    autoCorrect={false}
+                    keyboardType="default"
+                    returnKeyType="done"
+                    leftIcon={<Feather name="key" size={16} color={C.fog} />}
+                  />
+                )}
               </View>
 
               <Button
-                title="Create Account"
-                onPress={handleSignUp}
+                title={step === 'email' ? 'Send Magic Code' : 'Create Account'}
+                onPress={handleSubmit}
                 loading={loading}
                 size="lg"
                 style={styles.submitBtn}
-                disabled={!name.trim() || !email.trim() || !password}
+                disabled={step === 'email' ? !email.trim() : !code.trim()}
               />
             </Animated.View>
 

@@ -1,6 +1,7 @@
-import type { CalendarDay } from "@/convex/timeline";
+import type { CalendarDay } from "@/src/lib/home/types";
 
 import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { BorderRadius, Spacing } from "@/src/constants/spacing";
@@ -68,14 +69,20 @@ export function CalendarMonth({
         <View style={styles.controls}>
           <Pressable
             accessibilityRole="button"
-            onPress={onPreviousMonth}
+            onPress={() => {
+              Haptics.selectionAsync();
+              onPreviousMonth();
+            }}
             style={[styles.iconButton, { borderColor: colors.border }]}
           >
             <Feather name="chevron-left" size={18} color={colors.text} />
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            onPress={onToday}
+            onPress={() => {
+              Haptics.selectionAsync();
+              onToday();
+            }}
             style={[
               styles.todayButton,
               {
@@ -88,7 +95,10 @@ export function CalendarMonth({
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            onPress={onNextMonth}
+            onPress={() => {
+              Haptics.selectionAsync();
+              onNextMonth();
+            }}
             style={[styles.iconButton, { borderColor: colors.border }]}
           >
             <Feather name="chevron-right" size={18} color={colors.text} />
@@ -111,7 +121,10 @@ export function CalendarMonth({
             <Pressable
               key={day.date}
               accessibilityRole="button"
-              onPress={() => onSelectDate(day.date)}
+              onPress={() => {
+                Haptics.selectionAsync();
+                onSelectDate(day.date);
+              }}
               style={[
                 styles.dayCell,
                 {

@@ -24,7 +24,7 @@ import { EmptyState } from '@/src/components/ui';
 import { CreateWishlistSheet } from '@/src/components/wishlists/CreateWishlistSheet';
 import { CreateWishlistItemSheet } from '@/src/components/wishlists/CreateWishlistItemSheet';
 import { matchesSelectedDateForTimestamp } from '@/src/lib/togetherDateFilter';
-import { togetherItemContainerStyle, togetherListContainerStyle } from './_itemStyles';
+import { togetherItemContainerStyle, togetherListContainerStyle } from '@/src/constants/togetherStyles';
 
 function getPriorityColor(priority: number, C: ReturnType<typeof useColors>) {
   if (priority >= 3) return C.expenses;
@@ -112,23 +112,30 @@ export default function WishlistsScreen() {
     return (
       <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
         <SafeAreaView style={styles.flex} edges={['top']}>
-          <MiniDateRail
-            title="Wishlists"
-            selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
-            accentColor={C.wishlists}
-            onPressLeading={() => {
-              Haptics.selectionAsync();
-              router.replace("/(tabs)/together");
-            }}
-          />
-
-          <View style={styles.emptyWrap}>
-            <EmptyState
-              title="Your wishlists are empty"
-              description="Drop some hints for each other — add things you'd love"
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.wishlists} />
+            }
+          >
+            <MiniDateRail
+              title="Wishlists"
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              accentColor={C.wishlists}
+              onPressLeading={() => {
+                Haptics.selectionAsync();
+                router.replace("/(tabs)/together");
+              }}
             />
-          </View>
+
+            <View style={styles.emptyWrap}>
+              <EmptyState
+                title="Your wishlists are empty"
+                description="Drop some hints for each other — add things you'd love"
+              />
+            </View>
+          </ScrollView>
 
           {/* FAB */}
           <TouchableOpacity
@@ -152,39 +159,38 @@ export default function WishlistsScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
-        <MiniDateRail
-          title="Wishlists"
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          accentColor={C.wishlists}
-          onPressLeading={() => {
-            Haptics.selectionAsync();
-            router.replace("/(tabs)/together");
-          }}
-        />
-
         <ScrollView
           contentContainerStyle={[
             styles.listContent,
             togetherListContainerStyle,
           ]}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.wishlists} />
           }
           showsVerticalScrollIndicator={false}
         >
+          <MiniDateRail
+            title="Wishlists"
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            accentColor={C.wishlists}
+            onPressLeading={() => {
+              Haptics.selectionAsync();
+              router.replace("/(tabs)/together");
+            }}
+          />
           {visibleWishlists.length > 0 && (
             <Text style={[styles.sectionLabel, { color: C.textTertiary }]}>YOUR LISTS</Text>
           )}
           {visibleWishlists.length > 0 ? visibleWishlists.map((wishlist, index) => (
-            <Animated.View key={wishlist._id} entering={FadeInDown.duration(400).delay(100 + index * 60)}>
+            <Animated.View key={wishlist.id} entering={FadeInDown.duration(400).delay(100 + index * 60)}>
               <WishlistCard
                 wishlist={wishlist}
-                expanded={expandedId === wishlist._id}
+                expanded={expandedId === wishlist.id}
                 onToggle={toggleExpand}
                 onDelete={handleDeleteWishlist}
                 onEdit={(nextWishlist) => {
-                  setEditingWishlist({ id: nextWishlist._id, name: nextWishlist.name });
+                  setEditingWishlist({ id: nextWishlist.id, name: nextWishlist.name });
                   createSheetRef.current?.present();
                 }}
                 colors={C}
@@ -226,18 +232,18 @@ export default function WishlistsScreen() {
 /* ------------------------------------------------------------------ */
 
 type WishlistCardProps = {
-  wishlist: { _id: string; name: string; createdBy: string; createdAt: number };
+  wishlist: { id: string; name: string; createdBy: string; createdAt: number };
   expanded: boolean;
   onToggle: (id: string) => void;
   onDelete: (id: string, name: string) => void;
-  onEdit: (wishlist: { _id: string; name: string; createdBy: string; createdAt: number }) => void;
+  onEdit: (wishlist: { id: string; name: string; createdBy: string; createdAt: number }) => void;
   colors: ReturnType<typeof useColors>;
 };
 
 function WishlistCard({ wishlist, expanded, onToggle, onDelete, onEdit, colors: C }: WishlistCardProps) {
   const row = (
     <TouchableOpacity
-      onPress={() => onToggle(wishlist._id)}
+      onPress={() => onToggle(wishlist.id)}
       activeOpacity={0.7}
       style={[
         togetherItemContainerStyle,
@@ -276,7 +282,7 @@ function WishlistCard({ wishlist, expanded, onToggle, onDelete, onEdit, colors: 
         renderRightActions={() => (
           <TouchableOpacity
             style={[styles.swipeAction, { backgroundColor: C.error }]}
-            onPress={() => onDelete(wishlist._id, wishlist.name)}
+            onPress={() => onDelete(wishlist.id, wishlist.name)}
           >
             <Feather name="trash-2" size={18} color="#fff" />
           </TouchableOpacity>
@@ -288,7 +294,7 @@ function WishlistCard({ wishlist, expanded, onToggle, onDelete, onEdit, colors: 
         {row}
       </Swipeable>
 
-      {expanded && <WishlistItemsList wishlistId={wishlist._id} colors={C} />}
+      {expanded && <WishlistItemsList wishlistId={wishlist.id} colors={C} />}
     </View>
   );
 }
@@ -389,15 +395,15 @@ function WishlistItemsList({
         </View>
       ) : (
         items.map((item, i) => (
-          <Animated.View key={item._id} entering={FadeInDown.duration(300).delay(i * 40)}>
+          <Animated.View key={item.id} entering={FadeInDown.duration(300).delay(i * 40)}>
             {(() => {
-              const isPending = !!pendingItemIds[item._id];
+              const isPending = !!pendingItemIds[item.id];
               return (
             <Swipeable
               renderLeftActions={() => (
                 <TouchableOpacity
                   style={[styles.swipeAction, { backgroundColor: C.wishlists }]}
-                  onPress={() => handleTogglePurchased(item._id)}
+                  onPress={() => handleTogglePurchased(item.id)}
                 >
                   <Feather name="check" size={18} color="#fff" />
                 </TouchableOpacity>
@@ -405,7 +411,7 @@ function WishlistItemsList({
               renderRightActions={() => (
                 <TouchableOpacity
                   style={[styles.swipeAction, { backgroundColor: C.error }]}
-                  onPress={() => handleDeleteItem(item._id, item.title)}
+                  onPress={() => handleDeleteItem(item.id, item.title)}
                 >
                   <Feather name="trash-2" size={18} color="#fff" />
                 </TouchableOpacity>
@@ -415,7 +421,7 @@ function WishlistItemsList({
               friction={2}
             >
               <TouchableOpacity
-                onPress={() => handleTogglePurchased(item._id)}
+                onPress={() => handleTogglePurchased(item.id)}
                 disabled={isPending}
                 activeOpacity={0.7}
                 style={[
@@ -540,8 +546,8 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   emptyWrap: {
-    paddingHorizontal: Spacing['2xl'],
-    height: 400,
+    paddingTop: Spacing['2xl'],
+    justifyContent: 'center',
   },
 
   // Wishlist card

@@ -46,7 +46,7 @@ export default function RemindersScreen() {
   const C = useColors();
   const { mode } = useTheme();
   const { profile } = useSession();
-  const userId = profile?._id ?? null;
+  const userId = profile?.id ?? null;
   const { upcoming, completed, isLoading, create, update, toggleComplete, remove, refetch } = useReminders();
 
   const sheetRef = useRef<BottomSheetModal>(null);
@@ -237,32 +237,6 @@ export default function RemindersScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={[styles.flex, { backgroundColor: C.screenBackground }]} edges={['top']}>
-        <MiniDateRail
-          title="Reminders"
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          accentColor={C.reminders}
-          onPressAction={openCreate}
-          actionIcon="plus"
-          tabs={[
-            { value: 'all', label: 'All' },
-            { value: 'mine', label: 'Mine' },
-            { value: 'partner', label: "Partner's" },
-          ]}
-          selectedTab={filter}
-          onSelectTab={(value) => setFilter(value as Filter)}
-        />
-        <View style={[styles.header, { backgroundColor: C.background }]}>
-          <View style={styles.summaryRow}>
-            <Text style={[styles.summaryText, { color: C.textTertiary }]}>
-              {openCount} open
-            </Text>
-            <View style={[styles.summaryDivider, { backgroundColor: C.border }]} />
-            <Text style={[styles.summaryText, { color: C.textTertiary }]}>
-              {doneCount} done
-            </Text>
-          </View>
-        </View>
         {!hasItems && !isLoading ? (
           <ScrollView
             contentContainerStyle={styles.emptyContent}
@@ -272,6 +246,21 @@ export default function RemindersScreen() {
             showsVerticalScrollIndicator={false}
             {...tabSwipe.panHandlers}
           >
+            <MiniDateRail
+              title="Reminders"
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              accentColor={C.reminders}
+              onPressAction={openCreate}
+              actionIcon="plus"
+              tabs={[
+                { value: 'all', label: 'All' },
+                { value: 'mine', label: 'Mine' },
+                { value: 'partner', label: "Partner's" },
+              ]}
+              selectedTab={filter}
+              onSelectTab={(value) => setFilter(value as Filter)}
+            />
             <EmptyState
               icon="bell"
               title="No reminders yet"
@@ -281,8 +270,39 @@ export default function RemindersScreen() {
             />
           </ScrollView>
         ) : (
+          <>
           <FlashList
             data={filtered}
+            ListHeaderComponent={
+              <>
+                <MiniDateRail
+                  title="Reminders"
+                  selectedDate={selectedDate}
+                  onSelectDate={setSelectedDate}
+                  accentColor={C.reminders}
+                  onPressAction={openCreate}
+                  actionIcon="plus"
+                  tabs={[
+                    { value: 'all', label: 'All' },
+                    { value: 'mine', label: 'Mine' },
+                    { value: 'partner', label: "Partner's" },
+                  ]}
+                  selectedTab={filter}
+                  onSelectTab={(value) => setFilter(value as Filter)}
+                />
+                <View style={[styles.header, { backgroundColor: C.background }]}>
+                  <View style={styles.summaryRow}>
+                    <Text style={[styles.summaryText, { color: C.textTertiary }]}>
+                      {openCount} open
+                    </Text>
+                    <View style={[styles.summaryDivider, { backgroundColor: C.border }]} />
+                    <Text style={[styles.summaryText, { color: C.textTertiary }]}>
+                      {doneCount} done
+                    </Text>
+                  </View>
+                </View>
+              </>
+            }
             renderItem={renderItem}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
@@ -317,6 +337,7 @@ export default function RemindersScreen() {
               ) : null
             }
           />
+          </>
         )}
 
         {/* FAB */}
@@ -366,7 +387,7 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
   },
   listContent: { paddingBottom: 120 },
-  emptyContent: { paddingTop: Spacing.lg, paddingHorizontal: Spacing['2xl'] },
+  emptyContent: { paddingBottom: Spacing.xl },
   separator: {
     height: StyleSheet.hairlineWidth,
     marginLeft: 68,

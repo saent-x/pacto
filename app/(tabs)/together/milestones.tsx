@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -16,13 +16,13 @@ import { MiniDateRail } from '@/src/components/calendar/MiniDateRail';
 import { EmptyState } from '@/src/components/ui';
 import { CreateMilestoneSheet } from '@/src/components/milestones/CreateMilestoneSheet';
 import { matchesSelectedDate } from '@/src/lib/togetherDateFilter';
-import { togetherItemContainerStyle, togetherListContainerStyle } from './_itemStyles';
+import { togetherItemContainerStyle, togetherListContainerStyle } from '@/src/constants/togetherStyles';
 
 type MilestoneItem = {
-  _id: string;
+  id: string;
   title: string;
   date: string;
-  description: string | null;
+  description?: string | null;
   icon: string;
   createdBy: string;
   createdAt: number;
@@ -75,7 +75,7 @@ export default function MilestonesScreen() {
   const handleCreate = useCallback(
     async (data: { title: string; date: string; description: string | null; icon: string }) => {
       if (editingMilestone) {
-        await update(editingMilestone._id, data);
+        await update(editingMilestone.id, data);
         setEditingMilestone(undefined);
         return;
       }
@@ -92,7 +92,7 @@ export default function MilestonesScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            await remove(item._id);
+            await remove(item.id);
           },
         },
       ]);
@@ -145,7 +145,7 @@ export default function MilestonesScreen() {
 
           {filteredPast.map((item, i) => (
             <Animated.View
-              key={item._id}
+              key={item.id}
               entering={FadeInDown.duration(300).delay(i * 50)}
             >
               <View
@@ -183,23 +183,30 @@ export default function MilestonesScreen() {
     return (
       <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
         <SafeAreaView style={styles.flex} edges={['top']}>
-          <MiniDateRail
-            title="Milestones"
-            selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
-            accentColor={C.milestones}
-            onPressLeading={() => {
-              Haptics.selectionAsync();
-              router.replace("/(tabs)/together");
-            }}
-          />
-
-          <View style={styles.emptyWrap}>
-            <EmptyState
-              title="No milestones yet"
-              description="Mark the moments that matter"
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.milestones} />
+            }
+          >
+            <MiniDateRail
+              title="Milestones"
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              accentColor={C.milestones}
+              onPressLeading={() => {
+                Haptics.selectionAsync();
+                router.replace("/(tabs)/together");
+              }}
             />
-          </View>
+
+            <View style={styles.emptyWrap}>
+              <EmptyState
+                title="No milestones yet"
+                description="Mark the moments that matter"
+              />
+            </View>
+          </ScrollView>
 
           {/* FAB */}
           <TouchableOpacity
@@ -218,10 +225,10 @@ export default function MilestonesScreen() {
             sheetRef={sheetRef}
             onSave={handleCreate}
             milestone={editingMilestone ? {
-              id: editingMilestone._id,
+              id: editingMilestone.id,
               title: editingMilestone.title,
               date: editingMilestone.date,
-              description: editingMilestone.description,
+              description: editingMilestone.description ?? null,
               icon: editingMilestone.icon,
             } : undefined}
           />
@@ -233,33 +240,53 @@ export default function MilestonesScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
-        <MiniDateRail
-          title="Milestones"
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          accentColor={C.milestones}
-          onPressLeading={() => {
-            Haptics.selectionAsync();
-            router.replace("/(tabs)/together");
-          }}
-        />
-
         {filteredUpcoming.length === 0 && filteredPast.length === 0 ? (
-          <View style={styles.emptyWrap}>
-            <EmptyState
-              title="No milestones on this date"
-              description="Pick another day or clear the date filter."
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.milestones} />
+            }
+          >
+            <MiniDateRail
+              title="Milestones"
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              accentColor={C.milestones}
+              onPressLeading={() => {
+                Haptics.selectionAsync();
+                router.replace("/(tabs)/together");
+              }}
             />
-          </View>
+            <View style={styles.emptyWrap}>
+              <EmptyState
+                title="No milestones on this date"
+                description="Pick another day or clear the date filter."
+              />
+            </View>
+          </ScrollView>
         ) : (
           <FlashList
             data={filteredUpcoming}
-            keyExtractor={(item) => item._id}
+            keyExtractor={(item) => item.id}
             contentContainerStyle={[
               styles.listContent,
               togetherListContainerStyle,
             ]}
-            ListHeaderComponent={headerComponent}
+            ListHeaderComponent={
+              <>
+                <MiniDateRail
+                  title="Milestones"
+                  selectedDate={selectedDate}
+                  onSelectDate={setSelectedDate}
+                  accentColor={C.milestones}
+                  onPressLeading={() => {
+                    Haptics.selectionAsync();
+                    router.replace("/(tabs)/together");
+                  }}
+                />
+                {headerComponent}
+              </>
+            }
             ListFooterComponent={footerComponent}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />
@@ -306,7 +333,7 @@ export default function MilestonesScreen() {
             );
 
             return (
-              <Animated.View key={item._id} entering={FadeInDown.duration(400).delay(150 + index * 60)} style={{ marginBottom: Spacing.sm }}>
+              <Animated.View key={item.id} entering={FadeInDown.duration(400).delay(150 + index * 60)} style={{ marginBottom: Spacing.sm }}>
                 <Swipeable
                   renderLeftActions={renderEditAction(item)}
                   renderRightActions={renderDeleteAction(item)}
@@ -339,10 +366,10 @@ export default function MilestonesScreen() {
           sheetRef={sheetRef}
           onSave={handleCreate}
           milestone={editingMilestone ? {
-            id: editingMilestone._id,
+            id: editingMilestone.id,
             title: editingMilestone.title,
             date: editingMilestone.date,
-            description: editingMilestone.description,
+            description: editingMilestone.description ?? null,
             icon: editingMilestone.icon,
           } : undefined}
         />
@@ -358,8 +385,8 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   emptyWrap: {
-    paddingHorizontal: Spacing['2xl'],
-    height: 400,
+    paddingTop: Spacing['2xl'],
+    justifyContent: 'center',
   },
 
   // Section labels

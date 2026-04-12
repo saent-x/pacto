@@ -1,4 +1,4 @@
-import type { HomeView, TimelineItem } from "@/convex/timeline";
+import type { HomeView, TimelineItem } from "@/src/lib/home/types";
 
 import { Feather } from "@expo/vector-icons";
 import { format } from "date-fns";
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     ...Typography.caption,
   },
   emptyCard: {
-    borderRadius: 10,
+    borderRadius: 0,
     padding: Spacing.xl,
     gap: Spacing.sm,
   },

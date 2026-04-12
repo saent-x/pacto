@@ -1,16 +1,15 @@
 import type { ReactNode } from 'react';
-import { createContext, createElement, useContext } from 'react';
-import { useConvex, useConvexAuth, useQuery } from 'convex/react';
-import { makeFunctionReference } from 'convex/server';
+import { createContext, createElement, useContext, useEffect, useMemo } from 'react';
+import { db } from '@/src/lib/instant';
 
-import type { AppSession } from '@/convex/lib/auth';
-import { authClient } from '@/src/lib/auth-client';
-
-const getCurrentSessionUserQuery = makeFunctionReference<
-  'query',
-  {},
-  AppSession | null
->('users:getCurrentSessionUser');
+/**
+ * InstantDB link results may be an array (even for has-one) or a single object.
+ * This helper normalises either shape to a single value.
+ */
+function resolveLink<T>(value: unknown): T | null {
+  if (Array.isArray(value)) return (value[0] as T) ?? null;
+  return (value as T) ?? null;
+}
 
 export type SessionRoute =
   | '/(auth)/sign-in'
@@ -21,11 +20,18 @@ type SessionValue = {
   isLoading: boolean;
   isAuthenticated: boolean;
   route: SessionRoute | null;
-  authSession: ReturnType<typeof authClient.useSession>['data'] | null;
-  user: NonNullable<ReturnType<typeof authClient.useSession>['data']>['user'] | null;
-  session: AppSession | null;
-  profile: AppSession['profile'];
-  activeCouple: AppSession['activeCouple'];
+  user: { id: string; email: string } | null;
+  session: {
+    profile: { id: string; displayName: string; avatarUrl: string | null; email: string };
+    activeCouple: {
+      couple: { id: string; name: string; anniversary: string | null; inviteCode?: string | null };
+      membership: { id: string; userId: string; role: string };
+      memberCount: number;
+      partner: { id: string; displayName: string; avatarUrl: string | null } | null;
+    };
+  } | null;
+  profile: SessionValue['session'] extends null ? null : NonNullable<SessionValue['session']>['profile'];
+  activeCouple: SessionValue['session'] extends null ? null : NonNullable<SessionValue['session']>['activeCouple'];
   refetch: () => Promise<void>;
 };
 
@@ -50,47 +56,118 @@ export function getSessionRoute({
 }
 
 function useSessionValue(): SessionValue {
-  const auth = authClient.useSession();
-  const convex = useConvex();
-  const convexAuth = useConvexAuth();
-  const hasAuthSession = !!auth.data?.session;
-  const shouldLoadSession = convexAuth.isAuthenticated;
-  const session = useQuery(
-    getCurrentSessionUserQuery,
-    shouldLoadSession ? {} : 'skip',
+  const { isLoading: authLoading, user, error } = db.useAuth();
+
+  // Auto sign-out on stale/invalid token (e.g. "Record not found: app-user")
+  useEffect(() => {
+    if (error && !authLoading && !user) {
+      db.auth.signOut();
+    }
+  }, [error, authLoading, user]);
+
+  // Query the $users record for displayName / avatarUrl (not on auth object)
+  const { data: selfData } = db.useQuery(
+    user ? { $users: { $: { where: { id: user.id } } } } : null,
   );
-  // Convex finished loading but failed to authenticate despite better-auth
-  // having a session — treat as unauthenticated rather than stuck loading.
-  const convexAuthFailed =
-    hasAuthSession && !convexAuth.isLoading && !convexAuth.isAuthenticated;
-  const isAuthenticated = hasAuthSession && convexAuth.isAuthenticated;
-  const activeCouple = session?.activeCouple ?? null;
-  // Stay loading until we can compute a final route — auth resolution
-  // AND session query (when authenticated). This keeps the splash
-  // visible for the entire duration so there's one clean transition.
-  const isLoading =
-    auth.isPending ||
-    (hasAuthSession &&
-      !convexAuthFailed &&
-      (convexAuth.isLoading || session === undefined));
+  const selfRecord = selfData?.$users?.[0] as
+    | { id: string; displayName?: string; avatarUrl?: string | null }
+    | undefined;
+
+  const { isLoading: membershipLoading, data: membershipData } = db.useQuery(
+    user
+      ? {
+          memberships: {
+            $: { where: { 'user.id': user.id, status: 'active' } },
+            couple: {},
+            user: {},
+          },
+        }
+      : null,
+  );
+
+  const activeMembership = membershipData?.memberships?.[0] ?? null;
+  const couple = resolveLink<{ id: string; name: string; anniversary?: string | null; inviteCode?: string | null }>(activeMembership?.couple);
+
+  // Query partner info if we have a couple
+  const coupleId = couple?.id ?? null;
+  const { data: coupleData } = db.useQuery(
+    coupleId
+      ? {
+          memberships: {
+            $: { where: { 'couple.id': coupleId, status: 'active' } },
+            user: {},
+          },
+        }
+      : null,
+  );
+
+  const allMembers = coupleData?.memberships ?? [];
+  const partner = useMemo(() => {
+    if (!user) return null;
+    const partnerMembership = allMembers.find((m) => {
+      const linked = resolveLink<{ id: string }>(m.user);
+      return linked?.id !== user.id;
+    });
+    const partnerUser = resolveLink<{ id: string; displayName?: string; email?: string; avatarUrl?: string | null }>(partnerMembership?.user);
+    if (!partnerUser) return null;
+    return {
+      id: partnerUser.id,
+      displayName: partnerUser.displayName ?? partnerUser.email ?? 'Partner',
+      avatarUrl: partnerUser.avatarUrl ?? null,
+    };
+  }, [allMembers, user]);
+
+  const isAuthenticated = !!user;
+  const hasActiveCouple = !!couple;
+  const isLoading = authLoading || (isAuthenticated && membershipLoading);
+
+  const profile = useMemo(() => {
+    if (!user) return null;
+    return {
+      id: user.id,
+      displayName: selfRecord?.displayName ?? user.email ?? '',
+      avatarUrl: selfRecord?.avatarUrl ?? null,
+      email: user.email ?? '',
+    };
+  }, [user, selfRecord]);
+
+  const activeCouple = useMemo(() => {
+    if (!couple || !activeMembership || !user) return null;
+    return {
+      couple: {
+        id: couple.id,
+        name: couple.name,
+        anniversary: couple.anniversary ?? null,
+        inviteCode: couple.inviteCode ?? null,
+      },
+      membership: {
+        id: activeMembership.id,
+        userId: user.id,
+        role: activeMembership.role,
+      },
+      memberCount: allMembers.length,
+      partner,
+    };
+  }, [couple, activeMembership, user, allMembers.length, partner]);
+
+  const session = useMemo(() => {
+    if (!profile || !activeCouple) return null;
+    return { profile, activeCouple };
+  }, [profile, activeCouple]);
 
   return {
     isLoading,
     isAuthenticated,
     route: isLoading
       ? null
-      : getSessionRoute({
-          isAuthenticated,
-          hasActiveCouple: !!activeCouple,
-        }),
-    authSession: auth.data ?? null,
-    user: auth.data?.user ?? null,
-    session: session ?? null,
-    profile: session?.profile ?? null,
-    activeCouple,
+      : getSessionRoute({ isAuthenticated, hasActiveCouple }),
+    user: user ? { id: user.id, email: user.email ?? '' } : null,
+    session,
+    profile: profile as SessionValue['profile'],
+    activeCouple: activeCouple as SessionValue['activeCouple'],
     refetch: async () => {
-      if (!shouldLoadSession) return;
-      await convex.query(getCurrentSessionUserQuery, {});
+      // InstantDB queries are reactive — no manual refetch needed.
+      // This is kept for interface compatibility.
     },
   };
 }

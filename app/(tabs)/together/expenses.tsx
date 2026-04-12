@@ -3,6 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
+  ScrollView,
   TouchableOpacity,
   Alert,
   RefreshControl,
@@ -27,14 +28,14 @@ import { matchesSelectedDate } from "@/src/lib/togetherDateFilter";
 import {
   togetherItemContainerStyle,
   togetherListContainerStyle,
-} from "./_itemStyles";
+} from "@/src/constants/togetherStyles";
 
 type ExpenseItem = {
-  _id: string;
+  id: string;
   title: string;
   amount: number;
   paidBy: string;
-  currency: string;
+  currency?: string;
   splitType: string;
   category: string;
   date: string;
@@ -61,7 +62,8 @@ function formatAmount(n: number, currency: string) {
 
 function summarizeByCurrency(items: ExpenseItem[]) {
   return items.reduce<Record<string, number>>((acc, item) => {
-    acc[item.currency] = (acc[item.currency] ?? 0) + item.amount;
+    const cur = item.currency ?? 'USD';
+    acc[cur] = (acc[cur] ?? 0) + item.amount;
     return acc;
   }, {});
 }
@@ -81,7 +83,7 @@ export default function ExpensesScreen() {
   >();
 
   const partner = activeCouple?.partner ?? null;
-  const currentUserId = profile?._id ?? null;
+  const currentUserId = profile?.id ?? null;
   const filteredUnsettled = unsettled.filter((item) =>
     matchesSelectedDate(item.date, selectedDate),
   );
@@ -121,7 +123,7 @@ export default function ExpensesScreen() {
       };
 
       if (editingExpense) {
-        await update(editingExpense._id, payload);
+        await update(editingExpense.id, payload);
         setEditingExpense(undefined);
         return;
       }
@@ -145,7 +147,7 @@ export default function ExpensesScreen() {
 
   const getPaidByName = (paidBy: string) => {
     if (paidBy === currentUserId) return "You";
-    if (paidBy === partner?._id)
+    if (paidBy === partner?.id)
       return partner?.displayName?.split(" ")[0] ?? "Partner";
     return "Unknown";
   };
@@ -159,7 +161,7 @@ export default function ExpensesScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              await remove(item._id);
+              await remove(item.id);
             } catch {
               Alert.alert("Error", "Could not delete expense.");
             }
@@ -290,7 +292,7 @@ export default function ExpensesScreen() {
           {settledOpen &&
             filteredSettled.map((item, i) => (
               <Animated.View
-                key={item._id}
+                key={item.id}
                 entering={FadeInDown.duration(300).delay(i * 50)}
               >
                 <View
@@ -321,7 +323,7 @@ export default function ExpensesScreen() {
                     </View>
                   </View>
                   <Text style={[styles.cardAmount, { color: C.textTertiary }]}>
-                    {formatAmount(item.amount, item.currency)}
+                    {formatAmount(item.amount, item.currency ?? 'USD')}
                   </Text>
                 </View>
               </Animated.View>
@@ -337,23 +339,30 @@ export default function ExpensesScreen() {
     return (
       <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
         <SafeAreaView style={styles.flex} edges={["top"]}>
-          <MiniDateRail
-            title="Our Expenses"
-            selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
-            accentColor={C.expenses}
-            onPressLeading={() => {
-              Haptics.selectionAsync();
-              router.replace("/(tabs)/together");
-            }}
-          />
-
-          <View style={styles.emptyWrap}>
-            <EmptyState
-              title="No expenses yet"
-              description="Start tracking your adventures together"
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.expenses} />
+            }
+          >
+            <MiniDateRail
+              title="Our Expenses"
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              accentColor={C.expenses}
+              onPressLeading={() => {
+                Haptics.selectionAsync();
+                router.replace("/(tabs)/together");
+              }}
             />
-          </View>
+
+            <View style={styles.emptyWrap}>
+              <EmptyState
+                title="No expenses yet"
+                description="Start tracking your adventures together"
+              />
+            </View>
+          </ScrollView>
 
           {/* FAB */}
           <TouchableOpacity
@@ -373,11 +382,11 @@ export default function ExpensesScreen() {
             expense={
               editingExpense
                 ? {
-                    id: editingExpense._id,
+                    id: editingExpense.id,
                     title: editingExpense.title,
                     amount: editingExpense.amount,
                     paidBy: editingExpense.paidBy,
-                    currency: editingExpense.currency,
+                    currency: editingExpense.currency ?? 'USD',
                     splitType: editingExpense.splitType,
                     category: editingExpense.category,
                     date: editingExpense.date,
@@ -393,33 +402,53 @@ export default function ExpensesScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.flex} edges={["top"]}>
-        <MiniDateRail
-          title="Our Expenses"
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          accentColor={C.expenses}
-          onPressLeading={() => {
-            Haptics.selectionAsync();
-            router.replace("/(tabs)/together");
-          }}
-        />
-
         {filteredUnsettled.length === 0 && filteredSettled.length === 0 ? (
-          <View style={styles.emptyWrap}>
-            <EmptyState
-              title="No expenses on this date"
-              description="Pick another day or clear the date filter."
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.expenses} />
+            }
+          >
+            <MiniDateRail
+              title="Our Expenses"
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              accentColor={C.expenses}
+              onPressLeading={() => {
+                Haptics.selectionAsync();
+                router.replace("/(tabs)/together");
+              }}
             />
-          </View>
+            <View style={styles.emptyWrap}>
+              <EmptyState
+                title="No expenses on this date"
+                description="Pick another day or clear the date filter."
+              />
+            </View>
+          </ScrollView>
         ) : (
           <FlashList
             data={filteredUnsettled}
-            keyExtractor={(item) => item._id}
+            keyExtractor={(item) => item.id}
             contentContainerStyle={[
               styles.listContent,
               togetherListContainerStyle,
             ]}
-            ListHeaderComponent={headerComponent}
+            ListHeaderComponent={
+              <>
+                <MiniDateRail
+                  title="Our Expenses"
+                  selectedDate={selectedDate}
+                  onSelectDate={setSelectedDate}
+                  accentColor={C.expenses}
+                  onPressLeading={() => {
+                    Haptics.selectionAsync();
+                    router.replace("/(tabs)/together");
+                  }}
+                />
+                {headerComponent}
+              </>
+            }
             ListFooterComponent={footerComponent}
             refreshControl={
               <RefreshControl
@@ -458,10 +487,10 @@ export default function ExpensesScreen() {
                 </View>
                 <View style={styles.cardRight}>
                   <Text style={[styles.cardAmount, { color: C.expenses }]}>
-                    {formatAmount(item.amount, item.currency)}
+                    {formatAmount(item.amount, item.currency ?? 'USD')}
                   </Text>
                   <TouchableOpacity
-                    onPress={() => handleSettle(item._id)}
+                    onPress={() => handleSettle(item.id)}
                     style={[
                       styles.settleBtn,
                       { backgroundColor: C.expensesLight },
@@ -479,7 +508,7 @@ export default function ExpensesScreen() {
 
             return (
               <Animated.View
-                key={item._id}
+                key={item.id}
                 entering={FadeInDown.duration(400).delay(150 + index * 50)}
                 style={{ marginBottom: Spacing.sm }}
               >
@@ -516,11 +545,11 @@ export default function ExpensesScreen() {
           expense={
             editingExpense
               ? {
-                  id: editingExpense._id,
+                  id: editingExpense.id,
                   title: editingExpense.title,
                   amount: editingExpense.amount,
                   paidBy: editingExpense.paidBy,
-                  currency: editingExpense.currency,
+                  currency: editingExpense.currency ?? 'USD',
                   splitType: editingExpense.splitType,
                   category: editingExpense.category,
                   date: editingExpense.date,
@@ -540,8 +569,8 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   emptyWrap: {
-    paddingHorizontal: Spacing["2xl"],
-    height: 400,
+    paddingTop: Spacing['2xl'],
+    justifyContent: 'center',
   },
 
   // Total card

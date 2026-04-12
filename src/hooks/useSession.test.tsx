@@ -7,24 +7,14 @@ import { SessionProvider, getSessionRoute, useSession } from '@/src/hooks/useSes
 
 const {
   mockUseAuthSession,
-  mockUseConvexAuth,
-  mockUseQuery,
 } = vi.hoisted(() => ({
   mockUseAuthSession: vi.fn(),
-  mockUseConvexAuth: vi.fn(),
-  mockUseQuery: vi.fn(),
 }));
 
 vi.mock('@/src/lib/auth-client', () => ({
   authClient: {
     useSession: mockUseAuthSession,
   },
-}));
-
-vi.mock('convex/react', () => ({
-  useConvex: vi.fn(() => ({ query: vi.fn(async () => undefined) })),
-  useConvexAuth: mockUseConvexAuth,
-  useQuery: mockUseQuery,
 }));
 
 function renderSessionProvider(children: ReactNode) {
@@ -36,8 +26,6 @@ function renderSessionProvider(children: ReactNode) {
 describe('getSessionRoute', () => {
   beforeEach(() => {
     mockUseAuthSession.mockReset();
-    mockUseConvexAuth.mockReset();
-    mockUseQuery.mockReset();
   });
 
   it('routes signed-out users to sign-in', () => {
@@ -75,16 +63,6 @@ describe('getSessionRoute', () => {
       },
       isPending: false,
     });
-    mockUseConvexAuth.mockReturnValue({
-      isLoading: false,
-      isAuthenticated: true,
-    });
-    mockUseQuery.mockReturnValue({
-      profile: {
-        _id: 'profile_1',
-      },
-      activeCouple: null,
-    });
 
     const seenRoutes: Array<string | null> = [];
 
@@ -101,7 +79,6 @@ describe('getSessionRoute', () => {
       </>,
     );
 
-    expect(mockUseQuery).toHaveBeenCalledTimes(1);
     expect(seenRoutes).toEqual(['/(auth)/onboarding', '/(auth)/onboarding']);
   });
 });

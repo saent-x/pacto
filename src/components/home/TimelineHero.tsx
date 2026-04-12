@@ -1,7 +1,8 @@
-import type { HomeView } from "@/convex/timeline";
+import type { HomeView } from "@/src/lib/home/types";
 import type { HomeQuickAction } from "@/src/hooks/useHomeTimeline";
 
 import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { BorderRadius, Spacing } from "@/src/constants/spacing";
@@ -98,7 +99,10 @@ export function TimelineHero({
             <Pressable
               key={action.id}
               accessibilityRole="button"
-              onPress={() => onPressAction(action)}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onPressAction(action);
+              }}
               style={[
                 styles.actionCard,
                 {

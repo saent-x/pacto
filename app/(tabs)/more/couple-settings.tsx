@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Platform, Share } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Platform } from 'react-native';
 import { useCallback, useState, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,8 +8,7 @@ import * as Clipboard from 'expo-clipboard';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { useConvex, useMutation } from 'convex/react';
-import { makeFunctionReference } from 'convex/server';
+import { db } from '@/src/lib/instant';
 import { useColors } from '@/src/hooks/useColors';
 import { useTheme } from '@/src/lib/theme';
 import { useSession } from '@/src/hooks/useSession';
@@ -17,16 +16,10 @@ import { Typography } from '@/src/constants/typography';
 import { Spacing, BorderRadius } from '@/src/constants/spacing';
 import { GlassSection, GlassRow, ThemedSheet, BottomSheetTextInput } from '@/src/components/ui';
 
-const updateCoupleMutation = makeFunctionReference<'mutation', { name?: string; anniversary?: string | null }, any>('couples:updateCouple');
-const leaveCoupleMutation = makeFunctionReference<'mutation', {}>('couples:leaveCouple');
-const exportDataQuery = makeFunctionReference<'query', {}, any>('dataExport:exportMyData');
-
 export default function CoupleSettingsScreen() {
   const C = useColors();
   const { mode } = useTheme();
   const router = useRouter();
-  const convex = useConvex();
-  const updateCouple = useMutation(updateCoupleMutation);
   const { activeCouple, profile, refetch } = useSession();
 
   const couple = activeCouple?.couple ?? null;
@@ -51,9 +44,9 @@ export default function CoupleSettingsScreen() {
   };
 
   const handleSaveName = async () => {
-    if (!editName.trim()) return;
+    if (!editName.trim() || !couple) return;
     try {
-      await updateCouple({ name: editName.trim() });
+      await db.transact(db.tx.couples[couple.id].update({ name: editName.trim() }));
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       nameSheetRef.current?.dismiss();
       await refetch();
@@ -63,9 +56,10 @@ export default function CoupleSettingsScreen() {
   };
 
   const handleSaveAnniversary = async (date: Date) => {
+    if (!couple) return;
     const dateStr = date.toISOString().slice(0, 10);
     try {
-      await updateCouple({ anniversary: dateStr });
+      await db.transact(db.tx.couples[couple.id].update({ anniversary: dateStr }));
       setAnniversaryDate(date);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await refetch();
@@ -76,16 +70,7 @@ export default function CoupleSettingsScreen() {
 
   const handleExportData = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    try {
-      const data = await convex.query(exportDataQuery, {});
-      const json = JSON.stringify(data, null, 2);
-      await Share.share({
-        message: json,
-        title: 'Coupl Data Export',
-      });
-    } catch (e: any) {
-      Alert.alert('Error', e?.message ?? 'Failed to export data.');
-    }
+    Alert.alert('Export Data', 'Data export is not yet available in this version.');
   };
 
   const handleLeaveCouple = () => {
@@ -100,7 +85,10 @@ export default function CoupleSettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await convex.mutation(leaveCoupleMutation, {});
+              const membershipId = activeCouple?.membership?.id;
+              if (membershipId) {
+                await db.transact(db.tx.memberships[membershipId].update({ status: 'inactive' }));
+              }
             } catch (e: any) {
               Alert.alert('Error', e?.message ?? 'Failed to leave couple.');
               return;

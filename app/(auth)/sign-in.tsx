@@ -24,27 +24,39 @@ import { useAuthActions } from '@/src/hooks/useAuthActions';
 export default function SignInScreen() {
   const C = useColors();
   const router = useRouter();
-  const { signIn } = useAuthActions();
+  const { sendMagicCode, signInWithMagicCode } = useAuthActions();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
+  const [step, setStep] = useState<'email' | 'code'>('email');
   const [loading, setLoading] = useState(false);
   const compact = height < 780;
 
-  const handleSignIn = async () => {
-    if (!email.trim() || !password) {
-      Alert.alert('Missing details', 'Enter your email and password to continue.');
+  const handleSendCode = async () => {
+    if (!email.trim()) {
+      Alert.alert('Missing email', 'Enter your email to continue.');
       return;
     }
-
     try {
       setLoading(true);
-      await signIn({
-        email,
-        password,
-      });
-      // Navigate immediately — don't wait for reactive auth state.
+      await sendMagicCode(email);
+      setStep('code');
+    } catch (error) {
+      Alert.alert('Error', error instanceof Error ? error.message : 'Unable to send code.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignIn = async () => {
+    if (!code.trim()) {
+      Alert.alert('Missing code', 'Enter the code sent to your email.');
+      return;
+    }
+    try {
+      setLoading(true);
+      await signInWithMagicCode({ email, code });
       router.replace('/(tabs)/home');
     } catch (error) {
       setLoading(false);
@@ -54,6 +66,8 @@ export default function SignInScreen() {
       );
     }
   };
+
+  const handleSubmit = step === 'email' ? handleSendCode : handleSignIn;
 
   return (
     <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
@@ -119,30 +133,32 @@ export default function SignInScreen() {
                   autoCorrect={false}
                   keyboardType="email-address"
                   textContentType="emailAddress"
-                  returnKeyType="next"
+                  returnKeyType={step === 'email' ? 'done' : 'next'}
+                  editable={step === 'email'}
                   leftIcon={<Feather name="mail" size={16} color={C.fog} />}
                 />
-                <Input
-                  label="Password"
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Your password"
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  textContentType="password"
-                  returnKeyType="done"
-                  leftIcon={<Feather name="lock" size={16} color={C.fog} />}
-                />
+                {step === 'code' && (
+                  <Input
+                    label="Magic Code"
+                    value={code}
+                    onChangeText={setCode}
+                    placeholder="Enter the code from your email"
+                    autoCapitalize="characters"
+                    autoCorrect={false}
+                    keyboardType="default"
+                    returnKeyType="done"
+                    leftIcon={<Feather name="key" size={16} color={C.fog} />}
+                  />
+                )}
               </View>
 
               <Button
-                title="Sign In"
-                onPress={handleSignIn}
+                title={step === 'email' ? 'Send Magic Code' : 'Sign In'}
+                onPress={handleSubmit}
                 loading={loading}
                 size="lg"
                 style={styles.signInBtn}
-                disabled={!email.trim() || !password}
+                disabled={step === 'email' ? !email.trim() : !code.trim()}
               />
             </Animated.View>
 

@@ -10,6 +10,7 @@ import {
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import Animated, { LinearTransition } from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
 
 import { BorderRadius, Spacing } from "@/src/constants/spacing";
 import { Typography } from "@/src/constants/typography";
@@ -58,6 +59,7 @@ export function MiniDateRail({
   const { mode } = useTheme();
   const shellBg = mode === "dark" ? C.background : C.surface;
   const pillBg = mode === "dark" ? C.card : C.background;
+  const dayPillBg = mode === "dark" ? C.card : C.background;
   const referenceDate = selectedDate ? parseISO(selectedDate) : new Date();
   const weekStart = startOfWeek(referenceDate, { weekStartsOn: 1 });
   const weekDays = eachDayOfInterval({
@@ -66,6 +68,7 @@ export function MiniDateRail({
   });
 
   const shiftWeek = (direction: -1 | 1) => {
+    Haptics.selectionAsync();
     const nextDate = addWeeks(referenceDate, direction);
     onSelectDate(format(nextDate, "yyyy-MM-dd"));
   };
@@ -107,11 +110,14 @@ export function MiniDateRail({
       <View style={styles.monthRow}>
         {showClearAction ? (
           <Pressable
-            onPress={() => onSelectDate(null)}
+            onPress={() => {
+              Haptics.selectionAsync();
+              onSelectDate(null);
+            }}
             style={[
               styles.clearPill,
               {
-                backgroundColor: selectedDate ? pillBg : `${accentColor}18`,
+                backgroundColor: selectedDate ? pillBg : accentColor,
                 borderColor: selectedDate ? C.border : accentColor,
               },
             ]}
@@ -119,7 +125,7 @@ export function MiniDateRail({
             <Text
               style={[
                 styles.clearLabel,
-                { color: selectedDate ? C.textSecondary : accentColor },
+                { color: selectedDate ? C.textSecondary : C.ink },
               ]}
             >
               All dates
@@ -166,7 +172,10 @@ export function MiniDateRail({
             return (
               <Pressable
                 key={tab.value}
-                onPress={() => onSelectTab(tab.value)}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  onSelectTab(tab.value);
+                }}
                 style={styles.tabButton}
               >
                 <Text
@@ -204,11 +213,14 @@ export function MiniDateRail({
           return (
             <Pressable
               key={dateKey}
-              onPress={() => onSelectDate(isSelected ? null : dateKey)}
+              onPress={() => {
+                Haptics.selectionAsync();
+                onSelectDate(isSelected ? null : dateKey);
+              }}
               style={[
                 styles.dayPill,
                 {
-                  backgroundColor: isSelected ? accentColor : C.card,
+                  backgroundColor: isSelected ? accentColor : dayPillBg,
                   borderColor: isSelected ? accentColor : C.border,
                 },
               ]}

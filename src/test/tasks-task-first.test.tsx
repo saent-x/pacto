@@ -13,7 +13,19 @@ import { CreateListSheet } from '@/src/components/tasks/CreateListSheet';
 import {
   saveTaskFromListDetail,
 } from '@/src/components/tasks/listDetailComposer';
-import type { Task, TaskList } from '@/src/types/database';
+import type { Task } from '@/src/types/database';
+
+// TaskList was removed when migrating from Convex to InstantDB; tasks now use a category string.
+type TaskList = {
+  id: string;
+  couple_id: string;
+  name: string;
+  icon: string;
+  color: string;
+  sort_order: number;
+  created_by: string;
+  created_at: string;
+};
 
 const bottomSheetSpies = vi.hoisted(() => ({
   present: vi.fn(),
@@ -208,7 +220,7 @@ const initialLists: TaskList[] = [
 const initialTasks: Task[] = [
   {
     id: 'task-1',
-    list_id: 'list-1',
+    category: 'list-1',
     couple_id: 'couple-1',
     title: 'Buy milk',
     notes: null,
@@ -225,7 +237,7 @@ const initialTasks: Task[] = [
   },
   {
     id: 'task-3',
-    list_id: 'list-2',
+    category: 'list-2',
     couple_id: 'couple-1',
     title: 'Submit receipts',
     notes: null,
@@ -242,7 +254,7 @@ const initialTasks: Task[] = [
   },
   {
     id: 'task-4',
-    list_id: 'list-1',
+    category: 'list-1',
     couple_id: 'couple-1',
     title: 'Water plants',
     notes: null,
@@ -273,12 +285,12 @@ function createListResult(payload: Partial<TaskList> & Pick<TaskList, 'name' | '
 }
 
 function createTaskResult(
-  payload: Partial<Task> & Pick<Task, 'title' | 'list_id' | 'couple_id' | 'created_by'>,
+  payload: Partial<Task> & Pick<Task, 'title' | 'couple_id' | 'created_by'>,
 ): Task {
   const now = '2026-03-06T00:00:00.000Z';
   return {
     id: payload.id ?? `task-generated-${state.nextTaskSeq++}`,
-    list_id: payload.list_id,
+    category: payload.category ?? null,
     couple_id: payload.couple_id,
     title: payload.title,
     notes: payload.notes ?? null,
@@ -331,205 +343,6 @@ function upsertTaskRow(row: Task) {
   state.tasks = next;
 }
 
-vi.mock('convex/react', () => {
-  const React = require('react');
-
-  let _version = 0;
-  const _listeners = new Set<(v: number) => void>();
-
-  function _bump() {
-    _version++;
-    for (const fn of _listeners) fn(_version);
-  }
-
-  function _useListen() {
-    const [, setV] = React.useState(0);
-    React.useEffect(() => {
-      _listeners.add(setV);
-      return () => {
-        _listeners.delete(setV);
-      };
-    }, []);
-  }
-
-  function _getFnName(ref: any): string {
-    const sym = Object.getOwnPropertySymbols(ref).find(
-      (s) => s.toString() === 'Symbol(functionName)',
-    );
-    return sym ? ref[sym] : '';
-  }
-
-  return {
-    useConvex: () => ({ query: vi.fn(async () => undefined) }),
-    useQuery: (_ref: any, args: any) => {
-      _useListen();
-      if (args === 'skip') return undefined;
-      return {
-        lists: state.lists
-          .filter((l) => l.couple_id === state.coupleId)
-          .map((l) => ({
-            _id: l.id,
-            coupleId: l.couple_id,
-            name: l.name,
-            icon: l.icon,
-            color: l.color,
-            sortOrder: l.sort_order,
-            createdBy: l.created_by,
-            createdAt: new Date(l.created_at).getTime(),
-          })),
-        tasks: state.tasks
-          .filter((t) => t.couple_id === state.coupleId)
-          .map((t) => ({
-            _id: t.id,
-            listId: t.list_id,
-            coupleId: t.couple_id,
-            title: t.title,
-            notes: t.notes,
-            isCompleted: t.is_completed,
-            completedAt: t.completed_at ? new Date(t.completed_at).getTime() : null,
-            completedBy: t.completed_by,
-            assignedTo: t.assigned_to,
-            dueDate: t.due_date,
-            priority: t.priority,
-            sortOrder: t.sort_order,
-            createdBy: t.created_by,
-            createdAt: new Date(t.created_at).getTime(),
-            updatedAt: new Date(t.updated_at).getTime(),
-          })),
-      };
-    },
-    useMutation: (ref: any) => {
-      const fnName = _getFnName(ref);
-      return vi.fn(async (args: any) => {
-        const now = '2026-03-06T00:00:00.000Z';
-        if (fnName === 'tasks:createTask') {
-          const newTask = {
-            id: `task-generated-${state.nextTaskSeq++}`,
-            list_id: args.listId,
-            couple_id: state.coupleId!,
-            title: args.title,
-            notes: args.notes ?? null,
-            is_completed: false,
-            completed_at: null,
-            completed_by: null,
-            assigned_to: args.assignedTo ?? null,
-            due_date: args.dueDate ?? null,
-            priority: args.priority ?? 0,
-            sort_order: 0,
-            created_by: state.authUserId!,
-            created_at: now,
-            updated_at: now,
-          };
-          state.tasks = [...state.tasks, newTask];
-          _bump();
-          return {
-            _id: newTask.id,
-            listId: newTask.list_id,
-            coupleId: newTask.couple_id,
-            title: newTask.title,
-            notes: newTask.notes,
-            isCompleted: false,
-            completedAt: null,
-            completedBy: null,
-            assignedTo: newTask.assigned_to,
-            dueDate: newTask.due_date,
-            priority: newTask.priority,
-            sortOrder: 0,
-            createdBy: newTask.created_by,
-            createdAt: new Date(now).getTime(),
-            updatedAt: new Date(now).getTime(),
-          };
-        }
-        if (fnName === 'tasks:updateTask') {
-          state.tasks = state.tasks.map((t) => {
-            if (t.id !== args.taskId) return t;
-            return {
-              ...t,
-              ...(args.title !== undefined ? { title: args.title } : {}),
-              ...(args.listId !== undefined ? { list_id: args.listId } : {}),
-              ...(args.notes !== undefined ? { notes: args.notes } : {}),
-              ...(args.dueDate !== undefined ? { due_date: args.dueDate } : {}),
-              ...(args.priority !== undefined ? { priority: args.priority } : {}),
-              ...(args.assignedTo !== undefined ? { assigned_to: args.assignedTo } : {}),
-              updated_at: now,
-            };
-          });
-          _bump();
-          const updated = state.tasks.find((t) => t.id === args.taskId);
-          if (!updated) return null;
-          return {
-            _id: updated.id,
-            listId: updated.list_id,
-            coupleId: updated.couple_id,
-            title: updated.title,
-            notes: updated.notes,
-            isCompleted: updated.is_completed,
-            completedAt: updated.completed_at
-              ? new Date(updated.completed_at).getTime()
-              : null,
-            completedBy: updated.completed_by,
-            assignedTo: updated.assigned_to,
-            dueDate: updated.due_date,
-            priority: updated.priority,
-            sortOrder: updated.sort_order,
-            createdBy: updated.created_by,
-            createdAt: new Date(updated.created_at).getTime(),
-            updatedAt: new Date(now).getTime(),
-          };
-        }
-        if (fnName === 'tasks:toggleTask') {
-          state.tasks = state.tasks.map((t) => {
-            if (t.id !== args.taskId) return t;
-            return {
-              ...t,
-              is_completed: !t.is_completed,
-              completed_at: !t.is_completed ? now : null,
-              completed_by: !t.is_completed ? state.authUserId : null,
-            };
-          });
-          _bump();
-          return null;
-        }
-        if (fnName === 'tasks:deleteTask') {
-          state.tasks = state.tasks.filter((t) => t.id !== args.taskId);
-          _bump();
-          return null;
-        }
-        if (fnName === 'tasks:createTaskList') {
-          const newList = {
-            id: `list-generated-${state.nextListSeq++}`,
-            couple_id: state.coupleId!,
-            name: args.name,
-            icon: args.icon ?? '📋',
-            color: args.color ?? '#7BA08A',
-            sort_order: 0,
-            created_by: state.authUserId!,
-            created_at: '2026-03-01T00:00:00.000Z',
-          };
-          state.lists = [...state.lists, newList];
-          _bump();
-          return {
-            _id: newList.id,
-            coupleId: newList.couple_id,
-            name: newList.name,
-            icon: newList.icon,
-            color: newList.color,
-            sortOrder: newList.sort_order,
-            createdBy: newList.created_by,
-            createdAt: new Date(newList.created_at).getTime(),
-          };
-        }
-        if (fnName === 'tasks:deleteTaskList') {
-          state.lists = state.lists.filter((l) => l.id !== args.listId);
-          _bump();
-          return null;
-        }
-        return null;
-      });
-    },
-  };
-});
-
 vi.mock('@/src/hooks/useSession', () => ({
   useSession: () => ({
     profile: state.authUserId ? { _id: state.authUserId } : null,
@@ -557,53 +370,35 @@ describe('buildTaskFeed', () => {
     state.nextListSeq = 1;
   });
 
-  it('decorates tasks with their list metadata and keeps the active feed sorted predictably', () => {
-    const feed = buildTaskFeed(state.lists, state.tasks, 'active');
+  it('returns active tasks sorted predictably (incomplete first, then by due date and priority)', () => {
+    const feed = buildTaskFeed(state.tasks, 'active');
 
-    expect(feed).toEqual([
-      {
-        ...initialTasks[0],
-        list: {
-          id: 'list-1',
-          name: 'Home',
-          color: '#8B5CF6',
-          icon: '🏡',
-        },
-      },
-      {
-        ...initialTasks[2],
-        list: {
-          id: 'list-1',
-          name: 'Home',
-          color: '#8B5CF6',
-          icon: '🏡',
-        },
-      },
-    ]);
+    expect(feed.map((t) => t.id)).toEqual(['task-1', 'task-4']);
+    expect(feed.every((t) => !t.is_completed)).toBe(true);
   });
 
   it('filters completed tasks into the done feed', () => {
-    const feed = buildTaskFeed(state.lists, state.tasks, 'done');
+    const feed = buildTaskFeed(state.tasks, 'done');
 
     expect(feed).toHaveLength(1);
     expect(feed[0].id).toBe('task-3');
-    expect(feed[0].list?.name).toBe('Work');
+    expect(feed[0].category).toBe('list-2');
   });
 
   it('returns every task when no filter is applied', () => {
-    const feed = buildTaskFeed(state.lists, state.tasks, 'all');
+    const feed = buildTaskFeed(state.tasks, 'all');
 
     expect(feed.map((task) => task.id)).toEqual(['task-1', 'task-4', 'task-3']);
   });
 
   it('returns task-first empty state guidance when there are no lists or no matching tasks', () => {
-    expect(buildTaskFeedViewState([], [], 'all').emptyState).toEqual({
+    expect(buildTaskFeedViewState([], 'all').emptyState).toEqual({
       title: 'No tasks yet',
       description: 'Add your first task and Coupl will create a General list automatically.',
       actionLabel: 'Add Task',
     });
 
-    expect(buildTaskFeedViewState(state.lists, [], 'done').emptyState).toEqual({
+    expect(buildTaskFeedViewState([], 'done').emptyState).toEqual({
       title: 'No completed tasks',
       description: 'Completed tasks will appear here once you finish them.',
       actionLabel: 'Add Task',
@@ -626,12 +421,12 @@ describe('TasksScreen', () => {
   });
 
   function mockTasksHook(lists: TaskList[], tasks: Task[]) {
-    const getTaskFeed = vi.fn((filter: 'all' | 'active' | 'done' = 'all') => buildTaskFeed(lists, tasks, filter));
+    const getTaskFeed = vi.fn((filter: 'all' | 'active' | 'done' = 'all') => buildTaskFeed(tasks, filter));
 
     vi.spyOn(tasksHooks, 'useTasks').mockReturnValue({
       lists,
       allTasks: tasks,
-      taskFeed: buildTaskFeed(lists, tasks, 'all'),
+      taskFeed: buildTaskFeed(tasks, 'all'),
       getTaskFeed,
       isLoading: false,
       getListCounts: vi.fn(),
@@ -853,7 +648,7 @@ describe('task composer selection contract', () => {
       due_date: new Date().toISOString().slice(0, 10),
       priority: 0,
       assigned_to: null,
-      list_id: 'list-1',
+      category: 'list-1',
     });
 
     act(() => {
@@ -905,14 +700,14 @@ describe('task composer selection contract', () => {
     });
   });
 
-  it('preserves list_id and propagates failures in the list-detail save path', async () => {
+  it('preserves category and propagates failures in the list-detail save path', async () => {
     const data = {
       title: 'Draft from detail',
       notes: null,
       due_date: null,
       priority: 0,
       assigned_to: null,
-      list_id: 'list-1',
+      category: 'list-1',
     };
     const create = vi.fn(async () => {
       throw new Error('persist failed');
@@ -1024,7 +819,7 @@ describe('useTasks reconciliation', () => {
     expect(api).not.toBeNull();
 
     await act(async () => {
-      await api!.createTask({ title: 'Take out trash', list_id: 'list-1' });
+      await api!.createTask({ title: 'Take out trash', category: 'list-1' });
       await flush();
     });
 
@@ -1046,12 +841,12 @@ describe('useTasks reconciliation', () => {
     expect(api).not.toBeNull();
 
     await act(async () => {
-      await api!.updateTask('task-1', { list_id: 'list-2' });
+      await api!.updateTask('task-1', { category: 'list-2' });
       await flush();
     });
 
     expect(api!.allTasks.filter((task) => task.id === 'task-1')).toHaveLength(1);
-    expect(api!.allTasks.find((task) => task.id === 'task-1')?.list_id).toBe('list-2');
+    expect(api!.allTasks.find((task) => task.id === 'task-1')?.category).toBe('list-2');
 
     const moved = state.tasks.find((task) => task.id === 'task-1');
     expect(moved).toBeDefined();
@@ -1062,8 +857,7 @@ describe('useTasks reconciliation', () => {
     });
 
     expect(api!.allTasks.filter((task) => task.id === 'task-1')).toHaveLength(1);
-    expect(api!.allTasks.find((task) => task.id === 'task-1')?.list_id).toBe('list-2');
-    expect(api!.taskFeed.find((task) => task.id === 'task-1')?.list?.name).toBe('Work');
+    expect(api!.allTasks.find((task) => task.id === 'task-1')?.category).toBe('list-2');
   });
 });
 
@@ -1140,7 +934,7 @@ describe('task list detail screen integration', () => {
       due_date: new Date().toISOString().slice(0, 10),
       priority: 0,
       assigned_to: null,
-      list_id: 'list-1',
+      category: 'list-1',
     });
     expect(alertSpy).toHaveBeenCalledWith('Save failed', 'Try again.');
     expect(warnSpy).toHaveBeenCalled();
@@ -1219,7 +1013,7 @@ describe('task list detail screen integration', () => {
       due_date: '2026-03-29',
       priority: 1,
       assigned_to: null,
-      list_id: 'list-1',
+      category: 'list-1',
     });
     expect(alertSpy).toHaveBeenCalledWith('Save failed', 'Try again.');
     expect(warnSpy).toHaveBeenCalled();

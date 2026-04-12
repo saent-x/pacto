@@ -61,9 +61,8 @@ export function CreateEntrySheet({ sheetRef, onSave, onUploadImage, entry, readO
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [mediaItems, setMediaItems] = useState<MediaItem[]>(
-    (entry?.media_urls ?? []).map((uri, index) => ({
+    (entry?.media_urls ?? []).map((uri) => ({
       uri,
-      storageId: entry?.media_storage_ids?.[index],
     })),
   );
 
@@ -161,9 +160,8 @@ export function CreateEntrySheet({ sheetRef, onSave, onUploadImage, entry, readO
     sessionKeyRef.current = sessionKey;
     setTitle(entry?.title ?? '');
     setIsPrivate(entry?.is_private ?? false);
-    setMediaItems((entry?.media_urls ?? []).map((uri, index) => ({
+    setMediaItems((entry?.media_urls ?? []).map((uri) => ({
       uri,
-      storageId: entry?.media_storage_ids?.[index],
     })));
     editor.setContent(entry?.body || '<p></p>');
   }, [entry, sessionKey, editor]);
@@ -188,14 +186,14 @@ export function CreateEntrySheet({ sheetRef, onSave, onUploadImage, entry, readO
     setSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     try {
-      const mediaRefs = mediaItems.map((item) => item.storageId ?? item.uri);
+      const mediaRefs = mediaItems.map((item) => item.uri);
       await onSave({
         title: title.trim() || null,
         body: html,
         mood: null,
         is_private: isPrivate,
         entry_date: entryDate,
-        media_storage_ids: mediaRefs,
+        media_urls: mediaRefs,
       });
       sheetRef.current?.dismiss();
       if (!isEdit) {

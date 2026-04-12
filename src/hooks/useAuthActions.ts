@@ -1,79 +1,87 @@
-import { useConvex, useMutation } from 'convex/react';
-import { makeFunctionReference } from 'convex/server';
+import { db, id } from '@/src/lib/instant';
 
-import { authClient } from '@/src/lib/auth-client';
-
-const createCoupleMutation = makeFunctionReference<
-  'mutation',
-  { name: string; anniversary?: string | null },
-  {
-    couple: { _id: string; name: string };
-    membership: { _id: string };
-    inviteCode: string;
-  }
->('couples:createCouple');
-
-const joinCoupleByInviteCodeMutation = makeFunctionReference<
-  'mutation',
-  { inviteCode: string },
-  unknown
->('couples:joinCoupleByInviteCode');
-
-function toErrorMessage(
-  error: {
-    message?: string;
-  } | null,
-  fallback: string,
-) {
-  return error?.message ?? fallback;
+function generateInviteCode(): string {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
 export function useAuthActions() {
-  const convex = useConvex();
-  const createCouple = useMutation(createCoupleMutation);
-  const joinCoupleByInviteCode = useMutation(joinCoupleByInviteCodeMutation);
+  const { user } = db.useAuth();
 
   return {
-    signIn: async (input: { email: string; password: string }) => {
-      const { error } = await authClient.signIn.email({
-        email: input.email.trim().toLowerCase(),
-        password: input.password,
-      });
-
-      if (error) {
-        throw new Error(toErrorMessage(error, 'Unable to sign in.'));
-      }
+    sendMagicCode: async (email: string) => {
+      await db.auth.sendMagicCode({ email: email.trim().toLowerCase() });
     },
-    signUp: async (input: { name: string; email: string; password: string }) => {
-      const { error } = await authClient.signUp.email({
-        name: input.name.trim(),
+    signInWithMagicCode: async (input: { email: string; code: string }) => {
+      await db.auth.signInWithMagicCode({
         email: input.email.trim().toLowerCase(),
-        password: input.password,
+        code: input.code,
       });
-
-      if (error) {
-        throw new Error(toErrorMessage(error, 'Unable to create your account.'));
-      }
     },
     signOut: async () => {
-      const { error } = await authClient.signOut();
-
-      if (error) {
-        throw new Error(toErrorMessage(error, 'Unable to sign out.'));
-      }
-
-      convex.clearAuth();
+      db.auth.signOut();
     },
-    createCouple: async (input: { name: string; anniversary?: string | null }) =>
-      createCouple({
-        name: input.name,
-        ...(input.anniversary !== undefined
-          ? { anniversary: input.anniversary }
-          : {}),
-      }),
-    joinCoupleByInviteCode: async (inviteCode: string) =>
-      joinCoupleByInviteCode({
+    createCouple: async (input: { name: string; anniversary?: string | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const coupleId = id();
+      const membershipId = id();
+      const now = Date.now();
+      const inviteCode = generateInviteCode();
+
+      await db.transact([
+        db.tx.couples[coupleId]
+          .update({
+            name: input.name,
+            inviteCode,
+            anniversary: input.anniversary ?? undefined,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .link({ createdBy: user.id }),
+        db.tx.memberships[membershipId]
+          .update({
+            role: 'creator',
+            status: 'active',
+            joinedAt: now,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .link({ user: user.id, couple: coupleId }),
+      ]);
+
+      return {
+        couple: { id: coupleId, name: input.name },
+        membership: { id: membershipId },
         inviteCode,
-      }),
+      };
+    },
+    joinCoupleByInviteCode: async (inviteCode: string) => {
+      if (!user) throw new Error('Not authenticated');
+
+      const result = await db.queryOnce({
+        couples: { $: { where: { inviteCode: inviteCode.trim().toUpperCase() } } },
+      });
+
+      const couple = (result as any).data?.couples?.[0];
+      if (!couple) throw new Error('Invalid invite code.');
+
+      const membershipId = id();
+      const now = Date.now();
+
+      await db.transact([
+        db.tx.memberships[membershipId]
+          .update({
+            role: 'partner',
+            status: 'active',
+            joinedAt: now,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .link({ user: user.id, couple: couple.id }),
+        db.tx.couples[couple.id].update({
+          inviteCode: null,
+          updatedAt: now,
+        }),
+      ]);
+    },
   };
 }

@@ -3,6 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
+  ScrollView,
   TouchableOpacity,
   Alert,
   RefreshControl,
@@ -26,10 +27,10 @@ import { EmptyState } from "@/src/components/ui";
 import { toPlainMarkdownPreview } from "@/src/components/journal/MarkdownText";
 import { CreateLoveNoteSheet } from "@/src/components/loveNotes/CreateLoveNoteSheet";
 import { matchesSelectedDateForTimestamp } from "@/src/lib/togetherDateFilter";
-import { togetherItemContainerStyle, togetherListContainerStyle } from "./_itemStyles";
+import { togetherItemContainerStyle, togetherListContainerStyle } from "@/src/constants/togetherStyles";
 
 type NoteItem = {
-  _id: string;
+  id: string;
   authorId: string;
   body: string;
   isPrivate: boolean;
@@ -65,7 +66,7 @@ export default function LoveNotesScreen() {
     { id: string; body: string; isPrivate: boolean } | undefined
   >();
 
-  const currentUserId = profile?._id ?? null;
+  const currentUserId = profile?.id ?? null;
   const visibleNotes = notes.filter((note) =>
     matchesSelectedDateForTimestamp(note.createdAt, selectedDate),
   );
@@ -100,7 +101,7 @@ export default function LoveNotesScreen() {
   const openComposer = useCallback((note?: NoteItem) => {
     setEditingNote(
       note
-        ? { id: note._id, body: note.body, isPrivate: note.isPrivate }
+        ? { id: note.id, body: note.body, isPrivate: note.isPrivate }
         : undefined,
     );
     sheetRef.current?.present();
@@ -114,7 +115,7 @@ export default function LoveNotesScreen() {
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            await remove(note._id);
+            await remove(note.id);
           },
         },
       ]);
@@ -216,23 +217,30 @@ export default function LoveNotesScreen() {
     return (
       <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
         <SafeAreaView style={styles.flex} edges={["top"]}>
-          <MiniDateRail
-            title="Love Notes"
-            selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
-            accentColor={C.error}
-            onPressLeading={() => {
-              Haptics.selectionAsync();
-              router.replace("/(tabs)/together");
-            }}
-          />
-
-          <View style={styles.emptyWrap}>
-            <EmptyState
-              title="No notes yet"
-              description="Leave a note for each other and it will show up here."
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.error} />
+            }
+          >
+            <MiniDateRail
+              title="Love Notes"
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              accentColor={C.error}
+              onPressLeading={() => {
+                Haptics.selectionAsync();
+                router.replace("/(tabs)/together");
+              }}
             />
-          </View>
+
+            <View style={styles.emptyWrap}>
+              <EmptyState
+                title="No notes yet"
+                description="Leave a note for each other and it will show up here."
+              />
+            </View>
+          </ScrollView>
 
           <TouchableOpacity
             onPress={() => {
@@ -258,34 +266,52 @@ export default function LoveNotesScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={styles.flex} edges={["top"]}>
-        <MiniDateRail
-          title="Love Notes"
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          accentColor={C.error}
-          onPressLeading={() => {
-            Haptics.selectionAsync();
-            router.replace("/(tabs)/together");
-          }}
-        />
-
         {visibleNotes.length === 0 ? (
-          <View style={styles.emptyWrap}>
-            <EmptyState
-              title="No love notes on this date"
-              description="Pick another day or clear the date filter."
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.error} />
+            }
+          >
+            <MiniDateRail
+              title="Love Notes"
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              accentColor={C.error}
+              onPressLeading={() => {
+                Haptics.selectionAsync();
+                router.replace("/(tabs)/together");
+              }}
             />
-          </View>
+            <View style={styles.emptyWrap}>
+              <EmptyState
+                title="No love notes on this date"
+                description="Pick another day or clear the date filter."
+              />
+            </View>
+          </ScrollView>
         ) : (
           <FlashList
             data={visibleNotes}
-            keyExtractor={(item) => item._id}
+            keyExtractor={(item) => item.id}
             contentContainerStyle={[
               styles.listContent,
               togetherListContainerStyle,
             ]}
             ListHeaderComponent={
-              <Text style={[styles.sectionLabel, { color: C.textTertiary }]}>ALL NOTES</Text>
+              <>
+                <MiniDateRail
+                  title="Love Notes"
+                  selectedDate={selectedDate}
+                  onSelectDate={setSelectedDate}
+                  accentColor={C.error}
+                  onPressLeading={() => {
+                    Haptics.selectionAsync();
+                    router.replace("/(tabs)/together");
+                  }}
+                />
+                <Text style={[styles.sectionLabel, { color: C.textTertiary }]}>ALL NOTES</Text>
+              </>
             }
             ItemSeparatorComponent={() => (
               <View style={[styles.separator, { backgroundColor: C.border }]} />
@@ -369,8 +395,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   emptyWrap: {
-    paddingHorizontal: Spacing["2xl"],
-    height: 400,
+    paddingTop: Spacing['2xl'],
+    justifyContent: 'center',
   },
   topRow: {
     flexDirection: "row",

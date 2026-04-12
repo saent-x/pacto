@@ -6,8 +6,7 @@
  * truth so that all sheets feel like one product, not twelve.
  *
  * Font policy:
- *   Serif (Newsreader) = title inputs only.
- *   Sans  (DM Sans)    = everything else — labels, amounts, buttons, toggles.
+ *   Sans (DM Sans) = everything — titles, labels, amounts, buttons, toggles.
  */
 
 import { StyleSheet, Platform } from 'react-native';
@@ -60,12 +59,12 @@ export const sheet = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  /** Large cursive title input (the ONE place italic serif is allowed). */
+  /** Large title input — clean sans-serif, no italic. */
   titleInput: {
-    ...Typography.editorial,
-    fontSize: 28,
-    lineHeight: 34,
-    letterSpacing: -0.5,
+    fontFamily: Typography.sansSemiBold,
+    fontSize: 24,
+    lineHeight: 30,
+    letterSpacing: -0.3,
     padding: 0,
   },
 

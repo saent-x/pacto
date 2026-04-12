@@ -24,17 +24,20 @@ import { Spacing, BorderRadius } from '@/src/constants/spacing';
 import { Button, Input } from '@/src/components/ui';
 import { useAuthActions } from '@/src/hooks/useAuthActions';
 import { useSession } from '@/src/hooks/useSession';
+import { db } from '@/src/lib/instant';
 import { generateCoupleKey, storeCoupleKey } from '@/src/lib/crypto';
 
-type Step = 'choose' | 'create' | 'created';
+type Step = 'name' | 'choose' | 'create' | 'created';
 
 export default function OnboardingScreen() {
   const C = useColors();
   const router = useRouter();
   const { createCouple } = useAuthActions();
-  const { activeCouple, route } = useSession();
+  const { activeCouple, route, user } = useSession();
 
-  const [step, setStep] = useState<Step>('choose');
+  const [step, setStep] = useState<Step>('name');
+  const [displayName, setDisplayName] = useState('');
+  const [savingName, setSavingName] = useState(false);
   const [coupleName, setCoupleName] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -54,7 +57,7 @@ export default function OnboardingScreen() {
 
       // Auto-generate encryption key for the new couple
       try {
-        const coupleId = result.couple._id;
+        const coupleId = result.couple.id;
         const keyBase64 = await generateCoupleKey();
         await storeCoupleKey(coupleId, keyBase64);
       } catch {
@@ -84,6 +87,57 @@ export default function OnboardingScreen() {
       router.replace(route);
     }
   };
+
+  const handleSaveName = async () => {
+    if (!displayName.trim() || !user?.id) return;
+    try {
+      setSavingName(true);
+      await db.transact(db.tx.$users[user.id].update({ displayName: displayName.trim() }));
+      setStep('choose');
+    } catch {
+      Alert.alert('Error', 'Could not save your name. Please try again.');
+    } finally {
+      setSavingName(false);
+    }
+  };
+
+  // ── Name ──
+  if (step === 'name') {
+    return (
+      <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
+        <SafeAreaView style={styles.flex}>
+          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            <Animated.View entering={FadeInDown.duration(700)} style={styles.chooseHeader}>
+              <Text style={[styles.chooseTitle, { color: C.cream }]}>
+                What should we{'\n'}call you?
+              </Text>
+              <View style={[styles.goldRule, { backgroundColor: C.primary }]} />
+              <Text style={[styles.chooseSubtitle, { color: C.fog }]}>
+                Your first name is perfect.
+              </Text>
+            </Animated.View>
+
+            <Animated.View entering={FadeInDown.duration(600).delay(200)} style={styles.createForm}>
+              <Input
+                placeholder="Your name"
+                value={displayName}
+                onChangeText={setDisplayName}
+                autoFocus
+                leftIcon={<Feather name="user" size={16} color={C.fog} />}
+              />
+              <Button
+                title="Continue"
+                onPress={handleSaveName}
+                loading={savingName}
+                size="lg"
+                disabled={!displayName.trim()}
+              />
+            </Animated.View>
+          </ScrollView>
+        </SafeAreaView>
+      </View>
+    );
+  }
 
   // ── Choose ──
   if (step === 'choose') {

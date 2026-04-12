@@ -6,7 +6,7 @@
  * stored in expo-secure-store (hardware-backed keychain on iOS),
  * and exchanged with the partner during invite acceptance.
  *
- * Convex only ever sees ciphertext for encrypted fields.
+ * InstantDB only ever sees ciphertext for encrypted fields.
  */
 import * as SecureStore from 'expo-secure-store';
 

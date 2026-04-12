@@ -19,7 +19,8 @@ import type { Task } from '@/src/types/database';
 export default function TasksScreen() {
   const C = useColors();
   const insets = useSafeAreaInsets();
-  const { lists, allTasks, isLoading, createTask, createTaskInDefaultList, updateTask, toggleTask, deleteTask, refetch } = useTasks();
+  const { allTasks, isLoading, createTask, createTaskInDefaultList, updateTask, toggleTask, deleteTask, refetch } = useTasks();
+  const lists: { id: string; name: string; icon?: string | null; color: string }[] = [];
   const sheetRef = useRef<BottomSheetModal>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'done'>('all');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -47,7 +48,7 @@ export default function TasksScreen() {
     value: filter,
     onChange: setFilter,
   });
-  const feedState = useMemo(() => buildTaskFeedViewState(lists, allTasks, filter), [allTasks, filter, lists]);
+  const feedState = useMemo(() => buildTaskFeedViewState(allTasks, filter), [allTasks, filter]);
   const taskFeed = useMemo(
     () =>
       feedState.items.map((item) =>
@@ -70,7 +71,7 @@ export default function TasksScreen() {
     sheetRef.current?.present();
   };
 
-  const handleSave = async (data: Parameters<typeof createTask>[0]) => {
+  const handleSave = async (data: { title: string; notes: string | null; due_date: string | null; priority: number; assigned_to: string | null; category: string }) => {
     if (savingTask) return;
     setSavingTask(true);
     try {
@@ -80,7 +81,7 @@ export default function TasksScreen() {
         return;
       }
 
-      if (data.list_id === AUTO_CREATE_TASK_LIST_ID) {
+      if (data.category === AUTO_CREATE_TASK_LIST_ID) {
         await createTaskInDefaultList({
           title: data.title,
           notes: data.notes,
@@ -170,33 +171,6 @@ export default function TasksScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
       <SafeAreaView style={[styles.flex, { backgroundColor: C.screenBackground }]} edges={['top']}>
-        <MiniDateRail
-          title="Tasks"
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          accentColor={C.tasks}
-          onPressAction={openTaskComposer}
-          actionIcon="plus"
-          tabs={[
-            { value: 'all', label: 'All' },
-            { value: 'active', label: 'Active' },
-            { value: 'done', label: 'Done' },
-          ]}
-          selectedTab={filter}
-          onSelectTab={(value) => setFilter(value as 'all' | 'active' | 'done')}
-        />
-        <View style={[styles.header, { backgroundColor: C.background }]}>
-          <View style={styles.summaryRow}>
-            <Text style={[styles.summaryText, { color: C.textTertiary }]}>
-              {openCount} open
-            </Text>
-            <View style={[styles.summaryDivider, { backgroundColor: C.border }]} />
-            <Text style={[styles.summaryText, { color: C.textTertiary }]}>
-              {doneCount} done
-            </Text>
-          </View>
-        </View>
-
         {!isLoading && (feedState.emptyState || visibleTaskFeed.length === 0) ? (
           <ScrollView
             contentContainerStyle={styles.emptyContent}
@@ -206,6 +180,21 @@ export default function TasksScreen() {
             showsVerticalScrollIndicator={false}
             {...tabSwipe.panHandlers}
           >
+            <MiniDateRail
+              title="Tasks"
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              accentColor={C.tasks}
+              onPressAction={openTaskComposer}
+              actionIcon="plus"
+              tabs={[
+                { value: 'all', label: 'All' },
+                { value: 'active', label: 'Active' },
+                { value: 'done', label: 'Done' },
+              ]}
+              selectedTab={filter}
+              onSelectTab={(value) => setFilter(value as 'all' | 'active' | 'done')}
+            />
             <EmptyState
               icon="check-square"
               title={selectedDate && visibleTaskFeed.length === 0 ? 'No tasks on this date' : feedState.emptyState?.title ?? 'No tasks yet'}
@@ -219,8 +208,39 @@ export default function TasksScreen() {
             />
           </ScrollView>
         ) : (
+          <>
           <FlatList
             data={visibleTaskFeed}
+            ListHeaderComponent={
+              <>
+                <MiniDateRail
+                  title="Tasks"
+                  selectedDate={selectedDate}
+                  onSelectDate={setSelectedDate}
+                  accentColor={C.tasks}
+                  onPressAction={openTaskComposer}
+                  actionIcon="plus"
+                  tabs={[
+                    { value: 'all', label: 'All' },
+                    { value: 'active', label: 'Active' },
+                    { value: 'done', label: 'Done' },
+                  ]}
+                  selectedTab={filter}
+                  onSelectTab={(value) => setFilter(value as 'all' | 'active' | 'done')}
+                />
+                <View style={[styles.header, { backgroundColor: C.background }]}>
+                  <View style={styles.summaryRow}>
+                    <Text style={[styles.summaryText, { color: C.textTertiary }]}>
+                      {openCount} open
+                    </Text>
+                    <View style={[styles.summaryDivider, { backgroundColor: C.border }]} />
+                    <Text style={[styles.summaryText, { color: C.textTertiary }]}>
+                      {doneCount} done
+                    </Text>
+                  </View>
+                </View>
+              </>
+            }
             keyExtractor={(item) => item.id}
             contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 120 }]}
             refreshControl={
@@ -230,7 +250,6 @@ export default function TasksScreen() {
             {...tabSwipe.panHandlers}
             renderItem={({ item }) => {
               const dueLabel = item.due_date ? format(new Date(`${item.due_date}T00:00:00`), 'MMM d') : null;
-              const listColor = item.list?.color ?? C.tasks;
               const isCompleted = item.is_completed;
               const isPending = !!pendingTaskIds[item.id];
               const priorityColor =
@@ -276,11 +295,11 @@ export default function TasksScreen() {
                       </TouchableOpacity>
                       <View style={styles.taskBody}>
                         <View style={styles.kickerRow}>
-                          {item.list ? (
+                          {item.category ? (
                             <View style={[styles.listBadge, { backgroundColor: C.card, borderColor: C.border }]}>
-                              <View style={[styles.listDot, { backgroundColor: listColor }]} />
+                              <View style={[styles.listDot, { backgroundColor: C.tasks }]} />
                               <Text style={[styles.listMetaText, { color: C.textTertiary }]} numberOfLines={1}>
-                                {item.list.name}
+                                {item.category}
                               </Text>
                             </View>
                           ) : null}
@@ -312,6 +331,7 @@ export default function TasksScreen() {
               );
             }}
           />
+          </>
         )}
 
         {/* FAB */}
@@ -366,8 +386,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xl,
   },
   emptyContent: {
-    paddingTop: Spacing.lg,
-    paddingHorizontal: Spacing['2xl'],
+    paddingBottom: Spacing.xl,
   },
   separator: {
     height: StyleSheet.hairlineWidth,

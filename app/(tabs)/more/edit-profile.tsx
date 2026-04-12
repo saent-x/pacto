@@ -6,34 +6,26 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { useMutation } from 'convex/react';
-import { makeFunctionReference } from 'convex/server';
+import { db } from '@/src/lib/instant';
 import { useColors } from '@/src/hooks/useColors';
 import { useSession } from '@/src/hooks/useSession';
 import { Typography } from '@/src/constants/typography';
 import { Spacing } from '@/src/constants/spacing';
 import { GlassSection, GlassRow, ThemedSheet, BottomSheetTextInput } from '@/src/components/ui';
 
-const createProfileMutation = makeFunctionReference<
-  'mutation',
-  { displayName?: string; avatarUrl?: string },
-  unknown
->('users:createProfile');
-
 export default function EditProfileScreen() {
   const C = useColors();
   const router = useRouter();
-  const { profile, refetch } = useSession();
+  const { profile, refetch, user } = useSession();
   const [displayName, setDisplayName] = useState(profile?.displayName ?? '');
-  const updateProfile = useMutation(createProfileMutation);
 
   const nameSheetRef = useRef<BottomSheetModal>(null);
   const [editName, setEditName] = useState(displayName);
 
   const handleSaveName = async () => {
-    if (!editName.trim()) return;
+    if (!editName.trim() || !user?.id) return;
     try {
-      await updateProfile({ displayName: editName.trim() });
+      await db.transact(db.tx.$users[user.id].update({ displayName: editName.trim() }));
       setDisplayName(editName.trim());
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       nameSheetRef.current?.dismiss();

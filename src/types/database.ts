@@ -1,28 +1,14 @@
 /**
- * Adapter-layer types used by frontend hooks to bridge Convex camelCase
+ * Adapter-layer types used by frontend hooks to bridge InstantDB camelCase
  * documents to the snake_case row format expected by UI components.
- *
- * These are NOT Supabase types — they are standalone type definitions
- * matching the shape that hooks produce after converting from Convex.
  */
-
-export type TaskList = {
-  id: string;
-  couple_id: string;
-  name: string;
-  icon: string;
-  color: string;
-  sort_order: number;
-  created_by: string;
-  created_at: string;
-};
 
 export type Task = {
   id: string;
-  list_id: string;
   couple_id: string;
   title: string;
   notes: string | null;
+  category: string | null;
   is_completed: boolean;
   completed_at: string | null;
   completed_by: string | null;
@@ -62,7 +48,6 @@ export type JournalEntry = {
   mood: string | null;
   is_private: boolean;
   media_urls: string[];
-  media_storage_ids: string[];
   tags: string[];
   entry_date: string;
   created_at: string;

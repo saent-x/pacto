@@ -8,13 +8,14 @@ import {
   TouchableOpacity,
   ViewStyle,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
   interpolateColor,
 } from 'react-native-reanimated';
-import { Colors } from '@/src/constants/colors';
+import { useColors } from '@/src/hooks/useColors';
 import { Typography } from '@/src/constants/typography';
 import { Spacing } from '@/src/constants/spacing';
 
@@ -38,6 +39,7 @@ export function Input({
   containerStyle,
   ...props
 }: InputProps) {
+  const C = useColors();
   const [isFocused, setIsFocused] = useState(false);
   const focus = useSharedValue(0);
 
@@ -45,20 +47,20 @@ export function Input({
     backgroundColor: interpolateColor(
       focus.value,
       [0, 1],
-      [Colors.dusk, Colors.primary],
+      [C.dusk, C.primary],
     ),
     height: focus.value === 1 ? 2 : 1,
   }));
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <Text style={[styles.label, { color: C.fog }]}>{label}</Text>}
       <View style={styles.row}>
         {leftIcon && <View style={styles.iconLeft}>{leftIcon}</View>}
         <TextInput
-          style={[styles.input, leftIcon ? styles.inputWithIcon : undefined]}
-          placeholderTextColor={Colors.fog}
-          selectionColor={Colors.primary}
+          style={[styles.input, { color: C.bone }, leftIcon ? styles.inputWithIcon : undefined]}
+          placeholderTextColor={C.fog}
+          selectionColor={C.primary}
           onFocus={(e) => {
             setIsFocused(true);
             focus.value = withTiming(1, { duration: 250 });
@@ -73,7 +75,10 @@ export function Input({
         />
         {rightIcon && (
           <TouchableOpacity
-            onPress={onRightIconPress}
+            onPress={() => {
+              Haptics.selectionAsync();
+              onRightIconPress?.();
+            }}
             style={styles.iconRight}
             disabled={!onRightIconPress}
           >
@@ -81,8 +86,8 @@ export function Input({
           </TouchableOpacity>
         )}
       </View>
-      <AnimatedView style={[styles.line, error ? styles.lineError : undefined, !error ? lineStyle : undefined]} />
-      {error && <Text style={styles.error}>{error}</Text>}
+      <AnimatedView style={[styles.line, { backgroundColor: C.dusk }, error ? [styles.lineError, { backgroundColor: C.error }] : undefined, !error ? lineStyle : undefined]} />
+      {error && <Text style={[styles.error, { color: C.error }]}>{error}</Text>}
     </View>
   );
 }
@@ -93,7 +98,6 @@ const styles = StyleSheet.create({
   },
   label: {
     ...Typography.overline,
-    color: Colors.fog,
     marginBottom: Spacing.md,
   },
   row: {
@@ -104,7 +108,6 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     ...Typography.body,
-    color: Colors.bone,
     padding: 0,
   },
   inputWithIcon: {
@@ -116,15 +119,12 @@ const styles = StyleSheet.create({
   },
   line: {
     height: 1,
-    backgroundColor: Colors.dusk,
   },
   lineError: {
-    backgroundColor: Colors.error,
     height: 2,
   },
   error: {
     ...Typography.small,
-    color: Colors.error,
     marginTop: Spacing.sm,
   },
 });

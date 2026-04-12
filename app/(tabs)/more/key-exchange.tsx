@@ -25,7 +25,7 @@ export default function KeyExchangeScreen() {
   const router = useRouter();
   const { activeCouple } = useSession();
   const { hasKey, initializeKey, importPartnerKey } = useEncryption();
-  const coupleId = activeCouple?.couple?._id ?? null;
+  const coupleId = activeCouple?.couple?.id ?? null;
 
   const [mode, setMode] = useState<Mode>('choose');
   const [keyValue, setKeyValue] = useState<string | null>(null);
