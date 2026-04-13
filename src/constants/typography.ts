@@ -3,6 +3,7 @@ import { TextStyle, Platform } from 'react-native';
 // Display: Newsreader italic serif — the signature look for headings
 const serifFamily = 'Newsreader_300Light_Italic';
 const serifRegular = 'Newsreader_400Regular';
+const serifSemiBoldItalic = 'Newsreader_600SemiBold_Italic';
 
 // Body: DM Sans — clean, modern, with full italic + bold-italic support
 const sansFamily = 'DMSans_400Regular';
@@ -24,6 +25,13 @@ export const Typography = {
   } as TextStyle,
   editorialLargeTitle: {
     fontFamily: serifFamily,
+    fontSize: 34,
+    lineHeight: 40,
+    letterSpacing: -0.3,
+    fontStyle: 'italic' as const,
+  } as TextStyle,
+  editorialLargeTitleBold: {
+    fontFamily: serifSemiBoldItalic,
     fontSize: 34,
     lineHeight: 40,
     letterSpacing: -0.3,

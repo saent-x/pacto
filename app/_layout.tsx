@@ -9,6 +9,7 @@ import { useFonts } from 'expo-font';
 import {
   Newsreader_300Light_Italic,
   Newsreader_400Regular,
+  Newsreader_600SemiBold_Italic,
 } from '@expo-google-fonts/newsreader';
 import {
   DMSans_400Regular,
@@ -118,6 +119,7 @@ export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     Newsreader_300Light_Italic,
     Newsreader_400Regular,
+    Newsreader_600SemiBold_Italic,
     DMSans_400Regular,
     DMSans_500Medium,
     DMSans_600SemiBold,

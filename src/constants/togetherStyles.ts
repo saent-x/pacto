@@ -3,8 +3,9 @@ import { Spacing } from "@/src/constants/spacing";
 
 export const togetherItemContainerStyle: ViewStyle = {
   borderWidth: 0,
-  paddingHorizontal: Spacing.lg,
-  paddingVertical: Spacing.md,
+  paddingLeft: Spacing.lg,
+  paddingRight: Spacing['2xl'],
+  paddingVertical: 14,
 };
 
 export const togetherListContainerStyle: ViewStyle = {};

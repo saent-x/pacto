@@ -7,16 +7,14 @@ import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { db } from '@/src/lib/instant';
 import { useColors } from '@/src/hooks/useColors';
-import { useTheme } from '@/src/lib/theme';
 import { useSession } from '@/src/hooks/useSession';
 import { useAuthActions } from '@/src/hooks/useAuthActions';
 import { Typography } from '@/src/constants/typography';
 import { Spacing } from '@/src/constants/spacing';
-import { GlassSection, GlassRow, SegmentedControl } from '@/src/components/ui';
+import { GlassSection, GlassRow } from '@/src/components/ui';
 
 export default function MoreScreen() {
   const C = useColors();
-  const { mode, toggle } = useTheme();
   const { signOut } = useAuthActions();
   const { profile, activeCouple, refetch, user } = useSession();
   const router = useRouter();
@@ -81,29 +79,12 @@ export default function MoreScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />
           }
         >
-          {/* Appearance */}
-          <Animated.View entering={FadeInDown.duration(400).delay(100)} style={styles.sectionWrap}>
-            <GlassSection header="Appearance">
-              <View style={styles.segmentWrap}>
-                <SegmentedControl
-                  segments={[
-                    { value: 'light', label: 'Light' },
-                    { value: 'dark', label: 'Dark' },
-                  ]}
-                  selected={mode}
-                  onSelect={(val) => {
-                    if (val !== mode) toggle();
-                  }}
-                />
-              </View>
-            </GlassSection>
-          </Animated.View>
-
           {/* Account */}
-          <Animated.View entering={FadeInDown.duration(400).delay(200)} style={styles.sectionWrap}>
+          <Animated.View entering={FadeInDown.duration(400).delay(100)} style={styles.sectionWrap}>
             <GlassSection header="Account">
               <GlassRow icon="user" label="Edit Profile" subtitle="Name, photo, email" chevron onPress={navigate('/(tabs)/more/edit-profile')} />
-              <GlassRow icon="heart" iconColor={C.primary} label="Our Space" subtitle="Couple settings" chevron onPress={navigate('/(tabs)/more/couple-settings')} last />
+              <GlassRow icon="heart" iconColor={C.primary} label="Our Space" subtitle="Couple settings" chevron onPress={navigate('/(tabs)/more/couple-settings')} />
+              <GlassRow icon="sun" label="Theme" subtitle="Appearance & color palette" chevron onPress={navigate('/(tabs)/more/theme')} last />
             </GlassSection>
           </Animated.View>
 
@@ -237,8 +218,4 @@ const styles = StyleSheet.create({
   profileName: { ...Typography.heading, marginBottom: Spacing.xs },
   profileCouple: { ...Typography.caption },
 
-  // Segmented control padding
-  segmentWrap: {
-    padding: Spacing.md,
-  },
 });

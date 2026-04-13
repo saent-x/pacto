@@ -171,10 +171,14 @@ export default function PlansScreen() {
   const hasPlans = groupedPlans.length > 0;
 
   const renderPlanCard = (plan: PlanRecord, index: number) => {
-    const pri = PRIORITY_CONFIG[plan.priority];
+    const priorityColor =
+      plan.priority === 3 ? C.error : plan.priority === 2 ? C.warning : C.plans;
+    const dueLabel = plan.targetDate
+      ? format(new Date(`${plan.targetDate}T00:00:00`), "MMM d, yyyy")
+      : null;
     const row = (
       <TouchableOpacity
-        activeOpacity={0.7}
+        activeOpacity={0.85}
         onPress={() => openEdit(plan)}
         style={[
           togetherItemContainerStyle,
@@ -182,60 +186,37 @@ export default function PlansScreen() {
           { backgroundColor: C.card },
         ]}
       >
-        {/* Title row */}
-        <View style={styles.cardTop}>
+        <View style={[styles.priorityRail, { backgroundColor: plan.priority > 0 ? priorityColor : C.dim }]} />
+        <View style={[styles.planIcon, { backgroundColor: C.plansLight }]}>
+          <Feather name="compass" size={13} color={C.plans} />
+        </View>
+        <View style={styles.planBody}>
+          <View style={styles.kickerRow}>
+            {plan.category ? (
+              <View style={[styles.listBadge, { backgroundColor: C.card, borderColor: C.border }]}>
+                <View style={[styles.listDot, { backgroundColor: C.plans }]} />
+                <Text style={[styles.listMetaText, { color: C.textTertiary }]} numberOfLines={1}>
+                  {plan.category}
+                </Text>
+              </View>
+            ) : null}
+            {dueLabel ? (
+              <Text style={[styles.kickerText, { color: C.textSecondary }]}>
+                Due {dueLabel}
+              </Text>
+            ) : null}
+          </View>
           <Text
             style={[styles.planTitle, { color: C.text }]}
-            numberOfLines={1}
+            numberOfLines={2}
           >
             {plan.title}
           </Text>
-          {pri && (
-            <View
-              style={[
-                styles.priorityBadge,
-                { backgroundColor: glassBg, borderColor: glassBorder },
-              ]}
-            >
-              <Feather name={pri.icon} size={11} color={C.textTertiary} />
-              <Text style={[styles.priorityText, { color: C.textTertiary }]}>
-                {pri.label}
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* Category */}
-        {plan.category && (
-          <Text style={[styles.planCategory, { color: C.textSecondary }]}>
-            {plan.category}
-          </Text>
-        )}
-
-        {/* Meta row */}
-        <View style={styles.metaRow}>
-          {plan.targetDate && (
-            <View style={styles.metaItem}>
-              <Feather name="calendar" size={12} color={C.textTertiary} />
-              <Text style={[styles.metaText, { color: C.textTertiary }]}>
-                {format(
-                  new Date(`${plan.targetDate}T00:00:00`),
-                  "MMM d, yyyy",
-                )}
-              </Text>
-            </View>
-          )}
-          {plan.budget != null && plan.budget > 0 && (
-            <View style={styles.metaItem}>
-              <Feather name="dollar-sign" size={12} color={C.textTertiary} />
-              <Text style={[styles.metaText, { color: C.textTertiary }]}>
-                {plan.budget.toLocaleString("en-US", {
-                  style: "currency",
-                  currency: "USD",
-                })}
-              </Text>
-            </View>
-          )}
+          {plan.description ? (
+            <Text style={[styles.planNote, { color: C.textTertiary }]} numberOfLines={1}>
+              {plan.description}
+            </Text>
+          ) : null}
         </View>
       </TouchableOpacity>
     );
@@ -297,9 +278,20 @@ export default function PlansScreen() {
                     {group.label.toUpperCase()}
                   </Text>
                   <View style={styles.groupCards}>
-                    {group.items.map((plan, idx) =>
-                      renderPlanCard(plan, groupIdx * 10 + idx),
-                    )}
+                    {group.items.map((plan, idx) => (
+                      <View key={plan.id}>
+                        {idx > 0 && (
+                          <View
+                            style={{
+                              height: StyleSheet.hairlineWidth,
+                              marginLeft: 71,
+                              backgroundColor: C.dim,
+                            }}
+                          />
+                        )}
+                        {renderPlanCard(plan, groupIdx * 10 + idx)}
+                      </View>
+                    ))}
                   </View>
                 </Animated.View>
               ))}
@@ -398,55 +390,65 @@ const styles = StyleSheet.create({
     ...Typography.overline,
     letterSpacing: 3,
   },
-  groupCards: {
-    gap: Spacing.sm,
-  },
+  groupCards: {},
 
   // Plan card
   planCard: {
-    paddingVertical: 14,
-    gap: Spacing.sm,
-  },
-  cardTop: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: Spacing.md,
+    minHeight: 56,
+  },
+  priorityRail: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+  },
+  planIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  planBody: {
+    flex: 1,
+    gap: 6,
+  },
+  kickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: Spacing.sm,
+    flexWrap: "wrap",
+  },
+  listBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+  },
+  listDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  listMetaText: {
+    ...Typography.small,
+    maxWidth: 160,
+  },
+  kickerText: {
+    ...Typography.small,
+    textTransform: "uppercase",
+    letterSpacing: 1,
   },
   planTitle: {
-    ...Typography.subheading,
-    flex: 1,
+    ...Typography.bodyMedium,
   },
-  priorityBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: Spacing.sm + 2,
-    paddingVertical: 3,
-    borderRadius: BorderRadius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  priorityText: {
-    ...Typography.small,
-    letterSpacing: 0.5,
-  },
-  planCategory: {
-    ...Typography.caption,
-    lineHeight: 18,
-  },
-
-  // Meta
-  metaRow: {
-    flexDirection: "row",
-    gap: Spacing.lg,
-    marginTop: Spacing.xs,
-  },
-  metaItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  metaText: {
+  planNote: {
     ...Typography.small,
   },
 

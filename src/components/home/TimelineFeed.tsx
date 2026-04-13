@@ -1,10 +1,13 @@
 import type { HomeView, TimelineItem } from "@/src/lib/home/types";
 
 import { Feather } from "@expo/vector-icons";
-import { format } from "date-fns";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import * as Haptics from "expo-haptics";
+import { format, isToday, isTomorrow } from "date-fns";
+import { useMemo, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Animated, { LinearTransition } from "react-native-reanimated";
 
-import { BorderRadius, Spacing } from "@/src/constants/spacing";
+import { Spacing } from "@/src/constants/spacing";
 import { Typography } from "@/src/constants/typography";
 import { useColors } from "@/src/hooks/useColors";
 import { useTheme } from "@/src/lib/theme";
@@ -14,6 +17,9 @@ type Props = {
   isLoading: boolean;
   onPressItem: (item: TimelineItem) => void;
 };
+
+const COLLAPSED_LIMIT = 3;
+const MAX_ITEMS = 6;
 
 function iconForType(type: TimelineItem["type"]): keyof typeof Feather.glyphMap {
   switch (type) {
@@ -32,188 +38,332 @@ function iconForType(type: TimelineItem["type"]): keyof typeof Feather.glyphMap 
   }
 }
 
-function timeLabel(item: TimelineItem) {
-  if (!item.occursAt) {
-    return "Anytime";
+function tintForType(
+  type: TimelineItem["type"],
+  colors: ReturnType<typeof useColors>,
+) {
+  switch (type) {
+    case "event":
+      return colors.info;
+    case "plan":
+      return colors.plans;
+    case "reminder":
+      return colors.reminders;
+    case "task":
+      return colors.tasks;
+    case "ritual":
+      return colors.primary;
+    default:
+      return colors.journal;
   }
-  if (item.type === "task" || item.type === "plan" || item.type === "ritual") {
-    return format(item.occursAt, "EEE d MMM");
+}
+
+function compactTime(item: TimelineItem) {
+  if (!item.occursAt) return null;
+  if (item.type === "task" || item.type === "plan" || item.type === "ritual") return null;
+  return format(item.occursAt, "h:mm a");
+}
+
+type BucketKey = "overdue" | "today" | "tomorrow" | "later";
+
+type Bucket = {
+  key: BucketKey;
+  label: string;
+  items: TimelineItem[];
+};
+
+function bucketItems(items: TimelineItem[]): Bucket[] {
+  const feed = items.filter((i) => i.type !== "memory");
+  const overdue: TimelineItem[] = [];
+  const today: TimelineItem[] = [];
+  const tomorrow: TimelineItem[] = [];
+  const later: TimelineItem[] = [];
+
+  for (const item of feed) {
+    if (item.isOverdue) {
+      overdue.push(item);
+    } else if (!item.occursAt || isToday(item.occursAt)) {
+      today.push(item);
+    } else if (isTomorrow(item.occursAt)) {
+      tomorrow.push(item);
+    } else {
+      later.push(item);
+    }
   }
-  return format(item.occursAt, "EEE d MMM, h:mm a");
+
+  const buckets: Bucket[] = [];
+  if (overdue.length > 0) buckets.push({ key: "overdue", label: "Overdue", items: overdue });
+  if (today.length > 0) buckets.push({ key: "today", label: "Today", items: today });
+  if (tomorrow.length > 0) buckets.push({ key: "tomorrow", label: "Tomorrow", items: tomorrow });
+  if (later.length > 0) buckets.push({ key: "later", label: "This week", items: later });
+  return buckets;
+}
+
+function TimelineRow({
+  item,
+  onPress,
+}: {
+  item: TimelineItem;
+  onPress: () => void;
+}) {
+  const C = useColors();
+  const { mode } = useTheme();
+  const tint = item.isOverdue ? C.error : tintForType(item.type, C);
+  const tintBg = item.isOverdue ? C.errorLight : `${tint}18`;
+  const time = compactTime(item);
+  const rowBg = mode === "dark" ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.025)";
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.row,
+        { backgroundColor: rowBg, opacity: pressed ? 0.7 : 1 },
+      ]}
+    >
+      <View style={[styles.iconDot, { backgroundColor: tintBg }]}>
+        <Feather name={iconForType(item.type)} size={13} color={tint} />
+      </View>
+      <View style={styles.rowBody}>
+        <Text
+          style={[styles.rowTitle, { color: C.text }]}
+          numberOfLines={1}
+        >
+          {item.title}
+        </Text>
+        {(time || item.subtitle) && (
+          <Text style={[styles.rowSub, { color: C.textTertiary }]} numberOfLines={1}>
+            {[time, item.subtitle].filter(Boolean).join(" · ")}
+          </Text>
+        )}
+      </View>
+      <Feather name="chevron-right" size={14} color={C.textTertiary} />
+    </Pressable>
+  );
 }
 
 export function TimelineFeed({ timeline, isLoading, onPressItem }: Props) {
-  const colors = useColors();
+  const C = useColors();
   const { mode } = useTheme();
-  const feedItems = timeline.filter((item) => item.type !== "memory");
 
-  const glassBg = mode === "dark" ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.06)";
-  const glassBorder = mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.10)";
-  const timelineRowBg =
-    mode === "dark" ? "rgba(255,255,255,0.035)" : "rgba(0,0,0,0.05)";
+  const glassBg = mode === "dark" ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.04)";
+  const buckets = useMemo(() => bucketItems(timeline), [timeline]);
+  const [activeTab, setActiveTab] = useState<BucketKey | null>(null);
+  const [expanded, setExpanded] = useState(false);
+
+  const selectedKey = activeTab && buckets.some((b) => b.key === activeTab)
+    ? activeTab
+    : buckets[0]?.key ?? null;
+
+  const activeBucket = buckets.find((b) => b.key === selectedKey) ?? null;
+  const capped = activeBucket ? activeBucket.items.slice(0, MAX_ITEMS) : [];
+  const hasOverflow = capped.length > COLLAPSED_LIMIT;
+  const visible = expanded ? capped : capped.slice(0, COLLAPSED_LIMIT);
+  const remaining = capped.length - COLLAPSED_LIMIT;
 
   return (
     <View style={styles.wrapper}>
-      <View style={styles.header}>
-        <Text style={[styles.eyebrow, { color: colors.primary }]}>Timeline</Text>
-        <Text style={[styles.heading, { color: colors.text }]}>Today and next</Text>
-      </View>
+      {isLoading ? (
+        <View style={[styles.emptyCard, { backgroundColor: glassBg }]}>
+          <Text style={[styles.emptyTitle, { color: C.text }]}>Loading your day</Text>
+          <Text style={[styles.emptyBody, { color: C.textSecondary }]}>
+            Pulling shared plans, reminders, and the next moment that matters.
+          </Text>
+        </View>
+      ) : buckets.length === 0 ? (
+        <View style={[styles.emptyCard, { backgroundColor: glassBg }]}>
+          <View style={[styles.emptyIcon, { backgroundColor: C.primaryMuted }]}>
+            <Feather name="sun" size={22} color={C.primary} />
+          </View>
+          <Text style={[styles.emptyTitle, { color: C.text }]}>All clear</Text>
+          <Text style={[styles.emptyBody, { color: C.textSecondary }]}>
+            New reminders, plans, and rituals will land here as soon as they're due.
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.tabContent}>
+          <Text style={[styles.sectionLabel, { color: C.textTertiary }]}>TODAY & NEXT</Text>
 
-      <View style={styles.feedList}>
-        {isLoading ? (
-          <View style={[styles.emptyCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>Loading your day</Text>
-            <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>
-              Pulling shared plans, reminders, and the next moment that matters.
-            </Text>
-          </View>
-        ) : feedItems.length === 0 ? (
-          <View style={[styles.emptyCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>Nothing urgent today</Text>
-            <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>
-              New reminders, plans, and rituals will land here as soon as they are due.
-            </Text>
-          </View>
-        ) : (
-          feedItems.map((item) => (
-            <Pressable
-              key={item.id}
-              accessibilityRole="button"
-              onPress={() => onPressItem(item)}
-              style={({ pressed }) => [
-                item.type === "task" ? styles.taskRow : styles.row,
-                {
-                  backgroundColor:
-                    item.type === "task" ? colors.card : timelineRowBg,
-                  borderColor: colors.border,
-                  opacity: pressed ? 0.85 : 1,
-                },
-              ]}
-            >
-              {item.type === "task" ? (
-                <View
-                  style={[
-                    styles.taskRail,
-                    { backgroundColor: item.priority > 0 ? colors.tasks : colors.dim },
-                  ]}
-                />
-              ) : (
-                <View
-                  style={[
-                    styles.iconWrap,
-                    {
-                      backgroundColor: item.isOverdue ? colors.errorLight : colors.primaryMuted,
-                    },
-                  ]}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.tabRow, { borderBottomColor: C.border }]} contentContainerStyle={styles.tabRowContent}>
+            {buckets.map((bucket) => {
+              const active = bucket.key === selectedKey;
+              const isOverdue = bucket.key === "overdue";
+              const tint = isOverdue ? C.error : C.primary;
+              return (
+                <Pressable
+                  key={bucket.key}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setActiveTab(bucket.key);
+                    setExpanded(false);
+                  }}
+                  style={styles.tabButton}
                 >
-                  <Feather
-                    name={iconForType(item.type)}
-                    size={15}
-                    color={item.isOverdue ? colors.error : colors.primary}
-                  />
-                </View>
-              )}
-              <View style={styles.rowContent}>
-                <View style={styles.rowMetaLine}>
-                  <Text style={[styles.rowMeta, { color: colors.textTertiary }]}>
-                    {item.isOverdue ? "Overdue" : timeLabel(item)}
-                  </Text>
-                  {item.type === "task" ? (
-                    <Text style={[styles.typePill, { color: colors.tasks }]}>Task</Text>
-                  ) : null}
-                </View>
-                <Text style={[styles.rowTitle, { color: colors.text }]}>{item.title}</Text>
-                {item.subtitle ? (
-                  <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]}>
-                    {item.subtitle}
-                  </Text>
-                ) : null}
-              </View>
-            </Pressable>
-          ))
-        )}
-      </View>
+                  <View style={styles.tabLabelRow}>
+                    <Text
+                      style={[
+                        styles.tabLabel,
+                        { color: active ? tint : C.textTertiary },
+                      ]}
+                    >
+                      {bucket.label}
+                    </Text>
+                    <View style={[styles.countBadge, { backgroundColor: active ? (isOverdue ? C.errorLight : `${C.primary}18`) : (mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)") }]}>
+                      <Text style={[styles.countText, { color: active ? tint : C.textTertiary }]}>
+                        {bucket.items.length}
+                      </Text>
+                    </View>
+                  </View>
+                  {active ? (
+                    <Animated.View
+                      layout={LinearTransition.springify()
+                        .damping(18)
+                        .stiffness(220)}
+                      style={[styles.tabLine, { backgroundColor: tint }]}
+                    />
+                  ) : (
+                    <View style={styles.tabLineSpacer} />
+                  )}
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          <View style={styles.bucketList}>
+            {visible.map((item) => (
+              <TimelineRow
+                key={item.id}
+                item={item}
+                onPress={() => onPressItem(item)}
+              />
+            ))}
+            {hasOverflow && (
+              <TouchableOpacity
+                onPress={() => setExpanded(!expanded)}
+                style={styles.showMore}
+                activeOpacity={0.7}
+              >
+                <Feather name={expanded ? "chevron-up" : "chevron-down"} size={14} color={C.primary} />
+                <Text style={[styles.showMoreText, { color: C.primary }]}>
+                  {expanded ? "Show less" : `${remaining} more`}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
-    gap: Spacing.lg,
+    gap: Spacing.md,
   },
-  header: {
-    gap: Spacing.xs,
+  tabContent: {
+    gap: Spacing.md,
   },
-  feedList: {
-    marginHorizontal: -Spacing["2xl"],
-    gap: Spacing.sm,
-  },
-  eyebrow: {
+  sectionLabel: {
     ...Typography.overline,
-    letterSpacing: 2.4,
+    letterSpacing: 2,
   },
-  heading: {
-    ...Typography.heading,
+  tabRow: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingBottom: Spacing.sm,
+  },
+  tabRowContent: {
+    flexDirection: "row",
+    gap: Spacing.xl,
+  },
+  tabButton: {
+    position: "relative",
+    paddingBottom: Spacing.sm,
+  },
+  tabLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  tabLabel: {
+    ...Typography.captionMedium,
+  },
+  tabLine: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 2,
+    borderRadius: 1,
+  },
+  tabLineSpacer: {
+    height: 2,
+  },
+  countBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 5,
+  },
+  countText: {
+    ...Typography.small,
+    fontSize: 11,
+    fontFamily: Typography.sansSemiBold,
+  },
+  bucketList: {
+    gap: Spacing.sm,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
     gap: Spacing.md,
-    borderBottomWidth: 0,
-    borderRadius: 0,
+    borderRadius: 10,
   },
-  taskRow: {
-    flexDirection: "row",
-    alignItems: "stretch",
-    overflow: "hidden",
-    borderRadius: 0,
-    minHeight: 60,
-    paddingRight: Spacing.lg,
-    gap: Spacing.md,
-  },
-  taskRail: {
-    width: 4,
-    borderTopLeftRadius: 10,
-    borderBottomLeftRadius: 10,
-  },
-  iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  iconDot: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: "center",
     justifyContent: "center",
   },
-  rowContent: {
+  rowBody: {
     flex: 1,
-    gap: 2,
-    paddingVertical: Spacing.sm,
-  },
-  rowMetaLine: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: Spacing.md,
-  },
-  rowMeta: {
-    ...Typography.small,
-  },
-  typePill: {
-    ...Typography.small,
-    textTransform: "uppercase",
-    letterSpacing: 1.1,
   },
   rowTitle: {
-    ...Typography.subheading,
+    ...Typography.body,
+    marginBottom: 1,
   },
-  rowSubtitle: {
-    ...Typography.caption,
+  rowSub: {
+    ...Typography.small,
+  },
+  showMore: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.xs,
+    paddingVertical: 10,
+  },
+  showMoreText: {
+    ...Typography.captionMedium,
+    fontSize: 13,
   },
   emptyCard: {
-    borderRadius: 0,
+    borderRadius: 12,
     padding: Spacing.xl,
     gap: Spacing.sm,
+    alignItems: "center",
+  },
+  emptyIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: Spacing.xs,
   },
   emptyTitle: {
     ...Typography.subheading,
@@ -222,5 +372,6 @@ const styles = StyleSheet.create({
     ...Typography.body,
     fontSize: 14,
     lineHeight: 21,
+    textAlign: "center",
   },
 });

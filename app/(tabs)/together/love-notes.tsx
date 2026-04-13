@@ -166,31 +166,29 @@ export default function LoveNotesScreen() {
             styles.noteRow,
             { backgroundColor: C.card },
           ]}
-          activeOpacity={0.7}
+          activeOpacity={0.85}
           onPress={own ? () => openComposer(item) : undefined}
         >
+        <View style={[styles.accentRail, { backgroundColor: own ? C.errorLight : C.primaryMuted }]} />
         <View
           style={[
             styles.noteIcon,
             { backgroundColor: own ? C.errorLight : C.primaryMuted },
           ]}
         >
-          <Feather name="heart" size={16} color={own ? C.error : C.primary} />
+          <Feather name="heart" size={13} color={own ? C.error : C.primary} />
         </View>
         <View style={styles.noteBody}>
-          <Text style={[styles.noteTitle, { color: C.text }]} numberOfLines={1}>
+          <View style={styles.kickerRow}>
+            <Text style={[styles.kickerText, { color: C.textTertiary }]}>
+              {authorLabel} · {formatRelativeDate(item.createdAt)}
+            </Text>
+            {item.isPrivate && <Feather name="lock" size={11} color={C.textTertiary} />}
+          </View>
+          <Text style={[styles.noteTitle, { color: C.text }]} numberOfLines={2}>
             {preview || "Love note"}
           </Text>
-          <Text
-            style={[styles.noteMeta, { color: C.textTertiary }]}
-            numberOfLines={1}
-          >
-            {authorLabel} · {formatRelativeDate(item.createdAt)}
-          </Text>
         </View>
-        {item.isPrivate && (
-          <Feather name="lock" size={14} color={C.textTertiary} />
-        )}
       </TouchableOpacity>
     );
 
@@ -314,7 +312,7 @@ export default function LoveNotesScreen() {
               </>
             }
             ItemSeparatorComponent={() => (
-              <View style={[styles.separator, { backgroundColor: C.border }]} />
+              <View style={[styles.separator, { backgroundColor: C.dim }]} />
             )}
             refreshControl={
               <RefreshControl
@@ -365,25 +363,39 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.md,
-    paddingVertical: 14,
+    minHeight: 56,
+  },
+  accentRail: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
   },
   noteIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
   noteBody: {
     flex: 1,
+    gap: 6,
+  },
+  kickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    flexWrap: "wrap",
+  },
+  kickerText: {
+    ...Typography.small,
+    textTransform: "uppercase",
+    letterSpacing: 1,
   },
   noteTitle: {
-    ...Typography.body,
-    fontSize: 15,
-    marginBottom: 2,
-  },
-  noteMeta: {
-    ...Typography.small,
+    ...Typography.bodyMedium,
   },
   separator: {
     height: StyleSheet.hairlineWidth,

@@ -184,6 +184,7 @@ export default function WishlistsScreen() {
           )}
           {visibleWishlists.length > 0 ? visibleWishlists.map((wishlist, index) => (
             <Animated.View key={wishlist.id} entering={FadeInDown.duration(400).delay(100 + index * 60)}>
+              {index > 0 && <View style={[styles.hairline, { backgroundColor: C.dim }]} />}
               <WishlistCard
                 wishlist={wishlist}
                 expanded={expandedId === wishlist.id}
@@ -244,25 +245,25 @@ function WishlistCard({ wishlist, expanded, onToggle, onDelete, onEdit, colors: 
   const row = (
     <TouchableOpacity
       onPress={() => onToggle(wishlist.id)}
-      activeOpacity={0.7}
+      activeOpacity={0.85}
       style={[
         togetherItemContainerStyle,
         styles.wishlistRow,
         { backgroundColor: C.card },
       ]}
     >
-      <View style={styles.wishlistLeft}>
-        <View style={[styles.wishlistIcon, { backgroundColor: C.wishlistsLight }]}>
-          <Feather name="gift" size={18} color={C.wishlists} />
-        </View>
+      <View style={[styles.accentRail, { backgroundColor: C.wishlistsLight }]} />
+      <View style={[styles.wishlistIcon, { backgroundColor: C.wishlistsLight }]}>
+        <Feather name="gift" size={13} color={C.wishlists} />
+      </View>
+      <View style={styles.wishlistBody}>
         <Text style={[styles.wishlistName, { color: C.text }]} numberOfLines={1}>
           {wishlist.name}
         </Text>
       </View>
-
       <Feather
         name={expanded ? 'chevron-up' : 'chevron-down'}
-        size={18}
+        size={16}
         color={C.textTertiary}
       />
     </TouchableOpacity>
@@ -396,6 +397,7 @@ function WishlistItemsList({
       ) : (
         items.map((item, i) => (
           <Animated.View key={item.id} entering={FadeInDown.duration(300).delay(i * 40)}>
+            {i > 0 && <View style={[styles.hairline, { backgroundColor: C.dim }]} />}
             {(() => {
               const isPending = !!pendingItemIds[item.id];
               return (
@@ -423,83 +425,57 @@ function WishlistItemsList({
               <TouchableOpacity
                 onPress={() => handleTogglePurchased(item.id)}
                 disabled={isPending}
-                activeOpacity={0.7}
+                activeOpacity={0.85}
                 style={[
                   togetherItemContainerStyle,
                   styles.itemRow,
                   {
-                    backgroundColor: C.card,
-                    opacity: isPending ? 0.45 : item.isPurchased ? 0.5 : 1,
+                    backgroundColor: item.isPurchased ? C.wishlistsLight : C.card,
+                    opacity: isPending ? 0.45 : 1,
                   },
                 ]}
               >
-                {/* Purchased indicator */}
+                <View style={[styles.itemPriorityRail, { backgroundColor: item.priority > 0 ? getPriorityColor(item.priority, C) : C.dim }]} />
                 <View
                   style={[
                     styles.itemCheckbox,
                     {
-                      borderColor: item.isPurchased ? C.wishlists : C.border,
-                      backgroundColor: item.isPurchased ? C.wishlistsLight : 'transparent',
+                      borderColor: item.isPurchased ? C.wishlists : C.dusk,
+                      backgroundColor: item.isPurchased ? C.wishlists : 'transparent',
                     },
                   ]}
                   >
-                  {item.isPurchased && <Feather name="check" size={12} color={C.wishlists} />}
+                  {item.isPurchased && <Feather name="check" size={13} color={C.ink} />}
                 </View>
-
-                {/* Content */}
                 <View style={styles.itemContent}>
                   <View style={styles.itemTitleRow}>
-                    <Text
-                      style={[
-                        styles.itemTitle,
-                        { color: C.text },
-                        item.isPurchased && styles.itemStrikethrough,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {item.title}
-                    </Text>
                     {item.price != null && (
-                      <Text
-                        style={[
-                          styles.itemPrice,
-                          { color: C.textSecondary },
-                          item.isPurchased && styles.itemStrikethrough,
-                        ]}
-                      >
+                      <Text style={[styles.itemPrice, { color: item.isPurchased ? C.textTertiary : C.textSecondary }]}>
                         {formatPrice(item.price)}
                       </Text>
-                    )}
-                  </View>
-
-                  {item.description ? (
-                    <Text
-                      style={[styles.itemDescription, { color: C.textTertiary }]}
-                      numberOfLines={2}
-                    >
-                      {item.description}
-                    </Text>
-                  ) : null}
-
-                  <View style={styles.itemMeta}>
-                    {item.priority >= 2 && (
-                      <View
-                        style={[
-                          styles.priorityBadge,
-                          { backgroundColor: getPriorityColor(item.priority, C) + '18' },
-                        ]}
-                      >
-                        <Text
-                          style={[styles.priorityText, { color: getPriorityColor(item.priority, C) }]}
-                        >
-                          {getPriorityLabel(item.priority)}
-                        </Text>
-                      </View>
                     )}
                     {item.isPurchased && (
                       <Text style={[styles.gotItText, { color: C.wishlists }]}>Got it!</Text>
                     )}
                   </View>
+                  <Text
+                    style={[
+                      styles.itemTitle,
+                      { color: item.isPurchased ? C.textTertiary : C.text },
+                      item.isPurchased && styles.itemStrikethrough,
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {item.title}
+                  </Text>
+                  {item.description ? (
+                    <Text
+                      style={[styles.itemDescription, { color: C.textTertiary }]}
+                      numberOfLines={1}
+                    >
+                      {item.description}
+                    </Text>
+                  ) : null}
                 </View>
               </TouchableOpacity>
             </Swipeable>
@@ -551,31 +527,32 @@ const styles = StyleSheet.create({
   },
 
   // Wishlist card
-  wishlistCard: {
-    marginBottom: Spacing.md,
-  },
+  wishlistCard: {},
   wishlistRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-  },
-  wishlistLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
     gap: Spacing.md,
+    minHeight: 56,
+  },
+  accentRail: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
   },
   wishlistIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: BorderRadius.md,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  wishlistBody: {
+    flex: 1,
+  },
   wishlistName: {
     ...Typography.bodyMedium,
-    flex: 1,
   },
 
   // Items container
@@ -583,7 +560,10 @@ const styles = StyleSheet.create({
     paddingLeft: 0,
     borderLeftWidth: 0,
     paddingTop: Spacing.sm,
-    gap: Spacing.sm,
+  },
+  hairline: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: 71,
   },
   emptyItems: {
     paddingVertical: Spacing.xl,
@@ -596,38 +576,45 @@ const styles = StyleSheet.create({
   // Item row
   itemRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingVertical: 14,
+    alignItems: 'center',
     gap: Spacing.md,
+    minHeight: 56,
+  },
+  itemPriorityRail: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
   },
   itemCheckbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 1,
   },
   itemContent: {
     flex: 1,
-    gap: 4,
+    gap: 6,
   },
   itemTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: Spacing.sm,
+    flexWrap: 'wrap',
   },
   itemTitle: {
     ...Typography.bodyMedium,
-    flex: 1,
   },
   itemPrice: {
-    ...Typography.captionMedium,
+    ...Typography.small,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   itemDescription: {
-    ...Typography.caption,
+    ...Typography.small,
   },
   itemStrikethrough: {
     textDecorationLine: 'line-through',
@@ -635,24 +622,10 @@ const styles = StyleSheet.create({
   },
 
   // Meta / badges
-  itemMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginTop: 2,
-  },
-  priorityBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: BorderRadius.full,
-  },
-  priorityText: {
-    ...Typography.small,
-    fontFamily: Typography.captionMedium.fontFamily,
-  },
   gotItText: {
     ...Typography.small,
-    fontFamily: Typography.captionMedium.fontFamily,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
 
   // Add item button
