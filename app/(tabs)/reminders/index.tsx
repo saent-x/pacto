@@ -161,6 +161,10 @@ export default function RemindersScreen() {
   const renderItem = ({ item }: { item: Reminder }) => {
     const overdue = !item.is_completed && isPast(new Date(item.due_at)) && !isToday(new Date(item.due_at));
     const isPending = !!pendingReminderIds[item.id];
+    const isCompleted = item.is_completed;
+    const priorityColor =
+      item.priority === 3 ? C.error : item.priority === 2 ? C.warning : C.reminders;
+    const dueLabel = format(new Date(item.due_at), 'MMM d, h:mm a');
     return (
       <Swipeable
         renderRightActions={renderSwipeRight(item)}
@@ -170,61 +174,51 @@ export default function RemindersScreen() {
         friction={2}
       >
         <TouchableOpacity
-          style={[styles.reminderRow, { backgroundColor: C.background, opacity: isPending ? 0.6 : 1 }]}
-          activeOpacity={0.6}
+          style={[styles.reminderRow, {
+            backgroundColor: isCompleted ? C.remindersLight : C.card,
+            opacity: isPending ? 0.6 : 1,
+          }]}
+          activeOpacity={0.85}
           disabled={isPending}
           onPress={() => openEdit(item)}
-          onLongPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-            handleDelete(item);
-          }}
         >
+          <View style={[styles.priorityRail, { backgroundColor: item.priority > 0 ? priorityColor : C.dim }]} />
           <TouchableOpacity
             onPress={() => handleToggle(item)}
             disabled={isPending}
             style={[
               styles.checkbox,
-              {
-                borderColor: item.is_completed ? C.reminders : mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)',
-              },
-              item.is_completed && { backgroundColor: C.reminders },
+              { borderColor: isCompleted ? C.reminders : C.dusk, backgroundColor: isCompleted ? C.reminders : 'transparent' },
             ]}
+            hitSlop={8}
           >
-            {item.is_completed && <Feather name="check" size={14} color="#fff" />}
+            {isCompleted && <Feather name="check" size={13} color={C.ink} />}
           </TouchableOpacity>
           <View style={styles.reminderBody}>
+            <View style={styles.kickerRow}>
+              {item.category ? (
+                <View style={[styles.listBadge, { backgroundColor: C.card, borderColor: C.border }]}>
+                  <View style={[styles.listDot, { backgroundColor: C.reminders }]} />
+                  <Text style={[styles.listMetaText, { color: C.textTertiary }]} numberOfLines={1}>
+                    {item.category}
+                  </Text>
+                </View>
+              ) : null}
+              <Text style={[styles.kickerText, { color: overdue ? C.error : (isCompleted ? C.textTertiary : C.textSecondary) }]}>
+                {overdue ? 'Overdue · ' : 'Due '}{dueLabel}
+              </Text>
+            </View>
             <Text
               style={[
                 styles.reminderTitle,
-                { color: item.is_completed ? C.textTertiary : C.text },
-                item.is_completed && styles.strikethrough,
+                { color: isCompleted ? C.textTertiary : C.text },
+                isCompleted && styles.strikethrough,
               ]}
-              numberOfLines={1}
+              numberOfLines={2}
             >
               {item.title}
             </Text>
-            <Text style={[styles.reminderMeta, { color: overdue ? C.error : C.textTertiary }]}>
-              {format(new Date(item.due_at), 'MMM d, h:mm a')}
-              {item.category ? ` · ${item.category}` : ''}
-            </Text>
           </View>
-          {item.priority > 0 && (
-            <View
-              style={[
-                styles.priorityBadge,
-                {
-                  backgroundColor:
-                    item.priority === 3 ? C.errorLight : item.priority === 2 ? C.warningLight : C.primaryMuted,
-                },
-              ]}
-            >
-              <Feather
-                name={item.priority === 3 ? 'alert-triangle' : item.priority === 2 ? 'alert-circle' : 'minus'}
-                size={12}
-                color={item.priority === 3 ? C.error : item.priority === 2 ? C.warning : C.haze}
-              />
-            </View>
-          )}
         </TouchableOpacity>
       </Swipeable>
     );
@@ -310,7 +304,7 @@ export default function RemindersScreen() {
               <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.reminders} />
             }
             ItemSeparatorComponent={() => (
-              <View style={[styles.separator, { backgroundColor: glassBorder }]} />
+              <View style={[styles.separator, { backgroundColor: C.dim }]} />
             )}
             {...tabSwipe.panHandlers}
             ListFooterComponent={
@@ -390,35 +384,64 @@ const styles = StyleSheet.create({
   emptyContent: { paddingBottom: Spacing.xl },
   separator: {
     height: StyleSheet.hairlineWidth,
-    marginLeft: 68,
+    marginLeft: 71,
   },
 
   reminderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: Spacing['2xl'],
     gap: Spacing.md,
+    paddingVertical: 14,
+    paddingRight: Spacing['2xl'],
+    paddingLeft: Spacing.lg,
+    minHeight: 56,
+  },
+  priorityRail: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
   },
   checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  reminderBody: { flex: 1 },
-  reminderTitle: { ...Typography.body, fontSize: 15, marginBottom: 2 },
-  strikethrough: { textDecorationLine: 'line-through' },
-  reminderMeta: { ...Typography.small },
-  priorityBadge: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
+  reminderBody: { flex: 1, gap: 6 },
+  kickerRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: Spacing.sm,
+    flexWrap: 'wrap',
   },
+  listBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+  },
+  listDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  listMetaText: {
+    ...Typography.small,
+    maxWidth: 160,
+  },
+  kickerText: {
+    ...Typography.small,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  reminderTitle: { ...Typography.bodyMedium },
+  strikethrough: { textDecorationLine: 'line-through' },
 
   // Swipe actions
   swipeAction: {

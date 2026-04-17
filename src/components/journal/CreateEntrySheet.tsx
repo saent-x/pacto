@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
   },
   bodyCard: {
     borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 14,
+    borderRadius: 10,
     overflow: 'hidden',
     minHeight: 300,
   },

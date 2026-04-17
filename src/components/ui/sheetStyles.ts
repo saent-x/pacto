@@ -71,7 +71,7 @@ export const sheet = StyleSheet.create({
   /** Glass-bordered multiline card (description / notes). */
   bodyCard: {
     borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 14,
+    borderRadius: 10,
     padding: Spacing.md,
   },
 
@@ -124,7 +124,7 @@ export const sheet = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
     borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 14,
+    borderRadius: 10,
     paddingHorizontal: Spacing.md,
     paddingVertical: Platform.OS === 'ios' ? 10 : 4,
   },

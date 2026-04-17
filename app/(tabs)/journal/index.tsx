@@ -105,12 +105,11 @@ export default function JournalScreen() {
           friction={2}
         >
           <TouchableOpacity
-            style={[styles.entryCard, { backgroundColor: C.card, borderColor: C.border }]}
+            style={[styles.entryCard, { backgroundColor: C.card }]}
             activeOpacity={0.85}
             onPress={() => openEntry(item)}
           >
-          {/* Left accent for partner entries */}
-          {!isOwn && <View style={[styles.partnerBar, { backgroundColor: C.primary }]} />}
+          <View style={[styles.accentRail, { backgroundColor: isOwn ? C.journalLight : C.primaryMuted }]} />
 
           <View style={styles.entryContent}>
             {/* Meta row */}
@@ -201,26 +200,29 @@ export default function JournalScreen() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
             ListHeaderComponent={
-              <MiniDateRail
-                title="Journal"
-                selectedDate={selectedDate}
-                onSelectDate={setSelectedDate}
-                accentColor={C.journal}
-                onPressAction={openCreate}
-                actionIcon="plus"
-                tabs={[
-                  { value: 'all', label: 'All' },
-                  { value: 'shared', label: 'Shared' },
-                  { value: 'private', label: 'Private' },
-                ]}
-                selectedTab={filter}
-                onSelectTab={(value) => setFilter(value as JournalFilter)}
-              />
+              <>
+                <MiniDateRail
+                  title="Journal"
+                  selectedDate={selectedDate}
+                  onSelectDate={setSelectedDate}
+                  accentColor={C.journal}
+                  onPressAction={openCreate}
+                  actionIcon="plus"
+                  tabs={[
+                    { value: 'all', label: 'All' },
+                    { value: 'shared', label: 'Shared' },
+                    { value: 'private', label: 'Private' },
+                  ]}
+                  selectedTab={filter}
+                  onSelectTab={(value) => setFilter(value as JournalFilter)}
+                />
+                <Text style={[styles.sectionLabel, { color: C.textTertiary }]}>ENTRIES</Text>
+              </>
             }
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.journal} />
             }
-            ItemSeparatorComponent={() => <View style={styles.separator} />}
+            ItemSeparatorComponent={() => <View style={[styles.separator, { backgroundColor: C.dim }]} />}
             {...tabSwipe.panHandlers}
           />
         )}
@@ -256,16 +258,20 @@ const styles = StyleSheet.create({
   },
 
   listContent: {
-    paddingTop: Spacing.xl,
     paddingBottom: 100,
   },
   emptyContent: {
     paddingBottom: Spacing.xl,
   },
+  sectionLabel: {
+    ...Typography.overline,
+    letterSpacing: 2,
+    paddingHorizontal: Spacing['2xl'],
+    marginVertical: Spacing.md,
+  },
   separator: {
     height: StyleSheet.hairlineWidth,
-    marginLeft: 27,
-    marginRight: Spacing['2xl'],
+    marginLeft: 71,
   },
 
   entryCard: {
@@ -274,8 +280,12 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
     paddingRight: Spacing['2xl'],
   },
-  partnerBar: {
-    width: 3,
+  accentRail: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
   },
   entryContent: {
     flex: 1,

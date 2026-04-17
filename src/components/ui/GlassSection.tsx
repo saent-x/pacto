@@ -23,8 +23,8 @@ export function GlassSection({ header, footer, children, style }: GlassSectionPr
   const C = useColors();
   const { mode } = useTheme();
 
-  const cardBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.6)';
-  const borderColor = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.10)';
+  const cardBg = mode === 'dark' ? 'rgba(255,255,255,0.05)' : C.card;
+  const borderColor = mode === 'dark' ? 'rgba(255,255,255,0.07)' : C.border;
 
   return (
     <View style={[styles.container, style]}>

@@ -14,6 +14,13 @@ import Animated, {
   FadeInDown,
   FadeInUp,
   SlideInRight,
+  ZoomIn,
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withDelay,
+  withSequence,
+  Easing,
 } from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
@@ -21,7 +28,7 @@ import * as Haptics from 'expo-haptics';
 import { useColors } from '@/src/hooks/useColors';
 import { Typography } from '@/src/constants/typography';
 import { Spacing, BorderRadius } from '@/src/constants/spacing';
-import { Button, Input } from '@/src/components/ui';
+import { Button, Input, ConfettiBurst } from '@/src/components/ui';
 import { useAuthActions } from '@/src/hooks/useAuthActions';
 import { useSession } from '@/src/hooks/useSession';
 import { db } from '@/src/lib/instant';
@@ -42,6 +49,15 @@ export default function OnboardingScreen() {
   const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Pulse ring animation for success state
+  const pulseScale = useSharedValue(1);
+  const pulseOpacity = useSharedValue(0);
+
+  const pulseRingStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseScale.value }],
+    opacity: pulseOpacity.value,
+  }));
 
   const handleCreate = async () => {
     if (!coupleName.trim()) {
@@ -65,6 +81,16 @@ export default function OnboardingScreen() {
       }
 
       setStep('created');
+
+      // Trigger pulse ring animation after ZoomIn lands
+      pulseOpacity.value = withSequence(
+        withTiming(0.4, { duration: 0 }),
+        withDelay(600, withTiming(0, { duration: 800, easing: Easing.out(Easing.ease) })),
+      );
+      pulseScale.value = withSequence(
+        withTiming(1, { duration: 0 }),
+        withDelay(600, withTiming(100 / 56, { duration: 800, easing: Easing.out(Easing.ease) })),
+      );
     } catch (error) {
       Alert.alert(
         'Error',
@@ -245,11 +271,24 @@ export default function OnboardingScreen() {
   // ── Created ──
   return (
     <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
+      <ConfettiBurst />
       <SafeAreaView style={styles.flex}>
         <ScrollView contentContainerStyle={[styles.scroll, styles.centeredScroll]} showsVerticalScrollIndicator={false}>
           <Animated.View entering={FadeInDown.duration(700)} style={styles.successHeader}>
-            <View style={[styles.successRing, { borderColor: C.success, backgroundColor: C.successLight }]}>
-              <Feather name="check" size={24} color={C.success} />
+            <View style={styles.successRingContainer}>
+              <Animated.View
+                entering={ZoomIn.springify().damping(12).stiffness(150)}
+                style={[styles.successRing, { borderColor: C.success, backgroundColor: C.successLight }]}
+              >
+                <Feather name="check" size={24} color={C.success} />
+              </Animated.View>
+              <Animated.View
+                style={[
+                  styles.pulseRing,
+                  { borderColor: C.primary },
+                  pulseRingStyle,
+                ]}
+              />
             </View>
             <Text style={[styles.successTitle, { color: C.cream }]}>You're all set</Text>
             <Text style={[styles.successSubtitle, { color: C.fog }]}>
@@ -341,7 +380,18 @@ const styles = StyleSheet.create({
     width: 56, height: 56, borderRadius: 28,
     borderWidth: 1,
     alignItems: 'center', justifyContent: 'center',
+  },
+  successRingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: Spacing.xl,
+  },
+  pulseRing: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 1.5,
   },
   successTitle: { ...Typography.title },
   successSubtitle: { ...Typography.body, textAlign: 'center', marginTop: Spacing.sm },

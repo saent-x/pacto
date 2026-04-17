@@ -138,10 +138,44 @@ export type ColorScheme = {
   [K in keyof typeof dark]: string | readonly string[];
 };
 
-export const themes: Record<'dark' | 'light', typeof dark> = { dark, light };
+import { deepRose, sageWalnut, midnightHoney } from './colors-alternatives';
+
+export type PaletteKey = 'classic' | 'deepRose' | 'sageWalnut' | 'midnightHoney';
+
+export const PALETTE_OPTIONS: { value: PaletteKey; label: string }[] = [
+  { value: 'classic', label: 'Classic' },
+  { value: 'midnightHoney', label: 'Midnight' },
+  { value: 'deepRose', label: 'Rose' },
+  { value: 'sageWalnut', label: 'Sage' },
+];
+
+const palettes: Record<PaletteKey, { dark: typeof dark; light: typeof light }> = {
+  classic: { dark, light },
+  deepRose: { dark: deepRose.dark as typeof dark, light: deepRose.light as typeof light },
+  sageWalnut: { dark: sageWalnut.dark as typeof dark, light: sageWalnut.light as typeof light },
+  midnightHoney: { dark: midnightHoney.dark as typeof dark, light: midnightHoney.light as typeof light },
+};
+
+let activePaletteKey: PaletteKey = 'classic';
+
+export const themes: Record<'dark' | 'light', typeof dark> = {
+  dark: palettes.classic.dark,
+  light: palettes.classic.light,
+};
 
 // Default export for convenience — auth screens use this directly
-export let Colors: typeof dark = dark;
+export let Colors: typeof dark = palettes.classic.dark;
+
+export function setActivePalette(key: PaletteKey) {
+  activePaletteKey = key;
+  const p = palettes[key];
+  themes.dark = p.dark;
+  themes.light = p.light;
+}
+
+export function getActivePalette(): PaletteKey {
+  return activePaletteKey;
+}
 
 export function setActiveColors(mode: 'dark' | 'light') {
   Colors = themes[mode];

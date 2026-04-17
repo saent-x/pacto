@@ -10,3 +10,5 @@ export { SegmentedControl } from './SegmentedControl';
 export { ThemedSheet, BottomSheetTextInput } from './BottomSheet';
 export { BrushUnderline } from './BrushUnderline';
 export { OptionSelect } from './OptionSelect';
+export { OrbitalRings } from './OrbitalRings';
+export { ConfettiBurst } from './ConfettiBurst';

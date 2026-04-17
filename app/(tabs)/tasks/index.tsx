@@ -382,7 +382,6 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
   },
   listContent: {
-    paddingTop: Spacing.lg,
     paddingBottom: Spacing.xl,
   },
   emptyContent: {

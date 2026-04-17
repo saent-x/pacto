@@ -18,7 +18,7 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useColors } from '@/src/hooks/useColors';
 import { Typography } from '@/src/constants/typography';
 import { Spacing } from '@/src/constants/spacing';
-import { Button, Input } from '@/src/components/ui';
+import { Button, Input, OrbitalRings } from '@/src/components/ui';
 import { useAuthActions } from '@/src/hooks/useAuthActions';
 
 export default function SignUpScreen() {
@@ -71,6 +71,10 @@ export default function SignUpScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
+      {/* Ambient glows matching sign-in */}
+      <View style={[styles.glowTopRight, { backgroundColor: C.primary }]} />
+      <View style={[styles.glowBottomLeft, { backgroundColor: C.primary }]} />
+
       <SafeAreaView style={styles.flex}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -96,8 +100,13 @@ export default function SignUpScreen() {
               </TouchableOpacity>
             </Animated.View>
 
+            {/* Hero rings — approaching variant */}
+            <Animated.View entering={FadeInDown.duration(800).delay(150)} style={compact ? styles.heroCompact : styles.hero}>
+              <OrbitalRings variant="approaching" />
+            </Animated.View>
+
             <Animated.View
-              entering={FadeInDown.duration(700).delay(150)}
+              entering={FadeInDown.duration(700).delay(350)}
               style={[styles.header, compact ? styles.headerCompact : undefined]}
             >
               <Text style={[styles.title, compact ? styles.titleCompact : undefined, { color: C.cream }]}>
@@ -110,22 +119,9 @@ export default function SignUpScreen() {
             </Animated.View>
 
             <Animated.View
-              entering={FadeInDown.duration(600).delay(350)}
+              entering={FadeInUp.duration(600).delay(550)}
               style={[styles.form, compact ? styles.formCompact : undefined]}
             >
-              <View style={[styles.noticeCard, compact ? styles.noticeCardCompact : undefined, { backgroundColor: C.card, borderColor: C.border }]}>
-                <View style={[styles.noticeIcon, { backgroundColor: C.primaryMuted }]}>
-                  <Feather name="user-plus" size={18} color={C.primary} />
-                </View>
-                <View style={styles.noticeBody}>
-                  <Text style={[styles.noticeTitle, { color: C.cream }]}>Email and password</Text>
-                  <Text style={[styles.noticeCopy, { color: C.fog }]}>
-                    Create your account here, then continue straight into couple
-                    setup.
-                  </Text>
-                </View>
-              </View>
-
               <View style={[styles.fieldGroup, compact ? styles.fieldGroupCompact : undefined]}>
                 <Input
                   label="Email"
@@ -165,7 +161,7 @@ export default function SignUpScreen() {
               />
             </Animated.View>
 
-            <Animated.View entering={FadeInUp.duration(500).delay(500)} style={styles.footer}>
+            <Animated.View entering={FadeInUp.duration(500).delay(700)} style={styles.footer}>
               <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
                 <Text style={[styles.footerText, { color: C.fog }]}>
                   Already have an account? <Text style={{ color: C.primary, fontWeight: '500' }}>Sign in</Text>
@@ -184,6 +180,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   flex: { flex: 1 },
+
+  // Ambient glows
+  glowTopRight: {
+    position: 'absolute',
+    top: -60,
+    right: -80,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    opacity: 0.08,
+  },
+  glowBottomLeft: {
+    position: 'absolute',
+    bottom: 100,
+    left: -100,
+    width: 340,
+    height: 340,
+    borderRadius: 170,
+    opacity: 0.05,
+  },
+
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: Spacing['2xl'],
@@ -195,7 +212,7 @@ const styles = StyleSheet.create({
 
   backBtn: {
     marginTop: Spacing.lg,
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.md,
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -204,21 +221,29 @@ const styles = StyleSheet.create({
   },
   backBtnCompact: {
     marginTop: Spacing.sm,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.sm,
+  },
+
+  // Hero
+  hero: {
+    marginBottom: Spacing.sm,
+  },
+  heroCompact: {
+    marginBottom: 0,
   },
 
   header: {
-    marginBottom: Spacing['3xl'],
+    marginBottom: Spacing['2xl'],
   },
   headerCompact: {
-    marginBottom: Spacing['2xl'],
+    marginBottom: Spacing.xl,
   },
   title: {
     ...Typography.largeTitle,
-    fontSize: 38,
+    fontSize: 40,
   },
   titleCompact: {
-    fontSize: 32,
+    fontSize: 34,
   },
   goldRule: {
     width: 24,
@@ -230,6 +255,7 @@ const styles = StyleSheet.create({
     ...Typography.body,
   },
 
+  // Form
   form: {
     gap: Spacing['2xl'],
     marginBottom: Spacing['2xl'],
@@ -243,38 +269,11 @@ const styles = StyleSheet.create({
   fieldGroupCompact: {
     gap: Spacing.lg,
   },
-  noticeCard: {
-    flexDirection: 'row',
-    gap: Spacing.lg,
-    borderRadius: 24,
-    borderWidth: 1,
-    padding: Spacing.xl,
-  },
-  noticeCardCompact: {
-    padding: Spacing.lg,
-    borderRadius: 20,
-  },
-  noticeIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  noticeBody: {
-    flex: 1,
-    gap: Spacing.xs,
-  },
-  noticeTitle: {
-    ...Typography.subheading,
-  },
-  noticeCopy: {
-    ...Typography.caption,
-  },
   submitBtn: {
     marginTop: Spacing.sm,
   },
 
+  // Footer
   footer: {
     marginTop: 'auto',
     alignItems: 'center',

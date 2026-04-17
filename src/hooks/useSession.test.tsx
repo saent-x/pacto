@@ -4,18 +4,7 @@ import TestRenderer, { act } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SessionProvider, getSessionRoute, useSession } from '@/src/hooks/useSession';
-
-const {
-  mockUseAuthSession,
-} = vi.hoisted(() => ({
-  mockUseAuthSession: vi.fn(),
-}));
-
-vi.mock('@/src/lib/auth-client', () => ({
-  authClient: {
-    useSession: mockUseAuthSession,
-  },
-}));
+import { db } from '@/src/lib/instant';
 
 function renderSessionProvider(children: ReactNode) {
   act(() => {
@@ -25,7 +14,7 @@ function renderSessionProvider(children: ReactNode) {
 
 describe('getSessionRoute', () => {
   beforeEach(() => {
-    mockUseAuthSession.mockReset();
+    vi.restoreAllMocks();
   });
 
   it('routes signed-out users to sign-in', () => {
@@ -56,13 +45,11 @@ describe('getSessionRoute', () => {
   });
 
   it('shares one session subscription across consumers', () => {
-    mockUseAuthSession.mockReturnValue({
-      data: {
-        session: { id: 'session_1' },
-        user: { id: 'user_1', email: 'user@example.com' },
-      },
-      isPending: false,
-    });
+    vi.mocked(db.useAuth).mockReturnValue({
+      isLoading: false,
+      user: { id: 'user_1', email: 'user@example.com' },
+      error: undefined,
+    } as any);
 
     const seenRoutes: Array<string | null> = [];
 

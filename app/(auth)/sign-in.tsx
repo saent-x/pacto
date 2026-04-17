@@ -18,7 +18,7 @@ import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated'
 import { useColors } from '@/src/hooks/useColors';
 import { Typography } from '@/src/constants/typography';
 import { Spacing } from '@/src/constants/spacing';
-import { Button, Input } from '@/src/components/ui';
+import { Button, Input, OrbitalRings } from '@/src/components/ui';
 import { useAuthActions } from '@/src/hooks/useAuthActions';
 
 export default function SignInScreen() {
@@ -71,7 +71,7 @@ export default function SignInScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
-      {/* Warm glow in top-right — a subtle radial feel */}
+      {/* Enhanced ambient glows */}
       <View style={[styles.glowTopRight, { backgroundColor: C.primary }]} />
       <View style={[styles.glowBottomLeft, { backgroundColor: C.primary }]} />
 
@@ -90,8 +90,16 @@ export default function SignInScreen() {
             automaticallyAdjustKeyboardInsets
             showsVerticalScrollIndicator={false}
           >
+            {/* Hero rings */}
             <Animated.View
-              entering={FadeIn.duration(1000).delay(200)}
+              entering={FadeIn.duration(800).delay(200)}
+              style={compact ? styles.heroCompact : styles.hero}
+            >
+              <OrbitalRings variant="orbiting" />
+            </Animated.View>
+
+            <Animated.View
+              entering={FadeIn.duration(1000).delay(400)}
               style={[styles.brand, compact ? styles.brandCompact : undefined]}
             >
               <Text style={[styles.wordmark, compact ? styles.wordmarkCompact : undefined, { color: C.cream }]}>
@@ -100,29 +108,16 @@ export default function SignInScreen() {
               <View style={[styles.goldRule, { backgroundColor: C.primary }]} />
             </Animated.View>
 
-            <Animated.View entering={FadeInDown.duration(700).delay(600)}>
+            <Animated.View entering={FadeInDown.duration(700).delay(700)}>
               <Text style={[styles.tagline, compact ? styles.taglineCompact : undefined, { color: C.haze }]}>
                 Your quiet place,{'\n'}together.
               </Text>
             </Animated.View>
 
             <Animated.View
-              entering={FadeInDown.duration(600).delay(900)}
+              entering={FadeInUp.duration(600).delay(900)}
               style={[styles.form, compact ? styles.formCompact : undefined]}
             >
-              <View style={[styles.noticeCard, compact ? styles.noticeCardCompact : undefined, { backgroundColor: C.card, borderColor: C.border }]}>
-                <View style={[styles.noticeIcon, { backgroundColor: C.primaryMuted }]}>
-                  <Feather name="shield" size={18} color={C.primary} />
-                </View>
-                <View style={styles.noticeBody}>
-                  <Text style={[styles.noticeTitle, { color: C.cream }]}>Secure sign in</Text>
-                  <Text style={[styles.noticeCopy, { color: C.fog }]}>
-                    Use your email and password to restore your profile and shared
-                    space.
-                  </Text>
-                </View>
-              </View>
-
               <View style={[styles.fieldGroup, compact ? styles.fieldGroupCompact : undefined]}>
                 <Input
                   label="Email"
@@ -186,24 +181,24 @@ const styles = StyleSheet.create({
   },
   flex: { flex: 1 },
 
-  // Ambient glows
+  // Enhanced ambient glows
   glowTopRight: {
     position: 'absolute',
     top: -60,
     right: -80,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    opacity: 0.04,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    opacity: 0.08,
   },
   glowBottomLeft: {
     position: 'absolute',
     bottom: 100,
     left: -100,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    opacity: 0.025,
+    width: 340,
+    height: 340,
+    borderRadius: 170,
+    opacity: 0.05,
   },
 
   scrollContent: {
@@ -215,24 +210,30 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.sm,
   },
 
+  // Hero
+  hero: {
+    marginTop: Spacing['2xl'],
+  },
+  heroCompact: {
+    marginTop: Spacing.lg,
+  },
+
   // Brand
   brand: {
     alignItems: 'center',
-    marginTop: Spacing['4xl'],
-    marginBottom: Spacing['2xl'],
+    marginBottom: Spacing.xl,
   },
   brandCompact: {
-    marginTop: Spacing['2xl'],
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
   wordmark: {
     ...Typography.display,
-    fontSize: 52,
-    lineHeight: 56,
+    fontSize: 56,
+    lineHeight: 60,
   },
   wordmarkCompact: {
-    fontSize: 44,
-    lineHeight: 48,
+    fontSize: 48,
+    lineHeight: 52,
   },
   goldRule: {
     width: 24,
@@ -245,11 +246,11 @@ const styles = StyleSheet.create({
   tagline: {
     ...Typography.title,
     textAlign: 'center',
-    marginBottom: Spacing['3xl'],
+    marginBottom: Spacing['2xl'],
     fontWeight: '300',
   },
   taglineCompact: {
-    marginBottom: Spacing['2xl'],
+    marginBottom: Spacing.xl,
   },
 
   // Form
@@ -265,34 +266,6 @@ const styles = StyleSheet.create({
   },
   fieldGroupCompact: {
     gap: Spacing.lg,
-  },
-  noticeCard: {
-    flexDirection: 'row',
-    gap: Spacing.lg,
-    borderRadius: 24,
-    borderWidth: 1,
-    padding: Spacing.xl,
-  },
-  noticeCardCompact: {
-    padding: Spacing.lg,
-    borderRadius: 20,
-  },
-  noticeIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  noticeBody: {
-    flex: 1,
-    gap: Spacing.xs,
-  },
-  noticeTitle: {
-    ...Typography.subheading,
-  },
-  noticeCopy: {
-    ...Typography.caption,
   },
   signInBtn: {
     marginTop: Spacing.sm,

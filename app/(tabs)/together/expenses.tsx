@@ -303,24 +303,22 @@ export default function ExpensesScreen() {
                     { backgroundColor: C.card, opacity: 0.6 },
                   ]}
                 >
-                  <View style={styles.cardLeft}>
+                  <View style={[styles.priorityRail, { backgroundColor: C.dim }]} />
+                  <View style={[styles.emojiWrap, { backgroundColor: C.expensesLight }]}>
                     <Text style={styles.emoji}>
                       {getCategoryEmoji(item.category)}
                     </Text>
-                    <View style={styles.cardInfo}>
-                      <Text
-                        style={[styles.cardTitle, { color: C.textSecondary }]}
-                        numberOfLines={1}
-                      >
-                        {item.title}
-                      </Text>
-                      <Text
-                        style={[styles.cardMeta, { color: C.textTertiary }]}
-                      >
-                        Paid by {getPaidByName(item.paidBy)} ·{" "}
-                        {formatDate(item.date)}
-                      </Text>
-                    </View>
+                  </View>
+                  <View style={styles.cardBody}>
+                    <Text style={[styles.kickerText, { color: C.textTertiary }]}>
+                      {getPaidByName(item.paidBy)} · {formatDate(item.date)}
+                    </Text>
+                    <Text
+                      style={[styles.cardTitle, { color: C.textSecondary }]}
+                      numberOfLines={1}
+                    >
+                      {item.title}
+                    </Text>
                   </View>
                   <Text style={[styles.cardAmount, { color: C.textTertiary }]}>
                     {formatAmount(item.amount, item.currency ?? 'USD')}
@@ -449,6 +447,15 @@ export default function ExpensesScreen() {
                 {headerComponent}
               </>
             }
+            ItemSeparatorComponent={() => (
+              <View
+                style={{
+                  height: StyleSheet.hairlineWidth,
+                  marginLeft: 71,
+                  backgroundColor: C.dim,
+                }}
+              />
+            )}
             ListFooterComponent={footerComponent}
             refreshControl={
               <RefreshControl
@@ -460,7 +467,7 @@ export default function ExpensesScreen() {
             renderItem={({ item, index }) => {
             const row = (
               <TouchableOpacity
-                activeOpacity={0.8}
+                activeOpacity={0.85}
                 onPress={() => openComposer(item)}
                 style={[
                   togetherItemContainerStyle,
@@ -468,22 +475,24 @@ export default function ExpensesScreen() {
                   { backgroundColor: C.card },
                 ]}
               >
-                <View style={styles.cardLeft}>
+                <View style={[styles.priorityRail, { backgroundColor: C.expensesLight }]} />
+                <View style={[styles.emojiWrap, { backgroundColor: C.expensesLight }]}>
                   <Text style={styles.emoji}>
                     {getCategoryEmoji(item.category)}
                   </Text>
-                  <View style={styles.cardInfo}>
-                    <Text
-                      style={[styles.cardTitle, { color: C.text }]}
-                      numberOfLines={1}
-                    >
-                      {item.title}
-                    </Text>
-                    <Text style={[styles.cardMeta, { color: C.textTertiary }]}>
-                      Paid by {getPaidByName(item.paidBy)} ·{" "}
-                      {formatDate(item.date)} · {item.currency}
+                </View>
+                <View style={styles.cardBody}>
+                  <View style={styles.kickerRow}>
+                    <Text style={[styles.kickerText, { color: C.textTertiary }]}>
+                      {getPaidByName(item.paidBy)} · {formatDate(item.date)}
                     </Text>
                   </View>
+                  <Text
+                    style={[styles.cardTitle, { color: C.text }]}
+                    numberOfLines={2}
+                  >
+                    {item.title}
+                  </Text>
                 </View>
                 <View style={styles.cardRight}>
                   <Text style={[styles.cardAmount, { color: C.expenses }]}>
@@ -510,7 +519,6 @@ export default function ExpensesScreen() {
               <Animated.View
                 key={item.id}
                 entering={FadeInDown.duration(400).delay(150 + index * 50)}
-                style={{ marginBottom: Spacing.sm }}
               >
                 <Swipeable
                   renderLeftActions={renderEditAction(item)}
@@ -620,30 +628,44 @@ const styles = StyleSheet.create({
   expenseCard: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-  },
-  settledCard: {
-    marginBottom: Spacing.xs,
-  },
-  cardLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
     gap: Spacing.md,
+    minHeight: 56,
+  },
+  priorityRail: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+  },
+  settledCard: {},
+  emojiWrap: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
   emoji: {
-    fontSize: 24,
+    fontSize: 11,
   },
-  cardInfo: {
+  cardBody: {
     flex: 1,
+    gap: 6,
+  },
+  kickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    flexWrap: "wrap",
+  },
+  kickerText: {
+    ...Typography.small,
+    textTransform: "uppercase",
+    letterSpacing: 1,
   },
   cardTitle: {
     ...Typography.bodyMedium,
-    marginBottom: 2,
-  },
-  cardMeta: {
-    ...Typography.small,
   },
   cardRight: {
     alignItems: "flex-end",

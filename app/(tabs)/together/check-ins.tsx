@@ -74,30 +74,33 @@ export default function CheckInsScreen() {
     const checkedInAt = format(new Date(item.createdAt), 'MMM d, h:mm a');
     const row = (
       <TouchableOpacity
-        activeOpacity={0.78}
+        activeOpacity={0.85}
         style={[
           togetherItemContainerStyle,
           styles.row,
           { backgroundColor: C.card },
         ]}
       >
+        <View style={[styles.accentRail, { backgroundColor: C.moodLight }]} />
         <View style={[styles.iconWrap, { backgroundColor: C.moodLight }]}>
-          <Feather name={mood?.icon ?? 'activity'} size={16} color={C.mood} />
+          <Feather name={mood?.icon ?? 'activity'} size={13} color={C.mood} />
         </View>
         <View style={styles.body}>
-          <Text style={[styles.title, { color: C.text }]} numberOfLines={1}>
-            {authorLabel} · {mood?.label ?? 'Checked in'}
-          </Text>
-          <Text style={[styles.meta, { color: C.textTertiary }]} numberOfLines={1}>
-            {checkedInAt} · for {item.checkInDate}
+          <View style={styles.kickerRow}>
+            <Text style={[styles.kickerText, { color: C.textTertiary }]}>
+              {authorLabel} · {checkedInAt}
+            </Text>
+            {item.isPrivate && <Feather name="lock" size={11} color={C.textTertiary} />}
+          </View>
+          <Text style={[styles.title, { color: C.text }]} numberOfLines={2}>
+            {mood?.label ?? 'Checked in'}
           </Text>
           {item.note ? (
-            <Text style={[styles.note, { color: C.textSecondary }]} numberOfLines={2}>
+            <Text style={[styles.note, { color: C.textTertiary }]} numberOfLines={1}>
               {item.note}
             </Text>
           ) : null}
         </View>
-        {item.isPrivate && <Feather name="lock" size={14} color={C.textTertiary} />}
       </TouchableOpacity>
     );
 
@@ -156,7 +159,7 @@ export default function CheckInsScreen() {
                   {visibleCheckIns.map((item, index) => (
                     <View key={item.id}>
                       {renderCheckInItem({ item, index })}
-                      <View style={[styles.separator, { backgroundColor: C.border }]} />
+                      <View style={[styles.separator, { backgroundColor: C.dim }]} />
                     </View>
                   ))}
                 </View>
@@ -208,9 +211,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
   },
-  historySection: {
-    gap: Spacing.sm,
-  },
+  historySection: {},
   sectionLabel: {
     ...Typography.overline,
     letterSpacing: 2,
@@ -222,33 +223,44 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: Spacing.md,
-    paddingVertical: 14,
+    minHeight: 56,
+  },
+  accentRail: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
   },
   iconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 2,
   },
   body: {
     flex: 1,
-    gap: 2,
+    gap: 6,
+  },
+  kickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    flexWrap: 'wrap',
+  },
+  kickerText: {
+    ...Typography.small,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   title: {
-    ...Typography.body,
-    fontSize: 15,
-  },
-  meta: {
-    ...Typography.small,
+    ...Typography.bodyMedium,
   },
   note: {
     ...Typography.small,
-    lineHeight: 19,
-    marginTop: 2,
   },
   separator: {
     height: StyleSheet.hairlineWidth,

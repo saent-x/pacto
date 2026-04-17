@@ -156,18 +156,17 @@ export default function MilestonesScreen() {
                   { backgroundColor: C.card, opacity: 0.65 },
                 ]}
               >
-                <View style={styles.cardLeft}>
-                  <View style={[styles.iconRing, { backgroundColor: C.milestonesLight }]}>
-                    <Text style={styles.iconEmoji}>{item.icon || '\u2B50'}</Text>
-                  </View>
-                  <View style={styles.cardInfo}>
-                    <Text style={[styles.cardTitle, { color: C.textSecondary }]} numberOfLines={1}>
-                      {item.title}
-                    </Text>
-                    <Text style={[styles.cardMeta, { color: C.textTertiary }]}>
-                      {formatDate(item.date)}
-                    </Text>
-                  </View>
+                <View style={[styles.accentRail, { backgroundColor: C.dim }]} />
+                <View style={[styles.iconRing, { backgroundColor: C.milestonesLight }]}>
+                  <Text style={styles.iconEmoji}>{item.icon || '\u2B50'}</Text>
+                </View>
+                <View style={styles.cardBody}>
+                  <Text style={[styles.kickerText, { color: C.textTertiary }]}>
+                    {formatDate(item.date)}
+                  </Text>
+                  <Text style={[styles.cardTitle, { color: C.textSecondary }]} numberOfLines={1}>
+                    {item.title}
+                  </Text>
                 </View>
               </View>
             </Animated.View>
@@ -291,11 +290,14 @@ export default function MilestonesScreen() {
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />
             }
+            ItemSeparatorComponent={() => (
+              <View style={{ height: StyleSheet.hairlineWidth, marginLeft: 71, backgroundColor: C.dim }} />
+            )}
             renderItem={({ item, index }) => {
             const days = getDaysUntil(item.date);
             const row = (
               <TouchableOpacity
-                activeOpacity={0.8}
+                activeOpacity={0.85}
                 onPress={() => {
                   setEditingMilestone(item);
                   sheetRef.current?.present();
@@ -306,44 +308,36 @@ export default function MilestonesScreen() {
                   { backgroundColor: C.card },
                 ]}
               >
-                <View style={styles.cardLeft}>
-                  <View style={[styles.iconRing, { backgroundColor: C.milestonesLight }]}>
-                    <Text style={styles.iconEmoji}>{item.icon || '\u2B50'}</Text>
-                  </View>
-                  <View style={styles.cardInfo}>
-                    <Text style={[styles.cardTitle, { color: C.text }]} numberOfLines={1}>
-                      {item.title}
-                    </Text>
-                    <Text style={[styles.cardMeta, { color: C.textTertiary }]}>
-                      {formatDate(item.date)}
-                    </Text>
-                  </View>
+                <View style={[styles.accentRail, { backgroundColor: days <= 7 ? C.milestonesLight : C.dim }]} />
+                <View style={[styles.iconRing, { backgroundColor: C.milestonesLight }]}>
+                  <Text style={styles.iconEmoji}>{item.icon || '\u2B50'}</Text>
                 </View>
-                <View style={styles.countdown}>
-                  <Text
-                    style={[
-                      styles.countdownText,
-                      { color: days <= 7 ? C.milestones : C.textTertiary },
-                    ]}
-                  >
-                    {getCountdownLabel(days)}
+                <View style={styles.cardBody}>
+                  <Text style={[styles.kickerText, { color: days <= 7 ? C.milestones : C.textTertiary }]}>
+                    {getCountdownLabel(days)} · {formatDate(item.date)}
                   </Text>
+                  <Text style={[styles.cardTitle, { color: C.text }]} numberOfLines={2}>
+                    {item.title}
+                  </Text>
+                  {item.description ? (
+                    <Text style={[styles.cardNote, { color: C.textTertiary }]} numberOfLines={1}>
+                      {item.description}
+                    </Text>
+                  ) : null}
                 </View>
               </TouchableOpacity>
             );
 
             return (
-              <Animated.View key={item.id} entering={FadeInDown.duration(400).delay(150 + index * 60)} style={{ marginBottom: Spacing.sm }}>
-                <Swipeable
-                  renderLeftActions={renderEditAction(item)}
-                  renderRightActions={renderDeleteAction(item)}
-                  overshootLeft={false}
-                  overshootRight={false}
-                  friction={2}
-                >
-                  {row}
-                </Swipeable>
-              </Animated.View>
+              <Swipeable
+                renderLeftActions={renderEditAction(item)}
+                renderRightActions={renderDeleteAction(item)}
+                overshootLeft={false}
+                overshootRight={false}
+                friction={2}
+              >
+                {row}
+              </Swipeable>
             );
             }}
           />
@@ -401,44 +395,41 @@ const styles = StyleSheet.create({
   milestoneCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-  },
-  pastCard: {
-    marginBottom: Spacing.xs,
-  },
-  cardLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
     gap: Spacing.md,
+    minHeight: 56,
   },
+  accentRail: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+  },
+  pastCard: {},
   iconRing: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconEmoji: {
-    fontSize: 22,
+    fontSize: 11,
   },
-  cardInfo: {
+  cardBody: {
     flex: 1,
+    gap: 6,
+  },
+  kickerText: {
+    ...Typography.small,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   cardTitle: {
     ...Typography.bodyMedium,
-    marginBottom: 2,
   },
-  cardMeta: {
+  cardNote: {
     ...Typography.small,
-  },
-  countdown: {
-    alignItems: 'flex-end',
-  },
-  countdownText: {
-    ...Typography.captionMedium,
-    fontSize: 13,
   },
 
   // Past section
