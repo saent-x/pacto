@@ -1,5 +1,6 @@
-import { Redirect } from 'expo-router';
+import { View } from 'react-native';
 
 export default function Index() {
-  return <Redirect href={'/(auth)/sign-in' as any} />;
+  // SessionGate handles routing. Render an empty view until status resolves.
+  return <View style={{ flex: 1 }} />;
 }
