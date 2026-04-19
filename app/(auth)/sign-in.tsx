@@ -227,13 +227,15 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   wordmark: {
-    ...Typography.display,
-    fontSize: 56,
-    lineHeight: 60,
+    fontFamily: Typography.displayFont,
+    fontSize: 64,
+    lineHeight: 64,
+    letterSpacing: -2,
   },
   wordmarkCompact: {
-    fontSize: 48,
-    lineHeight: 52,
+    fontSize: 52,
+    lineHeight: 54,
+    letterSpacing: -1.6,
   },
   goldRule: {
     width: 24,

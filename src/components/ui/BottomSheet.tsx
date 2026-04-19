@@ -35,30 +35,39 @@ function GlassBackground({ style }: { style?: any }) {
   const { mode } = useTheme();
 
   if (Platform.OS === 'ios') {
+    // systemChromeMaterial + systemThickMaterial*  resolve to iOS 26 "liquid glass"
+    // automatically on iOS 26; on older iOS they render as the familiar frosted
+    // material. Either way we get the richest system-level blur available.
+    const tint =
+      mode === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight';
     return (
       <BlurView
-        intensity={mode === 'dark' ? 40 : 60}
-        tint={mode === 'dark' ? 'dark' : 'light'}
-        style={[style, { borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: 'hidden' }]}
+        intensity={80}
+        tint={tint as any}
+        style={[
+          style,
+          { borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden' },
+        ]}
       >
+        {/* Subtle warm tint — keeps the Coupl identity under the system blur. */}
         <View
           style={[
             StyleSheet.absoluteFill,
             {
               backgroundColor: mode === 'dark'
-                ? 'rgba(22, 19, 17, 0.6)'
-                : 'rgba(242, 237, 231, 0.88)',
+                ? 'rgba(22, 19, 17, 0.35)'
+                : 'rgba(255, 255, 255, 0.35)',
             },
           ]}
         />
-        {/* Glass highlight edge */}
+        {/* Top highlight edge — specular shimmer of the glass material. */}
         <View
           style={[
             styles.sheetHighlight,
             {
               backgroundColor: mode === 'dark'
-                ? 'rgba(255, 255, 255, 0.06)'
-                : 'rgba(255, 255, 255, 0.5)',
+                ? 'rgba(255, 255, 255, 0.14)'
+                : 'rgba(255, 255, 255, 0.75)',
             },
           ]}
         />

@@ -10,6 +10,11 @@ const sansFamily = 'DMSans_400Regular';
 const sansMedium = 'DMSans_500Medium';
 const sansSemiBold = 'DMSans_600SemiBold';
 
+// Warm Block display: Bricolage Grotesque — chunky, geometric, confident
+const displayFamily = 'BricolageGrotesque_800ExtraBold';
+const displaySemiBold = 'BricolageGrotesque_600SemiBold';
+const displayBold = 'BricolageGrotesque_700Bold';
+
 // Fallbacks for before fonts load
 const serifFallback = Platform.select({ ios: 'Georgia', android: 'serif', default: 'Georgia' });
 const sansFallback = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
@@ -38,36 +43,38 @@ export const Typography = {
     fontStyle: 'italic' as const,
   } as TextStyle,
 
-  // Standard display styles — keep these clean and legible by default
+  // Standard display styles — Warm Block redesign uses Bricolage (chunky sans)
+  // as the default display face. Serif remains available via `editorial*` styles
+  // for the journal verse / pull-quote moments only.
   display: {
-    fontFamily: serifRegular,
+    fontFamily: displayFamily,
     fontSize: 48,
     lineHeight: 48,
-    letterSpacing: -1.2,
+    letterSpacing: -1.4,
   } as TextStyle,
   largeTitle: {
-    fontFamily: serifRegular,
+    fontFamily: displayFamily,
     fontSize: 34,
-    lineHeight: 40,
-    letterSpacing: -0.3,
+    lineHeight: 38,
+    letterSpacing: -1,
   } as TextStyle,
   title: {
-    fontFamily: serifRegular,
+    fontFamily: displayFamily,
     fontSize: 30,
-    lineHeight: 36,
-    letterSpacing: -0.75,
+    lineHeight: 34,
+    letterSpacing: -0.9,
   } as TextStyle,
   heading: {
-    fontFamily: serifRegular,
+    fontFamily: displayFamily,
     fontSize: 24,
-    lineHeight: 32,
+    lineHeight: 28,
     letterSpacing: -0.6,
   } as TextStyle,
   headingRegular: {
-    fontFamily: serifRegular,
+    fontFamily: displaySemiBold,
     fontSize: 18,
-    lineHeight: 28,
-    letterSpacing: 0,
+    lineHeight: 24,
+    letterSpacing: -0.3,
   } as TextStyle,
 
   // Sans body styles — DM Sans, clean and functional
@@ -108,10 +115,17 @@ export const Typography = {
     letterSpacing: 0.3,
   } as TextStyle,
   overline: {
-    fontFamily: sansFamily,
+    fontFamily: sansSemiBold,
     fontSize: 10,
-    lineHeight: 15,
-    letterSpacing: 3,
+    lineHeight: 14,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase' as const,
+  } as TextStyle,
+  pillLabel: {
+    fontFamily: sansSemiBold,
+    fontSize: 12,
+    lineHeight: 14,
+    letterSpacing: 0.3,
     textTransform: 'uppercase' as const,
   } as TextStyle,
 
@@ -132,10 +146,45 @@ export const Typography = {
     letterSpacing: 2,
   } as TextStyle,
 
+  // Warm Block display styles — chunky, high-impact moments (hero labels, big stats)
+  displayChunky: {
+    fontFamily: displayFamily,
+    fontSize: 38,
+    lineHeight: 40,
+    letterSpacing: -1,
+  } as TextStyle,
+  displayChunkyLg: {
+    fontFamily: displayFamily,
+    fontSize: 48,
+    lineHeight: 48,
+    letterSpacing: -1.4,
+  } as TextStyle,
+  displayChunkyXl: {
+    fontFamily: displayFamily,
+    fontSize: 64,
+    lineHeight: 60,
+    letterSpacing: -2,
+  } as TextStyle,
+  displayChunkySm: {
+    fontFamily: displayFamily,
+    fontSize: 28,
+    lineHeight: 30,
+    letterSpacing: -0.8,
+  } as TextStyle,
+  displayChunkyBold: {
+    fontFamily: displayBold,
+    fontSize: 24,
+    lineHeight: 26,
+    letterSpacing: -0.6,
+  } as TextStyle,
+
   // Font family references for direct use
   sans: sansFamily,
   sansMedium,
   sansSemiBold,
+  displayFont: displayFamily,
+  displaySemiBoldFont: displaySemiBold,
+  displayBoldFont: displayBold,
 
   // Fallbacks
   fallbackSerif: serifFallback,

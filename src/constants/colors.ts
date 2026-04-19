@@ -1,23 +1,34 @@
 const dark = {
-  // Accent — warm amber gold, used boldly
-  primary: '#D4A054',
+  // Accent — Warm Block gold (brand anchor)
+  primary: '#E4B24A',
   primaryLight: '#2E2620',
-  primaryDark: '#B8863C',
-  primaryMuted: 'rgba(212, 160, 84, 0.15)',
+  primaryDark: '#C99836',
+  primaryMuted: 'rgba(228, 178, 74, 0.14)',
   primaryVivid: '#E8B86D',
 
-  // Warm dark scale
-  ink: '#0F0D0B',
-  coal: '#161311',
+  // Warm Block scale (prototype tokens)
+  ink: '#0E0B0A',
+  coal: '#161210',
+  card: '#1D1815',
+  cardHi: '#262019',
+  line: '#2B241E',
+  lineHi: '#3A322A',
+  bone: '#F5EEE3',
+  mist: '#B3A89A',
+  fog: '#80746A',
+  ash: '#5A5048',
+  gold: '#E4B24A',
+  goldDim: '#C99836',
+  goldSoft: 'rgba(228, 178, 74, 0.14)',
+
+  // Legacy warm scale aliases (kept for back-compat)
   night: '#1B1715',
   dark: '#221E1A',
   dim: '#2E2923',
   muted: '#3D362E',
   dusk: '#514840',
-  fog: '#7A6E62',
-  haze: '#A89A8C',
+  haze: '#B3A89A',
   cream: '#E8DDD0',
-  bone: '#F2EBE2',
   parchment: '#FAF6F1',
 
   // Semantic
@@ -50,43 +61,54 @@ const dark = {
   mood: '#9B8EC4',
   moodLight: 'rgba(155, 142, 196, 0.12)',
 
-  // Base
-  background: '#0F0D0B',
-  screenBackground: '#0F0D0B',
-  surface: '#171310',
-  card: '#221C18',
-  text: '#F2EBE2',
-  textSecondary: '#C3B5A6',
-  textTertiary: '#938475',
-  border: '#3A322B',
-  divider: '#342C26',
-  white: '#F2EBE2',
-  black: '#0F0D0B',
+  // Base (aliases of Warm Block scale above)
+  background: '#0E0B0A',
+  screenBackground: '#0E0B0A',
+  surface: '#161210',
+  text: '#F5EEE3',
+  textSecondary: '#B3A89A',
+  textTertiary: '#80746A',
+  border: '#2B241E',
+  divider: '#3A322A',
+  white: '#F5EEE3',
+  black: '#0E0B0A',
 
   // Gradients (as arrays for LinearGradient or as overlay colors)
-  gradientWarm: ['#2E2117', '#1B1715'],
-  gradientGold: ['rgba(212, 160, 84, 0.08)', 'rgba(212, 160, 84, 0)'],
+  gradientWarm: ['#2E2117', '#161210'],
+  gradientGold: ['rgba(228, 178, 74, 0.10)', 'rgba(228, 178, 74, 0)'],
 };
 
 const light = {
-  primary: '#B85A42',
+  // Warm Block light — deeper gold for cream contrast
+  primary: '#B8872E',
   primaryLight: '#F0E0D8',
-  primaryDark: '#A34E36',
-  primaryMuted: 'rgba(184, 90, 66, 0.07)',
-  primaryVivid: '#C96B54',
+  primaryDark: '#956912',
+  primaryMuted: 'rgba(184, 135, 46, 0.12)',
+  primaryVivid: '#C99836',
 
-  // Clean warm neutrals
-  ink: '#FAFAFA',
-  coal: '#F5F5F4',
+  // Warm Block cream scale (prototype lightTokens)
+  ink: '#F5EEE3',
+  coal: '#EDE5D8',
+  card: '#F9F3E8',
+  cardHi: '#FFF9EE',
+  line: '#D9CFBE',
+  lineHi: '#C5B8A2',
+  bone: '#1F1611',
+  mist: '#5A4B3E',
+  fog: '#86766A',
+  ash: '#A59684',
+  gold: '#B8872E',
+  goldDim: '#956912',
+  goldSoft: 'rgba(184, 135, 46, 0.12)',
+
+  // Legacy scale aliases
   night: '#EFEFEC',
   dark: '#E8E5E0',
   dim: '#DDD9D3',
   muted: '#CCC4B8',
   dusk: '#A89A8C',
-  fog: '#8A7E72',
-  haze: '#6B5F52',
+  haze: '#5A4B3E',
   cream: '#2C2420',
-  bone: '#1A1410',
   parchment: '#0F0D0B',
 
   success: '#5A7A50',
@@ -117,16 +139,15 @@ const light = {
   mood: '#6A5E9A',
   moodLight: 'rgba(106, 94, 154, 0.10)',
 
-  // Clean white base
-  background: '#FFFFFF',
-  screenBackground: '#FFFFFF',
-  surface: '#F7F5F2',
-  card: '#F5F2ED',
-  text: '#1A1410',
-  textSecondary: '#5B4F44',
-  textTertiary: '#8D7E70',
-  border: '#E0D8CE',
-  divider: '#EAE4DC',
+  // Warm cream base (aliases of Warm Block scale above)
+  background: '#F5EEE3',
+  screenBackground: '#F5EEE3',
+  surface: '#EDE5D8',
+  text: '#1F1611',
+  textSecondary: '#5A4B3E',
+  textTertiary: '#86766A',
+  border: '#D9CFBE',
+  divider: '#C5B8A2',
   white: '#FFFFFF',
   black: '#1A1410',
 

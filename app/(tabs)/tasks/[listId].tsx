@@ -1,286 +1,261 @@
-import React, { useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { FlashList } from '@shopify/flash-list';
-import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { Feather } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import { format } from 'date-fns';
-import { useColors } from '@/src/hooks/useColors';
-import { useTaskItems, useTasks } from '@/src/hooks/useTasks';
-import { Typography } from '@/src/constants/typography';
-import { Spacing, BorderRadius } from '@/src/constants/spacing';
-import { CreateTaskSheet, type TaskComposerSaveInput } from '@/src/components/tasks/CreateTaskSheet';
-import {
-  saveTaskFromListDetail,
-} from '@/src/components/tasks/listDetailComposer';
-import { Task } from '@/src/types/database';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { DateSectioned, Display, Pill, RoundBtn } from '@/src/components/ui/atoms';
+import { Icon } from '@/src/components/ui/Icon';
+import { useTheme } from '@/src/lib/theme';
+import { TASK_LISTS } from '@/src/lib/tasks-data';
 
-export default function TaskListDetailScreen() {
-  const C = useColors();
-  const router = useRouter();
+type Task = {
+  id: number;
+  title: string;
+  done: boolean;
+  priority: 'low' | 'med' | 'high';
+  due: string | null;
+  bucket: string;
+};
+
+const SEED: Task[] = [
+  { id: 1, title: 'Book flights Milan → Venice', done: true, priority: 'high', due: 'MAR 20', bucket: 'Done' },
+  { id: 2, title: 'Reserve hotel near San Marco', done: true, priority: 'high', due: 'MAR 22', bucket: 'Done' },
+  { id: 3, title: 'Pack travel documents', done: false, priority: 'high', due: 'Today', bucket: 'Today' },
+  { id: 4, title: 'Charge camera + power bank', done: false, priority: 'med', due: 'Today', bucket: 'Today' },
+  { id: 5, title: 'Download offline maps', done: false, priority: 'med', due: 'Tomorrow', bucket: 'Tomorrow' },
+  { id: 6, title: 'Confirm airport transfer', done: false, priority: 'high', due: 'Tomorrow', bucket: 'Tomorrow' },
+  { id: 7, title: 'Make restaurant bookings', done: false, priority: 'med', due: 'Fri', bucket: 'This week' },
+  { id: 8, title: 'Exchange currency', done: false, priority: 'low', due: 'Sat', bucket: 'This week' },
+  { id: 9, title: 'Buy travel adapters', done: false, priority: 'low', due: 'May 4', bucket: 'May' },
+  { id: 10, title: 'Print backup tickets', done: false, priority: 'med', due: 'May 8', bucket: 'May' },
+  { id: 11, title: 'Pre-book gondola ride', done: false, priority: 'low', due: 'May 14', bucket: 'May' },
+  { id: 12, title: 'Pack medicine kit', done: false, priority: 'med', due: null, bucket: 'Later' },
+  { id: 13, title: 'Research gondola routes', done: false, priority: 'low', due: null, bucket: 'Later' },
+];
+
+const BUCKET_ORDER = ['Overdue', 'Today', 'Tomorrow', 'This week', 'May', 'Jun', 'Later'];
+
+export default function TaskListDetail() {
   const { listId } = useLocalSearchParams<{ listId: string }>();
-  const currentListId = listId!;
-  const { lists } = useTasks();
-  const { tasks, counts, create, update, toggleComplete } = useTaskItems(currentListId);
+  const { C, F } = useTheme();
+  const insets = useSafeAreaInsets();
+  const list = TASK_LISTS.find((l) => String(l.id) === String(listId)) ?? TASK_LISTS[0];
+  const color = (C as any)[list.colorKey] as string;
+  const [tasks, setTasks] = useState<Task[]>(SEED);
 
-  const sheetRef = useRef<BottomSheetModal>(null);
-  const [editingTask, setEditingTask] = useState<Task | undefined>();
-  const [quickAdd, setQuickAdd] = useState('');
-  const [pendingTaskIds, setPendingTaskIds] = useState<Record<string, true>>({});
-  const [quickAdding, setQuickAdding] = useState(false);
-  const [savingTask, setSavingTask] = useState(false);
+  const active = tasks.filter((t) => !t.done);
+  const done = tasks.filter((t) => t.done);
+  const doneCount = done.length;
+  const pct = tasks.length ? doneCount / tasks.length : 0;
 
-  const handleQuickAdd = async () => {
-    if (!quickAdd.trim() || quickAdding) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setQuickAdding(true);
-    try {
-      await create({ title: quickAdd.trim() });
-      setQuickAdd('');
-    } finally {
-      setQuickAdding(false);
-    }
-  };
+  const bucketColor: Record<string, string> = useMemo(
+    () => ({
+      Overdue: C.error,
+      Today: C.gold,
+      Tomorrow: C.peach,
+      'This week': C.lavender,
+      May: C.sky,
+      Jun: C.butter,
+      Later: C.fog,
+    }),
+    [C]
+  );
+  const sections = BUCKET_ORDER.map((b) => ({
+    label: b.toUpperCase(),
+    color: bucketColor[b],
+    items: active.filter((t) => t.bucket === b),
+  })).filter((s) => s.items.length);
 
-  const handleToggle = async (task: Task) => {
-    if (pendingTaskIds[task.id]) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setPendingTaskIds((current) => ({ ...current, [task.id]: true }));
-    try {
-      await toggleComplete(task);
-    } finally {
-      setPendingTaskIds((current) => {
-        const next = { ...current };
-        delete next[task.id];
-        return next;
-      });
-    }
-  };
+  const toggle = (tid: number) =>
+    setTasks((xs) => xs.map((x) => (x.id === tid ? { ...x, done: !x.done } : x)));
 
-  const handleSave = async (data: TaskComposerSaveInput) => {
-    if (savingTask) return;
-    setSavingTask(true);
-    try {
-      await saveTaskFromListDetail({ editingTask, data, create, update });
-      setEditingTask(undefined);
-    } finally {
-      setSavingTask(false);
-    }
-  };
+  const prioColor = useMemo(
+    () => ({ high: C.error, med: C.butter, low: C.ash }),
+    [C]
+  );
 
-  const uncompleted = tasks.filter((t) => !t.is_completed);
-  const completed = tasks.filter((t) => t.is_completed);
-  const allItems = [...uncompleted, ...completed];
-
-  const renderItem = ({ item }: { item: Task }) => (
-    <TouchableOpacity
-      style={[styles.taskRow, { borderBottomColor: C.border, opacity: pendingTaskIds[item.id] ? 0.6 : 1 }]}
-      activeOpacity={0.7}
-      disabled={!!pendingTaskIds[item.id]}
-      onLongPress={() => {
-        setEditingTask(item);
-        sheetRef.current?.present();
+  const renderRow = (t: Task) => (
+    <View
+      key={t.id}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 14,
+        paddingVertical: 13,
+        paddingHorizontal: 14,
+        borderRadius: 16,
+        backgroundColor: C.card,
+        borderWidth: 1,
+        borderColor: C.line,
       }}
     >
-      <TouchableOpacity
-        onPress={() => handleToggle(item)}
-        disabled={!!pendingTaskIds[item.id]}
-        style={[
-          styles.checkbox,
-          { borderColor: item.is_completed ? C.tasks : C.dusk },
-          item.is_completed && { backgroundColor: C.tasks },
-        ]}
+      <Pressable
+        onPress={() => toggle(t.id)}
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: 11,
+          borderWidth: 1.5,
+          borderColor: C.ash,
+        }}
+      />
+      <Text
+        style={{ flex: 1, fontSize: 14, color: C.bone, fontFamily: F.body }}
       >
-        {item.is_completed && <Feather name="check" size={13} color={C.ink} />}
-      </TouchableOpacity>
-      <View style={styles.taskBody}>
+        {t.title}
+      </Text>
+      {t.due && (
         <Text
-          style={[
-            styles.taskTitle,
-            { color: item.is_completed ? C.textTertiary : C.text },
-            item.is_completed && styles.strikethrough,
-          ]}
-          numberOfLines={1}
+          style={{
+            fontSize: 10,
+            color: C.fog,
+            fontFamily: F.bodyBold,
+            letterSpacing: 0.6,
+            backgroundColor: C.cardHi,
+            paddingHorizontal: 7,
+            paddingVertical: 3,
+            borderRadius: 6,
+          }}
         >
-          {item.title}
+          {t.due.toUpperCase()}
         </Text>
-        {item.due_date && (
-          <Text style={[styles.taskDue, { color: C.textTertiary }]}>
-            {format(new Date(item.due_date + 'T00:00:00'), 'MMM d')}
-          </Text>
-        )}
-      </View>
-      {item.priority > 0 && (
-        <View
-          style={[
-            styles.priorityDot,
-            { backgroundColor: item.priority === 3 ? C.error : item.priority === 2 ? C.warning : C.haze },
-          ]}
-        />
       )}
-    </TouchableOpacity>
+      <View
+        style={{
+          width: 7,
+          height: 7,
+          borderRadius: 4,
+          backgroundColor: prioColor[t.priority],
+        }}
+      />
+    </View>
   );
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
-      <SafeAreaView style={styles.flex} edges={['top']}>
-        {/* Header */}
-        <View style={[styles.header, { backgroundColor: C.background }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Feather name="arrow-left" size={20} color={C.text} />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={[styles.headerTitle, { color: C.text }]} numberOfLines={1}>
-              Task List
-            </Text>
-            <Text style={[styles.headerCount, { color: C.textTertiary }]}>
-              {counts.completed} of {counts.total} done
-            </Text>
-          </View>
-          <TouchableOpacity
-            onPress={() => {
-              setEditingTask(undefined);
-              sheetRef.current?.present();
+    <View style={{ flex: 1, backgroundColor: C.ink }}>
+      <View
+        style={{
+          paddingTop: insets.top + 6,
+          paddingHorizontal: 18,
+          paddingBottom: 18,
+          backgroundColor: C.coal,
+          borderBottomLeftRadius: 28,
+          borderBottomRightRadius: 28,
+        }}
+      >
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 18,
+          }}
+        >
+          <RoundBtn icon="chevronLeft" size={38} onPress={() => router.back()} />
+          <Pill active bg={`${color}25`} color={color} size="sm">
+            {list.name.toUpperCase()}
+          </Pill>
+          <RoundBtn
+            icon="plus"
+            size={38}
+            onPress={() => router.push(`/sheets/new-task?listId=${list.id}` as any)}
+          />
+        </View>
+        <Display size={34}>{list.name}</Display>
+        <View style={{ marginTop: 14, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <View
+            style={{
+              flex: 1,
+              height: 4,
+              backgroundColor: C.line,
+              borderRadius: 2,
+              overflow: 'hidden',
             }}
           >
-            <Feather name="plus" size={20} color={C.tasks} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Progress bar */}
-        <View style={[styles.progressWrap, { backgroundColor: C.dim }]}>
-          <View
-            style={[
-              styles.progressFill,
-              { backgroundColor: C.tasks, width: `${counts.total > 0 ? (counts.completed / counts.total) * 100 : 0}%` as any },
-            ]}
-          />
-        </View>
-
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.flex}
-          keyboardVerticalOffset={88}
-        >
-          {/* Task list */}
-          <FlashList
-            data={allItems}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContent}
-          />
-
-          {/* Quick add bar */}
-          <View style={[styles.quickAdd, { backgroundColor: C.card, borderTopColor: C.border }]}>
-            <TextInput
-              style={[styles.quickInput, { color: C.text }]}
-              placeholder="Add a task..."
-              placeholderTextColor={C.fog}
-              value={quickAdd}
-              onChangeText={setQuickAdd}
-              onSubmitEditing={handleQuickAdd}
-              returnKeyType="done"
-              editable={!quickAdding}
-            />
-            <TouchableOpacity
-              onPress={handleQuickAdd}
-              disabled={!quickAdd.trim() || quickAdding}
-              style={[styles.quickSend, { opacity: quickAdd.trim() && !quickAdding ? 1 : 0.3 }]}
-            >
-              <Feather name="arrow-up" size={18} color={C.tasks} />
-            </TouchableOpacity>
+            <View style={{ width: `${pct * 100}%`, height: '100%', backgroundColor: color }} />
           </View>
-        </KeyboardAvoidingView>
+          <Text style={{ fontFamily: F.displayBold, fontSize: 13, color: C.bone }}>
+            {doneCount}
+            <Text style={{ color: C.fog }}>/{tasks.length}</Text>
+          </Text>
+        </View>
+      </View>
 
-        <CreateTaskSheet
-          sheetRef={sheetRef}
-          onSave={handleSave}
-          task={editingTask}
-          selectedListId={currentListId}
-          lists={lists}
-        />
-      </SafeAreaView>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 18, paddingBottom: insets.bottom + 110 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <DateSectioned sections={sections} maxOpen={3} renderItem={renderRow} />
+
+        {done.length > 0 && (
+          <View style={{ marginTop: 4 }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                paddingHorizontal: 4,
+                marginBottom: 10,
+              }}
+            >
+              <Icon name="chevronDown" size={12} color={C.fog} />
+              <Text
+                style={{
+                  color: C.fog,
+                  fontSize: 10,
+                  fontFamily: F.bodyBold,
+                  letterSpacing: 1.6,
+                  textTransform: 'uppercase',
+                }}
+              >
+                Completed · {done.length}
+              </Text>
+            </View>
+            <View style={{ gap: 8, opacity: 0.55 }}>
+              {done.map((t) => (
+                <View
+                  key={t.id}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 14,
+                    paddingVertical: 13,
+                    paddingHorizontal: 14,
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    borderColor: C.line,
+                  }}
+                >
+                  <Pressable
+                    onPress={() => toggle(t.id)}
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: 11,
+                      backgroundColor: color,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Icon name="check" size={12} color={C.ink} strokeWidth={3} />
+                  </Pressable>
+                  <Text
+                    style={{
+                      flex: 1,
+                      fontSize: 14,
+                      color: C.fog,
+                      fontFamily: F.body,
+                      textDecorationLine: 'line-through',
+                    }}
+                  >
+                    {t.title}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+      </ScrollView>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  flex: { flex: 1 },
-
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing['2xl'],
-    paddingVertical: Spacing.lg,
-    gap: Spacing.md,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerCenter: { flex: 1 },
-  headerTitle: { ...Typography.subheading },
-  headerCount: { ...Typography.small },
-
-  progressWrap: { height: 2 },
-  progressFill: { height: '100%' },
-
-  listContent: { paddingBottom: 80 },
-
-  taskRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: Spacing.lg,
-    paddingHorizontal: Spacing['2xl'],
-    gap: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  taskBody: { flex: 1 },
-  taskTitle: { ...Typography.body, marginBottom: 1 },
-  strikethrough: { textDecorationLine: 'line-through' },
-  taskDue: { ...Typography.small },
-  priorityDot: { width: 7, height: 7, borderRadius: 4 },
-
-  quickAdd: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing['2xl'],
-    paddingVertical: Spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    gap: Spacing.md,
-  },
-  quickInput: {
-    flex: 1,
-    ...Typography.body,
-    paddingVertical: Spacing.sm,
-  },
-  quickSend: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

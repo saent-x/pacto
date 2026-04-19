@@ -1,479 +1,290 @@
-import { useRef, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, RefreshControl, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { FlashList } from '@shopify/flash-list';
-import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { Feather } from '@expo/vector-icons';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
-import { format, isPast, isToday } from 'date-fns';
-import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import { useColors } from '@/src/hooks/useColors';
-import { useSession } from '@/src/hooks/useSession';
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  BlockCard,
+  DateSectioned,
+  Display,
+  IconTile,
+  Overline,
+  Pill,
+} from '@/src/components/ui/atoms';
+import { Icon } from '@/src/components/ui/Icon';
+import { Screen } from '@/src/components/ui/Screen';
 import { useTheme } from '@/src/lib/theme';
-import { useReminders } from '@/src/hooks/useReminders';
-import { useSwipeTabs } from '@/src/hooks/useSwipeTabs';
-import { Typography } from '@/src/constants/typography';
-import { Spacing, BorderRadius } from '@/src/constants/spacing';
-import { MiniDateRail } from '@/src/components/calendar/MiniDateRail';
-import { EmptyState } from '@/src/components/ui';
-import { CreateReminderSheet } from '@/src/components/reminders/CreateReminderSheet';
-import { Reminder } from '@/src/types/database';
 
-type Filter = 'all' | 'mine' | 'partner';
+type Item = {
+  id: number;
+  title: string;
+  bucket: string;
+  when: string;
+  who: string;
+  priority: 'low' | 'med' | 'high';
+  done: boolean;
+  overdue?: boolean;
+};
 
-function toLocalDateKey(value: string) {
-  return format(new Date(value), 'yyyy-MM-dd');
-}
+const SEED: Item[] = [
+  { id: 1, title: 'Call mom for her birthday', bucket: 'Today', when: '18:00', who: 'Mattia', priority: 'high', done: false },
+  { id: 2, title: 'Pick up flowers', bucket: 'Today', when: '12:30', who: 'Both', priority: 'med', done: false },
+  { id: 3, title: 'Water the plants', bucket: 'Overdue', when: 'Yesterday', who: 'Both', priority: 'low', done: false, overdue: true },
+  { id: 4, title: 'Book Venice flights', bucket: 'Tomorrow', when: '14:00', who: 'Both', priority: 'high', done: false },
+  { id: 5, title: 'Renew gym membership', bucket: 'This week', when: 'Fri', who: 'Sofia', priority: 'med', done: false },
+  { id: 6, title: 'Dentist appointment', bucket: 'This week', when: 'Sat · 10:00', who: 'Mattia', priority: 'high', done: false },
+  { id: 7, title: "Sofia's mom birthday", bucket: 'Apr 28', when: '', who: 'Both', priority: 'high', done: false },
+  { id: 8, title: "Grandma's visit reminder", bucket: 'Apr 28', when: '09:00', who: 'Mattia', priority: 'med', done: false },
+  { id: 9, title: 'Insurance renewal', bucket: 'May', when: 'May 3', who: 'Both', priority: 'high', done: false },
+  { id: 10, title: 'Anniversary prep', bucket: 'May', when: 'May 18', who: 'Both', priority: 'high', done: false },
+  { id: 11, title: 'Tax deadline', bucket: 'May', when: 'May 30', who: 'Mattia', priority: 'high', done: false },
+  { id: 12, title: 'Summer rental check', bucket: 'Jun', when: 'Jun 6', who: 'Both', priority: 'med', done: false },
+  { id: 13, title: 'Pay the rent', bucket: 'Done', when: 'Tue', who: 'Mattia', priority: 'high', done: true },
+  { id: 14, title: 'Pick up dry cleaning', bucket: 'Done', when: 'Mon', who: 'Sofia', priority: 'low', done: true },
+];
 
-function matchesReminderOwnerFilter(
-  reminder: Reminder,
-  filter: Filter,
-  userId: string | null,
-) {
-  if (filter === 'mine') {
-    return reminder.created_by === userId || reminder.assigned_to === userId;
-  }
-
-  if (filter === 'partner') {
-    return reminder.created_by !== userId;
-  }
-
-  return true;
-}
+const FILTERS = ['All', 'Mine', "Sofia's", 'Shared', 'Overdue'];
+const BUCKET_ORDER = ['Overdue', 'Today', 'Tomorrow', 'This week', 'Apr 28', 'May', 'Jun', 'Later'];
 
 export default function RemindersScreen() {
-  const C = useColors();
-  const { mode } = useTheme();
-  const { profile } = useSession();
-  const userId = profile?.id ?? null;
-  const { upcoming, completed, isLoading, create, update, toggleComplete, remove, refetch } = useReminders();
+  const { C, F } = useTheme();
+  const [filter, setFilter] = useState('All');
+  const [items, setItems] = useState(SEED);
+  const toggle = (id: number) =>
+    setItems((xs) => xs.map((x) => (x.id === id ? { ...x, done: !x.done } : x)));
 
-  const sheetRef = useRef<BottomSheetModal>(null);
-  const [editingReminder, setEditingReminder] = useState<Reminder | undefined>();
-  const [filter, setFilter] = useState<Filter>('all');
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [showCompleted, setShowCompleted] = useState(false);
-  const [pendingReminderIds, setPendingReminderIds] = useState<Record<string, true>>({});
-  const [refreshing, setRefreshing] = useState(false);
-
-  const glassBg = mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.6)';
-  const glassBorder = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.10)';
-
-  const filtered = upcoming.filter((r) => {
-    if (selectedDate && toLocalDateKey(r.due_at) !== selectedDate) return false;
-    return matchesReminderOwnerFilter(r, filter, userId);
-  });
-  const filteredCompleted = completed.filter((r) => {
-    if (selectedDate && toLocalDateKey(r.due_at) !== selectedDate) return false;
-    return matchesReminderOwnerFilter(r, filter, userId);
-  });
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await refetch();
-    } finally {
-      setRefreshing(false);
-    }
-  }, [refetch]);
-  const tabSwipe = useSwipeTabs({
-    tabs: ['all', 'mine', 'partner'] as const,
-    value: filter,
-    onChange: setFilter,
-  });
-
-  const handleSave = async (data: any) => {
-    if (editingReminder) {
-      await update(editingReminder.id, data);
-    } else {
-      await create(data);
-    }
-    setEditingReminder(undefined);
+  const matchFilter = (x: Item) => {
+    if (filter === 'All') return true;
+    if (filter === 'Mine') return x.who === 'Mattia';
+    if (filter === "Sofia's") return x.who === 'Sofia';
+    if (filter === 'Shared') return x.who === 'Both';
+    if (filter === 'Overdue') return !!x.overdue;
+    return true;
   };
+  const active = items.filter((x) => !x.done && matchFilter(x));
+  const done = items.filter((x) => x.done && matchFilter(x));
 
-  const openCreate = () => {
-    setEditingReminder(undefined);
-    sheetRef.current?.present();
+  const bucketColor: Record<string, string> = {
+    Overdue: C.error,
+    Today: C.gold,
+    Tomorrow: C.peach,
+    'This week': C.lavender,
+    'Apr 28': C.mint,
+    May: C.sky,
+    Jun: C.butter,
+    Later: C.fog,
   };
+  const sections = BUCKET_ORDER.map((b) => ({
+    label: b.toUpperCase(),
+    color: bucketColor[b],
+    items: active.filter((x) => x.bucket === b),
+  })).filter((s) => s.items.length);
 
-  const openEdit = (r: Reminder) => {
-    setEditingReminder(r);
-    sheetRef.current?.present();
-  };
-
-  const handleToggle = async (r: Reminder) => {
-    if (pendingReminderIds[r.id]) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setPendingReminderIds((current) => ({ ...current, [r.id]: true }));
-    try {
-      await toggleComplete(r);
-    } finally {
-      setPendingReminderIds((current) => {
-        const next = { ...current };
-        delete next[r.id];
-        return next;
-      });
-    }
-  };
-
-  const handleDelete = (r: Reminder) => {
-    if (pendingReminderIds[r.id]) return;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    Alert.alert('Delete Reminder', `Remove "${r.title}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          setPendingReminderIds((current) => ({ ...current, [r.id]: true }));
-          try {
-            await remove(r.id);
-          } finally {
-            setPendingReminderIds((current) => {
-              const next = { ...current };
-              delete next[r.id];
-              return next;
-            });
-          }
-        },
-      },
-    ]);
-  };
-
-  const renderSwipeRight = useCallback((item: Reminder) => () => (
-    <TouchableOpacity
-      style={[styles.swipeAction, styles.swipeDelete, { backgroundColor: C.error }]}
-      onPress={() => handleDelete(item)}
-    >
-      <Feather name="trash-2" size={18} color="#fff" />
-    </TouchableOpacity>
-  ), [C]);
-
-  const renderSwipeLeft = useCallback((item: Reminder) => () => (
-    <TouchableOpacity
-      style={[styles.swipeAction, styles.swipeComplete, { backgroundColor: C.success }]}
-      onPress={() => handleToggle(item)}
-    >
-      <Feather name={item.is_completed ? 'rotate-ccw' : 'check'} size={18} color="#fff" />
-    </TouchableOpacity>
-  ), [C]);
-
-  const renderItem = ({ item }: { item: Reminder }) => {
-    const overdue = !item.is_completed && isPast(new Date(item.due_at)) && !isToday(new Date(item.due_at));
-    const isPending = !!pendingReminderIds[item.id];
-    const isCompleted = item.is_completed;
-    const priorityColor =
-      item.priority === 3 ? C.error : item.priority === 2 ? C.warning : C.reminders;
-    const dueLabel = format(new Date(item.due_at), 'MMM d, h:mm a');
-    return (
-      <Swipeable
-        renderRightActions={renderSwipeRight(item)}
-        renderLeftActions={renderSwipeLeft(item)}
-        overshootRight={false}
-        overshootLeft={false}
-        friction={2}
-      >
-        <TouchableOpacity
-          style={[styles.reminderRow, {
-            backgroundColor: isCompleted ? C.remindersLight : C.card,
-            opacity: isPending ? 0.6 : 1,
-          }]}
-          activeOpacity={0.85}
-          disabled={isPending}
-          onPress={() => openEdit(item)}
-        >
-          <View style={[styles.priorityRail, { backgroundColor: item.priority > 0 ? priorityColor : C.dim }]} />
-          <TouchableOpacity
-            onPress={() => handleToggle(item)}
-            disabled={isPending}
-            style={[
-              styles.checkbox,
-              { borderColor: isCompleted ? C.reminders : C.dusk, backgroundColor: isCompleted ? C.reminders : 'transparent' },
-            ]}
-            hitSlop={8}
-          >
-            {isCompleted && <Feather name="check" size={13} color={C.ink} />}
-          </TouchableOpacity>
-          <View style={styles.reminderBody}>
-            <View style={styles.kickerRow}>
-              {item.category ? (
-                <View style={[styles.listBadge, { backgroundColor: C.card, borderColor: C.border }]}>
-                  <View style={[styles.listDot, { backgroundColor: C.reminders }]} />
-                  <Text style={[styles.listMetaText, { color: C.textTertiary }]} numberOfLines={1}>
-                    {item.category}
-                  </Text>
-                </View>
-              ) : null}
-              <Text style={[styles.kickerText, { color: overdue ? C.error : (isCompleted ? C.textTertiary : C.textSecondary) }]}>
-                {overdue ? 'Overdue · ' : 'Due '}{dueLabel}
+  return (
+    <Screen>
+      <BlockCard bg={C.lavender} ink={C.lavenderInk} style={{ marginBottom: 16, padding: 22 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <View style={{ flex: 1 }}>
+            <Overline color="rgba(31,22,53,0.7)">This week</Overline>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginTop: 8 }}>
+              <Display size={54} color={C.lavenderInk}>{`${active.length}`}</Display>
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: 'rgba(31,22,53,0.6)',
+                  fontFamily: F.bodyBold,
+                  marginBottom: 8,
+                }}
+              >
+                active
               </Text>
             </View>
             <Text
-              style={[
-                styles.reminderTitle,
-                { color: isCompleted ? C.textTertiary : C.text },
-                isCompleted && styles.strikethrough,
-              ]}
-              numberOfLines={2}
+              style={{
+                fontSize: 12,
+                color: 'rgba(31,22,53,0.7)',
+                marginTop: 6,
+                fontFamily: F.body,
+              }}
             >
-              {item.title}
+              {items.filter((x) => x.bucket === 'Today').length} due today ·{' '}
+              {items.filter((x) => x.overdue).length} overdue
             </Text>
           </View>
-        </TouchableOpacity>
-      </Swipeable>
-    );
-  };
-
-  const hasItems = filtered.length > 0 || filteredCompleted.length > 0;
-  const openCount = filtered.length;
-  const doneCount = filteredCompleted.length;
-
-  return (
-    <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
-      <SafeAreaView style={[styles.flex, { backgroundColor: C.screenBackground }]} edges={['top']}>
-        {!hasItems && !isLoading ? (
-          <ScrollView
-            contentContainerStyle={styles.emptyContent}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.reminders} />
-            }
-            showsVerticalScrollIndicator={false}
-            {...tabSwipe.panHandlers}
-          >
-            <MiniDateRail
-              title="Reminders"
-              selectedDate={selectedDate}
-              onSelectDate={setSelectedDate}
-              accentColor={C.reminders}
-              onPressAction={openCreate}
-              actionIcon="plus"
-              tabs={[
-                { value: 'all', label: 'All' },
-                { value: 'mine', label: 'Mine' },
-                { value: 'partner', label: "Partner's" },
-              ]}
-              selectedTab={filter}
-              onSelectTab={(value) => setFilter(value as Filter)}
-            />
-            <EmptyState
-              icon="bell"
-              title="No reminders yet"
-              description="Create shared reminders so you never forget what matters."
-              actionLabel="Add Reminder"
-              onAction={openCreate}
-            />
-          </ScrollView>
-        ) : (
-          <>
-          <FlashList
-            data={filtered}
-            ListHeaderComponent={
-              <>
-                <MiniDateRail
-                  title="Reminders"
-                  selectedDate={selectedDate}
-                  onSelectDate={setSelectedDate}
-                  accentColor={C.reminders}
-                  onPressAction={openCreate}
-                  actionIcon="plus"
-                  tabs={[
-                    { value: 'all', label: 'All' },
-                    { value: 'mine', label: 'Mine' },
-                    { value: 'partner', label: "Partner's" },
-                  ]}
-                  selectedTab={filter}
-                  onSelectTab={(value) => setFilter(value as Filter)}
-                />
-                <View style={[styles.header, { backgroundColor: C.background }]}>
-                  <View style={styles.summaryRow}>
-                    <Text style={[styles.summaryText, { color: C.textTertiary }]}>
-                      {openCount} open
-                    </Text>
-                    <View style={[styles.summaryDivider, { backgroundColor: C.border }]} />
-                    <Text style={[styles.summaryText, { color: C.textTertiary }]}>
-                      {doneCount} done
-                    </Text>
-                  </View>
-                </View>
-              </>
-            }
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContent}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.reminders} />
-            }
-            ItemSeparatorComponent={() => (
-              <View style={[styles.separator, { backgroundColor: C.dim }]} />
-            )}
-            {...tabSwipe.panHandlers}
-            ListFooterComponent={
-              filteredCompleted.length > 0 ? (
-                <View style={styles.completedSection}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      setShowCompleted(!showCompleted);
-                    }}
-                    style={styles.completedToggle}
-                  >
-                    <Text style={[styles.completedLabel, { color: C.textTertiary }]}>
-                      Completed ({filteredCompleted.length})
-                    </Text>
-                    <Feather name={showCompleted ? 'chevron-up' : 'chevron-down'} size={14} color={C.textTertiary} />
-                  </TouchableOpacity>
-                  {showCompleted && filteredCompleted.map((item) => (
-                    <View key={item.id}>
-                      {renderItem({ item })}
-                    </View>
-                  ))}
-                </View>
-              ) : null
-            }
+          <IconTile
+            icon="bell"
+            bg="rgba(31,22,53,0.15)"
+            color={C.lavenderInk}
+            size={44}
+            radius={14}
+            iconSize={20}
           />
-          </>
-        )}
+        </View>
+        <View style={{ marginTop: 16, flexDirection: 'row', gap: 4, height: 6 }}>
+          {[
+            { w: 40, c: C.lavenderInk },
+            { w: 25, c: 'rgba(31,22,53,0.45)' },
+            { w: 20, c: 'rgba(31,22,53,0.3)' },
+            { w: 15, c: 'rgba(31,22,53,0.18)' },
+          ].map((s, i) => (
+            <View key={i} style={{ flex: s.w, backgroundColor: s.c, borderRadius: 3 }} />
+          ))}
+        </View>
+        <View style={{ marginTop: 8, flexDirection: 'row', justifyContent: 'space-between' }}>
+          {[`DONE ${done.length}`, `OPEN ${active.length}`, 'SNOOZED 2', 'PARTNER 4'].map((t) => (
+            <Text
+              key={t}
+              style={{
+                fontSize: 10,
+                fontFamily: F.bodyBold,
+                letterSpacing: 0.5,
+                color: 'rgba(31,22,53,0.75)',
+              }}
+            >
+              {t}
+            </Text>
+          ))}
+        </View>
+      </BlockCard>
 
-        {/* FAB */}
-        <TouchableOpacity
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            openCreate();
-          }}
-          activeOpacity={0.85}
-          style={[styles.fab, { backgroundColor: C.reminders }]}
-        >
-          <Feather name="plus" size={22} color="#fff" />
-        </TouchableOpacity>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 18 }}>
+        <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 4 }}>
+          {FILTERS.map((f) => (
+            <Pill
+              key={f}
+              active={filter === f}
+              activeBg={C.reminders}
+              activeColor="#fff"
+              onPress={() => setFilter(f)}
+            >
+              {f}
+            </Pill>
+          ))}
+        </View>
+      </ScrollView>
 
-        <CreateReminderSheet
-          sheetRef={sheetRef}
-          onSave={handleSave}
-          reminder={editingReminder}
-        />
-      </SafeAreaView>
-    </View>
+      <DateSectioned
+        sections={sections}
+        maxOpen={3}
+        renderItem={(it) => <Row key={it.id} item={it} onToggle={() => toggle(it.id)} />}
+      />
+
+      {done.length > 0 && (
+        <View style={{ marginTop: 4 }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+              paddingHorizontal: 4,
+              marginBottom: 12,
+            }}
+          >
+            <Icon name="chevronDown" size={12} color={C.fog} />
+            <Text
+              style={{
+                color: C.fog,
+                fontSize: 11,
+                fontFamily: F.bodyBold,
+                letterSpacing: 1,
+                textTransform: 'uppercase',
+              }}
+            >
+              Completed · {done.length}
+            </Text>
+          </View>
+          <View style={{ gap: 10 }}>
+            {done.map((it) => (
+              <Row key={it.id} item={it} onToggle={() => toggle(it.id)} />
+            ))}
+          </View>
+        </View>
+      )}
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  flex: { flex: 1 },
-
-  header: {
-    paddingHorizontal: Spacing['2xl'],
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.lg,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginTop: Spacing.lg,
-  },
-  summaryText: {
-    ...Typography.small,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
-  },
-  summaryDivider: {
-    width: 18,
-    height: StyleSheet.hairlineWidth,
-  },
-  listContent: { paddingBottom: 120 },
-  emptyContent: { paddingBottom: Spacing.xl },
-  separator: {
-    height: StyleSheet.hairlineWidth,
-    marginLeft: 71,
-  },
-
-  reminderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    paddingVertical: 14,
-    paddingRight: Spacing['2xl'],
-    paddingLeft: Spacing.lg,
-    minHeight: 56,
-  },
-  priorityRail: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  reminderBody: { flex: 1, gap: 6 },
-  kickerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    flexWrap: 'wrap',
-  },
-  listBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
-  },
-  listDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  listMetaText: {
-    ...Typography.small,
-    maxWidth: 160,
-  },
-  kickerText: {
-    ...Typography.small,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  reminderTitle: { ...Typography.bodyMedium },
-  strikethrough: { textDecorationLine: 'line-through' },
-
-  // Swipe actions
-  swipeAction: {
-    width: 72,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  swipeDelete: {},
-  swipeComplete: {},
-
-  completedSection: { paddingTop: Spacing.md },
-  completedToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing['2xl'],
-    paddingVertical: Spacing.md,
-  },
-  completedLabel: { ...Typography.captionMedium },
-  fab: {
-    position: 'absolute',
-    bottom: 100,
-    right: Spacing['2xl'],
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-});
+function Row({ item, onToggle }: { item: Item; onToggle: () => void }) {
+  const { C, F } = useTheme();
+  const done = item.done;
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 14,
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        borderRadius: 18,
+        backgroundColor: C.card,
+        borderWidth: 1,
+        borderColor: C.line,
+      }}
+    >
+      <Pressable
+        onPress={onToggle}
+        style={{
+          width: 24,
+          height: 24,
+          borderRadius: 12,
+          borderWidth: done ? 0 : 1.5,
+          borderColor: C.ash,
+          backgroundColor: done ? C.reminders : 'transparent',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {done && <Icon name="check" size={14} color="#fff" strokeWidth={3} />}
+      </Pressable>
+      <View style={{ flex: 1 }}>
+        <Text
+          numberOfLines={1}
+          style={{
+            fontSize: 14,
+            fontFamily: F.body,
+            color: done ? C.fog : C.bone,
+            textDecorationLine: done ? 'line-through' : 'none',
+          }}
+        >
+          {item.title}
+        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
+          {!!item.when && (
+            <>
+              <Icon name="clock" size={10} color={item.overdue ? C.error : C.fog} />
+              <Text
+                style={{
+                  fontSize: 10,
+                  color: item.overdue ? C.error : C.fog,
+                  fontFamily: F.bodyBold,
+                  letterSpacing: 0.4,
+                }}
+              >
+                {item.when}
+              </Text>
+              <Text style={{ color: C.ash }}>·</Text>
+            </>
+          )}
+          <Text
+            style={{
+              fontSize: 10,
+              color: C.mist,
+              fontFamily: F.bodyBold,
+              letterSpacing: 0.4,
+              textTransform: 'uppercase',
+            }}
+          >
+            {item.who}
+          </Text>
+        </View>
+      </View>
+      <View
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: 4,
+          backgroundColor:
+            item.priority === 'high' ? C.error : item.priority === 'med' ? C.butter : C.ash,
+        }}
+      />
+    </View>
+  );
+}

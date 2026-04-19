@@ -1,484 +1,188 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, LayoutAnimation, Platform, UIManager, RefreshControl, ScrollView } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { Feather } from '@expo/vector-icons';
-import { format } from 'date-fns';
-import * as Haptics from 'expo-haptics';
-import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import { useColors } from '@/src/hooks/useColors';
-import { buildTaskFeedViewState, useTasks } from '@/src/hooks/useTasks';
-import { useSwipeTabs } from '@/src/hooks/useSwipeTabs';
-import { Typography } from '@/src/constants/typography';
-import { Spacing, BorderRadius } from '@/src/constants/spacing';
-import { MiniDateRail } from '@/src/components/calendar/MiniDateRail';
-import { EmptyState } from '@/src/components/ui';
-import { AUTO_CREATE_TASK_LIST_ID, CreateTaskSheet } from '@/src/components/tasks/CreateTaskSheet';
-import type { Task } from '@/src/types/database';
+import { router } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Display, Overline, Pill, ProgressRing } from '@/src/components/ui/atoms';
+import { Icon } from '@/src/components/ui/Icon';
+import { Screen } from '@/src/components/ui/Screen';
+import { useTheme } from '@/src/lib/theme';
+import { TASK_LISTS } from '@/src/lib/tasks-data';
 
-export default function TasksScreen() {
-  const C = useColors();
-  const insets = useSafeAreaInsets();
-  const { allTasks, isLoading, createTask, createTaskInDefaultList, updateTask, toggleTask, deleteTask, refetch } = useTasks();
-  const lists: { id: string; name: string; icon?: string | null; color: string }[] = [];
-  const sheetRef = useRef<BottomSheetModal>(null);
-  const [filter, setFilter] = useState<'all' | 'active' | 'done'>('all');
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [editingTask, setEditingTask] = useState<Task | undefined>();
-  const [optimisticCompletion, setOptimisticCompletion] = useState<Record<string, boolean>>({});
-  const [pendingTaskIds, setPendingTaskIds] = useState<Record<string, true>>({});
-  const [savingTask, setSavingTask] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+const FILTERS = ['All', 'Mine', "Sofia's", 'Shared', 'Travel', 'Home', 'Date', 'Work'] as const;
 
-  useEffect(() => {
-    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-      UIManager.setLayoutAnimationEnabledExperimental(true);
-    }
-  }, []);
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await refetch();
-    } finally {
-      setRefreshing(false);
-    }
-  }, [refetch]);
-  const tabSwipe = useSwipeTabs({
-    tabs: ['all', 'active', 'done'] as const,
-    value: filter,
-    onChange: setFilter,
-  });
-  const feedState = useMemo(() => buildTaskFeedViewState(allTasks, filter), [allTasks, filter]);
-  const taskFeed = useMemo(
-    () =>
-      feedState.items.map((item) =>
-        optimisticCompletion[item.id] === undefined
-          ? item
-          : { ...item, is_completed: optimisticCompletion[item.id] },
-      ),
-    [feedState.items, optimisticCompletion],
-  );
-  const visibleTaskFeed = useMemo(
-    () =>
-      selectedDate
-        ? taskFeed.filter((item) => item.due_date === selectedDate)
-        : taskFeed,
-    [selectedDate, taskFeed],
-  );
-
-  const openTaskComposer = () => {
-    setEditingTask(undefined);
-    sheetRef.current?.present();
-  };
-
-  const handleSave = async (data: { title: string; notes: string | null; due_date: string | null; priority: number; assigned_to: string | null; category: string }) => {
-    if (savingTask) return;
-    setSavingTask(true);
-    try {
-      if (editingTask) {
-        await updateTask(editingTask.id, data);
-        setEditingTask(undefined);
-        return;
-      }
-
-      if (data.category === AUTO_CREATE_TASK_LIST_ID) {
-        await createTaskInDefaultList({
-          title: data.title,
-          notes: data.notes,
-          due_date: data.due_date,
-          priority: data.priority,
-          assigned_to: data.assigned_to,
-        });
-        return;
-      }
-
-      await createTask(data);
-    } finally {
-      setSavingTask(false);
-    }
-  };
-
-  const handleToggle = async (item: Task) => {
-    if (pendingTaskIds[item.id]) return;
-    const nextValue = !item.is_completed;
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setOptimisticCompletion((current) => ({ ...current, [item.id]: nextValue }));
-    setPendingTaskIds((current) => ({ ...current, [item.id]: true }));
-    try {
-      await toggleTask(item);
-    } finally {
-      setOptimisticCompletion((current) => {
-        const next = { ...current };
-        delete next[item.id];
-        return next;
-      });
-      setPendingTaskIds((current) => {
-        const next = { ...current };
-        delete next[item.id];
-        return next;
-      });
-    }
-  };
-
-  const openTaskEditor = (item: Task) => {
-    setEditingTask(item);
-    sheetRef.current?.present();
-  };
-
-  const handleDelete = (item: Task) => {
-    if (pendingTaskIds[item.id]) return;
-    Alert.alert('Delete task', `Remove "${item.title}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          setPendingTaskIds((current) => ({ ...current, [item.id]: true }));
-          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-          try {
-            await deleteTask(item.id);
-          } finally {
-            setPendingTaskIds((current) => {
-              const next = { ...current };
-              delete next[item.id];
-              return next;
-            });
-          }
-        },
-      },
-    ]);
-  };
-
-  const openCount = visibleTaskFeed.filter((item) => !item.is_completed).length;
-  const doneCount = visibleTaskFeed.filter((item) => item.is_completed).length;
-  const renderSwipeRight = useCallback((item: Task) => () => (
-    <TouchableOpacity
-      style={[styles.swipeAction, styles.swipeDelete, { backgroundColor: C.error }]}
-      onPress={() => handleDelete(item)}
-    >
-      <Feather name="trash-2" size={18} color="#fff" />
-    </TouchableOpacity>
-  ), [C]);
-  const renderSwipeLeft = useCallback((item: Task) => () => (
-    <TouchableOpacity
-      style={[styles.swipeAction, styles.swipeComplete, { backgroundColor: item.is_completed ? C.info : C.success }]}
-      onPress={() => handleToggle(item)}
-    >
-      <Feather name={item.is_completed ? 'rotate-ccw' : 'check'} size={18} color="#fff" />
-    </TouchableOpacity>
-  ), [C]);
+export default function TasksList() {
+  const { C, F } = useTheme();
+  const [filter, setFilter] = useState<(typeof FILTERS)[number]>('All');
+  const lists = useMemo(() => {
+    if (filter === 'All') return TASK_LISTS;
+    if (filter === 'Mine') return TASK_LISTS.filter((l) => l.who === 'Mine');
+    if (filter === "Sofia's") return TASK_LISTS.filter((l) => l.who === "Sofia's");
+    if (filter === 'Shared') return TASK_LISTS.filter((l) => l.who === 'Both');
+    return TASK_LISTS.filter((l) => l.cat === filter);
+  }, [filter]);
+  const totalDone = TASK_LISTS.reduce((a, l) => a + l.done, 0);
+  const totalAll = TASK_LISTS.reduce((a, l) => a + l.total, 0);
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
-      <SafeAreaView style={[styles.flex, { backgroundColor: C.screenBackground }]} edges={['top']}>
-        {!isLoading && (feedState.emptyState || visibleTaskFeed.length === 0) ? (
-          <ScrollView
-            contentContainerStyle={styles.emptyContent}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.tasks} />
-            }
-            showsVerticalScrollIndicator={false}
-            {...tabSwipe.panHandlers}
-          >
-            <MiniDateRail
-              title="Tasks"
-              selectedDate={selectedDate}
-              onSelectDate={setSelectedDate}
-              accentColor={C.tasks}
-              onPressAction={openTaskComposer}
-              actionIcon="plus"
-              tabs={[
-                { value: 'all', label: 'All' },
-                { value: 'active', label: 'Active' },
-                { value: 'done', label: 'Done' },
-              ]}
-              selectedTab={filter}
-              onSelectTab={(value) => setFilter(value as 'all' | 'active' | 'done')}
-            />
-            <EmptyState
-              icon="check-square"
-              title={selectedDate && visibleTaskFeed.length === 0 ? 'No tasks on this date' : feedState.emptyState?.title ?? 'No tasks yet'}
-              description={
-                selectedDate && visibleTaskFeed.length === 0
-                  ? 'Pick another day or clear the date filter.'
-                  : feedState.emptyState?.description ?? 'Add your first task and Coupl will create a General list automatically.'
-              }
-              actionLabel={feedState.emptyState?.actionLabel ?? 'Add Task'}
-              onAction={openTaskComposer}
-            />
-          </ScrollView>
-        ) : (
-          <>
-          <FlatList
-            data={visibleTaskFeed}
-            ListHeaderComponent={
-              <>
-                <MiniDateRail
-                  title="Tasks"
-                  selectedDate={selectedDate}
-                  onSelectDate={setSelectedDate}
-                  accentColor={C.tasks}
-                  onPressAction={openTaskComposer}
-                  actionIcon="plus"
-                  tabs={[
-                    { value: 'all', label: 'All' },
-                    { value: 'active', label: 'Active' },
-                    { value: 'done', label: 'Done' },
-                  ]}
-                  selectedTab={filter}
-                  onSelectTab={(value) => setFilter(value as 'all' | 'active' | 'done')}
-                />
-                <View style={[styles.header, { backgroundColor: C.background }]}>
-                  <View style={styles.summaryRow}>
-                    <Text style={[styles.summaryText, { color: C.textTertiary }]}>
-                      {openCount} open
-                    </Text>
-                    <View style={[styles.summaryDivider, { backgroundColor: C.border }]} />
-                    <Text style={[styles.summaryText, { color: C.textTertiary }]}>
-                      {doneCount} done
-                    </Text>
-                  </View>
-                </View>
-              </>
-            }
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 120 }]}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.tasks} />
-            }
-            ItemSeparatorComponent={() => <View style={styles.separator} />}
-            {...tabSwipe.panHandlers}
-            renderItem={({ item }) => {
-              const dueLabel = item.due_date ? format(new Date(`${item.due_date}T00:00:00`), 'MMM d') : null;
-              const isCompleted = item.is_completed;
-              const isPending = !!pendingTaskIds[item.id];
-              const priorityColor =
-                item.priority === 3 ? C.error : item.priority === 2 ? C.warning : C.tasks;
-              return (
-                <Swipeable
-                  renderRightActions={renderSwipeRight(item)}
-                  renderLeftActions={renderSwipeLeft(item)}
-                  overshootRight={false}
-                  overshootLeft={false}
-                  friction={2}
+    <Screen>
+      <View
+        style={{
+          marginBottom: 16,
+          backgroundColor: C.mint,
+          borderRadius: 22,
+          padding: 22,
+        }}
+      >
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <View style={{ flex: 1 }}>
+            <Overline color="rgba(15,44,26,0.7)">Getting done</Overline>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6, marginTop: 6 }}>
+              <Display size={54} color={C.mintInk}>{`${totalDone}`}</Display>
+              <Text
+                style={{
+                  fontSize: 22,
+                  fontFamily: F.displayBold,
+                  color: 'rgba(15,44,26,0.55)',
+                  marginBottom: 8,
+                }}
+              >
+                /{totalAll}
+              </Text>
+            </View>
+            <Text
+              style={{
+                fontSize: 12,
+                color: 'rgba(15,44,26,0.75)',
+                marginTop: 4,
+                fontFamily: F.body,
+              }}
+            >
+              across {TASK_LISTS.length} lists · doing great.
+            </Text>
+          </View>
+          <ProgressRing
+            size={80}
+            stroke={8}
+            value={totalDone / totalAll}
+            colors={[C.mintInk, C.mintInk]}
+            bg="rgba(15,44,26,0.2)"
+            label={`${Math.round((100 * totalDone) / totalAll)}%`}
+            labelColor={C.mintInk}
+          />
+        </View>
+      </View>
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
+        <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 4 }}>
+          {FILTERS.map((f) => (
+            <Pill
+              key={f}
+              active={filter === f}
+              activeBg={C.tasks}
+              activeColor="#fff"
+              onPress={() => setFilter(f)}
+            >
+              {f}
+            </Pill>
+          ))}
+        </View>
+      </ScrollView>
+
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+        {lists.map((l) => {
+          const color = (C as any)[l.colorKey] as string;
+          const ink = (C as any)[`${l.colorKey}Ink`] as string;
+          const pct = l.total === 0 ? 0 : l.done / l.total;
+          return (
+            <Pressable
+              key={l.id}
+              onPress={() => router.push(`/tasks/${l.id}` as any)} // route: tasks/[listId]
+              style={{
+                width: '48%',
+                backgroundColor: color,
+                borderRadius: 22,
+                paddingHorizontal: 16,
+                paddingTop: 18,
+                paddingBottom: 16,
+                minHeight: 136,
+                justifyContent: 'space-between',
+              }}
+            >
+              <View
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 12,
+                  backgroundColor: 'rgba(0,0,0,0.12)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Icon name={l.icon} size={18} color={ink} />
+              </View>
+              <View>
+                <Text
+                  style={{
+                    fontFamily: F.displayBold,
+                    fontSize: 18,
+                    color: ink,
+                    letterSpacing: -0.4,
+                    lineHeight: 20,
+                    marginBottom: 10,
+                  }}
                 >
-                  <TouchableOpacity
-                    style={styles.taskWrap}
-                    activeOpacity={0.85}
-                    disabled={isPending}
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      openTaskEditor(item);
+                  {l.name}
+                </Text>
+                <View
+                  style={{
+                    height: 4,
+                    backgroundColor: 'rgba(0,0,0,0.12)',
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <View
+                    style={{
+                      width: `${pct * 100}%`,
+                      height: '100%',
+                      backgroundColor: ink,
+                    }}
+                  />
+                </View>
+                <View
+                  style={{
+                    marginTop: 8,
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 10,
+                      fontFamily: F.bodyBold,
+                      letterSpacing: 1,
+                      color: ink,
+                      opacity: 0.6,
                     }}
                   >
-                    <View
-                      style={[
-                        styles.taskRow,
-                        {
-                          backgroundColor: isCompleted ? C.tasksLight : C.card,
-                          opacity: isPending ? 0.6 : 1,
-                        },
-                      ]}
-                    >
-                      <View style={[styles.priorityRail, { backgroundColor: item.priority > 0 ? priorityColor : C.dim }]} />
-                      <TouchableOpacity
-                        onPress={() => handleToggle(item)}
-                        disabled={isPending}
-                        style={[
-                          styles.checkbox,
-                          { borderColor: isCompleted ? C.tasks : C.dusk, backgroundColor: isCompleted ? C.tasks : 'transparent' },
-                          isCompleted && { backgroundColor: C.tasks },
-                        ]}
-                        hitSlop={8}
-                      >
-                        {isCompleted && <Feather name="check" size={13} color={C.ink} />}
-                      </TouchableOpacity>
-                      <View style={styles.taskBody}>
-                        <View style={styles.kickerRow}>
-                          {item.category ? (
-                            <View style={[styles.listBadge, { backgroundColor: C.card, borderColor: C.border }]}>
-                              <View style={[styles.listDot, { backgroundColor: C.tasks }]} />
-                              <Text style={[styles.listMetaText, { color: C.textTertiary }]} numberOfLines={1}>
-                                {item.category}
-                              </Text>
-                            </View>
-                          ) : null}
-                          {dueLabel ? (
-                            <Text style={[styles.kickerText, { color: isCompleted ? C.textTertiary : C.textSecondary }]}>
-                              Due {dueLabel}
-                            </Text>
-                          ) : null}
-                        </View>
-                        <Text
-                          style={[
-                            styles.taskTitle,
-                            { color: isCompleted ? C.textTertiary : C.text },
-                            isCompleted && styles.strikethrough,
-                          ]}
-                          numberOfLines={2}
-                        >
-                          {item.title}
-                        </Text>
-                        {!!item.notes && (
-                          <Text style={[styles.taskNote, { color: C.textTertiary }]} numberOfLines={1}>
-                            {item.notes}
-                          </Text>
-                        )}
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                </Swipeable>
-              );
-            }}
-          />
-          </>
-        )}
-
-        {/* FAB */}
-        <TouchableOpacity
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            openTaskComposer();
-          }}
-          activeOpacity={0.85}
-          style={[styles.fab, { backgroundColor: C.tasks }]}
-        >
-          <Feather name="plus" size={22} color="#fff" />
-        </TouchableOpacity>
-
-        <CreateTaskSheet
-          sheetRef={sheetRef}
-          onSave={handleSave}
-          task={editingTask}
-          lists={lists}
-        />
-      </SafeAreaView>
-    </View>
+                    {l.done}/{l.total}
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 10,
+                      fontFamily: F.bodyBold,
+                      letterSpacing: 1,
+                      color: ink,
+                      opacity: 0.6,
+                    }}
+                  >
+                    {Math.round(pct * 100)}%
+                  </Text>
+                </View>
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  flex: { flex: 1 },
-
-  header: {
-    paddingHorizontal: Spacing['2xl'],
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.lg,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginTop: Spacing.lg,
-  },
-  summaryText: {
-    ...Typography.small,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
-  },
-  summaryDivider: {
-    width: 18,
-    height: StyleSheet.hairlineWidth,
-  },
-  listContent: {
-    paddingBottom: Spacing.xl,
-  },
-  emptyContent: {
-    paddingBottom: Spacing.xl,
-  },
-  separator: {
-    height: StyleSheet.hairlineWidth,
-    marginLeft: 71,
-  },
-  taskWrap: {
-    backgroundColor: 'transparent',
-  },
-  taskRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    paddingVertical: 14,
-    paddingRight: Spacing['2xl'],
-    paddingLeft: Spacing.lg,
-    minHeight: 56,
-  },
-  priorityRail: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  taskBody: {
-    flex: 1,
-    gap: 6,
-  },
-  kickerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    flexWrap: 'wrap',
-  },
-  listBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
-  },
-  kickerText: {
-    ...Typography.small,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  taskTitle: {
-    ...Typography.bodyMedium,
-  },
-  strikethrough: {
-    textDecorationLine: 'line-through',
-  },
-  listDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  listMetaText: {
-    ...Typography.small,
-    maxWidth: 160,
-  },
-  taskNote: {
-    ...Typography.small,
-  },
-  swipeAction: {
-    width: 76,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  swipeDelete: {},
-  swipeComplete: {},
-  fab: {
-    position: 'absolute',
-    bottom: 100,
-    right: Spacing['2xl'],
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-});

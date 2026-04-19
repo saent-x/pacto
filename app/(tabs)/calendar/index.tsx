@@ -1,271 +1,285 @@
-import * as Haptics from "expo-haptics";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { format, parseISO } from "date-fns";
-import { useCallback, useRef, useState } from "react";
-import { Feather } from "@expo/vector-icons";
-import { BottomSheetModal } from "@gorhom/bottom-sheet";
-import { db, id } from "@/src/lib/instant";
-import { useSession } from "@/src/hooks/useSession";
+import { useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
+import { Icon } from '@/src/components/ui/Icon';
+import { Screen } from '@/src/components/ui/Screen';
+import { useTheme } from '@/src/lib/theme';
 
-import { MiniDateRail } from "@/src/components/calendar/MiniDateRail";
-import { CreateEventSheet } from "@/src/components/calendar/CreateEventSheet";
-import { EmptyState } from "@/src/components/ui";
-import { toPlainMarkdownPreview } from "@/src/components/journal/MarkdownText";
-import { BorderRadius, Spacing } from "@/src/constants/spacing";
-import { Typography } from "@/src/constants/typography";
-import { useCalendar } from "@/src/hooks/useCalendar";
-import { useColors } from "@/src/hooks/useColors";
+export default function Calendar() {
+  const { C, F } = useTheme();
+  const [selectedDay, setSelectedDay] = useState(17);
+  const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
-function formatAgendaTime(occursAt: number | null) {
-  if (!occursAt) {
-    return "All day";
-  }
-  return format(occursAt, "h:mm a");
-}
-
-export default function CalendarScreen() {
-  const C = useColors();
-  const calendar = useCalendar();
-  const { activeCouple, user } = useSession();
-  const sheetRef = useRef<BottomSheetModal>(null);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const selectedDateLabel = calendar.selectedDate
-    ? format(parseISO(calendar.selectedDate), "EEEE, d MMMM")
-    : `All dates in ${calendar.monthLabel}`;
-
-  const handleSaveEvent = useCallback(
-    async (data: {
-      title: string;
-      description: string | null;
-      startsAt: number;
-      endsAt: number | null;
-      category: string | null;
-      location: string | null;
-      priority: number;
-      isPrivate: boolean;
-    }) => {
-      const coupleId = activeCouple?.couple?.id ?? null;
-      if (!coupleId || !user) return;
-      const eventId = id();
-      const now = Date.now();
-      await db.transact(
-        db.tx.events[eventId]
-          .update({
-            title: data.title,
-            description: data.description ?? undefined,
-            startsAt: data.startsAt,
-            endsAt: data.endsAt ?? undefined,
-            category: data.category ?? undefined,
-            location: data.location ?? undefined,
-            priority: data.priority,
-            isPrivate: data.isPrivate,
-            createdAt: now,
-            updatedAt: now,
-          })
-          .link({ couple: coupleId, createdBy: user.id }),
-      );
-      await calendar.refetch();
-    },
-    [activeCouple, user, calendar],
-  );
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await calendar.refetch();
-    } finally {
-      setRefreshing(false);
-    }
-  }, [calendar]);
+  const events = [
+    { id: 1, time: '18:00', title: "Sofia's mom dinner", loc: "Nonna's · Venice", who: 'BOTH', cat: 'family', color: C.peach },
+    { id: 2, time: '20:30', title: 'Film night — Past Lives', loc: 'Home', who: 'BOTH', cat: 'date', color: C.rose },
+    { id: 3, time: 'All day', title: 'Venice trip planning', loc: '', who: 'MATTIA', cat: 'travel', color: C.sky },
+  ];
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
-      <SafeAreaView style={[styles.safe, { backgroundColor: C.screenBackground }]} edges={["top"]}>
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />
-          }
+    <Screen>
+      <View style={{ backgroundColor: C.butter, borderRadius: 26, padding: 22, marginBottom: 22 }}>
+        <Text
+          style={{
+            fontSize: 10,
+            color: C.butterInk,
+            fontFamily: F.bodyBold,
+            letterSpacing: 1.4,
+            opacity: 0.6,
+            marginBottom: 8,
+          }}
         >
-          <MiniDateRail
-            title="Shared rhythm"
-            selectedDate={calendar.selectedDate}
-            helperLabel="Calendar"
-            accentColor={C.primary}
-            onSelectDate={(date) => {
-              Haptics.selectionAsync();
-              calendar.selectDate(date);
+          THIS MONTH
+        </Text>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'flex-end',
+            gap: 10,
+            marginBottom: 10,
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: F.displayBold,
+              fontSize: 60,
+              color: C.butterInk,
+              lineHeight: 56,
+              letterSpacing: -2,
             }}
-          />
+          >
+            8
+          </Text>
+          <Text
+            style={{
+              fontFamily: F.displayBold,
+              fontSize: 22,
+              color: C.butterInk,
+              lineHeight: 22,
+              marginBottom: 6,
+            }}
+          >
+            events
+          </Text>
+        </View>
+        <Text
+          style={{
+            fontSize: 11,
+            color: C.butterInk,
+            fontFamily: F.bodyBold,
+            opacity: 0.75,
+          }}
+        >
+          3 shared · 2 upcoming · next in 6h
+        </Text>
+      </View>
 
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionEyebrow, { color: C.primary }]}>Selected day</Text>
-              <Text style={[styles.sectionTitle, { color: C.text }]}>{selectedDateLabel}</Text>
-            </View>
-            {calendar.agenda.length === 0 ? (
-              <View style={styles.emptyWrap}>
-                <EmptyState
-                  title="Nothing scheduled"
-                  description="This day is clear. Shared items will appear here as soon as they land on the timeline."
-                />
-              </View>
-            ) : (
-              calendar.agenda.map((item) => {
-                const itemLocation =
-                  typeof (item as { location?: unknown }).location === "string"
-                    ? (item as { location?: string }).location ?? null
-                    : null;
-                return (
-                  <View
-                    key={item.id}
-                    style={[
-                      styles.agendaCard,
-                      { backgroundColor: C.card, borderColor: C.border },
-                    ]}
-                  >
-                    <Text style={[styles.agendaMeta, { color: C.primary }]}>
-                      {item.type.toUpperCase()}
-                    </Text>
-                    <Text style={[styles.agendaTitle, { color: C.text }]}>{item.title}</Text>
-                    <Text style={[styles.agendaTime, { color: C.textSecondary }]}>
-                      {formatAgendaTime(item.occursAt)}
-                    </Text>
-                    {item.subtitle ? (
-                      <Text style={[styles.agendaBody, { color: C.textSecondary }]} numberOfLines={2}>
-                        {toPlainMarkdownPreview(item.subtitle)}
-                      </Text>
-                    ) : null}
-                    {itemLocation ? (
-                      <Text style={[styles.agendaBody, { color: C.textSecondary }]}>
-                        {itemLocation}
-                      </Text>
-                    ) : null}
-                  </View>
-                );
-              })
-            )}
-          </View>
-
-          {calendar.milestones.length > 0 ? (
-            <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: C.text }]}>Countdowns</Text>
-              <View style={styles.countdownRow}>
-                {calendar.milestones.map((milestone) => (
-                  <View
-                    key={milestone.id}
-                    style={[
-                      styles.countdownCard,
-                      { backgroundColor: C.card, borderColor: C.border },
-                    ]}
-                  >
-                    <Text style={[styles.agendaMeta, { color: C.primary }]}>
-                      {milestone.type === "countdown" ? "ANNIVERSARY" : "MILESTONE"}
-                    </Text>
-                    <Text style={[styles.agendaTitle, { color: C.text }]}>
-                      {milestone.title}
-                    </Text>
-                    <Text style={[styles.agendaBody, { color: C.textSecondary }]}>
-                      {milestone.daysUntil === 0
-                        ? "Today"
-                        : `${milestone.daysUntil} day${milestone.daysUntil === 1 ? "" : "s"} away`}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          ) : null}
-        </ScrollView>
-      </SafeAreaView>
-
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: C.primary }]}
-        activeOpacity={0.8}
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          sheetRef.current?.present();
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          paddingHorizontal: 4,
+          marginBottom: 8,
         }}
       >
-        <Feather name="plus" size={22} color={C.ink} />
-      </TouchableOpacity>
+        {days.map((d) => (
+          <Text
+            key={d}
+            style={{
+              fontSize: 10,
+              color: C.fog,
+              fontFamily: F.bodyBold,
+              letterSpacing: 1.2,
+              width: 40,
+              textAlign: 'center',
+            }}
+          >
+            {d}
+          </Text>
+        ))}
+      </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 22 }}>
+        {[14, 15, 16, 17, 18, 19, 20].map((n) => {
+          const active = n === selectedDay;
+          const hasEvent = [15, 17, 19].includes(n);
+          return (
+            <Pressable
+              key={n}
+              onPress={() => setSelectedDay(n)}
+              style={{
+                width: 40,
+                height: 54,
+                borderRadius: 14,
+                backgroundColor: active ? C.gold : 'transparent',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Text
+                style={{
+                  fontFamily: F.displayBold,
+                  fontSize: 18,
+                  color: active ? C.peachInk : C.bone,
+                }}
+              >
+                {n}
+              </Text>
+              {hasEvent && !active && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    bottom: 8,
+                    width: 4,
+                    height: 4,
+                    borderRadius: 2,
+                    backgroundColor: C.gold,
+                  }}
+                />
+              )}
+            </Pressable>
+          );
+        })}
+      </View>
 
-      <CreateEventSheet sheetRef={sheetRef} onSave={handleSaveEvent} />
-    </View>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 12,
+          paddingHorizontal: 4,
+        }}
+      >
+        <Text style={{ fontSize: 11, color: C.fog, fontFamily: F.bodyBold, letterSpacing: 1.4 }}>
+          THURSDAY · 17 APR
+        </Text>
+        <Text style={{ fontSize: 11, color: C.gold, fontFamily: F.bodyBold }}>3 events</Text>
+      </View>
+
+      {events.map((e) => (
+        <View key={e.id} style={{ flexDirection: 'row', gap: 14, marginBottom: 14 }}>
+          <View style={{ width: 56, paddingTop: 14 }}>
+            <Text
+              style={{
+                fontFamily: F.displayBold,
+                fontSize: e.time === 'All day' ? 12 : 18,
+                color: C.bone,
+                letterSpacing: -0.3,
+              }}
+            >
+              {e.time}
+            </Text>
+            <Text
+              style={{
+                fontSize: 9,
+                color: C.fog,
+                fontFamily: F.bodyBold,
+                letterSpacing: 1,
+                marginTop: 2,
+              }}
+            >
+              {e.who}
+            </Text>
+          </View>
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: e.color,
+              borderRadius: 20,
+              padding: 16,
+              overflow: 'hidden',
+            }}
+          >
+            <Text
+              style={{
+                position: 'absolute',
+                top: 12,
+                right: 14,
+                fontSize: 9,
+                fontFamily: F.bodyBold,
+                letterSpacing: 1,
+                color: '#000',
+                opacity: 0.45,
+                textTransform: 'uppercase',
+              }}
+            >
+              {e.cat}
+            </Text>
+            <Text
+              style={{
+                fontFamily: F.displayBold,
+                fontSize: 18,
+                color: '#1A0F0A',
+                letterSpacing: -0.3,
+                marginBottom: e.loc ? 3 : 0,
+                lineHeight: 21,
+                paddingRight: 40,
+              }}
+            >
+              {e.title}
+            </Text>
+            {!!e.loc && (
+              <Text style={{ fontSize: 11, color: '#1A0F0A', opacity: 0.6, fontFamily: F.body }}>
+                {e.loc}
+              </Text>
+            )}
+          </View>
+        </View>
+      ))}
+
+      <Text
+        style={{
+          fontSize: 11,
+          color: C.fog,
+          fontFamily: F.bodyBold,
+          letterSpacing: 1.4,
+          paddingHorizontal: 4,
+          marginTop: 18,
+          marginBottom: 10,
+        }}
+      >
+        TOMORROW
+      </Text>
+      <View
+        style={{
+          backgroundColor: C.card,
+          borderRadius: 20,
+          padding: 16,
+          borderWidth: 1,
+          borderColor: C.line,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 12,
+        }}
+      >
+        <View
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            backgroundColor: C.mintInk,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Icon name="heart" size={16} color={C.mint} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text
+            style={{
+              fontFamily: F.displayBold,
+              fontSize: 15,
+              color: C.bone,
+              letterSpacing: -0.2,
+            }}
+          >
+            Anniversary · 3 yrs
+          </Text>
+          <Text style={{ fontSize: 11, color: C.fog, fontFamily: F.body }}>Fri 18 · All day</Text>
+        </View>
+        <Text style={{ fontSize: 10, color: C.mint, fontFamily: F.bodyBold, letterSpacing: 1 }}>
+          MILESTONE
+        </Text>
+      </View>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-  },
-  safe: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 120,
-    gap: Spacing.xl,
-  },
-  section: {
-    paddingHorizontal: Spacing["2xl"],
-    gap: Spacing.lg,
-  },
-  sectionHeader: {
-    gap: Spacing.xs,
-  },
-  sectionEyebrow: {
-    ...Typography.overline,
-    letterSpacing: 2.2,
-  },
-  sectionTitle: {
-    ...Typography.heading,
-  },
-  emptyWrap: {
-    paddingTop: Spacing['2xl'],
-    justifyContent: 'center',
-  },
-  agendaCard: {
-    borderWidth: 1,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.lg,
-    gap: Spacing.xs,
-  },
-  agendaMeta: {
-    ...Typography.overline,
-    letterSpacing: 2,
-  },
-  agendaTitle: {
-    ...Typography.subheading,
-  },
-  agendaTime: {
-    ...Typography.captionMedium,
-  },
-  agendaBody: {
-    ...Typography.body,
-  },
-  countdownRow: {
-    gap: Spacing.md,
-  },
-  countdownCard: {
-    borderWidth: 1,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.lg,
-    gap: Spacing.xs,
-  },
-  fab: {
-    position: "absolute",
-    bottom: 100,
-    right: Spacing["2xl"],
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-});

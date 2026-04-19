@@ -22,7 +22,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'gold';
   size?: 'sm' | 'md' | 'lg';
   disabled?: boolean;
   loading?: boolean;
@@ -120,6 +120,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderRadius: BorderRadius.sm,
   },
+  gold: {
+    backgroundColor: Colors.primary,
+    borderRadius: 999,
+  },
   size_sm: {
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.lg,
@@ -153,6 +157,13 @@ const styles = StyleSheet.create({
   },
   text_ghost: {
     color: Colors.primary,
+  },
+  text_gold: {
+    color: '#3A1F14',
+    fontFamily: Typography.displayBoldFont,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
   },
   textSize_sm: {
     ...Typography.captionMedium,

@@ -25,6 +25,8 @@ type Props = {
   onPressLeading?: () => void;
   leadingIcon?: React.ComponentProps<typeof Feather>["name"];
   helperLabel?: string;
+  /** Uppercase editorial eyebrow above the title. Falls back to helperLabel. */
+  eyebrow?: string;
   onPressAction?: () => void;
   actionIcon?: React.ComponentProps<typeof Feather>["name"];
   showClearAction?: boolean;
@@ -48,6 +50,7 @@ export function MiniDateRail({
   onPressLeading,
   leadingIcon = "arrow-left",
   helperLabel = "Filter by date",
+  eyebrow,
   onPressAction,
   actionIcon = "edit-3",
   showClearAction = true,
@@ -92,9 +95,13 @@ export function MiniDateRail({
             </Pressable>
           ) : null}
           <View style={styles.titleBlock}>
-            <Text style={[styles.helperLabel, { color: C.textTertiary }]}>
+            <Text style={[styles.eyebrow, { color: C.textTertiary }]}>
+              {eyebrow ?? helperLabel}
+            </Text>
+            <Text style={[styles.screenTitleChunky, { color: C.text }]}>
               {title}
             </Text>
+            <View style={[styles.rule, { backgroundColor: accentColor }]} />
           </View>
         </View>
         {/*{onPressAction ? (
@@ -296,8 +303,31 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 1,
   },
+  eyebrow: {
+    fontFamily: Typography.sansSemiBold,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  screenTitleChunky: {
+    fontFamily: Typography.displayFont,
+    fontSize: 32,
+    lineHeight: 34,
+    letterSpacing: -0.8,
+  },
+  rule: {
+    width: 28,
+    height: 2,
+    borderRadius: 1,
+    marginTop: 6,
+  },
   screenTitle: {
-    ...Typography.title,
+    fontFamily: Typography.displayFont,
+    fontSize: 28,
+    lineHeight: 30,
+    letterSpacing: -0.8,
   },
   monthRow: {
     flexDirection: "row",

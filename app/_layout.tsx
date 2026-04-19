@@ -1,147 +1,134 @@
-import { useEffect, useRef } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import {
+  BricolageGrotesque_700Bold,
+  BricolageGrotesque_800ExtraBold,
+} from '@expo-google-fonts/bricolage-grotesque';
+import {
+  SpaceGrotesk_500Medium,
+  SpaceGrotesk_700Bold,
+} from '@expo-google-fonts/space-grotesk';
+import { useFonts } from 'expo-font';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StyleSheet } from 'react-native';
-import 'react-native-reanimated';
-import { useFonts } from 'expo-font';
-import {
-  Newsreader_300Light_Italic,
-  Newsreader_400Regular,
-  Newsreader_600SemiBold_Italic,
-} from '@expo-google-fonts/newsreader';
-import {
-  DMSans_400Regular,
-  DMSans_500Medium,
-  DMSans_600SemiBold,
-} from '@expo-google-fonts/dm-sans';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ThemeProvider, useTheme } from '@/src/lib/theme';
 
-import { useTheme } from '@/src/lib/theme';
-import { useSession } from '@/src/hooks/useSession';
-import { useColors } from '@/src/hooks/useColors';
-import { AppProviders } from '@/src/providers/AppProviders';
-import { AppSplash } from '@/src/components/ui/AppSplash';
-
-export { ErrorBoundary } from 'expo-router';
-
-// Hide the native splash immediately — AppSplash takes over.
-SplashScreen.preventAutoHideAsync();
-
-function useProtectedRoute() {
-  const segments = useSegments() as string[];
-  const router = useRouter();
-  const { activeCouple, isAuthenticated, isLoading, route } = useSession();
-
-  useEffect(() => {
-    if (isLoading || !route) {
-      return;
-    }
-
-    const authScreen = segments[1];
-    const inAuthGroup = segments[0] === '(auth)';
-    const inTabsGroup = segments[0] === '(tabs)';
-
-    if (!isAuthenticated) {
-      const onSignedOutScreen =
-        inAuthGroup &&
-        (authScreen === 'sign-in' || authScreen === 'sign-up');
-
-      if (!onSignedOutScreen) {
-        router.replace(route);
-      }
-      return;
-    }
-
-    if (!activeCouple) {
-      const onMembershipScreen =
-        inAuthGroup &&
-        (authScreen === 'onboarding' || authScreen === 'invite');
-
-      if (!onMembershipScreen) {
-        router.replace(route);
-      }
-      return;
-    }
-
-    // Let the onboarding "created" step (invite-code screen) stay visible
-    // even after the couple exists — the user navigates away manually.
-    const onOnboardingScreen = inAuthGroup && authScreen === 'onboarding';
-
-    if (!inTabsGroup && !onOnboardingScreen) {
-      router.replace(route);
-    }
-  }, [activeCouple, isAuthenticated, isLoading, route, router, segments]);
-}
-
-function RootNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
-  const { isLoading, route } = useSession();
-  const C = useColors();
-  const hasInitialized = useRef(false);
-
-  useProtectedRoute();
-
-  // App is ready when fonts + auth + route are all resolved.
-  const appReady = fontsLoaded && !isLoading && !!route;
-
-  if (appReady) {
-    hasInitialized.current = true;
-  }
-
-  // Dismiss native splash on very first render so AppSplash is visible.
-  useEffect(() => {
-    SplashScreen.hideAsync();
-  }, []);
-
-  // Show AppSplash until everything is ready. Uses system fonts so it
-  // renders instantly — no dependency on custom font loading.
-  if (!hasInitialized.current) {
-    return <AppSplash />;
-  }
-
-  return (
-    <>
-      <StatusBarWrapper />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: C.screenBackground },
-        }}
-      >
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
-      </Stack>
-    </>
-  );
-}
+SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
-    Newsreader_300Light_Italic,
-    Newsreader_400Regular,
-    Newsreader_600SemiBold_Italic,
-    DMSans_400Regular,
-    DMSans_500Medium,
-    DMSans_600SemiBold,
+  const [loaded] = useFonts({
+    BricolageGrotesque_700Bold,
+    BricolageGrotesque_800ExtraBold,
+    SpaceGrotesk_500Medium,
+    SpaceGrotesk_700Bold,
   });
 
+  useEffect(() => {
+    if (loaded) SplashScreen.hideAsync().catch(() => undefined);
+  }, [loaded]);
+
+  if (!loaded) return null;
+
   return (
-    <GestureHandlerRootView style={styles.container}>
-      <AppProviders>
-        <RootNavigator fontsLoaded={fontsLoaded} />
-      </AppProviders>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <ThemedRoot />
+        </ThemeProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
 
-function StatusBarWrapper() {
-  const { mode } = useTheme();
-  return <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />;
+function ThemedRoot() {
+  const { C, mode } = useTheme();
+  return (
+    <>
+      <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: C.ink },
+        }}
+      >
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="notifications"
+          options={{
+            headerShown: true,
+            headerTransparent: true,
+            headerShadowVisible: false,
+            headerBackground: () => null,
+            headerTintColor: C.bone,
+            headerBackTitle: '',
+            title: 'Notifications',
+            headerTitleAlign: 'center',
+            contentStyle: { backgroundColor: C.ink },
+          }}
+        />
+        <Stack.Screen
+          name="sheets/new-reminder"
+          options={{
+            presentation: 'formSheet',
+            headerShown: false,
+            sheetGrabberVisible: true,
+            sheetCornerRadius: 28,
+            sheetAllowedDetents: 'fitToContents',
+            contentStyle: { backgroundColor: C.coal },
+          }}
+        />
+        <Stack.Screen
+          name="sheets/new-entry"
+          options={{
+            presentation: 'formSheet',
+            headerShown: false,
+            sheetGrabberVisible: true,
+            sheetCornerRadius: 28,
+            sheetAllowedDetents: 'fitToContents',
+            contentStyle: { backgroundColor: C.coal },
+          }}
+        />
+        <Stack.Screen
+          name="sheets/new-list"
+          options={{
+            presentation: 'formSheet',
+            headerShown: false,
+            sheetGrabberVisible: true,
+            sheetCornerRadius: 28,
+            sheetAllowedDetents: 'fitToContents',
+            contentStyle: { backgroundColor: C.coal },
+          }}
+        />
+        {[
+          'sheets/new-note',
+          'sheets/new-checkin',
+          'sheets/new-expense',
+          'sheets/new-wish',
+          'sheets/new-milestone',
+          'sheets/new-plan',
+          'sheets/new-task',
+          'sheets/profile',
+          'sheets/rings-history',
+          'sheets/new-timetable',
+          'sheets/new-timetable-item',
+        ].map((name) => (
+          <Stack.Screen
+            key={name}
+            name={name}
+            options={{
+              presentation: 'formSheet',
+              headerShown: false,
+              sheetGrabberVisible: true,
+              sheetCornerRadius: 28,
+              sheetAllowedDetents: 'fitToContents',
+              contentStyle: { backgroundColor: C.coal },
+            }}
+          />
+        ))}
+      </Stack>
+    </>
+  );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0F0D0B',
-  },
-});
