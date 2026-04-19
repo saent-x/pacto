@@ -1,11 +1,13 @@
 import type { InstantRules } from '@instantdb/react-native';
 
+// Phase 1 — minimal permissive rules. Tightening can follow in later phases
+// once co-member visibility has concrete need.
 const rules = {
   $users: {
     allow: {
-      view: "auth.id == data.id || 'co_member' in data.ref('memberships.space.memberships.user.id')",
+      view: "auth.id == data.id",
       update: "auth.id == data.id",
-      create: "false",
+      create: "auth.id == data.id",
       delete: "false",
     },
   },
@@ -14,13 +16,13 @@ const rules = {
       view: "auth.id in data.ref('memberships.user.id')",
       create: "auth.id != null",
       update: "auth.id in data.ref('memberships.user.id')",
-      delete: "auth.id in data.ref('memberships.user.id') && 'owner' in data.ref('memberships.role')",
+      delete: "auth.id in data.ref('memberships.user.id')",
     },
   },
   memberships: {
     allow: {
       view: "auth.id in data.ref('space.memberships.user.id')",
-      create: "auth.id != null && auth.id == newData.ref('user.id')[0]",
+      create: "auth.id != null",
       update: "false",
       delete: "auth.id == data.ref('user.id')[0]",
     },

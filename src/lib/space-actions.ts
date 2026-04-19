@@ -97,13 +97,11 @@ export async function leaveSpace(params: {
   await db.transact(ops);
 }
 
-// InstantDB auth auto-creates the $users row. This upsert touches only email
-// so later updates (displayName etc.) can go through the same helper.
-export async function ensureUserRow(params: {
+// No-op placeholder. Auth auto-creates $users. Profile fields will move to
+// a dedicated `profiles` entity in a later phase.
+export async function ensureUserRow(_params: {
   userId: string;
   email: string;
 }): Promise<void> {
-  await db.transact([
-    tx.$users[params.userId].update({ email: params.email }),
-  ]);
+  return;
 }
