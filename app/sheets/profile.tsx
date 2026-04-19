@@ -1,12 +1,72 @@
-import { router } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Alert, Pressable, Text, View } from 'react-native';
 import { BlockCard, CouplRings, IconTile, Overline } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
 import { SheetShell } from '@/src/components/ui/SheetShell';
 import { useTheme } from '@/src/lib/theme';
+import { useSession } from '@/src/lib/session';
+import { db } from '@/src/lib/db';
+import {
+  leaveSpace,
+  regenerateInviteCode,
+  upgradeSoloToCouple,
+} from '@/src/lib/space-actions';
 
 export default function ProfileSheet() {
   const { C, F, mode, setMode } = useTheme();
+  const navRouter = useRouter();
+  const session = useSession();
+
+  async function onInvitePartner() {
+    if (!session.space || session.space.kind !== 'couple') return;
+    let code = session.space.inviteCode;
+    if (!code) {
+      code = await regenerateInviteCode({ spaceId: session.space.id });
+    }
+    navRouter.push({ pathname: '/(auth)/invite-code', params: { code } } as any);
+  }
+
+  async function onUpgrade() {
+    if (!session.space || session.space.kind !== 'solo') return;
+    const code = await upgradeSoloToCouple({ spaceId: session.space.id });
+    navRouter.push({ pathname: '/(auth)/invite-code', params: { code } } as any);
+  }
+
+  function onSignOut() {
+    Alert.alert('Sign out?', 'You\u2019ll need to sign in again to see your space.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign out',
+        style: 'destructive',
+        onPress: async () => {
+          await db.auth.signOut();
+        },
+      },
+    ]);
+  }
+
+  function onLeave() {
+    if (!session.space || !session.membership) return;
+    const isLast = !session.partner;
+    const msg = isLast
+      ? 'This deletes your solo space and everything in it. Cannot be undone.'
+      : 'You will no longer see shared content. Your partner keeps the space.';
+    Alert.alert('Leave this space?', msg, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Leave',
+        style: 'destructive',
+        onPress: async () => {
+          await leaveSpace({
+            spaceId: session.space!.id,
+            membershipId: session.membership!.id,
+            isLastMember: isLast,
+          });
+        },
+      },
+    ]);
+  }
+
   const rows: { icon: IconName; label: string; sub: string }[] = [
     { icon: 'user', label: 'Your profile', sub: 'Mattia · mattia@coupl.app' },
     { icon: 'heart', label: 'Partner', sub: 'Sofia · connected since Jun 2023' },
@@ -206,20 +266,44 @@ export default function ProfileSheet() {
         ))}
       </View>
 
-      <Pressable
-        onPress={() => router.back()}
-        style={{
-          marginTop: 18,
-          paddingVertical: 14,
-          paddingHorizontal: 16,
-          borderRadius: 14,
-          borderWidth: 1,
-          borderColor: C.line,
-          alignItems: 'center',
-        }}
-      >
-        <Text style={{ color: C.mist, fontFamily: F.bodyBold, fontSize: 13 }}>Sign out</Text>
-      </Pressable>
+      <View style={{ gap: 2, marginTop: 24 }}>
+        {session.isCouple && !session.partner && (
+          <Pressable onPress={onInvitePartner} style={rowStyle(C)}>
+            <Icon name="send" size={16} color={C.gold} />
+            <Text style={rowTextStyle(C, F)}>Invite partner</Text>
+          </Pressable>
+        )}
+        {session.isSolo && (
+          <Pressable onPress={onUpgrade} style={rowStyle(C)}>
+            <Icon name="users" size={16} color={C.gold} />
+            <Text style={rowTextStyle(C, F)}>Upgrade to couple</Text>
+          </Pressable>
+        )}
+        <Pressable onPress={onSignOut} style={rowStyle(C)}>
+          <Icon name="logOut" size={16} color={C.mist} />
+          <Text style={rowTextStyle(C, F)}>Sign out</Text>
+        </Pressable>
+        <Pressable onPress={onLeave} style={rowStyle(C)}>
+          <Icon name="trash" size={16} color={C.error} />
+          <Text style={[rowTextStyle(C, F), { color: C.error }]}>Leave space</Text>
+        </Pressable>
+      </View>
     </SheetShell>
   );
+}
+
+function rowStyle(C: any) {
+  return {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 14,
+    backgroundColor: C.card,
+    borderRadius: 14,
+  };
+}
+
+function rowTextStyle(C: any, F: any) {
+  return { color: C.bone, fontFamily: F.body, fontSize: 15 };
 }
