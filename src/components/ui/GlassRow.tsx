@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch, ViewStyle } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useColors } from '@/src/hooks/useColors';
 import { useTheme } from '@/src/lib/theme';
 import { Typography } from '@/src/constants/typography';
 import { Spacing } from '@/src/constants/spacing';
@@ -57,25 +56,24 @@ export function GlassRow({
   destructive = false,
   style,
 }: GlassRowProps) {
-  const C = useColors();
-  const { mode } = useTheme();
+  const { C, mode } = useTheme();
 
   const dividerColor = mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
-  const textColor = destructive ? C.error : C.text;
+  const textColor = destructive ? C.error : C.bone;
   const defaultIconBg = mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.10)';
 
   const content = (
     <View style={[styles.row, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: dividerColor }, style]}>
       {icon && (
         <View style={[styles.iconWrap, { backgroundColor: iconBg || defaultIconBg }]}>
-          <Feather name={icon} size={16} color={iconColor || C.primary} />
+          <Feather name={icon} size={16} color={iconColor || C.gold} />
         </View>
       )}
       <View style={styles.body}>
         <Text style={[styles.label, { color: textColor }]}>{label}</Text>
-        {subtitle && <Text style={[styles.subtitle, { color: C.textTertiary }]}>{subtitle}</Text>}
+        {subtitle && <Text style={[styles.subtitle, { color: C.fog }]}>{subtitle}</Text>}
       </View>
-      {value && <Text style={[styles.value, { color: C.textTertiary }]}>{value}</Text>}
+      {value && <Text style={[styles.value, { color: C.fog }]}>{value}</Text>}
       {toggle && (
         <Switch
           value={toggleValue}
@@ -83,12 +81,12 @@ export function GlassRow({
             Haptics.selectionAsync();
             onToggle?.(v);
           }}
-          trackColor={{ false: C.dim, true: C.primary }}
+          trackColor={{ false: C.ash, true: C.gold }}
           thumbColor="#fff"
-          ios_backgroundColor={C.dim}
+          ios_backgroundColor={C.ash}
         />
       )}
-      {chevron && <Feather name="chevron-right" size={16} color={C.textTertiary} style={{ opacity: 0.5 }} />}
+      {chevron && <Feather name="chevron-right" size={16} color={C.fog} style={{ opacity: 0.5 }} />}
     </View>
   );
 

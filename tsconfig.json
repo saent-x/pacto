@@ -17,7 +17,6 @@
   "exclude": [
     "src/hooks",
     "src/providers",
-    "src/lib/auth",
     "src/types",
     "src/test",
     "node_modules"

@@ -2,7 +2,6 @@ import React from 'react';
 import { View, StyleSheet, ViewStyle, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '@/src/lib/theme';
-import { useColors } from '@/src/hooks/useColors';
 
 interface GlassViewProps {
   children: React.ReactNode;
@@ -29,8 +28,7 @@ export function GlassView({
   highlight = true,
   opacity = 1,
 }: GlassViewProps) {
-  const { mode } = useTheme();
-  const C = useColors();
+  const { C, mode } = useTheme();
   const tint = tintOverride ?? mode;
 
   const bgColor =

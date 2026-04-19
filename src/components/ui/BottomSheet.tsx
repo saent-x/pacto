@@ -10,7 +10,6 @@ import {
 } from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps, BottomSheetFooterProps } from '@gorhom/bottom-sheet';
 import { BlurView } from 'expo-blur';
-import { useColors } from '@/src/hooks/useColors';
 import { useTheme } from '@/src/lib/theme';
 import { Typography } from '@/src/constants/typography';
 import { Spacing } from '@/src/constants/spacing';
@@ -103,8 +102,7 @@ export function ThemedSheet({
   scrollable = false,
   maxDynamicContentSize,
 }: ThemedSheetProps) {
-  const C = useColors();
-  const { mode } = useTheme();
+  const { C, mode } = useTheme();
 
   // Dynamic sizing is the default — sheets fit their content.
   // Only use fixed snap points when explicitly provided.
@@ -195,7 +193,7 @@ export function ThemedSheet({
         <>
           {title && (
             <View style={styles.header}>
-              <Text style={[styles.title, { color: C.text }]}>{title}</Text>
+              <Text style={[styles.title, { color: C.bone }]}>{title}</Text>
               <View
                 style={[
                   styles.divider,
@@ -232,7 +230,7 @@ export function ThemedSheet({
         <BottomSheetView style={styles.content}>
           {title && (
             <View style={styles.header}>
-              <Text style={[styles.title, { color: C.text }]}>{title}</Text>
+              <Text style={[styles.title, { color: C.bone }]}>{title}</Text>
               <View
                 style={[
                   styles.divider,

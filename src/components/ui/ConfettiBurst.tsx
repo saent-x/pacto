@@ -8,7 +8,7 @@ import Animated, {
   withDelay,
   Easing,
 } from 'react-native-reanimated';
-import { useColors } from '@/src/hooks/useColors';
+import { useTheme } from '@/src/lib/theme';
 
 interface ConfettiBurstProps {
   colors?: string[];
@@ -85,9 +85,9 @@ export function ConfettiBurst({
   particleCount = 35,
   duration = 2500,
 }: ConfettiBurstProps) {
-  const C = useColors();
+  const { C } = useTheme();
   const { width } = useWindowDimensions();
-  const defaultColors = [C.primary as string, C.error as string, C.cream as string];
+  const defaultColors = [C.gold as string, C.error as string, C.bone as string];
   const particleColors = colorsProp ?? defaultColors;
 
   // Clean up invisible particle nodes after animation completes

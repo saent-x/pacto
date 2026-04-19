@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { useColors } from '@/src/hooks/useColors';
 import { useTheme } from '@/src/lib/theme';
 import { Typography } from '@/src/constants/typography';
 import { Spacing } from '@/src/constants/spacing';
@@ -20,22 +19,21 @@ interface GlassSectionProps {
  * Children should be GlassRow components separated by hairline dividers.
  */
 export function GlassSection({ header, footer, children, style }: GlassSectionProps) {
-  const C = useColors();
-  const { mode } = useTheme();
+  const { C, mode } = useTheme();
 
   const cardBg = mode === 'dark' ? 'rgba(255,255,255,0.05)' : C.card;
-  const borderColor = mode === 'dark' ? 'rgba(255,255,255,0.07)' : C.border;
+  const borderColor = mode === 'dark' ? 'rgba(255,255,255,0.07)' : C.line;
 
   return (
     <View style={[styles.container, style]}>
       {header && (
-        <Text style={[styles.header, { color: C.textTertiary }]}>{header}</Text>
+        <Text style={[styles.header, { color: C.fog }]}>{header}</Text>
       )}
       <View style={[styles.card, { backgroundColor: cardBg, borderColor }]}>
         {children}
       </View>
       {footer && (
-        <Text style={[styles.footer, { color: C.textTertiary }]}>{footer}</Text>
+        <Text style={[styles.footer, { color: C.fog }]}>{footer}</Text>
       )}
     </View>
   );

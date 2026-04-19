@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useColors } from '@/src/hooks/useColors';
+import { useTheme } from '@/src/lib/theme';
 import { Typography } from '@/src/constants/typography';
 import { Spacing } from '@/src/constants/spacing';
 
@@ -18,12 +18,12 @@ export function EmptyState({
   title,
   description,
 }: EmptyStateProps) {
-  const C = useColors();
+  const { C } = useTheme();
 
   return (
     <View style={styles.card}>
-      <Text style={[styles.title, { color: C.textSecondary }]}>{title}</Text>
-      <Text style={[styles.body, { color: C.textTertiary }]}>
+      <Text style={[styles.title, { color: C.mist }]}>{title}</Text>
+      <Text style={[styles.body, { color: C.fog }]}>
         {description}
       </Text>
     </View>

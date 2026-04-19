@@ -15,7 +15,7 @@ import Animated, {
   withTiming,
   interpolateColor,
 } from 'react-native-reanimated';
-import { useColors } from '@/src/hooks/useColors';
+import { useTheme } from '@/src/lib/theme';
 import { Typography } from '@/src/constants/typography';
 import { Spacing } from '@/src/constants/spacing';
 
@@ -39,7 +39,7 @@ export function Input({
   containerStyle,
   ...props
 }: InputProps) {
-  const C = useColors();
+  const { C } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
   const focus = useSharedValue(0);
 
@@ -47,7 +47,7 @@ export function Input({
     backgroundColor: interpolateColor(
       focus.value,
       [0, 1],
-      [C.dusk, C.primary],
+      [C.card, C.gold],
     ),
     height: focus.value === 1 ? 2 : 1,
   }));
@@ -60,7 +60,7 @@ export function Input({
         <TextInput
           style={[styles.input, { color: C.bone }, leftIcon ? styles.inputWithIcon : undefined]}
           placeholderTextColor={C.fog}
-          selectionColor={C.primary}
+          selectionColor={C.gold}
           onFocus={(e) => {
             setIsFocused(true);
             focus.value = withTiming(1, { duration: 250 });
@@ -86,7 +86,7 @@ export function Input({
           </TouchableOpacity>
         )}
       </View>
-      <AnimatedView style={[styles.line, { backgroundColor: C.dusk }, error ? [styles.lineError, { backgroundColor: C.error }] : undefined, !error ? lineStyle : undefined]} />
+      <AnimatedView style={[styles.line, { backgroundColor: C.card }, error ? [styles.lineError, { backgroundColor: C.error }] : undefined, !error ? lineStyle : undefined]} />
       {error && <Text style={[styles.error, { color: C.error }]}>{error}</Text>}
     </View>
   );

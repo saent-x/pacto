@@ -9,7 +9,7 @@ import Animated, {
   Easing,
   FadeIn,
 } from 'react-native-reanimated';
-import { useColors } from '@/src/hooks/useColors';
+import { useTheme } from '@/src/lib/theme';
 
 interface OrbitalRingsProps {
   variant: 'orbiting' | 'approaching';
@@ -20,7 +20,7 @@ const ORBIT_RADIUS = 30;
 const CONTAINER_HEIGHT = 160;
 
 export function OrbitalRings({ variant }: OrbitalRingsProps) {
-  const C = useColors();
+  const { C } = useTheme();
   const progress = useSharedValue(0);
 
   useEffect(() => {
@@ -75,7 +75,7 @@ export function OrbitalRings({ variant }: OrbitalRingsProps) {
 
   const shadowStyle = Platform.select({
     ios: {
-      shadowColor: C.primary,
+      shadowColor: C.gold,
       shadowOffset: { width: 0, height: 0 },
       shadowOpacity: 0.3,
       shadowRadius: 8,
@@ -91,7 +91,7 @@ export function OrbitalRings({ variant }: OrbitalRingsProps) {
       <Animated.View
         style={[
           styles.ring,
-          { borderColor: C.primary },
+          { borderColor: C.gold },
           shadowStyle,
           ring1Style,
         ]}
@@ -99,7 +99,7 @@ export function OrbitalRings({ variant }: OrbitalRingsProps) {
       <Animated.View
         style={[
           styles.ring,
-          { borderColor: C.primary },
+          { borderColor: C.gold },
           shadowStyle,
           ring2Style,
         ]}

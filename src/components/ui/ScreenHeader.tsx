@@ -11,7 +11,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, type StyleProp, type ViewStyle } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useColors } from '@/src/hooks/useColors';
+import { useTheme } from '@/src/lib/theme';
 import { Typography } from '@/src/constants/typography';
 import { Spacing } from '@/src/constants/spacing';
 import { GoldRule, WavyUnderline, Overline } from './WarmBlock';
@@ -53,7 +53,7 @@ export function ScreenHeader({
   action?: ActionBtn;
   style?: StyleProp<ViewStyle>;
 }) {
-  const C = useColors();
+  const { C } = useTheme();
   return (
     <View style={[styles.root, style]}>
       <View style={styles.topRow}>
@@ -66,7 +66,7 @@ export function ScreenHeader({
             hitSlop={10}
             style={styles.backBtn}
           >
-            <Feather name={back.icon ?? 'arrow-left'} size={22} color={C.text} />
+            <Feather name={back.icon ?? 'arrow-left'} size={22} color={C.bone} />
           </TouchableOpacity>
         ) : (
           <View style={styles.backSpacer} />
@@ -74,7 +74,7 @@ export function ScreenHeader({
 
         <View style={styles.titleBlock}>
           {eyebrow && <Overline style={styles.eyebrow}>{eyebrow}</Overline>}
-          <Text style={[styles.title, { color: C.text }]}>{title}</Text>
+          <Text style={[styles.title, { color: C.bone }]}>{title}</Text>
           {accent === 'gold' && <GoldRule width={28} style={{ marginTop: 6 }} />}
           {accent === 'wavy' && (
             <View style={{ marginTop: 4 }}>
@@ -96,7 +96,7 @@ export function ScreenHeader({
             <Feather
               name={action.icon}
               size={22}
-              color={action.color ?? C.text}
+              color={action.color ?? C.bone}
             />
           </TouchableOpacity>
         ) : (

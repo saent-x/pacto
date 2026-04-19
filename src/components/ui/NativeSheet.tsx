@@ -15,7 +15,6 @@
 import React from 'react';
 import { Platform, View, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { useColors } from '@/src/hooks/useColors';
 import { useTheme } from '@/src/lib/theme';
 
 /** Screen options for an iOS formSheet route (liquid-glass on iOS 26). */
@@ -38,8 +37,7 @@ export function NativeSheetContainer({
   children: React.ReactNode;
   style?: any;
 }) {
-  const C = useColors();
-  const { mode } = useTheme();
+  const { C, mode } = useTheme();
 
   if (Platform.OS === 'ios') {
     return (

@@ -15,7 +15,6 @@ import Svg, {
 import { BlurView } from 'expo-blur';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useColors } from '@/src/hooks/useColors';
 import { useTheme } from '@/src/lib/theme';
 import { Typography } from '@/src/constants/typography';
 import { Spacing, BorderRadius } from '@/src/constants/spacing';
@@ -28,7 +27,7 @@ export function Overline({
   color,
   style,
 }: { children: React.ReactNode; color?: string; style?: StyleProp<TextStyle> }) {
-  const C = useColors();
+  const { C } = useTheme();
   return (
     <Text style={[styles.overline, { color: color ?? C.fog }, style]}>
       {children}
@@ -49,7 +48,7 @@ export function Display({
   color?: string;
   style?: StyleProp<TextStyle>;
 }) {
-  const C = useColors();
+  const { C } = useTheme();
   const base =
     size === 'sm' ? Typography.displayChunkySm
     : size === 'md' ? Typography.displayChunky
@@ -57,7 +56,7 @@ export function Display({
     : size === 'xl' ? Typography.displayChunkyXl
     : { ...Typography.displayChunky, fontSize: size, lineHeight: size };
   return (
-    <Text style={[base, { color: color ?? C.text }, style]}>
+    <Text style={[base, { color: color ?? C.bone }, style]}>
       {children}
     </Text>
   );
@@ -127,8 +126,7 @@ export function GlassCard({
   border?: boolean;
   blur?: boolean;
 }) {
-  const C = useColors();
-  const { mode } = useTheme();
+  const { C, mode } = useTheme();
 
   if (blur && Platform.OS === 'ios') {
     return (
@@ -157,7 +155,7 @@ export function GlassCard({
         {
           backgroundColor: C.card,
           padding,
-          borderColor: C.border,
+          borderColor: C.line,
           borderWidth: border ? StyleSheet.hairlineWidth : 0,
         },
         style,
@@ -193,7 +191,7 @@ export function RoundBtn({
   style?: StyleProp<ViewStyle>;
   iconSize?: number;
 }) {
-  const C = useColors();
+  const { C } = useTheme();
   return (
     <TouchableOpacity
       onPress={() => {
@@ -210,14 +208,14 @@ export function RoundBtn({
           borderRadius: size / 2,
           backgroundColor: bg ?? C.card,
           borderWidth: border ? 1 : 0,
-          borderColor: C.line ?? C.border,
+          borderColor: C.line ?? C.line,
           alignItems: 'center',
           justifyContent: 'center',
         },
         style,
       ]}
     >
-      <Feather name={icon} size={iconSize ?? size * 0.45} color={color ?? C.text} strokeWidth={2.2 as any} />
+      <Feather name={icon} size={iconSize ?? size * 0.45} color={color ?? C.bone} strokeWidth={2.2 as any} />
     </TouchableOpacity>
   );
 }
@@ -243,10 +241,10 @@ export function Pill({
   icon?: keyof typeof Feather.glyphMap;
   style?: StyleProp<ViewStyle>;
 }) {
-  const C = useColors();
-  const paletteColor = active ? (color ?? Pastels.gold) : C.textSecondary;
+  const { C } = useTheme();
+  const paletteColor = active ? (color ?? Pastels.gold) : C.mist;
   const paletteBg = active ? (bg ?? Pastels.goldSoft) : 'transparent';
-  const border = active ? 'transparent' : C.border;
+  const border = active ? 'transparent' : C.line;
 
   return (
     <TouchableOpacity

@@ -19,7 +19,6 @@ import {
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
-import { useColors } from '@/src/hooks/useColors';
 import { useTheme } from '@/src/lib/theme';
 import { Typography } from '@/src/constants/typography';
 import { Spacing } from '@/src/constants/spacing';
@@ -64,8 +63,7 @@ export function OptionSelect({
   mode: forceMode,
   columns = 3,
 }: Props) {
-  const C = useColors();
-  const { mode: themeMode } = useTheme();
+  const { C, mode: themeMode } = useTheme();
 
   const layout = forceMode ?? (options.length <= 3 ? 'segment' : 'grid');
   const restBg =
@@ -104,13 +102,13 @@ export function OptionSelect({
                 <Feather
                   name={opt.icon}
                   size={14}
-                  color={active ? accentColor : C.textTertiary}
+                  color={active ? accentColor : C.fog}
                 />
               ) : null}
               <Text
                 style={[
                   styles.segmentLabel,
-                  { color: active ? accentColor : C.textSecondary },
+                  { color: active ? accentColor : C.mist },
                 ]}
               >
                 {opt.label}
@@ -146,7 +144,7 @@ export function OptionSelect({
             <Text
               style={[
                 styles.gridLabel,
-                { color: active ? accentColor : C.textSecondary },
+                { color: active ? accentColor : C.mist },
               ]}
               numberOfLines={1}
             >

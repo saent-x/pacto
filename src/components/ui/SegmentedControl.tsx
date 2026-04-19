@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, LayoutAnimation, Platform, UIManager } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { useColors } from '@/src/hooks/useColors';
 import { useTheme } from '@/src/lib/theme';
 import { Typography } from '@/src/constants/typography';
 import { Spacing } from '@/src/constants/spacing';
@@ -27,9 +26,8 @@ export function SegmentedControl<T extends string>({
   onSelect,
   tint,
 }: SegmentedControlProps<T>) {
-  const C = useColors();
-  const { mode } = useTheme();
-  const accent = tint || C.primary;
+  const { C, mode } = useTheme();
+  const accent = tint || C.gold;
 
   const trackBg = mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.10)';
   const thumbBg = mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.85)';
@@ -58,7 +56,7 @@ export function SegmentedControl<T extends string>({
             <Text
               style={[
                 styles.segmentText,
-                { color: active ? accent : C.textTertiary },
+                { color: active ? accent : C.fog },
                 active && styles.activeText,
               ]}
             >
