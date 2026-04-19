@@ -24,7 +24,8 @@ export default function Onboarding() {
       await createSpace({ userId: user.id, kind: 'solo' });
       // SessionGate will redirect to /(tabs)/home
     } catch (e: any) {
-      setError(e?.message ?? 'Could not create space');
+      console.warn('[onboarding] failed', e);
+      setError(e?.message ?? e?.body?.message ?? JSON.stringify(e) ?? 'Could not create space');
     } finally {
       setBusy(null);
     }
@@ -39,7 +40,8 @@ export default function Onboarding() {
       const { inviteCode } = await createSpace({ userId: user.id, kind: 'couple' });
       router.push({ pathname: '/(auth)/invite-code', params: { code: inviteCode ?? '' } } as any);
     } catch (e: any) {
-      setError(e?.message ?? 'Could not create space');
+      console.warn('[onboarding] failed', e);
+      setError(e?.message ?? e?.body?.message ?? JSON.stringify(e) ?? 'Could not create space');
     } finally {
       setBusy(null);
     }

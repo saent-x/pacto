@@ -66,10 +66,10 @@ export default function UsEditorial() {
         >
           THU · 17 · 11 · MATTIA × SOFIA
         </Text>
-      </View>
+      </View>      
 
       {/* Mood strip */}
-      <Text
+      {/*<Text
         style={{
           fontSize: 10,
           color: C.fog,
@@ -97,8 +97,8 @@ export default function UsEditorial() {
           ink={C.lavenderInk}
           bars={[0.5, 1, 1, 1, 0.7]}
         />
-      </View>
-      <Text
+      </View>*/}
+      {/*<Text
         style={{
           textAlign: 'center',
           fontSize: 10,
@@ -108,147 +108,9 @@ export default function UsEditorial() {
           marginBottom: 18,
         }}
       >
-        ◇ 86% IN SYNC · 4-DAY STREAK
-      </Text>
-
-      {/* Quote */}
-      <View
-        style={{
-          backgroundColor: C.card,
-          borderWidth: 1,
-          borderColor: C.line,
-          borderRadius: 22,
-          paddingVertical: 22,
-          paddingHorizontal: 24,
-          marginBottom: 18,
-          overflow: 'hidden',
-        }}
-      >
-        <Text
-          style={{
-            position: 'absolute',
-            top: 4,
-            right: 12,
-            fontFamily: F.serif,
-            fontSize: 84,
-            color: C.gold,
-            opacity: 0.3,
-          }}
-        >
-          "
-        </Text>
-        <Text
-          style={{
-            fontSize: 9,
-            color: C.fog,
-            fontFamily: F.bodyBold,
-            letterSpacing: 1.4,
-            marginBottom: 10,
-          }}
-        >
-          NOTE OF THE DAY · FROM SOFIA · 7:14 AM
-        </Text>
-        <Text
-          style={{
-            fontFamily: F.serif,
-            fontStyle: 'italic',
-            fontSize: 17,
-            color: C.bone,
-            lineHeight: 24,
-          }}
-        >
-          Morning sunshine. Coffee's on, your socks are in the dryer. I love our Thursdays.
-        </Text>
-        <View style={{ flexDirection: 'row', marginTop: 14, gap: 6 }}>
-          {QUOTES.map((_, i) => (
-            <View
-              key={i}
-              style={{
-                width: i === 0 ? 20 : 5,
-                height: 5,
-                borderRadius: 3,
-                backgroundColor: i === 0 ? C.gold : C.line,
-              }}
-            />
-          ))}
-        </View>
-      </View>
-
-      {/* Countdown */}
-      <Pressable
-        onPress={() => router.push('/us/milestones')}
-        style={{
-          backgroundColor: C.peach,
-          borderRadius: 22,
-          paddingVertical: 20,
-          paddingHorizontal: 22,
-          marginBottom: 22,
-          overflow: 'hidden',
-        }}
-      >
-        <Text
-          style={{
-            position: 'absolute',
-            right: -10,
-            top: -30,
-            fontFamily: F.displayBold,
-            fontSize: 170,
-            color: C.peachInk,
-            opacity: 0.08,
-            letterSpacing: -6,
-          }}
-        >
-          03
-        </Text>
-        <Text
-          style={{
-            fontSize: 9,
-            color: C.peachInk,
-            fontFamily: F.bodyBold,
-            letterSpacing: 1.4,
-            opacity: 0.55,
-          }}
-        >
-          COUNTDOWN · FRIDAY
-        </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10, marginTop: 6 }}>
-          <Text
-            style={{
-              fontFamily: F.displayBold,
-              fontSize: 64,
-              color: C.peachInk,
-              letterSpacing: -2.2,
-              lineHeight: 64,
-            }}
-          >
-            3
-          </Text>
-          <View>
-            <Text
-              style={{
-                fontFamily: F.displayBold,
-                fontSize: 20,
-                color: C.peachInk,
-                letterSpacing: -0.5,
-              }}
-            >
-              days until
-            </Text>
-            <Text
-              style={{
-                fontSize: 13,
-                color: C.peachInk,
-                opacity: 0.7,
-                fontFamily: F.serif,
-                fontStyle: 'italic',
-                marginTop: 2,
-              }}
-            >
-              3rd anniversary
-            </Text>
-          </View>
-        </View>
-      </Pressable>
+        ◇ 4-DAY STREAK
+      </Text>*/}
+      
 
       {/* Shared spaces header */}
       <View
@@ -319,65 +181,7 @@ export default function UsEditorial() {
       )}
 
       {/* On this day */}
-      <View
-        style={{
-          backgroundColor: C.rose,
-          borderRadius: 20,
-          paddingVertical: 18,
-          paddingHorizontal: 20,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 14,
-          marginTop: 12,
-        }}
-      >
-        <View
-          style={{
-            width: 52,
-            height: 52,
-            borderRadius: 12,
-            backgroundColor: C.roseInk,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Text
-            style={{
-              fontFamily: F.displayBold,
-              fontSize: 20,
-              color: C.rose,
-              letterSpacing: -0.5,
-            }}
-          >
-            '24
-          </Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text
-            style={{
-              fontSize: 9,
-              fontFamily: F.bodyBold,
-              letterSpacing: 1.4,
-              color: C.roseInk,
-              opacity: 0.55,
-            }}
-          >
-            ON THIS DAY · ONE YEAR AGO
-          </Text>
-          <Text
-            style={{
-              fontFamily: F.serif,
-              fontStyle: 'italic',
-              fontSize: 14,
-              color: C.roseInk,
-              lineHeight: 20,
-              marginTop: 3,
-            }}
-          >
-            "First morning in the new place. Kitchen smells like cardboard and coffee."
-          </Text>
-        </View>
-      </View>
+      
     </Screen>
   );
 }

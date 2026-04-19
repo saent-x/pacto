@@ -20,20 +20,26 @@ export async function createSpace(params: {
   const inviteCode = params.kind === 'couple' ? generateInviteCode() : null;
   const ts = now();
 
-  await db.transact([
-    tx.spaces[spaceId]
-      .update({
-        kind: params.kind,
-        name: params.name,
-        inviteCode: inviteCode ?? undefined,
-        createdAt: ts,
-        updatedAt: ts,
-      })
-      .link({ createdBy: params.userId }),
-    tx.memberships[membershipId]
-      .update({ role: 'owner', joinedAt: ts })
-      .link({ user: params.userId, space: spaceId }),
-  ]);
+  const spaceFields: Record<string, unknown> = {
+    kind: params.kind,
+    createdAt: ts,
+    updatedAt: ts,
+  };
+  if (params.name) spaceFields.name = params.name;
+  if (params.anniversary) spaceFields.anniversary = params.anniversary;
+  if (inviteCode) spaceFields.inviteCode = inviteCode;
+
+  try {
+    await db.transact([
+      tx.spaces[spaceId].update(spaceFields).link({ createdBy: params.userId }),
+      tx.memberships[membershipId]
+        .update({ role: 'owner', joinedAt: ts })
+        .link({ user: params.userId, space: spaceId }),
+    ]);
+  } catch (err) {
+    console.error('[createSpace] transact failed', err);
+    throw err;
+  }
 
   return { spaceId, inviteCode };
 }

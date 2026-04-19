@@ -38,7 +38,7 @@ const Ctx = createContext<Session | null>(null);
 export function SessionProvider({ children }: PropsWithChildren) {
   const { isLoading: authLoading, user } = db.useAuth();
 
-  const { isLoading: queryLoading, data } = db.useQuery(
+  const { isLoading: queryLoading, data, error: queryError } = db.useQuery(
     user
       ? {
           memberships: {
@@ -54,6 +54,10 @@ export function SessionProvider({ children }: PropsWithChildren) {
       : null
   );
 
+  if (queryError) {
+    console.warn('[session] query error', queryError);
+  }
+
   const session = useMemo<Session>(() => {
     if (authLoading) {
       return emptySession('loading');
@@ -65,6 +69,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
       return emptySession('loading');
     }
 
+    console.log('[session] memberships count:', data.memberships?.length ?? 0);
     const myMembership = data.memberships?.[0];
     if (!myMembership) {
       return {
