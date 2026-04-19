@@ -13,7 +13,12 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as WebBrowser from 'expo-web-browser';
 import { ThemeProvider, useTheme } from '@/src/lib/theme';
+import { SessionProvider } from '@/src/lib/session';
+import { SessionGate } from '@/src/lib/session-gate';
+
+WebBrowser.maybeCompleteAuthSession();
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -35,7 +40,11 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ThemeProvider>
-          <ThemedRoot />
+          <SessionProvider>
+            <SessionGate>
+              <ThemedRoot />
+            </SessionGate>
+          </SessionProvider>
         </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
