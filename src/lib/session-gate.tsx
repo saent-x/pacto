@@ -26,6 +26,9 @@ export function SessionGate({ children }: PropsWithChildren) {
     }
 
     if (status === 'ready' && group === '(auth)') {
+      // Allow ready users to revisit invite-code (e.g. after upgrading solo→couple
+      // or regenerating from profile).
+      if (leaf === 'invite-code') return;
       router.replace('/(tabs)/home' as any);
       return;
     }
