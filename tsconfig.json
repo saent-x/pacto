@@ -13,5 +13,13 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
+  ],
+  "exclude": [
+    "src/hooks",
+    "src/providers",
+    "src/lib/auth",
+    "src/types",
+    "src/test",
+    "node_modules"
   ]
 }
