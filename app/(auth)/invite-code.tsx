@@ -64,7 +64,13 @@ export default function InviteCodeScreen() {
       </View>
 
       <View style={{ marginTop: 'auto', gap: 10 }}>
-        <PrimaryButton onPress={() => router.replace('/(tabs)/home' as any)}>
+        <PrimaryButton
+          onPress={() => {
+            // Close any modal stack we might be nested in (profile sheet → upgrade flow).
+            try { router.dismissAll(); } catch {}
+            router.replace('/(tabs)/home' as any);
+          }}
+        >
           I&apos;ll do this later
         </PrimaryButton>
       </View>
