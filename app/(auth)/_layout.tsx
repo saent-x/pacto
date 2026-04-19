@@ -1,12 +1,14 @@
 import { Stack } from 'expo-router';
+import { useTheme } from '@/src/lib/theme';
 
 export default function AuthLayout() {
+  const { C } = useTheme();
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="sign-in" />
-      <Stack.Screen name="sign-up" />
-      <Stack.Screen name="onboarding" />
-      <Stack.Screen name="invite" />
-    </Stack>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: C.ink },
+      }}
+    />
   );
 }

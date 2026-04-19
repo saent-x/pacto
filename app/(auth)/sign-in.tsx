@@ -1,293 +1,80 @@
-import { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  useWindowDimensions,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
-import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { CouplRings, Display, Overline, PrimaryButton } from '@/src/components/ui/atoms';
+import { GoldRule } from '@/src/components/ui/WarmBlock';
+import { Icon } from '@/src/components/ui/Icon';
+import { useTheme } from '@/src/lib/theme';
 
-import { useColors } from '@/src/hooks/useColors';
-import { Typography } from '@/src/constants/typography';
-import { Spacing } from '@/src/constants/spacing';
-import { Button, Input, OrbitalRings } from '@/src/components/ui';
-import { useAuthActions } from '@/src/hooks/useAuthActions';
-
-export default function SignInScreen() {
-  const C = useColors();
+export default function SignIn() {
   const router = useRouter();
-  const { sendMagicCode, signInWithMagicCode } = useAuthActions();
-  const insets = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
+  const { C, F } = useTheme();
   const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
-  const [step, setStep] = useState<'email' | 'code'>('email');
-  const [loading, setLoading] = useState(false);
-  const compact = height < 780;
-
-  const handleSendCode = async () => {
-    if (!email.trim()) {
-      Alert.alert('Missing email', 'Enter your email to continue.');
-      return;
-    }
-    try {
-      setLoading(true);
-      await sendMagicCode(email);
-      setStep('code');
-    } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Unable to send code.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSignIn = async () => {
-    if (!code.trim()) {
-      Alert.alert('Missing code', 'Enter the code sent to your email.');
-      return;
-    }
-    try {
-      setLoading(true);
-      await signInWithMagicCode({ email, code });
-      router.replace('/(tabs)/home');
-    } catch (error) {
-      setLoading(false);
-      Alert.alert(
-        'Sign in failed',
-        error instanceof Error ? error.message : 'Unable to sign in.',
-      );
-    }
-  };
-
-  const handleSubmit = step === 'email' ? handleSendCode : handleSignIn;
+  const [pw, setPw] = useState('');
+  const [showPw, setShowPw] = useState(false);
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.screenBackground }]}>
-      {/* Enhanced ambient glows */}
-      <View style={[styles.glowTopRight, { backgroundColor: C.primary }]} />
-      <View style={[styles.glowBottomLeft, { backgroundColor: C.primary }]} />
+    <View style={[styles.root, { backgroundColor: C.ink }]}>
+      <View style={styles.hero}>
+        <CouplRings size={54} a={C.peach} b={C.lavender} />
+        <Display size={52} style={{ marginTop: 20 }}>
+          coupl<Text style={{ color: C.gold }}>.</Text>
+        </Display>
+        <GoldRule width={32} />
+        <Text style={{ fontFamily: F.serif, fontStyle: 'italic', fontSize: 18, color: C.mist, lineHeight: 25, marginTop: 16, maxWidth: 260 }}>
+          Your quiet place, together.
+        </Text>
+      </View>
 
-      <SafeAreaView style={styles.flex}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.flex}
-        >
-          <ScrollView
-            contentContainerStyle={[
-              styles.scrollContent,
-              compact ? styles.scrollContentCompact : undefined,
-              { paddingBottom: Math.max(insets.bottom, Spacing.lg) + Spacing.xl },
-            ]}
-            keyboardShouldPersistTaps="handled"
-            automaticallyAdjustKeyboardInsets
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Hero rings */}
-            <Animated.View
-              entering={FadeIn.duration(800).delay(200)}
-              style={compact ? styles.heroCompact : styles.hero}
-            >
-              <OrbitalRings variant="orbiting" />
-            </Animated.View>
+      <View style={{ gap: 28, marginBottom: 36 }}>
+        <View>
+          <Overline style={{ marginBottom: 10 }}>Email</Overline>
+          <View style={[styles.field, { borderBottomColor: C.ash }]}>
+            <Icon name="mail" size={16} color={C.fog} />
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              placeholder="you@coupl.app"
+              placeholderTextColor={C.fog}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              style={{ flex: 1, color: C.bone, fontFamily: F.body, fontSize: 15 }}
+            />
+          </View>
+        </View>
 
-            <Animated.View
-              entering={FadeIn.duration(1000).delay(400)}
-              style={[styles.brand, compact ? styles.brandCompact : undefined]}
-            >
-              <Text style={[styles.wordmark, compact ? styles.wordmarkCompact : undefined, { color: C.cream }]}>
-                Coupl
-              </Text>
-              <View style={[styles.goldRule, { backgroundColor: C.primary }]} />
-            </Animated.View>
+        <View>
+          <Overline style={{ marginBottom: 10 }}>Password</Overline>
+          <View style={[styles.field, { borderBottomColor: C.gold, borderBottomWidth: 2 }]}>
+            <Icon name="lock" size={16} color={C.gold} />
+            <TextInput
+              value={pw}
+              onChangeText={setPw}
+              secureTextEntry={!showPw}
+              placeholder="••••••••"
+              placeholderTextColor={C.fog}
+              style={{ flex: 1, color: C.bone, fontFamily: F.body, fontSize: 15 }}
+            />
+            <Pressable onPress={() => setShowPw((s) => !s)}>
+              <Icon name="eye" size={16} color={C.fog} />
+            </Pressable>
+          </View>
+        </View>
+      </View>
 
-            <Animated.View entering={FadeInDown.duration(700).delay(700)}>
-              <Text style={[styles.tagline, compact ? styles.taglineCompact : undefined, { color: C.haze }]}>
-                Your quiet place,{'\n'}together.
-              </Text>
-            </Animated.View>
+      <PrimaryButton onPress={() => router.replace('/(tabs)/home' as any)}>Sign in</PrimaryButton>
 
-            <Animated.View
-              entering={FadeInUp.duration(600).delay(900)}
-              style={[styles.form, compact ? styles.formCompact : undefined]}
-            >
-              <View style={[styles.fieldGroup, compact ? styles.fieldGroupCompact : undefined]}>
-                <Input
-                  label="Email"
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="you@example.com"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  keyboardType="email-address"
-                  textContentType="emailAddress"
-                  returnKeyType={step === 'email' ? 'done' : 'next'}
-                  editable={step === 'email'}
-                  leftIcon={<Feather name="mail" size={16} color={C.fog} />}
-                />
-                {step === 'code' && (
-                  <Input
-                    label="Magic Code"
-                    value={code}
-                    onChangeText={setCode}
-                    placeholder="Enter the code from your email"
-                    autoCapitalize="characters"
-                    autoCorrect={false}
-                    keyboardType="default"
-                    returnKeyType="done"
-                    leftIcon={<Feather name="key" size={16} color={C.fog} />}
-                  />
-                )}
-              </View>
-
-              <Button
-                title={step === 'email' ? 'Send Magic Code' : 'Sign In'}
-                onPress={handleSubmit}
-                loading={loading}
-                size="lg"
-                style={styles.signInBtn}
-                disabled={step === 'email' ? !email.trim() : !code.trim()}
-              />
-            </Animated.View>
-
-            <Animated.View entering={FadeInUp.duration(500).delay(1200)} style={styles.footer}>
-              <TouchableOpacity
-                onPress={() => router.push('/(auth)/sign-up')}
-                activeOpacity={0.7}
-                style={styles.switchLink}
-              >
-                <Text style={[styles.switchLabel, { color: C.fog }]}>No account yet?</Text>
-                <Text style={[styles.switchAction, { color: C.primary }]}>Create one</Text>
-                <Feather name="arrow-right" size={14} color={C.primary} />
-              </TouchableOpacity>
-            </Animated.View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+      <Pressable onPress={() => router.push('/(auth)/onboarding' as any)} style={{ marginTop: 28, alignSelf: 'center' }}>
+        <Text style={{ color: C.mist, fontFamily: F.body, fontSize: 13 }}>
+          New here? <Text style={{ color: C.gold, fontWeight: '600' }}>Create an account</Text>
+        </Text>
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-  },
-  flex: { flex: 1 },
-
-  // Enhanced ambient glows
-  glowTopRight: {
-    position: 'absolute',
-    top: -60,
-    right: -80,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    opacity: 0.08,
-  },
-  glowBottomLeft: {
-    position: 'absolute',
-    bottom: 100,
-    left: -100,
-    width: 340,
-    height: 340,
-    borderRadius: 170,
-    opacity: 0.05,
-  },
-
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: Spacing['2xl'],
-    paddingTop: Spacing.lg,
-  },
-  scrollContentCompact: {
-    paddingTop: Spacing.sm,
-  },
-
-  // Hero
-  hero: {
-    marginTop: Spacing['2xl'],
-  },
-  heroCompact: {
-    marginTop: Spacing.lg,
-  },
-
-  // Brand
-  brand: {
-    alignItems: 'center',
-    marginBottom: Spacing.xl,
-  },
-  brandCompact: {
-    marginBottom: Spacing.lg,
-  },
-  wordmark: {
-    fontFamily: Typography.displayFont,
-    fontSize: 64,
-    lineHeight: 64,
-    letterSpacing: -2,
-  },
-  wordmarkCompact: {
-    fontSize: 52,
-    lineHeight: 54,
-    letterSpacing: -1.6,
-  },
-  goldRule: {
-    width: 24,
-    height: 2,
-    marginTop: Spacing.lg,
-    borderRadius: 1,
-  },
-
-  // Tagline
-  tagline: {
-    ...Typography.title,
-    textAlign: 'center',
-    marginBottom: Spacing['2xl'],
-    fontWeight: '300',
-  },
-  taglineCompact: {
-    marginBottom: Spacing.xl,
-  },
-
-  // Form
-  form: {
-    gap: Spacing['2xl'],
-    marginBottom: Spacing['2xl'],
-  },
-  formCompact: {
-    gap: Spacing.xl,
-  },
-  fieldGroup: {
-    gap: Spacing.xl,
-  },
-  fieldGroupCompact: {
-    gap: Spacing.lg,
-  },
-  signInBtn: {
-    marginTop: Spacing.sm,
-  },
-
-  // Footer
-  footer: {
-    marginTop: 'auto',
-    alignItems: 'center',
-  },
-  switchLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.md,
-  },
-  switchLabel: {
-    ...Typography.caption,
-  },
-  switchAction: {
-    ...Typography.captionMedium,
-  },
+  root: { flex: 1, paddingHorizontal: 24, paddingTop: 80, paddingBottom: 40, justifyContent: 'center' },
+  hero: { marginBottom: 60 },
+  field: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 10, borderBottomWidth: 1 },
 });
