@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Constants from 'expo-constants';
 import { CouplRings, Display, Overline, PrimaryButton } from '@/src/components/ui/atoms';
@@ -19,6 +19,13 @@ export default function SignIn() {
   const [code, setCode] = useState<string[]>(Array(CODE_LENGTH).fill(''));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const slotRefs = useRef<Array<TextInput | null>>([]);
+
+  useEffect(() => {
+    if (stage === 'code') {
+      setTimeout(() => slotRefs.current[0]?.focus(), 50);
+    }
+  }, [stage]);
 
   async function sendCode() {
     if (!email.includes('@')) {
@@ -65,9 +72,30 @@ export default function SignIn() {
   }
 
   const setCodeSlot = (i: number, v: string) => {
+    // Handle paste of full code in a single slot
+    const digits = v.replace(/\D/g, '');
+    if (digits.length > 1) {
+      const next = Array(CODE_LENGTH).fill('');
+      for (let j = 0; j < Math.min(digits.length, CODE_LENGTH); j++) {
+        next[j] = digits[j];
+      }
+      setCode(next);
+      const last = Math.min(digits.length, CODE_LENGTH) - 1;
+      slotRefs.current[last]?.blur();
+      return;
+    }
     const next = [...code];
-    next[i] = v.slice(-1).toUpperCase();
+    next[i] = digits.slice(-1);
     setCode(next);
+    if (digits && i < CODE_LENGTH - 1) {
+      slotRefs.current[i + 1]?.focus();
+    }
+  };
+
+  const onCodeKeyPress = (i: number, key: string) => {
+    if (key === 'Backspace' && !code[i] && i > 0) {
+      slotRefs.current[i - 1]?.focus();
+    }
   };
 
   // Constants.isDevice was removed in newer expo-constants; use __DEV__ alone for the simulator helper
@@ -119,11 +147,13 @@ export default function SignIn() {
               {code.map((ch, i) => (
                 <TextInput
                   key={i}
+                  ref={(r) => { slotRefs.current[i] = r; }}
                   value={ch}
                   onChangeText={(v) => setCodeSlot(i, v)}
-                  maxLength={1}
-                  autoCapitalize="characters"
+                  onKeyPress={(e) => onCodeKeyPress(i, e.nativeEvent.key)}
                   keyboardType="number-pad"
+                  textContentType="oneTimeCode"
+                  autoComplete="sms-otp"
                   style={[
                     styles.slot,
                     {
