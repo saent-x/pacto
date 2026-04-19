@@ -1,0 +1,178 @@
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { Pressable, Text, TextInput, View } from 'react-native';
+import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
+import { Icon, IconName } from '@/src/components/ui/Icon';
+import { SheetShell } from '@/src/components/ui/SheetShell';
+import { useTheme } from '@/src/lib/theme';
+
+const ICONS: IconName[] = [
+  'heart',
+  'star',
+  'home',
+  'mapPin',
+  'gift',
+  'coffee',
+  'briefcase',
+  'camera',
+  'music',
+];
+
+export default function NewMilestone() {
+  const { C, F } = useTheme();
+  const colors = [C.rose, C.peach, C.butter, C.mint, C.sky, C.lavender, C.gold];
+  const [title, setTitle] = useState('');
+  const [date] = useState('Apr 18, 2026');
+  const [icon, setIcon] = useState<IconName>('heart');
+  const [color, setColor] = useState<string>(C.rose);
+  const [repeat, setRepeat] = useState(false);
+
+  return (
+    <SheetShell
+      eyebrow="NEW MILESTONE"
+      eyebrowColor={color}
+      title="Mark the day."
+      footer={<PrimaryButton icon="star" onPress={() => router.back()}>Save milestone</PrimaryButton>}
+    >
+      <Overline style={{ marginBottom: 8 }}>What is it</Overline>
+      <TextInput
+        value={title}
+        onChangeText={setTitle}
+        placeholder="Anniversary, first apartment..."
+        placeholderTextColor={C.fog}
+        style={{
+          color: C.bone,
+          fontFamily: F.displayBold,
+          fontSize: 22,
+          paddingVertical: 6,
+          borderBottomWidth: 2,
+          borderBottomColor: title ? color : C.line,
+        }}
+      />
+
+      <View style={{ marginTop: 22 }}>
+        <Overline style={{ marginBottom: 10 }}>When</Overline>
+        <View
+          style={{
+            backgroundColor: C.card,
+            borderWidth: 1,
+            borderColor: C.line,
+            borderRadius: 14,
+            paddingVertical: 14,
+            paddingHorizontal: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <Icon name="calendar" size={16} color={color} />
+          <Text style={{ flex: 1, color: C.bone, fontSize: 14, fontFamily: F.bodyBold }}>{date}</Text>
+          <Text
+            style={{
+              fontSize: 10,
+              color: C.fog,
+              fontFamily: F.bodyBold,
+              letterSpacing: 0.8,
+            }}
+          >
+            TAP TO EDIT
+          </Text>
+        </View>
+      </View>
+
+      <View style={{ marginTop: 22 }}>
+        <Overline style={{ marginBottom: 10 }}>Icon</Overline>
+        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+          {ICONS.map((i) => {
+            const sel = icon === i;
+            return (
+              <Pressable
+                key={i}
+                onPress={() => setIcon(i)}
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 13,
+                  backgroundColor: sel ? `${color}33` : C.card,
+                  borderWidth: 1,
+                  borderColor: sel ? color : C.line,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Icon name={i} size={17} color={sel ? color : C.mist} />
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
+      <View style={{ marginTop: 22 }}>
+        <Overline style={{ marginBottom: 10 }}>Color</Overline>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          {colors.map((c) => (
+            <Pressable
+              key={c}
+              onPress={() => setColor(c)}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                backgroundColor: c,
+                borderWidth: 3,
+                borderColor: color === c ? 'rgba(255,255,255,0.35)' : 'transparent',
+              }}
+            />
+          ))}
+        </View>
+      </View>
+
+      <View
+        style={{
+          marginTop: 22,
+          paddingVertical: 14,
+          paddingHorizontal: 16,
+          backgroundColor: C.card,
+          borderWidth: 1,
+          borderColor: C.line,
+          borderRadius: 14,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 12,
+        }}
+      >
+        <Icon name="repeat" size={16} color={repeat ? color : C.fog} />
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 13, color: C.bone, fontFamily: F.bodyBold }}>
+            Remind me every year
+          </Text>
+          <Text style={{ fontSize: 11, color: C.fog, marginTop: 2, fontFamily: F.body }}>
+            {repeat ? "We\u2019ll nudge you both 3 days before" : 'One-time only'}
+          </Text>
+        </View>
+        <Pressable
+          onPress={() => setRepeat((v) => !v)}
+          style={{
+            width: 44,
+            height: 26,
+            borderRadius: 13,
+            backgroundColor: repeat ? color : C.line,
+            justifyContent: 'center',
+          }}
+        >
+          <View
+            style={{
+              position: 'absolute',
+              top: 3,
+              left: repeat ? 21 : 3,
+              width: 20,
+              height: 20,
+              borderRadius: 10,
+              backgroundColor: '#fff',
+            }}
+          />
+        </Pressable>
+      </View>
+    </SheetShell>
+  );
+}
