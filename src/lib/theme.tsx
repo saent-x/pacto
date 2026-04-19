@@ -1,88 +1,33 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useContext, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
-import { setActiveColors, setActivePalette, getActivePalette, type PaletteKey } from '@/src/constants/colors';
+import { fonts, getTokens, type ThemeMode, type Tokens } from './tokens';
 
-export type ThemeMode = 'dark' | 'light';
-
-const MODE_KEY = '@coupl/theme-mode';
-const PALETTE_KEY = '@coupl/palette';
-
-interface ThemeContextType {
+type ThemeCtx = {
   mode: ThemeMode;
-  palette: PaletteKey;
-  toggle: () => void;
   setMode: (m: ThemeMode) => void;
-  setPalette: (p: PaletteKey) => void;
-}
+  C: Tokens;
+  F: typeof fonts;
+};
 
-const ThemeContext = createContext<ThemeContextType>({
-  mode: 'dark',
-  palette: 'classic',
-  toggle: () => {},
-  setMode: () => {},
-  setPalette: () => {},
-});
+const Ctx = createContext<ThemeCtx | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const systemScheme = useColorScheme();
-  const [mode, setModeState] = useState<ThemeMode>('dark');
-  const [palette, setPaletteState] = useState<PaletteKey>('classic');
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    Promise.all([
-      AsyncStorage.getItem(MODE_KEY),
-      AsyncStorage.getItem(PALETTE_KEY),
-    ]).then(([storedMode, storedPalette]) => {
-      const p = (storedPalette as PaletteKey) || 'classic';
-      setPaletteState(p);
-      setActivePalette(p);
-
-      if (storedMode === 'dark' || storedMode === 'light') {
-        setModeState(storedMode);
-        setActiveColors(storedMode);
-      } else if (systemScheme === 'light' || systemScheme === 'dark') {
-        setModeState(systemScheme);
-        setActiveColors(systemScheme);
-      }
-      setLoaded(true);
-    });
-  }, [systemScheme]);
-
-  const setMode = useCallback((m: ThemeMode) => {
-    setModeState(m);
-    setActiveColors(m);
-    AsyncStorage.setItem(MODE_KEY, m).catch(() => {});
-  }, []);
-
-  const toggle = useCallback(() => {
-    setModeState((prev) => {
-      const next = prev === 'dark' ? 'light' : 'dark';
-      setActiveColors(next);
-      AsyncStorage.setItem(MODE_KEY, next).catch(() => {});
-      return next;
-    });
-  }, []);
-
-  const setPaletteWrapped = useCallback((p: PaletteKey) => {
-    setPaletteState(p);
-    setActivePalette(p);
-    setActiveColors(mode);
-    AsyncStorage.setItem(PALETTE_KEY, p).catch(() => {});
-  }, [mode]);
-
-  if (!loaded) {
-    return null;
-  }
-
-  return (
-    <ThemeContext.Provider value={{ mode, palette, toggle, setMode, setPalette: setPaletteWrapped }}>
-      {children}
-    </ThemeContext.Provider>
+  const sys = useColorScheme();
+  const [mode, setMode] = useState<ThemeMode>(sys === 'light' ? 'light' : 'dark');
+  const value = useMemo<ThemeCtx>(
+    () => ({ mode, setMode, C: getTokens(mode), F: fonts }),
+    [mode]
   );
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
-export function useTheme() {
-  return useContext(ThemeContext);
+const fallback: ThemeCtx = {
+  mode: 'dark',
+  setMode: () => undefined,
+  C: getTokens('dark'),
+  F: fonts,
+};
+
+export function useTheme(): ThemeCtx {
+  return useContext(Ctx) ?? fallback;
 }
