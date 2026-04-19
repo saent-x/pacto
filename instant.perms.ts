@@ -1,84 +1,28 @@
 import type { InstantRules } from '@instantdb/react-native';
 
-const coupleScoped = {
-  allow: {
-    view: 'isCoupleMember',
-    create: 'isCoupleMember',
-    update: 'isCoupleMember',
-    delete: 'isCoupleMember',
-  },
-  bind: {
-    isCoupleMember:
-      "auth.id in data.ref('couple.memberships.user.id')",
-  },
-};
-
 const rules = {
-  couples: {
-    allow: {
-      view: 'isMember',
-      create: 'auth.id != null',
-      update: 'isMember',
-      delete: 'false',
-    },
-    bind: {
-      isMember: "auth.id in data.ref('memberships.user.id')",
-    },
-  },
-
-  memberships: {
-    allow: {
-      view: 'isSelf || isCouplemate',
-      create: 'auth.id != null',
-      update: 'isSelf',
-      delete: 'false',
-    },
-    bind: {
-      isSelf: "auth.id == data.ref('user.id')",
-      isCouplemate:
-        "auth.id in data.ref('couple.memberships.user.id')",
-    },
-  },
-
-  events: coupleScoped,
-  plans: coupleScoped,
-  rituals: coupleScoped,
-  checkIns: coupleScoped,
-  reminders: coupleScoped,
-  tasks: coupleScoped,
-  journalEntries: coupleScoped,
-  loveNotes: coupleScoped,
-  wishlists: coupleScoped,
-  wishlistItems: coupleScoped,
-  expenses: coupleScoped,
-  milestones: coupleScoped,
-
   $users: {
     allow: {
-      view: 'auth.id != null',
-      create: 'auth.id != null',
-      update: 'isSelf',
-      delete: 'false',
-    },
-    bind: {
-      isSelf: 'auth.id == data.id',
+      view: "auth.id == data.id || 'co_member' in data.ref('memberships.space.memberships.user.id')",
+      update: "auth.id == data.id",
+      create: "false",
+      delete: "false",
     },
   },
-
-  $files: {
+  spaces: {
     allow: {
-      view: 'auth.id != null',
-      create: 'auth.id != null',
-      delete: 'auth.id != null',
+      view: "auth.id in data.ref('memberships.user.id')",
+      create: "auth.id != null",
+      update: "auth.id in data.ref('memberships.user.id')",
+      delete: "auth.id in data.ref('memberships.user.id') && 'owner' in data.ref('memberships.role')",
     },
   },
-
-  dailyVerseCache: {
+  memberships: {
     allow: {
-      view: 'auth.id != null',
-      create: 'false',
-      update: 'false',
-      delete: 'false',
+      view: "auth.id in data.ref('space.memberships.user.id')",
+      create: "auth.id != null && auth.id == newData.ref('user.id')[0]",
+      update: "false",
+      delete: "auth.id == data.ref('user.id')[0]",
     },
   },
 } satisfies InstantRules;
