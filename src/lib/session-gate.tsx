@@ -34,9 +34,19 @@ export function SessionGate({ children }: PropsWithChildren) {
     }
   }, [status, segments, router]);
 
-  if (status === 'loading') {
-    return <View style={{ flex: 1 }} />;
-  }
-
-  return <>{children}</>;
+  return (
+    <View style={{ flex: 1 }}>
+      {children}
+      {status === 'loading' && (
+        <View
+          pointerEvents="auto"
+          style={{
+            position: 'absolute',
+            top: 0, bottom: 0, left: 0, right: 0,
+            backgroundColor: '#0E0B0A',
+          }}
+        />
+      )}
+    </View>
+  );
 }
