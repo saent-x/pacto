@@ -34,8 +34,6 @@ export default function RootLayout() {
     if (loaded) SplashScreen.hideAsync().catch(() => undefined);
   }, [loaded]);
 
-  if (!loaded) return null;
-
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
