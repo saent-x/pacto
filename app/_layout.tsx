@@ -17,6 +17,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { ThemeProvider, useTheme } from '@/src/lib/theme';
 import { SessionProvider } from '@/src/lib/session';
 import { SessionGate } from '@/src/lib/session-gate';
+import { ErrorBoundary } from '@/src/lib/error-boundary';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -35,17 +36,19 @@ export default function RootLayout() {
   }, [loaded]);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <ThemeProvider>
-          <SessionProvider>
-            <SessionGate>
-              <ThemedRoot />
-            </SessionGate>
-          </SessionProvider>
-        </ThemeProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <ErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#0E0B0A' }}>
+        <SafeAreaProvider>
+          <ThemeProvider>
+            <SessionProvider>
+              <SessionGate>
+                <ThemedRoot />
+              </SessionGate>
+            </SessionProvider>
+          </ThemeProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }
 
