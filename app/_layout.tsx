@@ -16,6 +16,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import { ThemeProvider, useTheme } from '@/src/lib/theme';
 import { SessionProvider } from '@/src/lib/session';
+import { SessionGate } from '@/src/lib/session-gate';
 import { ErrorBoundary } from '@/src/lib/error-boundary';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -44,7 +45,9 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <ThemeProvider>
             <SessionProvider>
-              <ThemedRoot />
+              <SessionGate>
+                <ThemedRoot />
+              </SessionGate>
             </SessionProvider>
           </ThemeProvider>
         </SafeAreaProvider>

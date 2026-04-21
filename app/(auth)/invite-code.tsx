@@ -66,9 +66,11 @@ export default function InviteCodeScreen() {
       <View style={{ marginTop: 'auto', gap: 10 }}>
         <PrimaryButton
           onPress={() => {
-            // Close any modal stack we might be nested in (profile sheet → upgrade flow).
-            try { router.dismissAll(); } catch {}
-            router.replace('/(tabs)/home' as any);
+            // Pop this screen. From profile-sheet upgrade path → back to profile.
+            // From onboarding couple-create path → back to onboarding, where
+            // SessionGate immediately redirects to home because status is now ready.
+            if (router.canGoBack()) router.back();
+            else router.replace('/(tabs)/home' as any);
           }}
         >
           I&apos;ll do this later
