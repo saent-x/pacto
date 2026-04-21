@@ -38,21 +38,20 @@ const Ctx = createContext<Session | null>(null);
 export function SessionProvider({ children }: PropsWithChildren) {
   const { isLoading: authLoading, user } = db.useAuth();
 
-  const { isLoading: queryLoading, data, error: queryError } = db.useQuery(
-    user
-      ? {
-          memberships: {
-            $: { where: { 'user.id': user.id } },
-            user: {},
-            space: {
-              memberships: {
-                user: {},
-              },
-            },
-          },
-        }
-      : null
-  );
+  // Always pass an object to useQuery; gate on `user` in the where clause.
+  // Some InstantDB client versions reject `null`.
+  const userId = user?.id ?? '__no_user__';
+  const { isLoading: queryLoading, data, error: queryError } = db.useQuery({
+    memberships: {
+      $: { where: { 'user.id': userId } },
+      user: {},
+      space: {
+        memberships: {
+          user: {},
+        },
+      },
+    },
+  });
 
   if (queryError) {
     console.warn('[session] query error', queryError);

@@ -31,9 +31,13 @@ export default function RootLayout() {
     SpaceGrotesk_700Bold,
   });
 
+  // Hide splash on mount regardless of font state. Fonts will pop in when ready.
   useEffect(() => {
-    if (loaded) SplashScreen.hideAsync().catch(() => undefined);
-  }, [loaded]);
+    const t = setTimeout(() => {
+      SplashScreen.hideAsync().catch(() => undefined);
+    }, 100);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
     <ErrorBoundary>
