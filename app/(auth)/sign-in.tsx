@@ -239,6 +239,7 @@ const styles = StyleSheet.create({
   slot: {
     width: 44, height: 52, borderWidth: 1, borderRadius: 10,
     textAlign: 'center', fontSize: 22, fontWeight: '700',
+    fontVariant: ['tabular-nums'],
   },
   oauth: {
     paddingVertical: 14, borderRadius: 14, alignItems: 'center', justifyContent: 'center',

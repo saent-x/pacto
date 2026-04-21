@@ -107,5 +107,6 @@ const styles = StyleSheet.create({
   slot: {
     width: 48, height: 56, borderWidth: 1, borderRadius: 12,
     textAlign: 'center', fontSize: 24, fontWeight: '700',
+    fontVariant: ['tabular-nums'],
   },
 });

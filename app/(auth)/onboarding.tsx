@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { CouplRings, Display, Overline } from '@/src/components/ui/atoms';
 import { GoldRule, BlockCard } from '@/src/components/ui/WarmBlock';
 import { Icon } from '@/src/components/ui/Icon';
@@ -69,8 +70,8 @@ export default function Onboarding() {
       )}
 
       <View style={{ marginTop: 40, gap: 14 }}>
-        <Pressable onPress={createSolo} disabled={busy !== null}>
-          <BlockCard bg={C.peach} ink={C.peachInk}>
+        <Animated.View entering={FadeInDown.delay(0).duration(420).springify().damping(18)}>
+          <BlockCard bg={C.peach} ink={C.peachInk} onPress={busy === null ? createSolo : undefined}>
             <Overline>Just me</Overline>
             <Text style={{ fontFamily: F.display, fontSize: 26, color: C.peachInk, marginTop: 6, fontWeight: '700' }}>
               Solo space
@@ -80,10 +81,10 @@ export default function Onboarding() {
             </Text>
             <Row ink={C.peachInk} label="BEGIN" />
           </BlockCard>
-        </Pressable>
+        </Animated.View>
 
-        <Pressable onPress={createCouple} disabled={busy !== null}>
-          <BlockCard bg={C.lavender} ink={C.lavenderInk}>
+        <Animated.View entering={FadeInDown.delay(100).duration(420).springify().damping(18)}>
+          <BlockCard bg={C.lavender} ink={C.lavenderInk} onPress={busy === null ? createCouple : undefined}>
             <Overline>With partner</Overline>
             <Text style={{ fontFamily: F.display, fontSize: 26, color: C.lavenderInk, marginTop: 6, fontWeight: '700' }}>
               Create a couple
@@ -93,10 +94,10 @@ export default function Onboarding() {
             </Text>
             <Row ink={C.lavenderInk} label="BEGIN" />
           </BlockCard>
-        </Pressable>
+        </Animated.View>
 
-        <Pressable onPress={goJoin} disabled={busy !== null}>
-          <BlockCard bg={C.butter} ink={C.butterInk}>
+        <Animated.View entering={FadeInDown.delay(200).duration(420).springify().damping(18)}>
+          <BlockCard bg={C.butter} ink={C.butterInk} onPress={busy === null ? goJoin : undefined}>
             <Overline>Invited</Overline>
             <Text style={{ fontFamily: F.display, fontSize: 26, color: C.butterInk, marginTop: 6, fontWeight: '700' }}>
               I have a code
@@ -106,7 +107,7 @@ export default function Onboarding() {
             </Text>
             <Row ink={C.butterInk} label="ENTER CODE" />
           </BlockCard>
-        </Pressable>
+        </Animated.View>
       </View>
     </ScrollView>
   );

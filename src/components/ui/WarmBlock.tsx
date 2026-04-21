@@ -13,6 +13,7 @@ import Svg, {
   Circle, Path, Defs, LinearGradient as SvgGradient, Stop,
 } from 'react-native-svg';
 import { BlurView } from 'expo-blur';
+import { PressScale } from './PressScale';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/src/lib/theme';
@@ -97,15 +98,14 @@ export function BlockCard({
   );
   if (onPress) {
     return (
-      <TouchableOpacity
-        activeOpacity={0.85}
+      <PressScale
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           onPress();
         }}
       >
         {content}
-      </TouchableOpacity>
+      </PressScale>
     );
   }
   return content;
@@ -192,15 +192,16 @@ export function RoundBtn({
   iconSize?: number;
 }) {
   const { C } = useTheme();
+  const hitPad = Math.max(0, (40 - size) / 2);
   return (
-    <TouchableOpacity
+    <PressScale
       onPress={() => {
         if (onPress) {
           Haptics.selectionAsync();
           onPress();
         }
       }}
-      activeOpacity={0.75}
+      hitSlop={hitPad}
       style={[
         {
           width: size,
@@ -216,7 +217,7 @@ export function RoundBtn({
       ]}
     >
       <Feather name={icon} size={iconSize ?? size * 0.45} color={color ?? C.bone} strokeWidth={2.2 as any} />
-    </TouchableOpacity>
+    </PressScale>
   );
 }
 
@@ -247,14 +248,14 @@ export function Pill({
   const border = active ? 'transparent' : C.line;
 
   return (
-    <TouchableOpacity
+    <PressScale
       onPress={() => {
         if (onPress) {
           Haptics.selectionAsync();
           onPress();
         }
       }}
-      activeOpacity={0.7}
+      hitSlop={8}
       style={[
         styles.pill,
         size === 'sm' ? styles.pillSm : styles.pillMd,
@@ -271,7 +272,7 @@ export function Pill({
       >
         {children}
       </Text>
-    </TouchableOpacity>
+    </PressScale>
   );
 }
 

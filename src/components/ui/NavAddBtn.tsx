@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
-import { Pressable } from 'react-native';
 import { useTheme } from '@/src/lib/theme';
 import { Icon, IconName } from './Icon';
+import { PressScale } from './PressScale';
 
 export function NavAddBtn({
   href,
@@ -12,12 +12,12 @@ export function NavAddBtn({
 }) {
   const { C } = useTheme();
   return (
-    <Pressable
+    <PressScale
       onPress={() => router.push(href as any)}
       hitSlop={12}
       style={{ padding: 4 }}
     >
       <Icon name={icon} size={22} color={C.bone} strokeWidth={2.4} />
-    </Pressable>
+    </PressScale>
   );
 }

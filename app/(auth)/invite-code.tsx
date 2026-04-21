@@ -42,7 +42,7 @@ export default function InviteCodeScreen() {
         <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center' }}>
           {code.split('').map((ch, i) => (
             <View key={i} style={[styles.slot, { borderColor: C.gold, backgroundColor: C.card }]}>
-              <Text style={{ color: C.bone, fontFamily: F.display, fontSize: 24, fontWeight: '700' }}>
+              <Text style={{ color: C.bone, fontFamily: F.display, fontSize: 24, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
                 {ch}
               </Text>
             </View>

@@ -10,6 +10,7 @@ import {
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { useTheme } from '@/src/lib/theme';
 import { Icon, IconName } from './Icon';
+import { PressScale } from './PressScale';
 
 // ───────── Avatar ─────────
 export function Avatar({
@@ -132,7 +133,7 @@ export function BlockCard({
   onPress?: () => void;
 }) {
   const { C } = useTheme();
-  const Wrapper: any = onPress ? Pressable : View;
+  const Wrapper: any = onPress ? PressScale : View;
   return (
     <Wrapper
       onPress={onPress}
@@ -165,7 +166,7 @@ export function DarkCard({
   padding?: number;
 }) {
   const { C } = useTheme();
-  const Wrapper: any = onPress ? Pressable : View;
+  const Wrapper: any = onPress ? PressScale : View;
   return (
     <Wrapper
       onPress={onPress}
@@ -212,8 +213,9 @@ export function Pill({
   const padH = size === 'sm' ? 12 : 14;
   const fs = size === 'sm' ? 11 : 12;
   return (
-    <Pressable
+    <PressScale
       onPress={onPress}
+      hitSlop={8}
       style={[
         {
           backgroundColor: active ? activeBg ?? bg ?? C.goldSoft : 'transparent',
@@ -238,7 +240,7 @@ export function Pill({
       >
         {children}
       </Text>
-    </Pressable>
+    </PressScale>
   );
 }
 
@@ -334,7 +336,7 @@ export function PrimaryButton({
 }) {
   const { C, F } = useTheme();
   return (
-    <Pressable
+    <PressScale
       onPress={onPress}
       disabled={disabled}
       style={[
@@ -363,7 +365,7 @@ export function PrimaryButton({
       >
         {children}
       </Text>
-    </Pressable>
+    </PressScale>
   );
 }
 
@@ -388,9 +390,12 @@ export function RoundBtn({
 }) {
   const { C } = useTheme();
   const borderColor = border === null ? null : border ?? C.line;
+  // Extend hit area to 40×40 minimum
+  const hitPad = Math.max(0, (40 - size) / 2);
   return (
-    <Pressable
+    <PressScale
       onPress={onPress}
+      hitSlop={hitPad}
       style={[
         {
           width: size,
@@ -406,7 +411,7 @@ export function RoundBtn({
       ]}
     >
       <Icon name={icon} size={iconSize ?? size * 0.45} color={color ?? C.bone} strokeWidth={2.2} />
-    </Pressable>
+    </PressScale>
   );
 }
 
@@ -464,6 +469,7 @@ export function ProgressRing({
             fontSize: size * 0.26,
             color: labelColor ?? C.peachInk,
             letterSpacing: -0.5,
+            fontVariant: ['tabular-nums'],
           }}
         >
           {label}

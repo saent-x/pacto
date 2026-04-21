@@ -1,12 +1,13 @@
-import { Pressable } from 'react-native';
 import { useTheme } from '@/src/lib/theme';
 import { Icon } from './Icon';
+import { PressScale } from './PressScale';
 
 export function AddBtn({ onPress }: { onPress?: () => void }) {
   const { C } = useTheme();
   return (
-    <Pressable
+    <PressScale
       onPress={onPress}
+      hitSlop={6}
       style={{
         width: 38,
         height: 38,
@@ -17,6 +18,6 @@ export function AddBtn({ onPress }: { onPress?: () => void }) {
       }}
     >
       <Icon name="plus" size={18} color={C.peachInk} strokeWidth={2.5} />
-    </Pressable>
+    </PressScale>
   );
 }
