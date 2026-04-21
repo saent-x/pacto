@@ -4,9 +4,11 @@ import { Avatar } from '@/src/components/ui/atoms';
 import { HeaderBrand } from '@/src/components/ui/HeaderBrand';
 import { HeaderLeft } from '@/src/components/ui/HeaderLeft';
 import { useTheme } from '@/src/lib/theme';
+import { useSession } from '@/src/lib/session';
 
 export default function HomeLayout() {
   const { C } = useTheme();
+  const { isSolo } = useSession();
   return (
     <Stack
       screenOptions={{
@@ -32,14 +34,16 @@ export default function HomeLayout() {
               style={{ flexDirection: 'row' }}
             >
               <Avatar letter="M" size={30} bg={C.peach} color={C.peachInk} />
-              <Avatar
-                letter="S"
-                size={30}
-                bg={C.lavender}
-                color={C.lavenderInk}
-                border={C.ink}
-                style={{ marginLeft: -10 }}
-              />
+              {!isSolo && (
+                <Avatar
+                  letter="S"
+                  size={30}
+                  bg={C.lavender}
+                  color={C.lavenderInk}
+                  border={C.ink}
+                  style={{ marginLeft: -10 }}
+                />
+              )}
             </Pressable>
           ),
         }}

@@ -6,9 +6,12 @@ import { HeaderLeft } from '@/src/components/ui/HeaderLeft';
 import { NavAddBtn } from '@/src/components/ui/NavAddBtn';
 import { useTheme } from '@/src/lib/theme';
 import { pastels } from '@/src/lib/tokens';
+import { useSession } from '@/src/lib/session';
 
 export default function UsLayout() {
   const { C } = useTheme();
+  const { isSolo } = useSession();
+  const spaceLabel = isSolo ? 'ME' : 'US';
   const base = {
     headerShown: true,
     headerShadowVisible: false,
@@ -34,21 +37,28 @@ export default function UsLayout() {
         name="index"
         options={{
           ...base,
-          headerTitle: () => <HeaderBrand eyebrow="Day 847 together" title="US" />,
+          headerTitle: () => (
+            <HeaderBrand
+              eyebrow={isSolo ? 'Day 1' : 'Day 847 together'}
+              title={spaceLabel}
+            />
+          ),
           headerRight: () => (
             <Pressable
               onPress={() => router.push('/sheets/profile' as any)}
               style={{ flexDirection: 'row' }}
             >
               <Avatar letter="M" size={30} bg={C.peach} color={C.peachInk} />
-              <Avatar
-                letter="S"
-                size={30}
-                bg={C.lavender}
-                color={C.lavenderInk}
-                border={C.ink}
-                style={{ marginLeft: -10 }}
-              />
+              {!isSolo && (
+                <Avatar
+                  letter="S"
+                  size={30}
+                  bg={C.lavender}
+                  color={C.lavenderInk}
+                  border={C.ink}
+                  style={{ marginLeft: -10 }}
+                />
+              )}
             </Pressable>
           ),
         }}
@@ -58,7 +68,7 @@ export default function UsLayout() {
         options={{
           ...base,
           headerTitle: () => (
-            <HeaderBrand eyebrow="US · NOTES" title="Love notes" accent={pastels.rose} size={22} />
+            <HeaderBrand eyebrow={`${spaceLabel} · NOTES`} title="Love notes" accent={pastels.rose} size={22} />
           ),
           headerRight: () => <NavAddBtn href="/sheets/new-note" />,
         }}
@@ -68,7 +78,7 @@ export default function UsLayout() {
         options={{
           ...base,
           headerTitle: () => (
-            <HeaderBrand eyebrow="US · CHECK-INS" title="How we are" accent={pastels.butter} size={22} />
+            <HeaderBrand eyebrow={`${spaceLabel} · CHECK-INS`} title="How we are" accent={pastels.butter} size={22} />
           ),
           headerRight: () => <NavAddBtn href="/sheets/new-checkin" />,
         }}
@@ -78,7 +88,7 @@ export default function UsLayout() {
         options={{
           ...base,
           headerTitle: () => (
-            <HeaderBrand eyebrow="US · EXPENSES" title="Shared" accent={pastels.mint} size={22} />
+            <HeaderBrand eyebrow={`${spaceLabel} · EXPENSES`} title="Shared" accent={pastels.mint} size={22} />
           ),
           headerRight: () => <NavAddBtn href="/sheets/new-expense" />,
         }}
@@ -89,7 +99,7 @@ export default function UsLayout() {
           ...base,
           headerTitle: () => (
             <HeaderBrand
-              eyebrow="US · WISHLISTS"
+              eyebrow={`${spaceLabel} · WISHLISTS`}
               title="Drop hints"
               accent={pastels.lavender}
               size={22}
@@ -103,7 +113,7 @@ export default function UsLayout() {
         options={{
           ...base,
           headerTitle: () => (
-            <HeaderBrand eyebrow="US · MILESTONES" title="Moments" accent={pastels.peach} size={22} />
+            <HeaderBrand eyebrow={`${spaceLabel} · MILESTONES`} title="Moments" accent={pastels.peach} size={22} />
           ),
           headerRight: () => <NavAddBtn href="/sheets/new-milestone" />,
         }}
@@ -113,7 +123,7 @@ export default function UsLayout() {
         options={{
           ...base,
           headerTitle: () => (
-            <HeaderBrand eyebrow="US · PLANS" title="Dream & do" accent={pastels.sky} size={22} />
+            <HeaderBrand eyebrow={`${spaceLabel} · PLANS`} title="Dream & do" accent={pastels.sky} size={22} />
           ),
           headerRight: () => <NavAddBtn href="/sheets/new-plan" />,
         }}
@@ -123,7 +133,7 @@ export default function UsLayout() {
         options={{
           ...base,
           headerTitle: () => (
-            <HeaderBrand eyebrow="US · JOURNAL" title="Journal" accent={pastels.journal} size={22} />
+            <HeaderBrand eyebrow={`${spaceLabel} · JOURNAL`} title="Journal" accent={pastels.journal} size={22} />
           ),
           headerRight: () => <NavAddBtn href="/sheets/new-entry" icon="edit" />,
         }}
@@ -133,7 +143,7 @@ export default function UsLayout() {
         options={{
           ...base,
           headerTitle: () => (
-            <HeaderBrand eyebrow="US · TIMETABLES" title="Rhythms" accent={pastels.peach} size={22} />
+            <HeaderBrand eyebrow={`${spaceLabel} · TIMETABLES`} title="Rhythms" accent={pastels.peach} size={22} />
           ),
           headerRight: () => <NavAddBtn href="/sheets/new-timetable" />,
         }}
@@ -143,7 +153,7 @@ export default function UsLayout() {
         options={{
           ...base,
           headerTitle: () => (
-            <HeaderBrand eyebrow="US · TIMETABLE" title="Week" accent={pastels.peach} size={22} />
+            <HeaderBrand eyebrow={`${spaceLabel} · TIMETABLE`} title="Week" accent={pastels.peach} size={22} />
           ),
         }}
       />

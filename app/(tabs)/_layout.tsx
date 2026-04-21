@@ -1,8 +1,10 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useTheme } from '@/src/lib/theme';
+import { useSession } from '@/src/lib/session';
 
 export default function TabsLayout() {
   const { C } = useTheme();
+  const { isSolo } = useSession();
   return (
     <NativeTabs
       labelStyle={{ fontFamily: 'SpaceGrotesk_700Bold', fontSize: 11 }}
@@ -15,8 +17,8 @@ export default function TabsLayout() {
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="us">
-        <NativeTabs.Trigger.Label>Us</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="heart.fill" drawable="ic_menu_share" />
+        <NativeTabs.Trigger.Label>{isSolo ? 'Me' : 'Us'}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={isSolo ? 'person.fill' : 'heart.fill'} drawable="ic_menu_share" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="calendar">
