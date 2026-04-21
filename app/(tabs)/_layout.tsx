@@ -1,7 +1,6 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useTheme } from '@/src/lib/theme';
 import { useSession } from '@/src/lib/session';
-import { TabAccessoryAdd } from '@/src/components/ui/TabAccessoryAdd';
 
 export default function TabsLayout() {
   const { C } = useTheme();
@@ -12,9 +11,6 @@ export default function TabsLayout() {
       tintColor={C.gold}
       minimizeBehavior="onScrollDown"
     >
-      <NativeTabs.BottomAccessory>
-        <TabAccessoryAdd />
-      </NativeTabs.BottomAccessory>
       <NativeTabs.Trigger name="home">
         <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="house.fill" drawable="ic_menu_compass" />
