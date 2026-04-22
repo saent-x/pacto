@@ -1,40 +1,57 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { Alert, Pressable, TextInput, View } from 'react-native';
 import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
 import { SheetShell } from '@/src/components/ui/SheetShell';
 import { useTheme } from '@/src/lib/theme';
+import { useTaskLists, type PastelKey } from '@/src/hooks/useTaskLists';
 
 const ICONS: IconName[] = [
-  'shoppingBag',
-  'home',
-  'heart',
-  'briefcase',
-  'book',
-  'gift',
-  'mapPin',
-  'coffee',
-  'music',
-  'camera',
+  'shoppingBag', 'home', 'heart', 'briefcase', 'book', 'gift', 'mapPin', 'coffee', 'music', 'camera',
 ];
+
+const COLOR_KEYS: PastelKey[] = ['peach', 'lavender', 'butter', 'mint', 'rose', 'sky'];
 
 export default function NewList() {
   const { C, F } = useTheme();
-  const colors = [C.peach, C.lavender, C.butter, C.mint, C.rose, C.sky, C.gold, C.journal];
+  const { create } = useTaskLists();
   const [name, setName] = useState('');
   const [icon, setIcon] = useState<IconName>('shoppingBag');
-  const [color, setColor] = useState<string>(C.peach);
+  const [colorKey, setColorKey] = useState<PastelKey>('peach');
+  const [saving, setSaving] = useState(false);
+
+  const color = (C as any)[colorKey] as string;
+
+  const handleSave = async () => {
+    const trimmed = name.trim();
+    if (!trimmed || saving) return;
+    setSaving(true);
+    try {
+      await create({ name: trimmed, icon, colorKey });
+      router.back();
+    } catch (err) {
+      console.warn('[new-list] create failed', err);
+      Alert.alert('Create failed', 'Try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <SheetShell
       eyebrow="NEW LIST"
       eyebrowColor={color}
       title="Make a list."
-      footer={<PrimaryButton icon="plus" onPress={() => router.back()}>Create list</PrimaryButton>}
+      footer={
+        <PrimaryButton icon="plus" onPress={handleSave} disabled={!name.trim() || saving}>
+          Create list
+        </PrimaryButton>
+      }
     >
       <Overline style={{ marginBottom: 8 }}>Name</Overline>
       <TextInput
+        testID="new-list-name-input"
         value={name}
         onChangeText={setName}
         placeholder="Anniversary plans..."
@@ -57,6 +74,7 @@ export default function NewList() {
             return (
               <Pressable
                 key={i}
+                testID={`new-list-icon-${i}`}
                 onPress={() => setIcon(i)}
                 style={{
                   width: 44,
@@ -79,17 +97,18 @@ export default function NewList() {
       <View style={{ marginTop: 22 }}>
         <Overline style={{ marginBottom: 10 }}>Color</Overline>
         <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
-          {colors.map((c) => (
+          {COLOR_KEYS.map((ck) => (
             <Pressable
-              key={c}
-              onPress={() => setColor(c)}
+              key={ck}
+              testID={`new-list-color-${ck}`}
+              onPress={() => setColorKey(ck)}
               style={{
                 width: 34,
                 height: 34,
                 borderRadius: 17,
-                backgroundColor: c,
+                backgroundColor: (C as any)[ck],
                 borderWidth: 3,
-                borderColor: color === c ? 'rgba(255,255,255,0.3)' : 'transparent',
+                borderColor: colorKey === ck ? 'rgba(255,255,255,0.3)' : 'transparent',
               }}
             />
           ))}
