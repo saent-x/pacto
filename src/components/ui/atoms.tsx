@@ -200,6 +200,7 @@ export function Pill({
   onPress,
   size = 'md',
   style,
+  testID,
 }: {
   children: React.ReactNode;
   bg?: string;
@@ -210,6 +211,7 @@ export function Pill({
   onPress?: () => void;
   size?: 'sm' | 'md';
   style?: StyleProp<ViewStyle>;
+  testID?: string;
 }) {
   const { C, F } = useTheme();
   const padV = size === 'sm' ? 6 : 8;
@@ -219,6 +221,7 @@ export function Pill({
     <PressScale
       onPress={onPress}
       hitSlop={8}
+      testID={testID}
       style={[
         {
           backgroundColor: active ? activeBg ?? bg ?? C.goldSoft : 'transparent',
