@@ -44,6 +44,35 @@ vi.mock('@instantdb/react-native', () => {
   };
 });
 
+// react-native-svg ships a web build whose module entry pulls in syntax
+// (legacy `typeof` import expressions in css/web subpaths) that Node's ESM
+// loader cannot parse. Stub it with passthrough components so snapshots still
+// capture which SVG primitives render and with what props.
+vi.mock('react-native-svg', () => {
+  const React = require('react') as typeof import('react');
+  const passthrough = (displayName: string) =>
+    Object.assign(
+      (props: Record<string, unknown>) =>
+        React.createElement(displayName, props, (props as { children?: React.ReactNode }).children),
+      { displayName },
+    );
+  const Svg = passthrough('Svg');
+  return {
+    __esModule: true,
+    default: Svg,
+    Svg,
+    Circle: passthrough('Circle'),
+    Defs: passthrough('Defs'),
+    LinearGradient: passthrough('LinearGradient'),
+    Line: passthrough('Line'),
+    Path: passthrough('Path'),
+    Polygon: passthrough('Polygon'),
+    Polyline: passthrough('Polyline'),
+    Rect: passthrough('Rect'),
+    Stop: passthrough('Stop'),
+  };
+});
+
 const reactActEnv = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
 };
