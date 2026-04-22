@@ -5,18 +5,20 @@ export function routeForTimelineItem(item: TimelineItem): string | null {
     case "event":
       return "/(tabs)/calendar";
     case "plan":
-      return "/(tabs)/together/plans";
+      return "/(tabs)/us/plans";
     case "reminder":
       return "/(tabs)/reminders";
     case "task":
       return "/(tabs)/tasks";
     case "ritual":
       return "/(tabs)/calendar";
+    case "memory":
+      return "/(tabs)/us/journal";
     default:
       return null;
   }
 }
 
 export function routeForMilestoneItem(_item: MilestoneStripItem): string {
-  return "/(tabs)/together/milestones";
+  return "/(tabs)/us/milestones";
 }
