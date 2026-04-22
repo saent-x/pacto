@@ -1,10 +1,12 @@
 import Constants from 'expo-constants';
 import React from 'react';
-import { ScrollView, StyleProp, View, ViewStyle } from 'react-native';
+import { StyleProp, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useTheme } from '@/src/lib/theme';
 
 const STATUS_BAR = Constants.statusBarHeight || 44;
+const ENTER = FadeIn.duration(240);
 
 export function Screen({
   children,
@@ -27,7 +29,8 @@ export function Screen({
   const insets = useSafeAreaInsets();
   if (scroll) {
     return (
-      <ScrollView
+      <Animated.ScrollView
+        entering={ENTER}
         style={{ flex: 1, backgroundColor: C.ink }}
         contentInsetAdjustmentBehavior={underHeader ? 'never' : 'automatic'}
         automaticallyAdjustContentInsets={!underHeader}
@@ -42,11 +45,12 @@ export function Screen({
         showsVerticalScrollIndicator={false}
       >
         {children}
-      </ScrollView>
+      </Animated.ScrollView>
     );
   }
   return (
-    <View
+    <Animated.View
+      entering={ENTER}
       style={[
         {
           flex: 1,
@@ -59,6 +63,6 @@ export function Screen({
       ]}
     >
       {children}
-    </View>
+    </Animated.View>
   );
 }
