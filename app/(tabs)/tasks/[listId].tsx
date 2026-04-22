@@ -1,6 +1,6 @@
 // app/(tabs)/tasks/[listId].tsx
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,7 +24,7 @@ export default function TaskListDetail() {
     [lists, listId],
   );
 
-  const { tasks, isLoading: tasksLoading, toggleComplete, remove } =
+  const { tasks, isLoading: tasksLoading, toggleComplete, remove, reorder } =
     useTaskItems(listId ?? null);
 
   const color = list ? ((C as any)[list.colorKey] as string) : C.gold;
@@ -61,6 +61,50 @@ export default function TaskListDetail() {
 
   const listName = list?.name ?? (listsLoading ? '...' : 'List');
   const isEmpty = !listsLoading && !tasksLoading && tasks.length === 0;
+
+  // Bucket-scoped reorder: track which bucket (if any) is in reorder mode,
+  // plus a local copy of its ids so we can swap before persisting.
+  const [reorderBucket, setReorderBucket] = useState<string | null>(null);
+  const [localOrder, setLocalOrder] = useState<string[]>([]);
+
+  const enterReorder = useCallback((bucketLabel: string, ids: string[]) => {
+    setReorderBucket(bucketLabel);
+    setLocalOrder(ids);
+  }, []);
+
+  const exitReorder = useCallback(() => {
+    if (reorderBucket === null) return;
+    // Persist whole-list order: localOrder for reordered bucket, then the
+    // other active ids in their current section order, then completed.
+    const reorderedSet = new Set(localOrder);
+    const activeIds = active.map((t) => t.id);
+    const otherActive = activeIds.filter((tid) => !reorderedSet.has(tid));
+    const completed = done.map((t) => t.id);
+    void reorder([...localOrder, ...otherActive, ...completed]);
+    setReorderBucket(null);
+    setLocalOrder([]);
+  }, [reorderBucket, localOrder, active, done, reorder]);
+
+  // When tasks change (e.g. new sync) outside of reorder mode, drop stale state.
+  useEffect(() => {
+    if (reorderBucket === null) setLocalOrder([]);
+  }, [tasks, reorderBucket]);
+
+  const move = useCallback(
+    (taskId: string, direction: -1 | 1) => {
+      setLocalOrder((prev) => {
+        const idx = prev.indexOf(taskId);
+        if (idx === -1) return prev;
+        const target = idx + direction;
+        if (target < 0 || target >= prev.length) return prev;
+        const next = [...prev];
+        const [removed] = next.splice(idx, 1);
+        next.splice(target, 0, removed);
+        return next;
+      });
+    },
+    [],
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: C.ink }}>
@@ -155,18 +199,61 @@ export default function TaskListDetail() {
                   <Text style={{ fontSize: 10, color: C.fog, fontFamily: F.bodyBold, flex: 1 }}>
                     {s.items.length}
                   </Text>
+                  {reorderBucket === s.label ? (
+                    <Pressable
+                      testID={`task-reorder-done-${s.label}`}
+                      onPress={exitReorder}
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 4,
+                        borderRadius: 999,
+                        backgroundColor: color,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 10,
+                          fontFamily: F.bodyBold,
+                          letterSpacing: 0.6,
+                          color: C.ink,
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        Done
+                      </Text>
+                    </Pressable>
+                  ) : null}
                 </View>
                 <Animated.View layout={LinearTransition.springify().damping(18)} style={{ gap: 8 }}>
-                  {s.items.map((t) => (
-                    <TaskRow
-                      key={t.id}
-                      task={t}
-                      listColor={color}
-                      testID={`task-row-${t.id}`}
-                      onToggle={() => toggleComplete(t)}
-                      onDelete={() => remove(t.id)}
-                    />
-                  ))}
+                  {(() => {
+                    const isReorderingHere = reorderBucket === s.label;
+                    const orderedIds = isReorderingHere
+                      ? localOrder
+                      : s.items.map((t) => t.id);
+                    return orderedIds.map((tid, idx, arr) => {
+                      const t = s.items.find((x) => x.id === tid);
+                      if (!t) return null;
+                      return (
+                        <TaskRow
+                          key={t.id}
+                          task={t}
+                          listColor={color}
+                          state={isReorderingHere ? 'reordering' : 'idle'}
+                          testID={`task-row-${t.id}`}
+                          onToggle={() => toggleComplete(t)}
+                          onDelete={() => remove(t.id)}
+                          onLongPress={() => {
+                            if (isReorderingHere) return;
+                            enterReorder(s.label, s.items.map((x) => x.id));
+                          }}
+                          onMoveUp={isReorderingHere ? () => move(tid, -1) : undefined}
+                          onMoveDown={isReorderingHere ? () => move(tid, 1) : undefined}
+                          canMoveUp={isReorderingHere && idx > 0}
+                          canMoveDown={isReorderingHere && idx < arr.length - 1}
+                        />
+                      );
+                    });
+                  })()}
                 </Animated.View>
               </Animated.View>
             ))}

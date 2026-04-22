@@ -20,6 +20,10 @@ export function TaskRow({
   onToggle,
   onDelete,
   onLongPress,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp = true,
+  canMoveDown = true,
   testID,
 }: {
   task: Task;
@@ -28,6 +32,10 @@ export function TaskRow({
   onToggle: () => void;
   onDelete: () => void;
   onLongPress?: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
   testID?: string;
 }) {
   const { C, F } = useTheme();
@@ -164,7 +172,48 @@ export function TaskRow({
               {dueChip}
             </Text>
           ) : null}
-          {prioKey !== 'none' ? (
+          {state === 'reordering' && (onMoveUp || onMoveDown) ? (
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              <Pressable
+                testID={`${testID ?? 'task-row'}-move-up`}
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => undefined);
+                  onMoveUp?.();
+                }}
+                disabled={!canMoveUp || !onMoveUp}
+                style={{
+                  width: 26,
+                  height: 26,
+                  borderRadius: 13,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: canMoveUp && onMoveUp ? `${listColor}33` : 'transparent',
+                  opacity: canMoveUp && onMoveUp ? 1 : 0.3,
+                }}
+              >
+                <Icon name="chevronsUp" size={14} color={listColor} strokeWidth={2.5} />
+              </Pressable>
+              <Pressable
+                testID={`${testID ?? 'task-row'}-move-down`}
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => undefined);
+                  onMoveDown?.();
+                }}
+                disabled={!canMoveDown || !onMoveDown}
+                style={{
+                  width: 26,
+                  height: 26,
+                  borderRadius: 13,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: canMoveDown && onMoveDown ? `${listColor}33` : 'transparent',
+                  opacity: canMoveDown && onMoveDown ? 1 : 0.3,
+                }}
+              >
+                <Icon name="chevronDown" size={14} color={listColor} strokeWidth={2.5} />
+              </Pressable>
+            </View>
+          ) : prioKey !== 'none' ? (
             <View
               style={{
                 width: 7,
