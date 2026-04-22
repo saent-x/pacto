@@ -239,7 +239,7 @@ export function useTaskItems(listId: string | null) {
   const coupleId = activeCouple?.couple?.id ?? null;
   const userId = user?.id ?? null;
 
-  const { data, isLoading: queryLoading } = db.useQuery(
+  const { data, isLoading: queryLoading, error } = db.useQuery(
     coupleId && listId
       ? {
           tasks: {
@@ -364,11 +364,11 @@ export function useTaskItems(listId: string | null) {
   }, []);
 
   const reorder = useCallback(async (idsInOrder: string[]) => {
+    if (idsInOrder.length === 0) return;
     const now = Date.now();
     const txns = idsInOrder.map((taskId, index) =>
       db.tx.tasks[taskId].update({ sortOrder: index, updatedAt: now }),
     );
-    if (txns.length === 0) return;
     await db.transact(txns);
   }, []);
 
@@ -376,6 +376,7 @@ export function useTaskItems(listId: string | null) {
     tasks,
     counts,
     isLoading: !!coupleId && !!listId && queryLoading,
+    error,
     create,
     update,
     toggleComplete,
