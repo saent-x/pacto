@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { Icon } from './Icon';
+import { PressScale } from './PressScale';
 import { useTheme } from '@/src/lib/theme';
 
 export function SubHeader({
@@ -23,8 +24,9 @@ export function SubHeader({
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}>
-        <Pressable
+        <PressScale
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/home'))}
+          hitSlop={6}
           style={{
             width: 38,
             height: 38,
@@ -35,7 +37,7 @@ export function SubHeader({
           }}
         >
           <Icon name="chevronLeft" size={18} color={C.bone} />
-        </Pressable>
+        </PressScale>
         <View style={{ flex: 1 }}>
           <Text
             style={{
