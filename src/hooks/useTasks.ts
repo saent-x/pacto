@@ -243,10 +243,7 @@ export function useTaskItems(listId: string | null) {
     coupleId && listId
       ? {
           tasks: {
-            $: {
-              where: { 'couple.id': coupleId, 'list.id': listId },
-              order: { sortOrder: 'asc' },
-            },
+            $: { where: { 'couple.id': coupleId, 'list.id': listId } },
             list: {},
             couple: {},
             createdBy: {},
@@ -257,8 +254,18 @@ export function useTaskItems(listId: string | null) {
       : null,
   );
 
+  // sortOrder is not indexed in the schema so the server can't order by it.
+  // Sort client-side by sortOrder ascending, falling back to createdAt.
   const tasks = useMemo(
-    () => (data?.tasks ?? []).map(toTaskRow),
+    () =>
+      (data?.tasks ?? [])
+        .map(toTaskRow)
+        .sort((a, b) => {
+          const ao = a.sort_order ?? 0;
+          const bo = b.sort_order ?? 0;
+          if (ao !== bo) return ao - bo;
+          return a.created_at.localeCompare(b.created_at);
+        }),
     [data?.tasks],
   );
 
