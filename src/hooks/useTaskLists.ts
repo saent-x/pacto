@@ -37,6 +37,9 @@ export function toListRows(nodes: RawTaskListNode[]): ListRow[] {
     const colorKey = VALID_COLORS.includes(n.colorKey as PastelKey)
       ? (n.colorKey as PastelKey)
       : DEFAULT_COLOR;
+    // icon is trusted: values are always written through create/update which
+    // type input.icon as IconName. Persisted values may still be arbitrary
+    // strings, so consumers should treat this as IconName | string.
     const icon = (n.icon as IconName | null | undefined) ?? DEFAULT_ICON;
     return {
       id: n.id,
