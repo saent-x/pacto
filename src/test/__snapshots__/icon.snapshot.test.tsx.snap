@@ -1,0 +1,598 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Icon snapshots > bell — color=#ff0 1`] = `
+<Svg
+  height={20}
+  viewBox="0 0 24 24"
+  width={20}
+>
+  <Path
+    d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"
+    fill="none"
+    stroke="#ff0"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  />
+  <Path
+    d="M10.3 21a1.94 1.94 0 0 0 3.4 0"
+    fill="none"
+    stroke="#ff0"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  />
+</Svg>
+`;
+
+exports[`Icon snapshots > bell — default 1`] = `
+<Svg
+  height={20}
+  viewBox="0 0 24 24"
+  width={20}
+>
+  <Path
+    d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"
+    fill="none"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  />
+  <Path
+    d="M10.3 21a1.94 1.94 0 0 0 3.4 0"
+    fill="none"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  />
+</Svg>
+`;
+
+exports[`Icon snapshots > bell — strokeWidth=3 1`] = `
+<Svg
+  height={20}
+  viewBox="0 0 24 24"
+  width={20}
+>
+  <Path
+    d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"
+    fill="none"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={3}
+  />
+  <Path
+    d="M10.3 21a1.94 1.94 0 0 0 3.4 0"
+    fill="none"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={3}
+  />
+</Svg>
+`;
+
+exports[`Icon snapshots > check — color=#ff0 1`] = `
+<Svg
+  height={20}
+  viewBox="0 0 24 24"
+  width={20}
+>
+  <Polyline
+    fill="none"
+    points="20 6 9 17 4 12"
+    stroke="#ff0"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  />
+</Svg>
+`;
+
+exports[`Icon snapshots > check — default 1`] = `
+<Svg
+  height={20}
+  viewBox="0 0 24 24"
+  width={20}
+>
+  <Polyline
+    fill="none"
+    points="20 6 9 17 4 12"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  />
+</Svg>
+`;
+
+exports[`Icon snapshots > check — strokeWidth=3 1`] = `
+<Svg
+  height={20}
+  viewBox="0 0 24 24"
+  width={20}
+>
+  <Polyline
+    fill="none"
+    points="20 6 9 17 4 12"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={3}
+  />
+</Svg>
+`;
+
+exports[`Icon snapshots > chevronRight — color=#ff0 1`] = `
+<Svg
+  height={20}
+  viewBox="0 0 24 24"
+  width={20}
+>
+  <Polyline
+    fill="none"
+    points="9 18 15 12 9 6"
+    stroke="#ff0"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  />
+</Svg>
+`;
+
+exports[`Icon snapshots > chevronRight — default 1`] = `
+<Svg
+  height={20}
+  viewBox="0 0 24 24"
+  width={20}
+>
+  <Polyline
+    fill="none"
+    points="9 18 15 12 9 6"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  />
+</Svg>
+`;
+
+exports[`Icon snapshots > chevronRight — strokeWidth=3 1`] = `
+<Svg
+  height={20}
+  viewBox="0 0 24 24"
+  width={20}
+>
+  <Polyline
+    fill="none"
+    points="9 18 15 12 9 6"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={3}
+  />
+</Svg>
+`;
+
+exports[`Icon snapshots > heart — color=#ff0 1`] = `
+<Svg
+  height={20}
+  viewBox="0 0 24 24"
+  width={20}
+>
+  <Path
+    d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+    fill="none"
+    stroke="#ff0"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  />
+</Svg>
+`;
+
+exports[`Icon snapshots > heart — default 1`] = `
+<Svg
+  height={20}
+  viewBox="0 0 24 24"
+  width={20}
+>
+  <Path
+    d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+    fill="none"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  />
+</Svg>
+`;
+
+exports[`Icon snapshots > heart — strokeWidth=3 1`] = `
+<Svg
+  height={20}
+  viewBox="0 0 24 24"
+  width={20}
+>
+  <Path
+    d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+    fill="none"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={3}
+  />
+</Svg>
+`;
+
+exports[`Icon snapshots > home — color=#ff0 1`] = `
+<Svg
+  height={20}
+  viewBox="0 0 24 24"
+  width={20}
+>
+  <Path
+    d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+    fill="none"
+    stroke="#ff0"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  />
+  <Polyline
+    fill="none"
+    points="9 22 9 12 15 12 15 22"
+    stroke="#ff0"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  />
+</Svg>
+`;
+
+exports[`Icon snapshots > home — default 1`] = `
+<Svg
+  height={20}
+  viewBox="0 0 24 24"
+  width={20}
+>
+  <Path
+    d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+    fill="none"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  />
+  <Polyline
+    fill="none"
+    points="9 22 9 12 15 12 15 22"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  />
+</Svg>
+`;
+
+exports[`Icon snapshots > home — strokeWidth=3 1`] = `
+<Svg
+  height={20}
+  viewBox="0 0 24 24"
+  width={20}
+>
+  <Path
+    d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+    fill="none"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={3}
+  />
+  <Polyline
+    fill="none"
+    points="9 22 9 12 15 12 15 22"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={3}
+  />
+</Svg>
+`;
+
+exports[`Icon snapshots > plus — color=#ff0 1`] = `
+<Svg
+  height={20}
+  viewBox="0 0 24 24"
+  width={20}
+>
+  <Line
+    fill="none"
+    stroke="#ff0"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+    x1="12"
+    x2="12"
+    y1="5"
+    y2="19"
+  />
+  <Line
+    fill="none"
+    stroke="#ff0"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+    x1="5"
+    x2="19"
+    y1="12"
+    y2="12"
+  />
+</Svg>
+`;
+
+exports[`Icon snapshots > plus — default 1`] = `
+<Svg
+  height={20}
+  viewBox="0 0 24 24"
+  width={20}
+>
+  <Line
+    fill="none"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+    x1="12"
+    x2="12"
+    y1="5"
+    y2="19"
+  />
+  <Line
+    fill="none"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+    x1="5"
+    x2="19"
+    y1="12"
+    y2="12"
+  />
+</Svg>
+`;
+
+exports[`Icon snapshots > plus — strokeWidth=3 1`] = `
+<Svg
+  height={20}
+  viewBox="0 0 24 24"
+  width={20}
+>
+  <Line
+    fill="none"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={3}
+    x1="12"
+    x2="12"
+    y1="5"
+    y2="19"
+  />
+  <Line
+    fill="none"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={3}
+    x1="5"
+    x2="19"
+    y1="12"
+    y2="12"
+  />
+</Svg>
+`;
+
+exports[`Icon snapshots > renders null for unknown name gracefully (type-bypass) 1`] = `null`;
+
+exports[`Icon snapshots > respects size prop 1`] = `
+<Svg
+  height={48}
+  viewBox="0 0 24 24"
+  width={48}
+>
+  <Path
+    d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"
+    fill="none"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  />
+  <Path
+    d="M10.3 21a1.94 1.94 0 0 0 3.4 0"
+    fill="none"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  />
+</Svg>
+`;
+
+exports[`Icon snapshots > user — color=#ff0 1`] = `
+<Svg
+  height={20}
+  viewBox="0 0 24 24"
+  width={20}
+>
+  <Path
+    d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
+    fill="none"
+    stroke="#ff0"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  />
+  <Circle
+    cx="12"
+    cy="7"
+    fill="none"
+    r="4"
+    stroke="#ff0"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  />
+</Svg>
+`;
+
+exports[`Icon snapshots > user — default 1`] = `
+<Svg
+  height={20}
+  viewBox="0 0 24 24"
+  width={20}
+>
+  <Path
+    d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
+    fill="none"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  />
+  <Circle
+    cx="12"
+    cy="7"
+    fill="none"
+    r="4"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  />
+</Svg>
+`;
+
+exports[`Icon snapshots > user — strokeWidth=3 1`] = `
+<Svg
+  height={20}
+  viewBox="0 0 24 24"
+  width={20}
+>
+  <Path
+    d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
+    fill="none"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={3}
+  />
+  <Circle
+    cx="12"
+    cy="7"
+    fill="none"
+    r="4"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={3}
+  />
+</Svg>
+`;
+
+exports[`Icon snapshots > x — color=#ff0 1`] = `
+<Svg
+  height={20}
+  viewBox="0 0 24 24"
+  width={20}
+>
+  <Line
+    fill="none"
+    stroke="#ff0"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+    x1="18"
+    x2="6"
+    y1="6"
+    y2="18"
+  />
+  <Line
+    fill="none"
+    stroke="#ff0"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+    x1="6"
+    x2="18"
+    y1="6"
+    y2="18"
+  />
+</Svg>
+`;
+
+exports[`Icon snapshots > x — default 1`] = `
+<Svg
+  height={20}
+  viewBox="0 0 24 24"
+  width={20}
+>
+  <Line
+    fill="none"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+    x1="18"
+    x2="6"
+    y1="6"
+    y2="18"
+  />
+  <Line
+    fill="none"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+    x1="6"
+    x2="18"
+    y1="6"
+    y2="18"
+  />
+</Svg>
+`;
+
+exports[`Icon snapshots > x — strokeWidth=3 1`] = `
+<Svg
+  height={20}
+  viewBox="0 0 24 24"
+  width={20}
+>
+  <Line
+    fill="none"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={3}
+    x1="18"
+    x2="6"
+    y1="6"
+    y2="18"
+  />
+  <Line
+    fill="none"
+    stroke="#fff"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={3}
+    x1="6"
+    x2="18"
+    y1="6"
+    y2="18"
+  />
+</Svg>
+`;

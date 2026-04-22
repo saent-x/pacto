@@ -34,3 +34,17 @@ export type { IconName } from './Icon';
 export { NativeSheetContainer, formSheetOptions } from './NativeSheet';
 export { ScreenHeader } from './ScreenHeader';
 export { SubscreenHero } from './SubscreenHero';
+
+// Atoms-only surface (from `./atoms`, not WarmBlock). Exposed additively so
+// direct-path imports (`@/src/components/ui/atoms`) keep working and nothing
+// on the consumer side needs to change. Atoms' Badge is aliased `WarmBadge`
+// to avoid colliding with the separate `./Badge` component above, matching
+// the existing `WarmPill`/`WarmAvatar` convention.
+export {
+  Badge as WarmBadge,
+  CouplRings,
+  DateSectioned,
+  PrimaryButton,
+  ScreenHeader as CouplScreenHeader,
+  StickyDate,
+} from './atoms';
