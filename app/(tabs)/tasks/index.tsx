@@ -16,6 +16,7 @@ export default function TasksList() {
   const { C, F } = useTheme();
   const { lists, isLoading, error } = useTaskLists();
   const [filter, setFilter] = useState<string>('All');
+  const [dismissedError, setDismissedError] = useState(false);
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -34,7 +35,9 @@ export default function TasksList() {
   const totalAll = lists.reduce((a, l) => a + l.total, 0);
   const pct = totalAll === 0 ? 0 : totalDone / totalAll;
 
-  if (error) return <ErrorState onRetry={() => setFilter(filter)} />;
+  if (error && !dismissedError) {
+    return <ErrorState onRetry={() => setDismissedError(true)} />;
+  }
   if (isLoading && lists.length === 0) return <IndexSkeleton />;
 
   return (
