@@ -164,14 +164,16 @@ export function TaskRow({
               {dueChip}
             </Text>
           ) : null}
-          <View
-            style={{
-              width: 7,
-              height: 7,
-              borderRadius: 4,
-              backgroundColor: prioColor[prioKey],
-            }}
-          />
+          {prioKey !== 'none' ? (
+            <View
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: 4,
+                backgroundColor: prioColor[prioKey],
+              }}
+            />
+          ) : null}
         </Pressable>
       </ReanimatedSwipeable>
     </Animated.View>
