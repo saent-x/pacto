@@ -21,6 +21,16 @@ const _schema = i.schema({
       role: i.string(),                                     // 'owner' | 'partner'
       joinedAt: i.number(),
     }),
+    events: i.entity({
+      title: i.string(),
+      description: i.string().optional(),
+      startsAt: i.number().indexed(),
+      endsAt: i.number().optional(),
+      priority: i.number().optional(),
+      isPrivate: i.boolean().optional(),
+      createdAt: i.number().indexed(),
+      updatedAt: i.number().optional(),
+    }),
   },
   links: {
     spaceCreator: {
@@ -34,6 +44,14 @@ const _schema = i.schema({
     membershipSpace: {
       forward: { on: 'memberships', has: 'one', label: 'space', onDelete: 'cascade' },
       reverse: { on: 'spaces', has: 'many', label: 'memberships' },
+    },
+    eventCouple: {
+      forward: { on: 'events', has: 'one', label: 'couple', onDelete: 'cascade' },
+      reverse: { on: 'spaces', has: 'many', label: 'events' },
+    },
+    eventCreator: {
+      forward: { on: 'events', has: 'one', label: 'createdBy' },
+      reverse: { on: '$users', has: 'many', label: 'createdEvents' },
     },
   },
 });

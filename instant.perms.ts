@@ -27,6 +27,14 @@ const rules = {
       delete: "auth.id == data.ref('user.id')[0]",
     },
   },
+  events: {
+    allow: {
+      view: "auth.id in data.ref('couple.memberships.user.id')",
+      create: "auth.id in data.ref('couple.memberships.user.id')",
+      update: "auth.id in data.ref('couple.memberships.user.id')",
+      delete: "auth.id in data.ref('couple.memberships.user.id')",
+    },
+  },
 } satisfies InstantRules;
 
 export default rules;
