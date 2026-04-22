@@ -25,7 +25,7 @@ export function useCheckIns() {
   const { encrypt, decrypt, hasKey } = useEncryption();
   const today = getLocalDateKey();
 
-  const { data, isLoading: queryLoading } = db.useQuery(
+  const { data, isLoading: queryLoading } = (db as any).useQuery(
     coupleId
       ? {
           checkIns: {
@@ -37,7 +37,7 @@ export function useCheckIns() {
   );
 
   const rawCheckIns = useMemo<CheckInRecord[]>(() => {
-    return (data?.checkIns ?? []).map((c) => ({
+    return (data?.checkIns ?? []).map((c: any) => ({
       id: c.id,
       authorId: (c.author as any)?.[0]?.id ?? (c.author as any)?.id ?? '',
       mood: c.mood ?? null,
@@ -92,7 +92,7 @@ export function useCheckIns() {
         const now = Date.now();
         if (existing) {
           await db.transact(
-            db.tx.checkIns[existing.id].update({
+            (db.tx as any).checkIns[existing.id].update({
               mood: input.mood ?? null,
               note: input.note ? await encrypt(input.note) : null,
               isPrivate: input.isPrivate,
@@ -102,7 +102,7 @@ export function useCheckIns() {
         } else {
           const checkInId = id();
           await db.transact(
-            db.tx.checkIns[checkInId]
+            (db.tx as any).checkIns[checkInId]
               .update({
                 mood: input.mood ?? undefined,
                 note: input.note ? await encrypt(input.note) : undefined,
@@ -123,7 +123,7 @@ export function useCheckIns() {
   );
 
   const remove = useCallback(async (checkInId: string) => {
-    await db.transact(db.tx.checkIns[checkInId].delete());
+    await db.transact((db.tx as any).checkIns[checkInId].delete());
   }, []);
 
   const myTodayCheckIn = useMemo(

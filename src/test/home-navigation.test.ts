@@ -30,7 +30,7 @@ describe("homeNavigation", () => {
       "/(tabs)/calendar",
     );
     expect(routeForTimelineItem(makeTimelineItem({ type: "plan" }))).toBe(
-      "/(tabs)/together/plans",
+      "/(tabs)/us/plans",
     );
     expect(routeForTimelineItem(makeTimelineItem({ type: "reminder" }))).toBe(
       "/(tabs)/reminders",
@@ -40,6 +40,9 @@ describe("homeNavigation", () => {
     );
     expect(routeForTimelineItem(makeTimelineItem({ type: "ritual" }))).toBe(
       "/(tabs)/calendar",
+    );
+    expect(routeForTimelineItem(makeTimelineItem({ type: "memory" }))).toBe(
+      "/(tabs)/us/journal",
     );
   });
 
@@ -54,7 +57,7 @@ describe("homeNavigation", () => {
     };
 
     expect(routeForMilestoneItem(milestone)).toBe(
-      "/(tabs)/together/milestones",
+      "/(tabs)/us/milestones",
     );
   });
 });

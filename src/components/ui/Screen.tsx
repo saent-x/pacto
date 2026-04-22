@@ -1,6 +1,6 @@
 import Constants from 'expo-constants';
 import React from 'react';
-import { StyleProp, ViewStyle } from 'react-native';
+import { RefreshControl, StyleProp, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useTheme } from '@/src/lib/theme';
@@ -15,6 +15,8 @@ export function Screen({
   bottom = 110,
   topPad,
   underHeader = false,
+  refreshing,
+  onRefresh,
 }: {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
@@ -22,12 +24,22 @@ export function Screen({
   bottom?: number;
   topPad?: number;
   underHeader?: boolean;
+  refreshing?: boolean;
+  onRefresh?: () => void | Promise<void>;
 }) {
   const defaultTop = underHeader ? 0 : 8;
   const tp = topPad ?? defaultTop;
   const { C } = useTheme();
   const insets = useSafeAreaInsets();
   if (scroll) {
+    const refreshControl = onRefresh ? (
+      <RefreshControl
+        refreshing={!!refreshing}
+        onRefresh={onRefresh}
+        tintColor={C.gold}
+        colors={[C.gold]}
+      />
+    ) : undefined;
     return (
       <Animated.ScrollView
         entering={ENTER}
@@ -43,6 +55,7 @@ export function Screen({
           style,
         ]}
         showsVerticalScrollIndicator={false}
+        refreshControl={refreshControl}
       >
         {children}
       </Animated.ScrollView>

@@ -125,18 +125,21 @@ export function BlockCard({
   children,
   style,
   onPress,
+  testID,
 }: {
   bg?: string;
   ink?: string;
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   onPress?: () => void;
+  testID?: string;
 }) {
   const { C } = useTheme();
   const Wrapper: any = onPress ? PressScale : View;
   return (
     <Wrapper
       onPress={onPress}
+      testID={testID}
       style={[
         {
           backgroundColor: bg ?? C.peach,
