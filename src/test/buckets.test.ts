@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
-import { bucketOf, orderBuckets } from '@/src/components/tasks/buckets';
+import { bucketOf, orderBuckets, formatDueChip } from '@/src/components/tasks/buckets';
 
 const TODAY_ISO = '2026-04-22';
 const TODAY_DATE = new Date('2026-04-22T09:00:00');
@@ -37,4 +37,12 @@ describe('orderBuckets', () => {
       'Overdue', 'Today', 'Tomorrow', 'This week', 'MAY', 'JUN', 'Later',
     ]);
   });
+});
+
+describe('formatDueChip', () => {
+  it('returns null for null', () => expect(formatDueChip(null)).toBeNull());
+  it('returns TODAY for today', () => expect(formatDueChip(TODAY_ISO, TODAY_ISO)).toBe('TODAY'));
+  it('returns TOMORROW for +1', () => expect(formatDueChip('2026-04-23', TODAY_ISO)).toBe('TOMORROW'));
+  it('formats month + zero-padded day for future dates', () =>
+    expect(formatDueChip('2026-05-03', TODAY_ISO)).toBe('MAY 03'));
 });

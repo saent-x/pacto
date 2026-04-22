@@ -43,10 +43,11 @@ export function orderBuckets(labels: string[], todayIso?: string): string[] {
   return [...new Set(labels)].sort((a, b) => rank(a) - rank(b));
 }
 
-export function formatDueChip(dueDate: string | null): string | null {
+export function formatDueChip(dueDate: string | null, todayIso?: string): string | null {
   if (!dueDate) return null;
   const d = parseIsoDate(dueDate);
-  const today = startOfDay(new Date());
+  const now = todayIso ? parseIsoDate(todayIso) : new Date();
+  const today = startOfDay(now);
   const due = startOfDay(d);
   const diff = Math.floor((due - today) / 86400000);
   if (diff === 0) return 'TODAY';
