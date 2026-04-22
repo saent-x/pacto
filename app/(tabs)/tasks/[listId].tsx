@@ -1,134 +1,66 @@
+// app/(tabs)/tasks/[listId].tsx
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { DateSectioned, Display, Pill, RoundBtn } from '@/src/components/ui/atoms';
+import { Display, Pill, RoundBtn } from '@/src/components/ui/atoms';
 import { Icon } from '@/src/components/ui/Icon';
+import { TaskRow } from '@/src/components/tasks/TaskRow';
+import { bucketOf, orderBuckets } from '@/src/components/tasks/buckets';
+import { useTaskLists, type ListRow } from '@/src/hooks/useTaskLists';
+import { useTaskItems } from '@/src/hooks/useTasks';
 import { useTheme } from '@/src/lib/theme';
-import { TASK_LISTS } from '@/src/lib/tasks-data';
-
-type Task = {
-  id: number;
-  title: string;
-  done: boolean;
-  priority: 'low' | 'med' | 'high';
-  due: string | null;
-  bucket: string;
-};
-
-const SEED: Task[] = [
-  { id: 1, title: 'Book flights Milan → Venice', done: true, priority: 'high', due: 'MAR 20', bucket: 'Done' },
-  { id: 2, title: 'Reserve hotel near San Marco', done: true, priority: 'high', due: 'MAR 22', bucket: 'Done' },
-  { id: 3, title: 'Pack travel documents', done: false, priority: 'high', due: 'Today', bucket: 'Today' },
-  { id: 4, title: 'Charge camera + power bank', done: false, priority: 'med', due: 'Today', bucket: 'Today' },
-  { id: 5, title: 'Download offline maps', done: false, priority: 'med', due: 'Tomorrow', bucket: 'Tomorrow' },
-  { id: 6, title: 'Confirm airport transfer', done: false, priority: 'high', due: 'Tomorrow', bucket: 'Tomorrow' },
-  { id: 7, title: 'Make restaurant bookings', done: false, priority: 'med', due: 'Fri', bucket: 'This week' },
-  { id: 8, title: 'Exchange currency', done: false, priority: 'low', due: 'Sat', bucket: 'This week' },
-  { id: 9, title: 'Buy travel adapters', done: false, priority: 'low', due: 'May 4', bucket: 'May' },
-  { id: 10, title: 'Print backup tickets', done: false, priority: 'med', due: 'May 8', bucket: 'May' },
-  { id: 11, title: 'Pre-book gondola ride', done: false, priority: 'low', due: 'May 14', bucket: 'May' },
-  { id: 12, title: 'Pack medicine kit', done: false, priority: 'med', due: null, bucket: 'Later' },
-  { id: 13, title: 'Research gondola routes', done: false, priority: 'low', due: null, bucket: 'Later' },
-];
-
-const BUCKET_ORDER = ['Overdue', 'Today', 'Tomorrow', 'This week', 'May', 'Jun', 'Later'];
+import type { Task } from '@/src/types/database';
 
 export default function TaskListDetail() {
   const { listId } = useLocalSearchParams<{ listId: string }>();
   const { C, F } = useTheme();
   const insets = useSafeAreaInsets();
-  const list = TASK_LISTS.find((l) => String(l.id) === String(listId)) ?? TASK_LISTS[0];
-  const color = (C as any)[list.colorKey] as string;
-  const [tasks, setTasks] = useState<Task[]>(SEED);
 
-  const active = tasks.filter((t) => !t.done);
-  const done = tasks.filter((t) => t.done);
-  const doneCount = done.length;
-  const pct = tasks.length ? doneCount / tasks.length : 0;
-
-  const bucketColor: Record<string, string> = useMemo(
-    () => ({
-      Overdue: C.error,
-      Today: C.gold,
-      Tomorrow: C.peach,
-      'This week': C.lavender,
-      May: C.sky,
-      Jun: C.butter,
-      Later: C.fog,
-    }),
-    [C]
-  );
-  const sections = BUCKET_ORDER.map((b) => ({
-    label: b.toUpperCase(),
-    color: bucketColor[b],
-    items: active.filter((t) => t.bucket === b),
-  })).filter((s) => s.items.length);
-
-  const toggle = (tid: number) =>
-    setTasks((xs) => xs.map((x) => (x.id === tid ? { ...x, done: !x.done } : x)));
-
-  const prioColor = useMemo(
-    () => ({ high: C.error, med: C.butter, low: C.ash }),
-    [C]
+  const { lists, isLoading: listsLoading } = useTaskLists();
+  const list: ListRow | null = useMemo(
+    () => lists.find((l) => l.id === listId) ?? null,
+    [lists, listId],
   );
 
-  const renderRow = (t: Task) => (
-    <View
-      key={t.id}
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 14,
-        paddingVertical: 13,
-        paddingHorizontal: 14,
-        borderRadius: 16,
-        backgroundColor: C.card,
-        borderWidth: 1,
-        borderColor: C.line,
-      }}
-    >
-      <Pressable
-        onPress={() => toggle(t.id)}
-        style={{
-          width: 22,
-          height: 22,
-          borderRadius: 11,
-          borderWidth: 1.5,
-          borderColor: C.ash,
-        }}
-      />
-      <Text
-        style={{ flex: 1, fontSize: 14, color: C.bone, fontFamily: F.body }}
-      >
-        {t.title}
-      </Text>
-      {t.due && (
-        <Text
-          style={{
-            fontSize: 10,
-            color: C.fog,
-            fontFamily: F.bodyBold,
-            letterSpacing: 0.6,
-            backgroundColor: C.cardHi,
-            paddingHorizontal: 7,
-            paddingVertical: 3,
-            borderRadius: 6,
-          }}
-        >
-          {t.due.toUpperCase()}
-        </Text>
-      )}
-      <View
-        style={{
-          width: 7,
-          height: 7,
-          borderRadius: 4,
-          backgroundColor: prioColor[t.priority],
-        }}
-      />
-    </View>
-  );
+  const { tasks, isLoading: tasksLoading, toggleComplete, remove } =
+    useTaskItems(listId ?? null);
+
+  const color = list ? ((C as any)[list.colorKey] as string) : C.gold;
+
+  const active = tasks.filter((t) => !t.is_completed);
+  const done = tasks.filter((t) => t.is_completed);
+  const pct = tasks.length ? done.length / tasks.length : 0;
+
+  const bucketColor: Record<string, string> = {
+    Overdue: C.error,
+    Today: C.gold,
+    Tomorrow: C.peach,
+    'This week': C.lavender,
+    Later: C.fog,
+    JAN: C.sky, FEB: C.sky, MAR: C.sky, APR: C.sky,
+    MAY: C.sky, JUN: C.butter, JUL: C.butter, AUG: C.butter,
+    SEP: C.rose, OCT: C.rose, NOV: C.rose, DEC: C.rose,
+  };
+
+  const sections = useMemo(() => {
+    const buckets = new Map<string, Task[]>();
+    active.forEach((t) => {
+      const b = bucketOf(t.due_date, undefined);
+      if (!buckets.has(b)) buckets.set(b, []);
+      buckets.get(b)!.push(t);
+    });
+    const labels = orderBuckets(Array.from(buckets.keys()));
+    return labels.map((label) => ({
+      label: label.toUpperCase(),
+      color: bucketColor[label] ?? C.fog,
+      items: buckets.get(label)!,
+    }));
+  }, [active, bucketColor, C.fog]);
+
+  const listName = list?.name ?? (listsLoading ? '...' : 'List');
+  const isEmpty = !listsLoading && !tasksLoading && tasks.length === 0;
 
   return (
     <View style={{ flex: 1, backgroundColor: C.ink }}>
@@ -152,15 +84,15 @@ export default function TaskListDetail() {
         >
           <RoundBtn icon="chevronLeft" size={38} onPress={() => router.back()} />
           <Pill active bg={`${color}25`} color={color} size="sm">
-            {list.name.toUpperCase()}
+            {listName.toUpperCase()}
           </Pill>
           <RoundBtn
             icon="plus"
             size={38}
-            onPress={() => router.push(`/sheets/new-task?listId=${list.id}` as any)}
+            onPress={() => list && router.push(`/sheets/new-task?listId=${list.id}` as any)}
           />
         </View>
-        <Display size={34}>{list.name}</Display>
+        <Display size={34}>{listName}</Display>
         <View style={{ marginTop: 14, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
           <View
             style={{
@@ -174,7 +106,7 @@ export default function TaskListDetail() {
             <View style={{ width: `${pct * 100}%`, height: '100%', backgroundColor: color }} />
           </View>
           <Text style={{ fontFamily: F.displayBold, fontSize: 13, color: C.bone }}>
-            {doneCount}
+            {done.length}
             <Text style={{ color: C.fog }}>/{tasks.length}</Text>
           </Text>
         </View>
@@ -185,77 +117,168 @@ export default function TaskListDetail() {
         contentContainerStyle={{ padding: 18, paddingBottom: insets.bottom + 110 }}
         showsVerticalScrollIndicator={false}
       >
-        <DateSectioned sections={sections} maxOpen={3} renderItem={renderRow} />
-
-        {done.length > 0 && (
-          <View style={{ marginTop: 4 }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 8,
-                paddingHorizontal: 4,
-                marginBottom: 10,
-              }}
-            >
-              <Icon name="chevronDown" size={12} color={C.fog} />
-              <Text
-                style={{
-                  color: C.fog,
-                  fontSize: 10,
-                  fontFamily: F.bodyBold,
-                  letterSpacing: 1.6,
-                  textTransform: 'uppercase',
-                }}
+        {isEmpty ? (
+          <EmptyTasks listName={listName} onAdd={() => list && router.push(`/sheets/new-task?listId=${list.id}` as any)} />
+        ) : tasksLoading && tasks.length === 0 ? (
+          <DetailSkeleton />
+        ) : (
+          <>
+            {sections.map((s, si) => (
+              <Animated.View
+                key={s.label}
+                entering={FadeInDown.delay(si * 60).duration(360).springify().damping(18)}
+                style={{ marginBottom: 18 }}
               >
-                Completed · {done.length}
-              </Text>
-            </View>
-            <View style={{ gap: 8, opacity: 0.55 }}>
-              {done.map((t) => (
                 <View
-                  key={t.id}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    gap: 14,
-                    paddingVertical: 13,
-                    paddingHorizontal: 14,
-                    borderRadius: 16,
-                    borderWidth: 1,
-                    borderColor: C.line,
+                    gap: 10,
+                    paddingVertical: 8,
+                    marginBottom: 8,
+                    borderBottomWidth: 1,
+                    borderBottomColor: C.line,
                   }}
                 >
-                  <Pressable
-                    onPress={() => toggle(t.id)}
-                    style={{
-                      width: 22,
-                      height: 22,
-                      borderRadius: 11,
-                      backgroundColor: color,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Icon name="check" size={12} color={C.ink} strokeWidth={3} />
-                  </Pressable>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: s.color }} />
                   <Text
                     style={{
-                      flex: 1,
-                      fontSize: 14,
-                      color: C.fog,
-                      fontFamily: F.body,
-                      textDecorationLine: 'line-through',
+                      fontFamily: F.bodyBold,
+                      fontSize: 10,
+                      letterSpacing: 1.6,
+                      color: C.bone,
+                      textTransform: 'uppercase',
                     }}
                   >
-                    {t.title}
+                    {s.label}
+                  </Text>
+                  <Text style={{ fontSize: 10, color: C.fog, fontFamily: F.bodyBold, flex: 1 }}>
+                    {s.items.length}
                   </Text>
                 </View>
-              ))}
-            </View>
-          </View>
+                <Animated.View layout={LinearTransition.springify().damping(18)} style={{ gap: 8 }}>
+                  {s.items.map((t) => (
+                    <TaskRow
+                      key={t.id}
+                      task={t}
+                      listColor={color}
+                      testID={`task-row-${t.id}`}
+                      onToggle={() => toggleComplete(t)}
+                      onDelete={() => remove(t.id)}
+                    />
+                  ))}
+                </Animated.View>
+              </Animated.View>
+            ))}
+
+            {done.length > 0 ? (
+              <CompletedSection color={color} done={done} onToggle={toggleComplete} />
+            ) : null}
+          </>
         )}
       </ScrollView>
+    </View>
+  );
+}
+
+function CompletedSection({
+  color,
+  done,
+  onToggle,
+}: { color: string; done: Task[]; onToggle: (t: Task) => void }) {
+  const { C, F } = useTheme();
+  return (
+    <View style={{ marginTop: 4 }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          paddingHorizontal: 4,
+          marginBottom: 10,
+        }}
+      >
+        <Icon name="chevronDown" size={12} color={C.fog} />
+        <Text
+          style={{
+            color: C.fog,
+            fontSize: 10,
+            fontFamily: F.bodyBold,
+            letterSpacing: 1.6,
+            textTransform: 'uppercase',
+          }}
+        >
+          Completed · {done.length}
+        </Text>
+      </View>
+      <Animated.View layout={LinearTransition.springify().damping(18)} style={{ gap: 8, opacity: 0.55 }}>
+        {done.map((t) => (
+          <TaskRow
+            key={t.id}
+            task={t}
+            listColor={color}
+            testID={`task-row-${t.id}`}
+            onToggle={() => onToggle(t)}
+            onDelete={() => undefined}
+          />
+        ))}
+      </Animated.View>
+    </View>
+  );
+}
+
+function EmptyTasks({ listName, onAdd }: { listName: string; onAdd: () => void }) {
+  const { C, F } = useTheme();
+  return (
+    <View testID="tasks-detail-empty" style={{ alignItems: 'center', paddingVertical: 48, gap: 10 }}>
+      <Icon name="checkSquare" size={28} color={C.fog} />
+      <Text style={{ fontFamily: F.displayBold, fontSize: 22, color: C.bone, letterSpacing: -0.3 }}>
+        All clear.
+      </Text>
+      <Text style={{ fontSize: 12, color: C.fog, fontFamily: F.body }}>
+        Nothing on {listName} yet.
+      </Text>
+      <Pressable
+        testID="tasks-detail-empty-add"
+        onPress={onAdd}
+        style={{
+          marginTop: 8,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+          paddingHorizontal: 16,
+          paddingVertical: 10,
+          borderRadius: 999,
+          backgroundColor: C.goldSoft,
+        }}
+      >
+        <Icon name="plus" size={14} color={C.gold} />
+        <Text style={{ color: C.gold, fontFamily: F.bodyBold, fontSize: 12, letterSpacing: 0.4 }}>
+          Add a task
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function DetailSkeleton() {
+  const { C } = useTheme();
+  return (
+    <View>
+      {[0, 1, 2, 3].map((i) => (
+        <View
+          key={i}
+          style={{
+            height: 54,
+            backgroundColor: C.card,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: C.line,
+            marginBottom: 10,
+            opacity: 0.6,
+          }}
+        />
+      ))}
     </View>
   );
 }
