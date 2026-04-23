@@ -59,6 +59,39 @@ export function useWishlists() {
   };
 }
 
+export function useAllWishlistItems() {
+  const { activeCouple } = useSession();
+  const coupleId = activeCouple?.couple?.id ?? null;
+
+  const { data, isLoading: queryLoading } = db.useQuery(
+    coupleId
+      ? {
+          wishlistItems: {
+            $: { where: { 'couple.id': coupleId } },
+            addedBy: {},
+            wishlist: {},
+          },
+        }
+      : null,
+  );
+
+  const items = useMemo(
+    () =>
+      (data?.wishlistItems ?? []).map((i) => ({
+        ...i,
+        addedBy: (i.addedBy as any)?.[0]?.id ?? (i.addedBy as any)?.id ?? '',
+        wishlistId: (i.wishlist as any)?.[0]?.id ?? (i.wishlist as any)?.id ?? '',
+        wishlistName: (i.wishlist as any)?.[0]?.name ?? (i.wishlist as any)?.name ?? null,
+      })),
+    [data?.wishlistItems],
+  );
+
+  return {
+    items,
+    isLoading: !!coupleId && queryLoading,
+  };
+}
+
 export function useWishlistItems(wishlistId: string | null) {
   const { activeCouple, user } = useSession();
   const coupleId = activeCouple?.couple?.id ?? null;
