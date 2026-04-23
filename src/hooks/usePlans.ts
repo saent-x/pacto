@@ -26,7 +26,7 @@ export function usePlans(statuses?: string[]) {
   const plans = useMemo(() => {
     const raw = data?.plans ?? [];
     if (!statuses || statuses.length === 0) return raw;
-    return raw.filter((p) => statuses.includes(p.status));
+    return raw.filter((p) => p.status != null && statuses.includes(p.status));
   }, [data?.plans, statuses]);
 
   const create = useCallback(
