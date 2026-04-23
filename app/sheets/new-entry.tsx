@@ -1,19 +1,28 @@
+import { format } from 'date-fns';
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
 import { SheetShell } from '@/src/components/ui/SheetShell';
+import { useJournal } from '@/src/hooks/useJournal';
 import { useTheme } from '@/src/lib/theme';
 
 type Mood = 'great' | 'good' | 'okay' | 'low' | 'rough';
 
 export default function NewEntry() {
   const { C, F } = useTheme();
+  const { create } = useJournal();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [mood, setMood] = useState<Mood>('good');
   const [isPrivate, setIsPrivate] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const now = useMemo(() => new Date(), []);
+  const eyebrow = format(now, 'EEEE, MMMM d').toUpperCase();
+  const entryDate = format(now, 'yyyy-MM-dd');
 
   const moods: { k: Mood; icon: IconName; color: string; label: string }[] = [
     { k: 'great', icon: 'sun', color: C.mint, label: 'Great' },
@@ -23,13 +32,45 @@ export default function NewEntry() {
     { k: 'rough', icon: 'zap', color: C.peach, label: 'Rough' },
   ];
 
+  const canSave = body.trim().length > 0 && !saving;
+
+  const onSave = async () => {
+    if (!canSave) return;
+    setSaving(true);
+    try {
+      await create({
+        title: title.trim() || null,
+        body: body.trim(),
+        mood,
+        is_private: isPrivate,
+        entry_date: entryDate,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.back();
+    } catch (err) {
+      console.warn('[new-entry] create failed', err);
+      Alert.alert('Save failed', 'Try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <SheetShell
-      eyebrow="SATURDAY, APRIL 18"
+      eyebrow={eyebrow}
       title="New entry."
-      footer={<PrimaryButton icon="feather" onPress={() => router.back()}>Save entry</PrimaryButton>}
+      footer={
+        <PrimaryButton
+          icon="feather"
+          onPress={onSave}
+          disabled={!canSave}
+        >
+          {saving ? 'Saving…' : 'Save entry'}
+        </PrimaryButton>
+      }
     >
       <TextInput
+        testID="new-entry-title-input"
         value={title}
         onChangeText={setTitle}
         placeholder="Give it a title…"
@@ -45,6 +86,7 @@ export default function NewEntry() {
       <View style={{ marginTop: 4, width: 40, height: 2, backgroundColor: C.gold, borderRadius: 1 }} />
 
       <TextInput
+        testID="new-entry-body-input"
         value={body}
         onChangeText={setBody}
         placeholder="Write your thoughts..."
@@ -71,6 +113,7 @@ export default function NewEntry() {
               return (
                 <Pressable
                   key={m.k}
+                  testID={`new-entry-mood-${m.k}`}
                   onPress={() => setMood(m.k)}
                   style={{
                     flexDirection: 'row',
@@ -123,6 +166,7 @@ export default function NewEntry() {
           </Text>
         </View>
         <Pressable
+          testID="new-entry-private-toggle"
           onPress={() => setIsPrivate((v) => !v)}
           style={{
             width: 44,
