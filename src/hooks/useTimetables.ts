@@ -1,0 +1,225 @@
+import { useCallback, useMemo } from 'react';
+import { db, id as newId } from '@/src/lib/instant';
+import { useSession } from './useSession';
+import type { IconName } from '@/src/components/ui/Icon';
+import type {
+  ShareKind,
+  TemplateKey,
+  TimetableItem,
+  Who,
+} from '@/src/lib/timetables-data';
+
+export type TimetableRow = {
+  id: string;
+  title: string;
+  template: TemplateKey;
+  share: ShareKind;
+  itemsCount: number;
+  updatedAt: number;
+};
+
+type TimetableInput = {
+  title: string;
+  template?: TemplateKey;
+  share?: ShareKind;
+};
+
+type TimetableItemInput = {
+  title: string;
+  day: number;
+  startHour: number;
+  duration: number;
+  category?: string;
+  icon?: IconName;
+  color?: string;
+  ink?: string;
+  who?: Who;
+  repeat?: string;
+  star?: boolean;
+};
+
+export function useTimetables() {
+  const { activeCouple, user } = useSession();
+  const coupleId = activeCouple?.couple?.id ?? null;
+  const userId = user?.id ?? null;
+
+  const { data, isLoading: queryLoading } = db.useQuery(
+    coupleId
+      ? {
+          timetables: {
+            $: { where: { 'couple.id': coupleId } },
+            items: {},
+          },
+        }
+      : null,
+  );
+
+  const timetables = useMemo<TimetableRow[]>(() => {
+    const raw = (data?.timetables ?? []) as any[];
+    return raw
+      .map((t): TimetableRow => ({
+        id: String(t.id),
+        title: String(t.title ?? ''),
+        template: (t.template ?? 'custom') as TemplateKey,
+        share: (t.share ?? 'solo') as ShareKind,
+        itemsCount: Array.isArray(t.items) ? t.items.length : 0,
+        updatedAt: Number(t.updatedAt ?? t.createdAt ?? 0),
+      }))
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+  }, [data?.timetables]);
+
+  const create = useCallback(
+    async (input: TimetableInput) => {
+      if (!coupleId || !userId) return;
+      const tId = newId();
+      const now = Date.now();
+      await db.transact(
+        db.tx.timetables[tId]
+          .update({
+            title: input.title,
+            template: input.template ?? 'custom',
+            share: input.share ?? 'solo',
+            createdAt: now,
+            updatedAt: now,
+          })
+          .link({ couple: coupleId, createdBy: userId }),
+      );
+    },
+    [coupleId, userId],
+  );
+
+  const update = useCallback(
+    async (timetableId: string, input: Partial<TimetableInput>) => {
+      const updates: Record<string, unknown> = { updatedAt: Date.now() };
+      if (input.title !== undefined) updates.title = input.title;
+      if (input.template !== undefined) updates.template = input.template;
+      if (input.share !== undefined) updates.share = input.share;
+      await db.transact(db.tx.timetables[timetableId].update(updates));
+    },
+    [],
+  );
+
+  const remove = useCallback(async (timetableId: string) => {
+    await db.transact(db.tx.timetables[timetableId].delete());
+  }, []);
+
+  return {
+    timetables,
+    isLoading: !!coupleId && queryLoading,
+    create,
+    update,
+    remove,
+    refetch: async () => {},
+  };
+}
+
+export function normalizeTimetableItem(raw: any): TimetableItem {
+  return {
+    id: String(raw.id),
+    day: typeof raw.day === 'number' ? raw.day : 0,
+    start: typeof raw.startHour === 'number' ? raw.startHour : 0,
+    dur: typeof raw.duration === 'number' ? raw.duration : 1,
+    title: String(raw.title ?? ''),
+    icon: ((raw.icon as IconName) ?? 'coffee') as IconName,
+    color: (raw.color as string) ?? '#F4A68C',
+    ink: (raw.ink as string) ?? '#3A1F14',
+    cat: (raw.category as string) ?? 'other',
+    who: ((raw.who as Who) ?? 'both') as Who,
+    star: Boolean(raw.star),
+  };
+}
+
+export function useTimetable(timetableId: string | null) {
+  const { activeCouple } = useSession();
+  const coupleId = activeCouple?.couple?.id ?? null;
+
+  const { data, isLoading: queryLoading } = db.useQuery(
+    coupleId && timetableId
+      ? {
+          timetables: {
+            $: { where: { id: timetableId, 'couple.id': coupleId } },
+            items: {},
+          },
+        }
+      : null,
+  );
+
+  const timetable = useMemo(() => {
+    const first = (data?.timetables ?? [])[0] as any | undefined;
+    if (!first) return null;
+    return {
+      id: String(first.id),
+      title: String(first.title ?? ''),
+      template: (first.template ?? 'custom') as TemplateKey,
+      share: (first.share ?? 'solo') as ShareKind,
+      updatedAt: Number(first.updatedAt ?? first.createdAt ?? 0),
+    };
+  }, [data?.timetables]);
+
+  const items = useMemo<TimetableItem[]>(() => {
+    const first = (data?.timetables ?? [])[0] as any | undefined;
+    const raw = (first?.items ?? []) as any[];
+    return raw.map(normalizeTimetableItem);
+  }, [data?.timetables]);
+
+  const add = useCallback(
+    async (input: TimetableItemInput) => {
+      if (!coupleId || !timetableId) return;
+      const itemId = newId();
+      const now = Date.now();
+      await db.transact(
+        db.tx.timetableItems[itemId]
+          .update({
+            title: input.title,
+            day: input.day,
+            startHour: input.startHour,
+            duration: input.duration,
+            category: input.category ?? 'other',
+            icon: input.icon ?? 'coffee',
+            color: input.color ?? '#F4A68C',
+            ink: input.ink ?? '#3A1F14',
+            who: input.who ?? 'both',
+            repeat: input.repeat ?? 'weekly',
+            star: Boolean(input.star),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .link({ timetable: timetableId, couple: coupleId }),
+      );
+    },
+    [coupleId, timetableId],
+  );
+
+  const update = useCallback(
+    async (itemId: string, input: Partial<TimetableItemInput>) => {
+      const updates: Record<string, unknown> = { updatedAt: Date.now() };
+      if (input.title !== undefined) updates.title = input.title;
+      if (input.day !== undefined) updates.day = input.day;
+      if (input.startHour !== undefined) updates.startHour = input.startHour;
+      if (input.duration !== undefined) updates.duration = input.duration;
+      if (input.category !== undefined) updates.category = input.category;
+      if (input.icon !== undefined) updates.icon = input.icon;
+      if (input.color !== undefined) updates.color = input.color;
+      if (input.ink !== undefined) updates.ink = input.ink;
+      if (input.who !== undefined) updates.who = input.who;
+      if (input.repeat !== undefined) updates.repeat = input.repeat;
+      if (input.star !== undefined) updates.star = Boolean(input.star);
+      await db.transact(db.tx.timetableItems[itemId].update(updates));
+    },
+    [],
+  );
+
+  const remove = useCallback(async (itemId: string) => {
+    await db.transact(db.tx.timetableItems[itemId].delete());
+  }, []);
+
+  return {
+    timetable,
+    items,
+    isLoading: !!coupleId && !!timetableId && queryLoading,
+    add,
+    update,
+    remove,
+    refetch: async () => {},
+  };
+}

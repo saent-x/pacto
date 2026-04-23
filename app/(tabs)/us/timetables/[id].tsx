@@ -1,17 +1,19 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Icon, IconName } from '@/src/components/ui/Icon';
 import { Screen } from '@/src/components/ui/Screen';
 import { WhoDot } from '@/src/components/ui/WhoDot';
+import { useTimetable } from '@/src/hooks/useTimetables';
 import { useTheme } from '@/src/lib/theme';
 import {
   DAYS_FULL,
   DAYS_LETTER,
   DAYS_SHORT,
-  DEMO_ITEMS,
-  DEMO_TIMETABLES,
   fmtHour,
+  shareBadge,
+  tmplByKey,
   type TimetableItem,
 } from '@/src/lib/timetables-data';
 
@@ -19,35 +21,69 @@ type Layout = 'grid' | 'list' | 'timeline';
 
 export default function TimetableDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const idString = Array.isArray(id) ? id[0] : id;
   const { C, F } = useTheme();
-  const table = DEMO_TIMETABLES.find((t) => String(t.id) === String(id)) ?? DEMO_TIMETABLES[0];
+  const { timetable, items, isLoading } = useTimetable(idString ?? null);
 
   const [layout, setLayout] = useState<Layout>('grid');
   const [selectedDay, setSelectedDay] = useState(2);
   const [weekOffset, setWeekOffset] = useState(0);
 
+  if (isLoading && !timetable) return <DetailSkeleton />;
+
+  if (!timetable) {
+    return (
+      <Screen>
+        <View
+          style={{
+            marginTop: 24,
+            padding: 24,
+            borderRadius: 22,
+            borderWidth: 1,
+            borderStyle: 'dashed',
+            borderColor: C.line,
+            alignItems: 'center',
+            gap: 10,
+          }}
+        >
+          <Icon name="grid" size={22} color={C.fog} />
+          <Text style={{ fontFamily: F.displayBold, fontSize: 16, color: C.mist }}>
+            Timetable not found
+          </Text>
+          <Pressable onPress={() => router.back()} hitSlop={8}>
+            <Text style={{ fontSize: 12, color: C.gold, fontFamily: F.bodyBold, letterSpacing: 0.8 }}>
+              BACK TO RHYTHMS →
+            </Text>
+          </Pressable>
+        </View>
+      </Screen>
+    );
+  }
+
+  const tpl = tmplByKey(timetable.template);
+  const badge = shareBadge(timetable.share);
+
   return (
     <Screen>
-      {/* Heading (Stack also shows back arrow native) */}
-      <View style={{ marginBottom: 14 }}>
+      <Animated.View entering={FadeInDown.duration(420)} style={{ marginBottom: 14 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <View
             style={{
               paddingHorizontal: 6,
               paddingVertical: 2,
               borderRadius: 4,
-              backgroundColor: C.goldSoft,
+              backgroundColor: badge.bg,
             }}
           >
             <Text
               style={{
-                color: C.gold,
+                color: badge.color,
                 fontSize: 9,
                 fontFamily: F.bodyBold,
                 letterSpacing: 1,
               }}
             >
-              SHARED
+              {badge.label}
             </Text>
           </View>
           <Text
@@ -58,7 +94,7 @@ export default function TimetableDetail() {
               letterSpacing: 0.6,
             }}
           >
-            Meals · week 42
+            {tpl.label} · {items.length} item{items.length === 1 ? '' : 's'}
           </Text>
         </View>
         <Text
@@ -71,12 +107,12 @@ export default function TimetableDetail() {
             marginTop: 2,
           }}
         >
-          {table.title}
+          {timetable.title}
         </Text>
-      </View>
+      </Animated.View>
 
-      {/* Week nav + layout toggle */}
-      <View
+      <Animated.View
+        entering={FadeInDown.delay(80).duration(380)}
         style={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -174,17 +210,44 @@ export default function TimetableDetail() {
             );
           })}
         </View>
-      </View>
+      </Animated.View>
 
-      {layout === 'grid' && (
-        <GridView selectedDay={selectedDay} setSelectedDay={setSelectedDay} />
-      )}
-      {layout === 'list' && <ListView />}
-      {layout === 'timeline' && (
-        <TimelineView selectedDay={selectedDay} setSelectedDay={setSelectedDay} />
+      {items.length === 0 ? (
+        <Pressable
+          onPress={() => router.push('/sheets/new-timetable-item' as any)}
+          style={{
+            padding: 24,
+            borderRadius: 22,
+            borderWidth: 1,
+            borderStyle: 'dashed',
+            borderColor: C.line,
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <Icon name="plus" size={22} color={C.fog} />
+          <Text style={{ fontFamily: F.displayBold, fontSize: 16, color: C.mist }}>
+            No items yet
+          </Text>
+          <Text
+            style={{
+              fontSize: 12,
+              color: C.fog,
+              fontFamily: F.body,
+              textAlign: 'center',
+            }}
+          >
+            Tap + to add your first entry for this rhythm.
+          </Text>
+        </Pressable>
+      ) : layout === 'grid' ? (
+        <GridView items={items} selectedDay={selectedDay} setSelectedDay={setSelectedDay} />
+      ) : layout === 'list' ? (
+        <ListView items={items} />
+      ) : (
+        <TimelineView items={items} selectedDay={selectedDay} setSelectedDay={setSelectedDay} />
       )}
 
-      {/* FAB */}
       <Pressable
         onPress={() => router.push('/sheets/new-timetable-item' as any)}
         style={{
@@ -210,15 +273,17 @@ export default function TimetableDetail() {
 }
 
 function GridView({
+  items,
   selectedDay,
   setSelectedDay,
 }: {
+  items: TimetableItem[];
   selectedDay: number;
   setSelectedDay: (n: number) => void;
 }) {
   const { C, F } = useTheme();
-  const dayItems = DEMO_ITEMS.filter((i) => i.day === selectedDay).sort((a, b) => a.start - b.start);
-  const dayCounts = [0, 1, 2, 3, 4, 5, 6].map((d) => DEMO_ITEMS.filter((i) => i.day === d).length);
+  const dayItems = items.filter((i) => i.day === selectedDay).sort((a, b) => a.start - b.start);
+  const dayCounts = [0, 1, 2, 3, 4, 5, 6].map((d) => items.filter((i) => i.day === d).length);
 
   return (
     <View>
@@ -302,7 +367,7 @@ function GridView({
             {dayItems.reduce((s, i) => s + i.dur, 0).toFixed(1)}h scheduled
           </Text>
         </View>
-        {selectedDay === 2 && (
+        {dayItems.some((it) => it.star) ? (
           <View
             style={{
               paddingHorizontal: 8,
@@ -319,15 +384,20 @@ function GridView({
                 letterSpacing: 1.2,
               }}
             >
-              ★ DATE NIGHT
+              ★ STARRED
             </Text>
           </View>
-        )}
+        ) : null}
       </View>
 
       <View style={{ gap: 10 }}>
-        {dayItems.map((item) => (
-          <ItemCard key={item.id} item={item} />
+        {dayItems.map((item, i) => (
+          <Animated.View
+            key={item.id}
+            entering={FadeInDown.delay(Math.min(i, 10) * 60 + 80).duration(400)}
+          >
+            <ItemCard item={item} />
+          </Animated.View>
         ))}
       </View>
     </View>
@@ -411,12 +481,12 @@ function ItemCard({ item }: { item: TimetableItem }) {
   );
 }
 
-function ListView() {
+function ListView({ items }: { items: TimetableItem[] }) {
   const { C, F } = useTheme();
   const byDay = DAYS_FULL.map((name, i) => ({
     name,
     idx: i,
-    items: DEMO_ITEMS.filter((it) => it.day === i).sort((a, b) => a.start - b.start),
+    items: items.filter((it) => it.day === i).sort((a, b) => a.start - b.start),
   }));
   return (
     <View>
@@ -448,9 +518,10 @@ function ListView() {
                 </Text>
               </View>
               <View style={{ gap: 6 }}>
-                {d.items.map((item) => (
-                  <View
+                {d.items.map((item, i) => (
+                  <Animated.View
                     key={item.id}
+                    entering={FadeInDown.delay(Math.min(i, 10) * 40 + 40).duration(360)}
                     style={{
                       backgroundColor: C.card,
                       borderWidth: 1,
@@ -498,25 +569,27 @@ function ListView() {
                       </Text>
                     </View>
                     <WhoDot who={item.who} size={18} borderColor={C.card} />
-                  </View>
+                  </Animated.View>
                 ))}
               </View>
             </View>
-          )
+          ),
       )}
     </View>
   );
 }
 
 function TimelineView({
+  items,
   selectedDay,
   setSelectedDay,
 }: {
+  items: TimetableItem[];
   selectedDay: number;
   setSelectedDay: (n: number) => void;
 }) {
   const { C, F } = useTheme();
-  const dayItems = DEMO_ITEMS.filter((i) => i.day === selectedDay).sort((a, b) => a.start - b.start);
+  const dayItems = items.filter((i) => i.day === selectedDay).sort((a, b) => a.start - b.start);
   const startHour = 6;
   const endHour = 23;
   const hourHeight = 42;
@@ -527,7 +600,7 @@ function TimelineView({
       <View style={{ flexDirection: 'row', gap: 4, marginBottom: 14 }}>
         {DAYS_LETTER.map((d, i) => {
           const active = i === selectedDay;
-          const count = DEMO_ITEMS.filter((it) => it.day === i).length;
+          const count = items.filter((it) => it.day === i).length;
           return (
             <Pressable
               key={i}
@@ -629,12 +702,13 @@ function TimelineView({
             </View>
           );
         })}
-        {dayItems.map((item) => {
+        {dayItems.map((item, i) => {
           const top = (item.start - startHour) * hourHeight;
           const height = item.dur * hourHeight - 3;
           return (
-            <View
+            <Animated.View
               key={item.id}
+              entering={FadeIn.delay(Math.min(i, 10) * 40 + 80).duration(360)}
               style={{
                 position: 'absolute',
                 left: 4,
@@ -697,10 +771,41 @@ function TimelineView({
                   {fmtHour(item.start)} – {fmtHour(item.start + item.dur)}
                 </Text>
               )}
-            </View>
+            </Animated.View>
           );
         })}
       </View>
     </View>
+  );
+}
+
+function DetailSkeleton() {
+  const { C } = useTheme();
+  return (
+    <Screen>
+      <Animated.View
+        entering={FadeIn.duration(300)}
+        style={{ height: 50, marginBottom: 14, borderRadius: 10, backgroundColor: C.card, opacity: 0.55 }}
+      />
+      <Animated.View
+        entering={FadeIn.delay(60).duration(300)}
+        style={{ height: 38, marginBottom: 16, borderRadius: 999, backgroundColor: C.card, opacity: 0.55 }}
+      />
+      {[0, 1, 2, 3].map((i) => (
+        <Animated.View
+          key={i}
+          entering={FadeIn.delay(120 + i * 60).duration(300)}
+          style={{
+            height: 72,
+            borderRadius: 22,
+            backgroundColor: C.card,
+            borderWidth: 1,
+            borderColor: C.line,
+            opacity: 0.55,
+            marginBottom: 10,
+          }}
+        />
+      ))}
+    </Screen>
   );
 }

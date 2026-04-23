@@ -1,24 +1,86 @@
 import { router } from 'expo-router';
+import { useMemo } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import { formatDistanceToNowStrict } from 'date-fns';
 import { Icon } from '@/src/components/ui/Icon';
 import { Screen } from '@/src/components/ui/Screen';
+import { useTimetables, type TimetableRow } from '@/src/hooks/useTimetables';
 import { useTheme } from '@/src/lib/theme';
-import {
-  DEMO_TIMETABLES,
-  TEMPLATES,
-  shareBadge,
-  tmplByKey,
-  type Timetable,
-} from '@/src/lib/timetables-data';
+import { TEMPLATES, shareBadge, tmplByKey } from '@/src/lib/timetables-data';
 
 export default function TimetablesHub() {
   const { C, F } = useTheme();
-  const tables = DEMO_TIMETABLES;
+  const { timetables, isLoading } = useTimetables();
+
+  const stats = useMemo(() => {
+    const itemsScheduled = timetables.reduce((s, t) => s + t.itemsCount, 0);
+    const shared = timetables.filter((t) => t.share === 'shared').length;
+    const partner = timetables.filter((t) => t.share === 'partner').length;
+    return { itemsScheduled, shared, partner };
+  }, [timetables]);
+
+  if (isLoading && timetables.length === 0) return <HubSkeleton />;
+
+  if (timetables.length === 0) {
+    return (
+      <Screen>
+        <Pressable
+          onPress={() => router.push('/sheets/new-timetable' as any)}
+          style={{
+            marginTop: 8,
+            padding: 24,
+            borderRadius: 22,
+            borderWidth: 1,
+            borderStyle: 'dashed',
+            borderColor: C.line,
+            alignItems: 'center',
+            gap: 8,
+            marginBottom: 28,
+          }}
+        >
+          <Icon name="grid" size={22} color={C.fog} />
+          <Text style={{ fontFamily: F.displayBold, fontSize: 16, color: C.mist }}>
+            No rhythms yet
+          </Text>
+          <Text
+            style={{
+              fontSize: 12,
+              color: C.fog,
+              fontFamily: F.body,
+              textAlign: 'center',
+            }}
+          >
+            Build a weekly cadence — meals, workouts, morning rituals.
+          </Text>
+        </Pressable>
+        <Text
+          style={{
+            fontSize: 10,
+            color: C.fog,
+            fontFamily: F.bodyBold,
+            letterSpacing: 1.4,
+            marginBottom: 10,
+            paddingHorizontal: 4,
+          }}
+        >
+          START FROM A TEMPLATE
+        </Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View style={{ flexDirection: 'row', gap: 10, paddingRight: 12 }}>
+            {TEMPLATES.slice(0, 5).map((t) => (
+              <TemplateCard key={t.key} t={t} />
+            ))}
+          </View>
+        </ScrollView>
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
-      {/* Rhythm of the week */}
-      <View
+      <Animated.View
+        entering={FadeInDown.duration(420)}
         style={{
           backgroundColor: C.card,
           borderWidth: 1,
@@ -67,15 +129,17 @@ export default function TimetablesHub() {
               lineHeight: 40,
             }}
           >
-            56
+            {stats.itemsScheduled}
           </Text>
-          <Text style={{ fontSize: 12, color: C.mist, fontFamily: F.body }}>items scheduled</Text>
+          <Text style={{ fontSize: 12, color: C.mist, fontFamily: F.body }}>
+            item{stats.itemsScheduled === 1 ? '' : 's'} scheduled
+          </Text>
         </View>
         <View style={{ marginTop: 14, flexDirection: 'row', gap: 20 }}>
           {[
-            { n: '4', l: 'TIMETABLES' },
-            { n: '2', l: 'SHARED' },
-            { n: '12h', l: 'TOGETHER' },
+            { n: String(timetables.length), l: 'TIMETABLES' },
+            { n: String(stats.shared), l: 'SHARED' },
+            { n: String(stats.partner), l: "PARTNER'S" },
           ].map((s) => (
             <View key={s.l}>
               <Text
@@ -102,9 +166,8 @@ export default function TimetablesHub() {
             </View>
           ))}
         </View>
-      </View>
+      </Animated.View>
 
-      {/* Your rhythms list */}
       <View
         style={{
           flexDirection: 'row',
@@ -122,7 +185,7 @@ export default function TimetablesHub() {
             letterSpacing: 1.4,
           }}
         >
-          YOUR RHYTHMS · {tables.length}
+          YOUR RHYTHMS · {timetables.length}
         </Text>
         <Pressable
           onPress={() => router.push('/sheets/new-timetable' as any)}
@@ -151,12 +214,16 @@ export default function TimetablesHub() {
       </View>
 
       <View style={{ gap: 10 }}>
-        {tables.map((t) => (
-          <TimetableCard key={t.id} t={t} onPress={() => router.push(`/us/timetables/${t.id}` as any)} />
+        {timetables.map((t, i) => (
+          <Animated.View
+            key={t.id}
+            entering={FadeInDown.delay(Math.min(i, 10) * 60 + 80).duration(400)}
+          >
+            <TimetableCard t={t} onPress={() => router.push(`/us/timetables/${t.id}` as any)} />
+          </Animated.View>
         ))}
       </View>
 
-      {/* Templates horizontal strip */}
       <View style={{ marginTop: 28 }}>
         <Text
           style={{
@@ -173,54 +240,7 @@ export default function TimetablesHub() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={{ flexDirection: 'row', gap: 10, paddingRight: 12 }}>
             {TEMPLATES.slice(0, 5).map((t) => (
-              <Pressable
-                key={t.key}
-                onPress={() => router.push('/sheets/new-timetable' as any)}
-                style={{
-                  width: 132,
-                  backgroundColor: t.color,
-                  borderRadius: 20,
-                  paddingHorizontal: 14,
-                  paddingTop: 16,
-                  paddingBottom: 14,
-                }}
-              >
-                <View
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 10,
-                    backgroundColor: `${t.ink}22`,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginBottom: 10,
-                  }}
-                >
-                  <Icon name={t.icon} size={16} color={t.ink} strokeWidth={2.2} />
-                </View>
-                <Text
-                  style={{
-                    fontFamily: F.displayBold,
-                    fontSize: 14,
-                    color: t.ink,
-                    letterSpacing: -0.2,
-                    marginBottom: 3,
-                  }}
-                >
-                  {t.label}
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 10,
-                    color: t.ink,
-                    opacity: 0.7,
-                    fontFamily: F.body,
-                    lineHeight: 14,
-                  }}
-                >
-                  {t.sample}
-                </Text>
-              </Pressable>
+              <TemplateCard key={t.key} t={t} />
             ))}
           </View>
         </ScrollView>
@@ -229,10 +249,13 @@ export default function TimetablesHub() {
   );
 }
 
-function TimetableCard({ t, onPress }: { t: Timetable; onPress: () => void }) {
+function TimetableCard({ t, onPress }: { t: TimetableRow; onPress: () => void }) {
   const { C, F } = useTheme();
   const tmpl = tmplByKey(t.template);
   const badge = shareBadge(t.share);
+  const updatedLabel = t.updatedAt
+    ? `${formatDistanceToNowStrict(new Date(t.updatedAt))} ago`
+    : '';
   return (
     <Pressable
       onPress={onPress}
@@ -280,17 +303,19 @@ function TimetableCard({ t, onPress }: { t: Timetable; onPress: () => void }) {
               {badge.label}
             </Text>
           </View>
-          <Text
-            style={{
-              fontSize: 9,
-              color: C.ash,
-              fontFamily: F.bodyBold,
-              letterSpacing: 0.6,
-              textTransform: 'uppercase',
-            }}
-          >
-            {t.updated}
-          </Text>
+          {updatedLabel ? (
+            <Text
+              style={{
+                fontSize: 9,
+                color: C.ash,
+                fontFamily: F.bodyBold,
+                letterSpacing: 0.6,
+                textTransform: 'uppercase',
+              }}
+            >
+              {updatedLabel}
+            </Text>
+          ) : null}
         </View>
         <Text
           numberOfLines={1}
@@ -306,16 +331,104 @@ function TimetableCard({ t, onPress }: { t: Timetable; onPress: () => void }) {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
           <Icon name="clock" size={11} color={C.fog} />
           <Text numberOfLines={1} style={{ fontSize: 11, color: C.mist, fontFamily: F.body }}>
-            {t.next}
+            {t.itemsCount} item{t.itemsCount === 1 ? '' : 's'}
           </Text>
         </View>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
         <Text style={{ fontFamily: F.displayBold, fontSize: 18, color: C.gold, lineHeight: 18 }}>
-          {t.items}
+          {t.itemsCount}
         </Text>
         <Icon name="chevronRight" size={14} color={C.fog} />
       </View>
     </Pressable>
+  );
+}
+
+function TemplateCard({ t }: { t: (typeof TEMPLATES)[number] }) {
+  const { F } = useTheme();
+  return (
+    <Pressable
+      onPress={() => router.push('/sheets/new-timetable' as any)}
+      style={{
+        width: 132,
+        backgroundColor: t.color,
+        borderRadius: 20,
+        paddingHorizontal: 14,
+        paddingTop: 16,
+        paddingBottom: 14,
+      }}
+    >
+      <View
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: 10,
+          backgroundColor: `${t.ink}22`,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: 10,
+        }}
+      >
+        <Icon name={t.icon} size={16} color={t.ink} strokeWidth={2.2} />
+      </View>
+      <Text
+        style={{
+          fontFamily: F.displayBold,
+          fontSize: 14,
+          color: t.ink,
+          letterSpacing: -0.2,
+          marginBottom: 3,
+        }}
+      >
+        {t.label}
+      </Text>
+      <Text
+        style={{
+          fontSize: 10,
+          color: t.ink,
+          opacity: 0.7,
+          fontFamily: F.body,
+          lineHeight: 14,
+        }}
+      >
+        {t.sample}
+      </Text>
+    </Pressable>
+  );
+}
+
+function HubSkeleton() {
+  const { C } = useTheme();
+  return (
+    <Screen>
+      <Animated.View
+        entering={FadeIn.duration(300)}
+        style={{
+          height: 168,
+          borderRadius: 26,
+          backgroundColor: C.card,
+          borderWidth: 1,
+          borderColor: C.line,
+          opacity: 0.55,
+          marginBottom: 22,
+        }}
+      />
+      {[0, 1, 2].map((i) => (
+        <Animated.View
+          key={i}
+          entering={FadeIn.delay(60 + i * 60).duration(300)}
+          style={{
+            height: 72,
+            borderRadius: 20,
+            backgroundColor: C.card,
+            borderWidth: 1,
+            borderColor: C.line,
+            opacity: 0.55,
+            marginBottom: 10,
+          }}
+        />
+      ))}
+    </Screen>
   );
 }
