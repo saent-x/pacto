@@ -1,9 +1,12 @@
+import { format } from 'date-fns';
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Alert, Pressable, Text, TextInput, View } from 'react-native';
 import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
 import { SheetShell } from '@/src/components/ui/SheetShell';
+import { useMilestones } from '@/src/hooks/useMilestones';
 import { useTheme } from '@/src/lib/theme';
 
 const ICONS: IconName[] = [
@@ -20,22 +23,59 @@ const ICONS: IconName[] = [
 
 export default function NewMilestone() {
   const { C, F } = useTheme();
+  const { create } = useMilestones();
   const colors = [C.rose, C.peach, C.butter, C.mint, C.sky, C.lavender, C.gold];
   const [title, setTitle] = useState('');
-  const [date] = useState('Apr 18, 2026');
   const [icon, setIcon] = useState<IconName>('heart');
   const [color, setColor] = useState<string>(C.rose);
   const [repeat, setRepeat] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const now = useMemo(() => new Date(), []);
+  const dateLabel = format(now, 'MMM d, yyyy');
+  const dateValue = format(now, 'yyyy-MM-dd');
+
+  const canSave = title.trim().length > 0 && !saving;
+
+  const onSave = async () => {
+    if (!canSave) return;
+    setSaving(true);
+    try {
+      await create({
+        title: title.trim(),
+        date: dateValue,
+        icon,
+        color,
+        repeatYearly: repeat,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.back();
+    } catch (err) {
+      console.warn('[new-milestone] create failed', err);
+      Alert.alert('Save failed', 'Try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <SheetShell
       eyebrow="NEW MILESTONE"
       eyebrowColor={color}
       title="Mark the day."
-      footer={<PrimaryButton icon="star" onPress={() => router.back()}>Save milestone</PrimaryButton>}
+      footer={
+        <PrimaryButton
+          icon="star"
+          onPress={onSave}
+          disabled={!canSave}
+        >
+          {saving ? 'Saving…' : 'Save milestone'}
+        </PrimaryButton>
+      }
     >
       <Overline style={{ marginBottom: 8 }}>What is it</Overline>
       <TextInput
+        testID="new-milestone-title-input"
         value={title}
         onChangeText={setTitle}
         placeholder="Anniversary, first apartment..."
@@ -66,7 +106,9 @@ export default function NewMilestone() {
           }}
         >
           <Icon name="calendar" size={16} color={color} />
-          <Text style={{ flex: 1, color: C.bone, fontSize: 14, fontFamily: F.bodyBold }}>{date}</Text>
+          <Text style={{ flex: 1, color: C.bone, fontSize: 14, fontFamily: F.bodyBold }}>
+            {dateLabel}
+          </Text>
           <Text
             style={{
               fontSize: 10,
@@ -88,6 +130,7 @@ export default function NewMilestone() {
             return (
               <Pressable
                 key={i}
+                testID={`new-milestone-icon-${i}`}
                 onPress={() => setIcon(i)}
                 style={{
                   width: 42,
@@ -113,6 +156,7 @@ export default function NewMilestone() {
           {colors.map((c) => (
             <Pressable
               key={c}
+              testID={`new-milestone-color-${c}`}
               onPress={() => setColor(c)}
               style={{
                 width: 32,
@@ -147,10 +191,11 @@ export default function NewMilestone() {
             Remind me every year
           </Text>
           <Text style={{ fontSize: 11, color: C.fog, marginTop: 2, fontFamily: F.body }}>
-            {repeat ? "We\u2019ll nudge you both 3 days before" : 'One-time only'}
+            {repeat ? 'We’ll nudge you both 3 days before' : 'One-time only'}
           </Text>
         </View>
         <Pressable
+          testID="new-milestone-repeat-toggle"
           onPress={() => setRepeat((v) => !v)}
           style={{
             width: 44,
