@@ -1,5 +1,6 @@
+import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
 import { Overline, Pill, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
@@ -14,12 +15,31 @@ const PRIORITIES: { k: 'low' | 'med' | 'high'; icon: IconName; dots: number; num
   { k: 'high', icon: 'chevronsUp', dots: 3, num: 3 },
 ];
 
-const BUCKET_OFFSETS: Record<string, number | null> = {
-  Today: 0,
-  Tomorrow: 1,
-  'This week': 3,
-  Later: null,
-};
+const MONTH_LABELS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+type Bucket = { label: string; offsetDays: number | null };
+
+function startOfDay(d: Date): Date {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+export function buildBuckets(now: Date = new Date()): Bucket[] {
+  const nextMonthIndex = (now.getMonth() + 1) % 12;
+  const nextMonthYear = now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear();
+  const firstOfNextMonth = new Date(nextMonthYear, nextMonthIndex, 1);
+  const offsetDays = Math.round(
+    (firstOfNextMonth.getTime() - startOfDay(now).getTime()) / 86_400_000,
+  );
+  return [
+    { label: 'Today', offsetDays: 0 },
+    { label: 'Tomorrow', offsetDays: 1 },
+    { label: 'This week', offsetDays: 3 },
+    { label: MONTH_LABELS[nextMonthIndex], offsetDays },
+    { label: 'Later', offsetDays: null },
+  ];
+}
 
 function dueIso(offsetDays: number | null): string | null {
   if (offsetDays === null) return null;
@@ -36,9 +56,11 @@ export default function NewTask() {
 
   const list = lists.find((l) => l.id === listId) ?? null;
   const color = list ? ((C as any)[list.colorKey] as string) : C.gold;
+  const listInk = list ? (((C as any)[`${list.colorKey}Ink`] as string | undefined) ?? C.ink) : C.ink;
 
+  const buckets = useMemo(() => buildBuckets(), []);
   const [title, setTitle] = useState('');
-  const [bucket, setBucket] = useState<string>('Today');
+  const [bucketLabel, setBucketLabel] = useState<string>(buckets[0].label);
   const [priority, setPriority] = useState<'low' | 'med' | 'high'>('med');
   const [saving, setSaving] = useState(false);
 
@@ -48,11 +70,13 @@ export default function NewTask() {
     setSaving(true);
     try {
       const prio = PRIORITIES.find((p) => p.k === priority)!.num;
+      const bucket = buckets.find((b) => b.label === bucketLabel) ?? buckets[0];
       await create({
         title: trimmed,
-        due_date: dueIso(BUCKET_OFFSETS[bucket] ?? null),
+        due_date: dueIso(bucket.offsetDays),
         priority: prio,
       });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (err) {
       console.warn('[new-task] create failed', err);
@@ -73,7 +97,7 @@ export default function NewTask() {
           onPress={handleSave}
           disabled={!title.trim() || !listId || saving}
         >
-          Add task
+          {saving ? 'Saving…' : 'Add task'}
         </PrimaryButton>
       }
     >
@@ -98,16 +122,16 @@ export default function NewTask() {
       <View style={{ marginTop: 22 }}>
         <Overline style={{ marginBottom: 10 }}>When</Overline>
         <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-          {Object.keys(BUCKET_OFFSETS).map((b) => (
+          {buckets.map((b) => (
             <Pill
-              key={b}
-              testID={`new-task-bucket-${b}`}
-              active={bucket === b}
+              key={b.label}
+              testID={`new-task-bucket-${b.label}`}
+              active={bucketLabel === b.label}
               activeBg={`${color}33`}
               activeColor={color}
-              onPress={() => setBucket(b)}
+              onPress={() => setBucketLabel(b.label)}
             >
-              {b}
+              {b.label}
             </Pill>
           ))}
         </View>
@@ -180,7 +204,7 @@ export default function NewTask() {
               justifyContent: 'center',
             }}
           >
-            <Icon name={list.icon} size={14} color={(C as any)[`${list.colorKey}Ink`]} />
+            <Icon name={list.icon} size={14} color={listInk} />
           </View>
           <Text style={{ flex: 1, color: C.mist, fontFamily: F.body, fontSize: 13 }}>
             Adding to <Text style={{ color: C.bone, fontFamily: F.bodyBold }}>{list.name}</Text>
