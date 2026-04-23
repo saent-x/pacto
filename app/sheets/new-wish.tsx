@@ -1,29 +1,62 @@
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { Alert, Text, TextInput, View } from 'react-native';
 import { Overline, Pill, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon } from '@/src/components/ui/Icon';
 import { SheetShell } from '@/src/components/ui/SheetShell';
+import { useQuickAddWishItem } from '@/src/hooks/useWishlists';
 import { useTheme } from '@/src/lib/theme';
 
 const TAGS = ['HOME', 'TRAVEL', 'TREATS', 'BIG', 'KITCHEN', 'CLOTHES'];
 
 export default function NewWish() {
   const { C, F } = useTheme();
+  const { add } = useQuickAddWishItem();
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
   const [tag, setTag] = useState('HOME');
   const [url, setUrl] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const canSave = title.trim().length > 0 && !saving;
+
+  const onSave = async () => {
+    if (!canSave) return;
+    setSaving(true);
+    try {
+      const priceNum = price ? Number(price) : null;
+      await add({
+        title: title.trim(),
+        price: priceNum != null && !Number.isNaN(priceNum) ? priceNum : null,
+        currency: 'EUR',
+        tag: tag || null,
+        url: url.trim() || null,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.back();
+    } catch (err) {
+      console.warn('[new-wish] add failed', err);
+      Alert.alert('Save failed', 'Try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <SheetShell
       eyebrow="NEW WISH"
       eyebrowColor={C.peach}
       title="Something for us."
-      footer={<PrimaryButton icon="plus" onPress={() => router.back()}>Add to wishlist</PrimaryButton>}
+      footer={
+        <PrimaryButton icon="plus" onPress={onSave} disabled={!canSave}>
+          {saving ? 'Saving…' : 'Add to wishlist'}
+        </PrimaryButton>
+      }
     >
       <Overline style={{ marginBottom: 8 }}>What</Overline>
       <TextInput
+        testID="new-wish-title-input"
         value={title}
         onChangeText={setTitle}
         placeholder="Linen throw, oatmeal..."
@@ -56,6 +89,7 @@ export default function NewWish() {
           >
             <Text style={{ color: C.fog, fontFamily: F.bodyBold }}>€</Text>
             <TextInput
+              testID="new-wish-price-input"
               value={price}
               onChangeText={(t) => setPrice(t.replace(/[^0-9]/g, ''))}
               placeholder="0"
@@ -87,6 +121,7 @@ export default function NewWish() {
           >
             <Icon name="link" size={14} color={C.fog} />
             <TextInput
+              testID="new-wish-url-input"
               value={url}
               onChangeText={setUrl}
               placeholder="paste url..."
@@ -108,6 +143,7 @@ export default function NewWish() {
           {TAGS.map((t) => (
             <Pill
               key={t}
+              testID={`new-wish-tag-${t}`}
               active={tag === t}
               activeBg={`${C.peach}33`}
               activeColor={C.peach}

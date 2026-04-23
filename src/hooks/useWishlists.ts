@@ -59,6 +59,58 @@ export function useWishlists() {
   };
 }
 
+export type QuickAddWishInput = {
+  title: string;
+  price?: number | null;
+  currency?: string;
+  tag?: string | null;
+  url?: string | null;
+};
+
+export function useQuickAddWishItem() {
+  const { activeCouple, user } = useSession();
+  const coupleId = activeCouple?.couple?.id ?? null;
+
+  const { data } = db.useQuery(
+    coupleId ? { wishlists: { $: { where: { 'couple.id': coupleId } } } } : null,
+  );
+  const existingId = (data?.wishlists ?? [])[0]?.id as string | undefined;
+
+  const add = useCallback(
+    async (input: QuickAddWishInput) => {
+      if (!coupleId || !user) return;
+      let wlId = existingId;
+      if (!wlId) {
+        wlId = id();
+        await db.transact(
+          db.tx.wishlists[wlId]
+            .update({ name: 'Our wishes', createdAt: Date.now() })
+            .link({ couple: coupleId, createdBy: user.id }),
+        );
+      }
+      const itId = id();
+      await db.transact(
+        db.tx.wishlistItems[itId]
+          .update({
+            title: input.title,
+            price: input.price ?? undefined,
+            currency: input.currency ?? 'EUR',
+            tag: input.tag ?? undefined,
+            url: input.url ?? undefined,
+            isPurchased: false,
+            priority: 0,
+            sortOrder: 0,
+            createdAt: Date.now(),
+          })
+          .link({ wishlist: wlId, couple: coupleId, addedBy: user.id }),
+      );
+    },
+    [coupleId, user, existingId],
+  );
+
+  return { add };
+}
+
 export function useAllWishlistItems() {
   const { activeCouple } = useSession();
   const coupleId = activeCouple?.couple?.id ?? null;
