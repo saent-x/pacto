@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, TextInput, View } from 'react-native';
@@ -11,7 +12,7 @@ const ICONS: IconName[] = [
   'shoppingBag', 'home', 'heart', 'briefcase', 'book', 'gift', 'mapPin', 'coffee', 'music', 'camera',
 ];
 
-const COLOR_KEYS: PastelKey[] = ['peach', 'lavender', 'butter', 'mint', 'rose', 'sky'];
+const COLOR_KEYS: PastelKey[] = ['peach', 'lavender', 'butter', 'mint', 'rose', 'sky', 'gold', 'journal'];
 
 export default function NewList() {
   const { C, F } = useTheme();
@@ -29,6 +30,7 @@ export default function NewList() {
     setSaving(true);
     try {
       await create({ name: trimmed, icon, colorKey });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (err) {
       console.warn('[new-list] create failed', err);

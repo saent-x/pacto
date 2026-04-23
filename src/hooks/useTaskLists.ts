@@ -3,7 +3,7 @@ import { db, id } from '@/src/lib/instant';
 import type { IconName } from '@/src/components/ui/Icon';
 import { useSession } from './useSession';
 
-export type PastelKey = 'peach' | 'mint' | 'butter' | 'rose' | 'sky' | 'lavender';
+export type PastelKey = 'peach' | 'mint' | 'butter' | 'rose' | 'sky' | 'lavender' | 'gold' | 'journal';
 
 export type ListRow = {
   id: string;
@@ -28,7 +28,7 @@ export type RawTaskListNode = {
 
 const DEFAULT_ICON: IconName = 'shoppingBag';
 const DEFAULT_COLOR: PastelKey = 'peach';
-const VALID_COLORS: PastelKey[] = ['peach', 'mint', 'butter', 'rose', 'sky', 'lavender'];
+const VALID_COLORS: PastelKey[] = ['peach', 'mint', 'butter', 'rose', 'sky', 'lavender', 'gold', 'journal'];
 
 export function toListRows(nodes: RawTaskListNode[]): ListRow[] {
   return nodes.map((n) => {
