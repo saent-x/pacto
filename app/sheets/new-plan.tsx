@@ -1,9 +1,11 @@
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Overline, Pill, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
 import { SheetShell } from '@/src/components/ui/SheetShell';
+import { usePlans } from '@/src/hooks/usePlans';
 import { useTheme } from '@/src/lib/theme';
 
 const ICONS: IconName[] = [
@@ -23,8 +25,16 @@ const TARGETS = ['This month', 'Next month', '3 months', '6 months', 'This year'
 
 type Bucket = 'Soon' | 'Ongoing' | 'Later' | 'Someday';
 
+const BUCKET_CANON: Record<Bucket, string> = {
+  Soon: 'This month',
+  Ongoing: 'Ongoing',
+  Later: 'Later this year',
+  Someday: 'Someday',
+};
+
 export default function NewPlan() {
   const { C, F } = useTheme();
+  const { create } = usePlans();
   const colors = [C.sky, C.peach, C.butter, C.mint, C.rose, C.lavender, C.gold];
   const [title, setTitle] = useState('');
   const [sub, setSub] = useState('');
@@ -32,6 +42,33 @@ export default function NewPlan() {
   const [color, setColor] = useState<string>(C.sky);
   const [bucket, setBucket] = useState<Bucket>('Soon');
   const [target, setTarget] = useState('This month');
+  const [saving, setSaving] = useState(false);
+
+  const canSave = title.trim().length > 0 && !saving;
+
+  const onSave = async () => {
+    if (!canSave) return;
+    setSaving(true);
+    try {
+      await create({
+        title: title.trim(),
+        description: sub.trim() || undefined,
+        category: target,
+        bucket: BUCKET_CANON[bucket],
+        icon,
+        color,
+        priority: 0,
+        status: 'active',
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.back();
+    } catch (err) {
+      console.warn('[new-plan] create failed', err);
+      Alert.alert('Save failed', 'Try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const buckets: { k: Bucket; sub: string; color: string }[] = useMemo(
     () => [
@@ -48,7 +85,11 @@ export default function NewPlan() {
       eyebrow="NEW PLAN"
       eyebrowColor={color}
       title="Something to build."
-      footer={<PrimaryButton icon="plus" onPress={() => router.back()}>Create plan</PrimaryButton>}
+      footer={
+        <PrimaryButton icon="plus" onPress={onSave} disabled={!canSave}>
+          {saving ? 'Saving…' : 'Create plan'}
+        </PrimaryButton>
+      }
     >
       {/* Preview card */}
       <View style={{ backgroundColor: color, borderRadius: 20, padding: 18, marginBottom: 20 }}>
@@ -107,6 +148,7 @@ export default function NewPlan() {
 
       <Overline style={{ marginBottom: 8 }}>Title</Overline>
       <TextInput
+        testID="new-plan-title-input"
         value={title}
         onChangeText={setTitle}
         placeholder="Venice weekend, buy the apartment..."
@@ -124,6 +166,7 @@ export default function NewPlan() {
       <View style={{ marginTop: 20 }}>
         <Overline style={{ marginBottom: 8 }}>Subtitle</Overline>
         <TextInput
+          testID="new-plan-sub-input"
           value={sub}
           onChangeText={setSub}
           placeholder="3 days, weekends, target late 2026..."
@@ -150,6 +193,7 @@ export default function NewPlan() {
             return (
               <Pressable
                 key={b.k}
+                testID={`new-plan-bucket-${b.k}`}
                 onPress={() => setBucket(b.k)}
                 style={{
                   width: '48%',
@@ -194,6 +238,7 @@ export default function NewPlan() {
             {TARGETS.map((t) => (
               <Pill
                 key={t}
+                testID={`new-plan-target-${t}`}
                 active={target === t}
                 activeBg={`${color}33`}
                 activeColor={color}
@@ -214,6 +259,7 @@ export default function NewPlan() {
             return (
               <Pressable
                 key={i}
+                testID={`new-plan-icon-${i}`}
                 onPress={() => setIcon(i)}
                 style={{
                   width: 42,
@@ -239,6 +285,7 @@ export default function NewPlan() {
           {colors.map((c) => (
             <Pressable
               key={c}
+              testID={`new-plan-color-${c}`}
               onPress={() => setColor(c)}
               style={{
                 width: 32,
