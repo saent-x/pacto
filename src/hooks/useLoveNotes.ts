@@ -3,9 +3,12 @@ import { db, id } from '@/src/lib/instant';
 import { useSession } from './useSession';
 import { useEncryption } from './useEncryption';
 
+export type LoveNoteVibe = 'sweet' | 'funny' | 'thank' | 'sorry' | 'proud';
+
 type LoveNoteInput = {
   body: string;
   isPrivate?: boolean;
+  vibe?: LoveNoteVibe;
 };
 
 export function useLoveNotes() {
@@ -59,6 +62,7 @@ export function useLoveNotes() {
           .update({
             body: await encrypt(input.body),
             isPrivate: input.isPrivate ?? false,
+            vibe: input.vibe ?? undefined,
             createdAt: now,
             updatedAt: now,
           })
@@ -73,6 +77,7 @@ export function useLoveNotes() {
       const updates: Record<string, unknown> = { updatedAt: Date.now() };
       if (input.body !== undefined) updates.body = await encrypt(input.body);
       if (input.isPrivate !== undefined) updates.isPrivate = input.isPrivate;
+      if (input.vibe !== undefined) updates.vibe = input.vibe;
       await db.transact(db.tx.loveNotes[noteId].update(updates));
     },
     [encrypt],

@@ -1,20 +1,21 @@
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
 import { SheetShell } from '@/src/components/ui/SheetShell';
+import { useLoveNotes, type LoveNoteVibe } from '@/src/hooks/useLoveNotes';
 import { useTheme } from '@/src/lib/theme';
-
-type Vibe = 'sweet' | 'funny' | 'thank' | 'sorry' | 'proud';
 
 export default function NewNote() {
   const { C, F } = useTheme();
+  const { create } = useLoveNotes();
   const [body, setBody] = useState('');
-  const [to] = useState<'sofia' | 'mattia'>('sofia');
-  const [vibe, setVibe] = useState<Vibe>('sweet');
+  const [vibe, setVibe] = useState<LoveNoteVibe>('sweet');
+  const [saving, setSaving] = useState(false);
 
-  const vibes: { k: Vibe; label: string; icon: IconName; color: string }[] = useMemo(
+  const vibes: { k: LoveNoteVibe; label: string; icon: IconName; color: string }[] = useMemo(
     () => [
       { k: 'sweet', label: 'Sweet', icon: 'heart', color: C.rose },
       { k: 'funny', label: 'Funny', icon: 'star', color: C.butter },
@@ -26,12 +27,36 @@ export default function NewNote() {
   );
   const active = vibes.find((v) => v.k === vibe)!;
 
+  const onSave = async () => {
+    const trimmed = body.trim();
+    if (!trimmed || saving) return;
+    setSaving(true);
+    try {
+      await create({ body: trimmed, vibe });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.back();
+    } catch (err) {
+      console.warn('[new-note] create failed', err);
+      Alert.alert('Send failed', 'Try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <SheetShell
       eyebrow="NEW LOVE NOTE"
       eyebrowColor={active.color}
       title="Tell them."
-      footer={<PrimaryButton icon="heart" onPress={() => router.back()}>Send note</PrimaryButton>}
+      footer={
+        <PrimaryButton
+          icon="heart"
+          onPress={onSave}
+          disabled={!body.trim() || saving}
+        >
+          {saving ? 'Sending…' : 'Send note'}
+        </PrimaryButton>
+      }
     >
       <View
         style={{
@@ -45,8 +70,8 @@ export default function NewNote() {
         <View style={{ position: 'absolute', top: 14, right: 16, opacity: 0.4 }}>
           <Icon name={active.icon} size={18} color={active.color} />
         </View>
-        <Overline color={C.fog}>For {to === 'sofia' ? 'Sofia' : 'Mattia'}</Overline>
         <TextInput
+          testID="new-note-body-input"
           value={body}
           onChangeText={setBody}
           placeholder="Say the thing you've been meaning to say..."
@@ -55,7 +80,6 @@ export default function NewNote() {
           textAlignVertical="top"
           style={{
             minHeight: 140,
-            marginTop: 10,
             color: C.bone,
             fontFamily: F.serif,
             fontStyle: body ? 'normal' : 'italic',
@@ -74,6 +98,7 @@ export default function NewNote() {
               return (
                 <Pressable
                   key={v.k}
+                  testID={`new-note-vibe-${v.k}`}
                   onPress={() => setVibe(v.k)}
                   style={{
                     flexDirection: 'row',
