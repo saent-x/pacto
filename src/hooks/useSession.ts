@@ -30,6 +30,7 @@ export type HookSession = {
   profile: HookProfile | null;
   activeCouple: ActiveCouple | null;
   space: ReturnType<typeof useBaseSession>['space'];
+  membership: ReturnType<typeof useBaseSession>['membership'];
   partner: ReturnType<typeof useBaseSession>['partner'];
   isSolo: boolean;
   isCouple: boolean;
@@ -73,6 +74,7 @@ export function useSession(): HookSession {
       : null,
     activeCouple,
     space: s.space,
+    membership: s.membership,
     partner: s.partner,
     isSolo: s.isSolo,
     isCouple: s.isCouple,

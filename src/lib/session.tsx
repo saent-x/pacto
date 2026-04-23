@@ -21,6 +21,7 @@ export type SessionSpace = {
 export type SessionMembership = {
   id: string;
   role: 'owner' | 'partner';
+  lastNotificationsReadAt: number | null;
 };
 
 export type Session = {
@@ -101,6 +102,8 @@ export function SessionProvider({ children }: PropsWithChildren) {
       membership: {
         id: myMembership.id,
         role: myMembership.role as 'owner' | 'partner',
+        lastNotificationsReadAt:
+          (myMembership as any).lastNotificationsReadAt ?? null,
       },
       partner,
       isSolo: space.kind === 'solo',

@@ -20,6 +20,7 @@ const _schema = i.schema({
     memberships: i.entity({
       role: i.string(),                                     // 'owner' | 'partner'
       joinedAt: i.number(),
+      lastNotificationsReadAt: i.number().optional(),
     }),
     profiles: i.entity({
       displayName: i.string().optional(),

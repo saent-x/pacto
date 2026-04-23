@@ -1,93 +1,158 @@
-import { Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
+import Animated, { FadeIn, FadeInDown, FadeOut } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { IconTile, Overline } from '@/src/components/ui/atoms';
-import { Icon, IconName } from '@/src/components/ui/Icon';
 import { Screen } from '@/src/components/ui/Screen';
 import { useTheme } from '@/src/lib/theme';
-
-type Item = {
-  id: number;
-  icon: IconName;
-  color: string;
-  title: string;
-  sub: string;
-  time: string;
-  unread?: boolean;
-};
+import { useNotifications, type NotificationItem } from '@/src/hooks/useNotifications';
 
 export default function Notifications() {
   const { C, F } = useTheme();
-  const today: Item[] = [
-    { id: 1, icon: 'heart', color: C.rose, title: 'Sofia sent you a note', sub: '"Coffee\'s on, your socks are in the dryer."', time: '7:14 AM', unread: true },
-    { id: 2, icon: 'sun', color: C.butter, title: 'Check-in · 4-day streak', sub: 'Sofia just checked in — bright', time: '8:32 AM', unread: true },
-    { id: 3, icon: 'bell', color: C.lavender, title: 'Reminder · Call mom', sub: 'Due today at 6:00 PM', time: '6h', unread: false },
-  ];
-  const earlier: Item[] = [
-    { id: 4, icon: 'dollarSign', color: C.mint, title: 'Sofia added €42 expense', sub: 'Airbnb deposit · Venice', time: 'Wed' },
-    { id: 5, icon: 'flag', color: C.peach, title: '3 years · in 1 day', sub: "Don't forget the reservation.", time: 'Tue' },
-    { id: 6, icon: 'calendar', color: C.peach, title: 'Timetable updated', sub: 'Sofia added Pizza night · Friday 8pm', time: 'Mon' },
-  ];
+  const { buckets, isLoading, markAllRead } = useNotifications();
 
+  useEffect(() => {
+    return () => {
+      markAllRead().catch(() => undefined);
+    };
+  }, [markAllRead]);
+
+  if (isLoading) {
+    return (
+      <Screen>
+        <View testID="notifications-loading" style={{ paddingTop: 48, alignItems: 'center' }}>
+          <Text style={{ fontFamily: F.body, fontSize: 13, color: C.mist }}>Loading…</Text>
+        </View>
+      </Screen>
+    );
+  }
+
+  if (buckets.length === 0) {
+    return (
+      <Screen>
+        <View testID="notifications-empty" style={{ paddingTop: 64, alignItems: 'center' }}>
+          <Text
+            style={{
+              fontFamily: F.serif,
+              fontSize: 28,
+              fontStyle: 'italic',
+              color: C.bone,
+              letterSpacing: -0.6,
+              marginBottom: 10,
+            }}
+          >
+            quiet.
+          </Text>
+          <Text
+            style={{
+              fontFamily: F.body,
+              fontSize: 13,
+              color: C.mist,
+              textAlign: 'center',
+              maxWidth: 240,
+              lineHeight: 19,
+            }}
+          >
+            Nothing new to read. Your next note, check-in, or reminder will land here.
+          </Text>
+        </View>
+      </Screen>
+    );
+  }
+
+  let flat = 0;
   return (
     <Screen>
-      <Overline style={{ marginBottom: 12, paddingLeft: 4 }}>Today</Overline>
-      <View style={{ gap: 10 }}>
-        {today.map((n) => (
-          <Row key={n.id} n={n} />
-        ))}
-      </View>
-      <Overline style={{ marginTop: 24, marginBottom: 12, paddingLeft: 4 }}>Earlier</Overline>
-      <View style={{ gap: 10 }}>
-        {earlier.map((n) => (
-          <Row key={n.id} n={n} />
-        ))}
-      </View>
+      {buckets.map((bucket, bi) => (
+        <View key={bucket.label} testID={`notifications-bucket-${bucket.label}`}>
+          <Overline style={{ marginTop: bi === 0 ? 0 : 24, marginBottom: 12, paddingLeft: 4 }}>
+            {bucket.label}
+          </Overline>
+          <View style={{ gap: 10 }}>
+            {bucket.items.map((n) => {
+              const idx = flat++;
+              return <Row key={n.id} n={n} index={idx} />;
+            })}
+          </View>
+        </View>
+      ))}
     </Screen>
   );
 }
 
-function Row({ n }: { n: Item }) {
+function Row({ n, index }: { n: NotificationItem; index: number }) {
   const { C, F } = useTheme();
+  const [locallyRead, setLocallyRead] = useState(false);
+  const showDot = n.unread && !locallyRead;
+
+  const handlePress = () => {
+    if (n.unread && !locallyRead) {
+      Haptics.selectionAsync().catch(() => undefined);
+      setLocallyRead(true);
+    }
+  };
+
   return (
-    <View
-      style={{
-        flexDirection: 'row',
-        gap: 12,
-        padding: 14,
-        borderRadius: 18,
-        backgroundColor: C.card,
-        borderWidth: 1,
-        borderColor: C.line,
-        alignItems: 'flex-start',
-      }}
+    <Animated.View
+      entering={FadeInDown.delay(Math.min(index, 8) * 40)
+        .duration(280)
+        .springify()
+        .damping(18)}
+      testID={`notification-row-${n.id}`}
     >
-      <IconTile icon={n.icon} bg={`${n.color}22`} color={n.color} size={38} iconSize={17} />
-      <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Text
-            style={{ flex: 1, fontSize: 14, color: C.bone, fontFamily: F.bodyBold }}
-            numberOfLines={1}
-          >
-            {n.title}
-          </Text>
-          {n.unread && (
-            <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: C.gold }} />
-          )}
-        </View>
-        <Text style={{ fontSize: 12, color: C.mist, marginTop: 2, fontFamily: F.body }}>
-          {n.sub}
-        </Text>
-        <Text
+      <Pressable onPress={handlePress}>
+        <View
           style={{
-            fontSize: 10,
-            color: C.fog,
-            marginTop: 4,
-            fontFamily: F.bodyBold,
-            letterSpacing: 0.6,
+            flexDirection: 'row',
+            gap: 12,
+            padding: 14,
+            borderRadius: 18,
+            backgroundColor: C.card,
+            borderWidth: 1,
+            borderColor: C.line,
+            alignItems: 'flex-start',
           }}
         >
-          {n.time}
-        </Text>
-      </View>
-    </View>
+          <IconTile icon={n.icon} bg={`${n.color}22`} color={n.color} size={38} iconSize={17} />
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text
+                style={{ flex: 1, fontSize: 14, color: C.bone, fontFamily: F.bodyBold }}
+                numberOfLines={1}
+              >
+                {n.title}
+              </Text>
+              {showDot && (
+                <Animated.View
+                  entering={FadeIn.duration(200)}
+                  exiting={FadeOut.duration(200)}
+                  testID="notification-unread-dot"
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: 4,
+                    backgroundColor: C.gold,
+                  }}
+                />
+              )}
+            </View>
+            <Text style={{ fontSize: 12, color: C.mist, marginTop: 2, fontFamily: F.body }}>
+              {n.sub}
+            </Text>
+            <Text
+              style={{
+                fontSize: 10,
+                color: C.fog,
+                marginTop: 4,
+                fontFamily: F.bodyBold,
+                letterSpacing: 0.6,
+              }}
+            >
+              {n.time}
+            </Text>
+          </View>
+        </View>
+      </Pressable>
+    </Animated.View>
   );
 }
