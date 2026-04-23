@@ -1,31 +1,65 @@
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, Text, TextInput, View } from 'react-native';
 import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
 import { SheetShell } from '@/src/components/ui/SheetShell';
+import { useCheckIns } from '@/src/hooks/useCheckIns';
 import { useTheme } from '@/src/lib/theme';
+
+type Mood = { n: number; icon: IconName; color: string; label: string; key: string };
 
 export default function NewCheckin() {
   const { C, F } = useTheme();
+  const { createOrUpdate, isSubmitting } = useCheckIns();
   const [mood, setMood] = useState(4);
   const [one, setOne] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const moods: { n: number; icon: IconName; color: string; label: string }[] = [
-    { n: 1, icon: 'cloudRain', color: C.sky, label: 'Rough' },
-    { n: 2, icon: 'drizzle', color: C.lavender, label: 'Low' },
-    { n: 3, icon: 'minus', color: C.butter, label: 'Okay' },
-    { n: 4, icon: 'cloud', color: C.mint, label: 'Good' },
-    { n: 5, icon: 'sun', color: C.peach, label: 'Great' },
+  const moods: Mood[] = [
+    { n: 1, icon: 'cloudRain', color: C.sky, label: 'Rough', key: 'rough' },
+    { n: 2, icon: 'drizzle', color: C.lavender, label: 'Low', key: 'low' },
+    { n: 3, icon: 'minus', color: C.butter, label: 'Okay', key: 'okay' },
+    { n: 4, icon: 'cloud', color: C.mint, label: 'Good', key: 'good' },
+    { n: 5, icon: 'sun', color: C.peach, label: 'Great', key: 'great' },
   ];
   const active = moods.find((m) => m.n === mood)!;
+  const busy = saving || isSubmitting;
+
+  const onSave = async () => {
+    if (busy) return;
+    setSaving(true);
+    try {
+      await createOrUpdate({
+        mood: active.key,
+        note: one.trim() || null,
+        isPrivate: false,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.back();
+    } catch (err) {
+      console.warn('[new-checkin] create failed', err);
+      Alert.alert('Save failed', 'Try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <SheetShell
       eyebrow="DAILY CHECK-IN"
       eyebrowColor={active.color}
       title="How are you?"
-      footer={<PrimaryButton icon="check" onPress={() => router.back()}>Log today</PrimaryButton>}
+      footer={
+        <PrimaryButton
+          icon="check"
+          onPress={onSave}
+          disabled={busy}
+        >
+          {busy ? 'Saving…' : 'Log today'}
+        </PrimaryButton>
+      }
     >
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8, marginTop: 4 }}>
         {moods.map((m) => {
@@ -33,6 +67,7 @@ export default function NewCheckin() {
           return (
             <Pressable
               key={m.n}
+              testID={`new-checkin-mood-${m.n}`}
               onPress={() => setMood(m.n)}
               style={{
                 flex: 1,
@@ -79,6 +114,7 @@ export default function NewCheckin() {
       <View style={{ marginTop: 22 }}>
         <Overline style={{ marginBottom: 8 }}>One thing</Overline>
         <TextInput
+          testID="new-checkin-note-input"
           value={one}
           onChangeText={setOne}
           placeholder="that made today what it was..."
