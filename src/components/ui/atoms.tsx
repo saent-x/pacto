@@ -20,7 +20,8 @@ import { useTheme } from '@/src/lib/theme';
 import { Icon, IconName } from './Icon';
 import { PressScale } from './PressScale';
 
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+const AnimatedCircle =
+  (Animated as any)?.createAnimatedComponent?.(Circle) ?? Circle;
 
 // ───────── Avatar ─────────
 export function Avatar({
