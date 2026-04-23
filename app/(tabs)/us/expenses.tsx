@@ -1,23 +1,127 @@
 import { router } from 'expo-router';
-import { Text, View } from 'react-native';
-import { AddBtn } from '@/src/components/ui/AddBtn';
+import { useMemo } from 'react';
+import { Pressable, Text, View } from 'react-native';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import { format, parseISO } from 'date-fns';
 import { Icon } from '@/src/components/ui/Icon';
 import { Screen } from '@/src/components/ui/Screen';
-import { SubHeader } from '@/src/components/ui/SubHeader';
+import { useExpenses } from '@/src/hooks/useExpenses';
+import { useSession } from '@/src/hooks/useSession';
 import { useTheme } from '@/src/lib/theme';
+
+type ExpenseRow = {
+  id: string;
+  title: string;
+  amount: number;
+  currency: string;
+  date: string;
+  splitType: string;
+  splitAmount: number | null;
+  paidBy: string;
+};
+
+function toRow(e: any): ExpenseRow {
+  return {
+    id: String(e.id),
+    title: String(e.title ?? ''),
+    amount: Number(e.amount ?? 0),
+    currency: String(e.currency ?? 'USD'),
+    date: String(e.date ?? ''),
+    splitType: String(e.splitType ?? 'even'),
+    splitAmount: e.splitAmount != null ? Number(e.splitAmount) : null,
+    paidBy: String(e.paidBy ?? ''),
+  };
+}
+
+function fmtMoney(amount: number, currency: string) {
+  const abs = Math.abs(amount);
+  const symbol = currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : currency === 'USD' ? '$' : '';
+  return symbol ? `${symbol}${abs.toFixed(2)}` : `${abs.toFixed(2)} ${currency}`;
+}
+
+function formatRelativeDay(iso: string) {
+  if (!iso) return '';
+  const today = format(new Date(), 'yyyy-MM-dd');
+  if (iso === today) return 'TODAY';
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (iso === format(yesterday, 'yyyy-MM-dd')) return 'YESTERDAY';
+  try {
+    return format(parseISO(iso), 'EEE').toUpperCase();
+  } catch {
+    return iso.slice(5).toUpperCase();
+  }
+}
 
 export default function Expenses() {
   const { C, F } = useTheme();
-  const items = [
-    { t: 'Groceries · Coop', amt: 64.5, by: 'mattia', split: '50/50', day: 'TODAY' },
-    { t: 'Airbnb deposit · Venice', amt: 240.0, by: 'sofia', split: '50/50', day: 'WED' },
-    { t: 'Date night — Osteria', amt: 78.0, by: 'mattia', split: '50/50', day: 'TUE' },
-    { t: 'Electric bill', amt: 142.0, by: 'sofia', split: '50/50', day: 'MON' },
-  ];
+  const { user, activeCouple, isSolo } = useSession();
+  const { expenses, unsettled, isLoading, settle } = useExpenses();
+
+  const userId = user?.id ?? '';
+  const partnerName = activeCouple?.partner?.displayName ?? 'Partner';
+  const partnerUpper = partnerName.toUpperCase();
+
+  const rows = useMemo(() => expenses.map(toRow), [expenses]);
+  const sortedRows = useMemo(
+    () => [...rows].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30),
+    [rows],
+  );
+
+  const balance = useMemo(() => {
+    let net = 0;
+    for (const r of unsettled.map(toRow)) {
+      const share = r.splitType === 'even' ? r.amount / 2 : (r.splitAmount ?? r.amount / 2);
+      if (r.paidBy === userId) net += share;
+      else net -= share;
+    }
+    return net;
+  }, [unsettled, userId]);
+
+  const currency = rows[0]?.currency ?? 'USD';
+
+  const monthStats = useMemo(() => {
+    const monthKey = format(new Date(), 'yyyy-MM');
+    const monthRows = rows.filter((r) => r.date.startsWith(monthKey));
+    let youPaid = 0;
+    let partnerPaid = 0;
+    for (const r of monthRows) {
+      if (r.paidBy === userId) youPaid += r.amount;
+      else partnerPaid += r.amount;
+    }
+    const total = youPaid + partnerPaid;
+    return { youPaid, partnerPaid, total };
+  }, [rows, userId]);
+
+  if (isLoading && rows.length === 0) return <IndexSkeleton />;
+  if (rows.length === 0) return <EmptyExpenses />;
+
+  const direction =
+    balance > 0.005
+      ? `${isSolo ? 'YOU ARE OWED' : `${partnerUpper} OWES YOU`}`
+      : balance < -0.005
+        ? `YOU OWE ${partnerUpper}`
+        : 'ALL SETTLED';
+
+  const youPct = monthStats.total > 0 ? (monthStats.youPaid / monthStats.total) * 100 : 50;
+  const partnerPct = monthStats.total > 0 ? 100 - youPct : 50;
+
+  const settleAll = async () => {
+    if (!unsettled.length) return;
+    await Promise.all(unsettled.map((e: any) => settle(String(e.id))));
+  };
+
+  const absBalance = Math.abs(balance);
+  const whole = Math.floor(absBalance);
+  const cents = Math.round((absBalance - whole) * 100).toString().padStart(2, '0');
+  const symbol = currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : currency === 'USD' ? '$' : '';
 
   return (
     <Screen>
-      <View style={{ backgroundColor: C.mint, borderRadius: 26, padding: 22, marginBottom: 18 }}>
+      <Animated.View
+        entering={FadeInDown.duration(420)}
+        style={{ backgroundColor: C.mint, borderRadius: 26, padding: 22, marginBottom: 18 }}
+      >
         <Text
           style={{
             fontSize: 10,
@@ -28,7 +132,7 @@ export default function Expenses() {
             marginBottom: 6,
           }}
         >
-          SOFIA OWES YOU
+          {direction}
         </Text>
         <Text
           style={{
@@ -39,36 +143,29 @@ export default function Expenses() {
             letterSpacing: -2.5,
           }}
         >
-          €42<Text style={{ fontSize: 28, opacity: 0.6 }}>.25</Text>
+          {symbol}
+          {whole}
+          <Text style={{ fontSize: 28, opacity: 0.6 }}>.{cents}</Text>
         </Text>
-        <View
-          style={{
-            marginTop: 14,
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-          }}
-        >
-          <Text
-            style={{
-              fontSize: 11,
-              color: C.mintInk,
-              opacity: 0.7,
-              fontFamily: F.bodyBold,
-            }}
-          >
-            This month · €524 total
+        <View style={{ marginTop: 14, flexDirection: 'row', justifyContent: 'space-between' }}>
+          <Text style={{ fontSize: 11, color: C.mintInk, opacity: 0.7, fontFamily: F.bodyBold }}>
+            This month · {fmtMoney(monthStats.total, currency)} total
           </Text>
-          <Text
-            style={{
-              fontSize: 11,
-              color: C.mintInk,
-              opacity: 0.7,
-              fontFamily: F.bodyBold,
-              letterSpacing: 0.8,
-            }}
-          >
-            SETTLE →
-          </Text>
+          {unsettled.length > 0 ? (
+            <Pressable onPress={settleAll} hitSlop={8}>
+              <Text
+                style={{
+                  fontSize: 11,
+                  color: C.mintInk,
+                  opacity: 0.7,
+                  fontFamily: F.bodyBold,
+                  letterSpacing: 0.8,
+                }}
+              >
+                SETTLE →
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
         <View
           style={{
@@ -80,24 +177,36 @@ export default function Expenses() {
             flexDirection: 'row',
           }}
         >
-          <View style={{ width: '58%', backgroundColor: C.mintInk }} />
-          <View style={{ width: '42%', backgroundColor: 'rgba(15,44,26,0.45)' }} />
+          <View style={{ width: `${youPct}%`, backgroundColor: C.mintInk }} />
+          <View style={{ width: `${partnerPct}%`, backgroundColor: 'rgba(15,44,26,0.45)' }} />
         </View>
-        <View
-          style={{
-            marginTop: 8,
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-          }}
-        >
-          <Text style={{ fontSize: 10, color: C.mintInk, opacity: 0.6, fontFamily: F.bodyBold, letterSpacing: 0.8 }}>
-            YOU · €305
+        <View style={{ marginTop: 8, flexDirection: 'row', justifyContent: 'space-between' }}>
+          <Text
+            style={{
+              fontSize: 10,
+              color: C.mintInk,
+              opacity: 0.6,
+              fontFamily: F.bodyBold,
+              letterSpacing: 0.8,
+            }}
+          >
+            YOU · {fmtMoney(monthStats.youPaid, currency)}
           </Text>
-          <Text style={{ fontSize: 10, color: C.mintInk, opacity: 0.6, fontFamily: F.bodyBold, letterSpacing: 0.8 }}>
-            SOFIA · €219
-          </Text>
+          {!isSolo ? (
+            <Text
+              style={{
+                fontSize: 10,
+                color: C.mintInk,
+                opacity: 0.6,
+                fontFamily: F.bodyBold,
+                letterSpacing: 0.8,
+              }}
+            >
+              {partnerUpper} · {fmtMoney(monthStats.partnerPaid, currency)}
+            </Text>
+          ) : null}
         </View>
-      </View>
+      </Animated.View>
 
       <Text
         style={{
@@ -112,69 +221,145 @@ export default function Expenses() {
         RECENT
       </Text>
 
-      {items.map((x, i) => (
-        <View
-          key={i}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 14,
-            padding: 14,
-            backgroundColor: C.card,
-            borderRadius: 18,
-            borderWidth: 1,
-            borderColor: C.line,
-            marginBottom: 8,
-          }}
-        >
-          <View
+      {sortedRows.map((x, i) => {
+        const by = x.paidBy === userId ? 'YOU' : partnerName.toLowerCase();
+        const splitLabel =
+          x.splitType === 'even' ? '50/50' : x.splitAmount != null ? `${x.splitAmount}` : 'custom';
+        const day = formatRelativeDay(x.date);
+        return (
+          <Animated.View
+            key={x.id}
+            entering={FadeInDown.delay(Math.min(i, 10) * 60 + 80).duration(400)}
             style={{
-              width: 40,
-              height: 40,
-              borderRadius: 12,
-              backgroundColor: C.mintInk,
+              flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'center',
+              gap: 14,
+              padding: 14,
+              backgroundColor: C.card,
+              borderRadius: 18,
+              borderWidth: 1,
+              borderColor: C.line,
+              marginBottom: 8,
             }}
           >
-            <Icon name="dollarSign" size={16} color={C.mint} />
-          </View>
-          <View style={{ flex: 1 }}>
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 12,
+                backgroundColor: C.mintInk,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Icon name="dollarSign" size={16} color={C.mint} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{
+                  fontFamily: F.displayBold,
+                  fontSize: 14,
+                  color: C.bone,
+                  letterSpacing: -0.2,
+                }}
+                numberOfLines={1}
+              >
+                {x.title}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 10,
+                  color: C.fog,
+                  fontFamily: F.bodyBold,
+                  marginTop: 2,
+                  letterSpacing: 0.5,
+                  textTransform: 'uppercase',
+                }}
+              >
+                {day} · {by} paid · {splitLabel}
+              </Text>
+            </View>
             <Text
               style={{
                 fontFamily: F.displayBold,
-                fontSize: 14,
+                fontSize: 16,
                 color: C.bone,
-                letterSpacing: -0.2,
-              }}
-              numberOfLines={1}
-            >
-              {x.t}
-            </Text>
-            <Text
-              style={{
-                fontSize: 10,
-                color: C.fog,
-                fontFamily: F.bodyBold,
-                marginTop: 2,
-                letterSpacing: 0.5,
-                textTransform: 'uppercase',
+                letterSpacing: -0.3,
               }}
             >
-              {x.day} · {x.by} paid · {x.split}
+              {fmtMoney(x.amount, x.currency)}
             </Text>
-          </View>
-          <Text
-            style={{
-              fontFamily: F.displayBold,
-              fontSize: 16,
-              color: C.bone,
-              letterSpacing: -0.3,
-            }}
-          >
-            €{x.amt.toFixed(2)}
-          </Text>
-        </View>
+          </Animated.View>
+        );
+      })}
+    </Screen>
+  );
+}
+
+function EmptyExpenses() {
+  const { C, F } = useTheme();
+  return (
+    <Screen>
+      <Pressable
+        onPress={() => router.push('/sheets/new-expense' as any)}
+        style={{
+          marginTop: 8,
+          padding: 24,
+          borderRadius: 22,
+          borderWidth: 1,
+          borderStyle: 'dashed',
+          borderColor: C.line,
+          alignItems: 'center',
+          gap: 8,
+        }}
+      >
+        <Icon name="dollarSign" size={22} color={C.fog} />
+        <Text style={{ fontFamily: F.displayBold, fontSize: 16, color: C.mist }}>
+          No shared expenses yet
+        </Text>
+        <Text
+          style={{
+            fontSize: 12,
+            color: C.fog,
+            fontFamily: F.body,
+            textAlign: 'center',
+          }}
+        >
+          Track groceries, trips, bills — split any way you like.
+        </Text>
+      </Pressable>
+    </Screen>
+  );
+}
+
+function IndexSkeleton() {
+  const { C } = useTheme();
+  return (
+    <Screen>
+      <Animated.View
+        entering={FadeIn.duration(300)}
+        style={{
+          height: 168,
+          borderRadius: 26,
+          backgroundColor: C.mint,
+          opacity: 0.35,
+          marginBottom: 22,
+        }}
+      />
+      {[0, 1, 2, 3].map((i) => (
+        <Animated.View
+          key={i}
+          entering={FadeIn.delay(60 + i * 60).duration(300)}
+          style={{
+            height: 62,
+            borderRadius: 18,
+            backgroundColor: C.card,
+            borderWidth: 1,
+            borderColor: C.line,
+            opacity: 0.55,
+            marginBottom: 8,
+          }}
+        />
       ))}
     </Screen>
   );
