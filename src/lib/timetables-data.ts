@@ -44,7 +44,7 @@ export const DEMO_TIMETABLES: Timetable[] = [
 export type Who = 'me' | 'sofia' | 'both';
 
 export type TimetableItem = {
-  id: number;
+  id: number | string;
   day: number;
   start: number;
   dur: number;
