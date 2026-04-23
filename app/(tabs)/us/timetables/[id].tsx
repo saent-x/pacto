@@ -214,7 +214,12 @@ export default function TimetableDetail() {
 
       {items.length === 0 ? (
         <Pressable
-          onPress={() => router.push('/sheets/new-timetable-item' as any)}
+          onPress={() =>
+            router.push({
+              pathname: '/sheets/new-timetable-item',
+              params: { timetableId: id },
+            } as any)
+          }
           style={{
             padding: 24,
             borderRadius: 22,
@@ -249,7 +254,12 @@ export default function TimetableDetail() {
       )}
 
       <Pressable
-        onPress={() => router.push('/sheets/new-timetable-item' as any)}
+        onPress={() =>
+          router.push({
+            pathname: '/sheets/new-timetable-item',
+            params: { timetableId: id },
+          } as any)
+        }
         style={{
           position: 'absolute',
           right: 22,

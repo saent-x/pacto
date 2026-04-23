@@ -1,9 +1,11 @@
-import { router } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, Text, TextInput, View } from 'react-native';
 import { Overline, Pill, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
 import { SheetShell } from '@/src/components/ui/SheetShell';
+import { useTimetable } from '@/src/hooks/useTimetables';
 import { useTheme } from '@/src/lib/theme';
 import { DAYS_LETTER } from '@/src/lib/timetables-data';
 
@@ -19,8 +21,25 @@ const CATS: { k: Cat; color: string; ink: string; icon: IconName }[] = [
 ];
 const DURATIONS = [15, 30, 45, 60, 90, 120];
 
+function parseTimeStr(s: string): number {
+  const m = s.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?$/);
+  if (!m) return 7;
+  let h = Number(m[1]);
+  const min = Number(m[2]);
+  const suf = (m[3] ?? '').toUpperCase();
+  if (suf === 'PM' && h !== 12) h += 12;
+  if (suf === 'AM' && h === 12) h = 0;
+  return h + min / 60;
+}
+
 export default function NewTimetableItem() {
   const { C, F } = useTheme();
+  const params = useLocalSearchParams<{ timetableId?: string }>();
+  const timetableId =
+    typeof params.timetableId === 'string' && params.timetableId.length > 0
+      ? params.timetableId
+      : null;
+  const { add } = useTimetable(timetableId);
   const [title, setTitle] = useState('');
   const [cat, setCat] = useState<Cat>('Dinner');
   const [time, setTime] = useState('7:00 PM');
@@ -28,17 +47,54 @@ export default function NewTimetableItem() {
   const [days, setDays] = useState<number[]>([2]);
   const [who, setWho] = useState<Who>('both');
   const [repeat, setRepeat] = useState<Repeat>('weekly');
+  const [saving, setSaving] = useState(false);
 
   const active = CATS.find((c) => c.k === cat) ?? CATS[0];
   const toggleDay = (i: number) =>
     setDays((d) => (d.includes(i) ? d.filter((x) => x !== i) : [...d, i].sort()));
+
+  const canSave =
+    title.trim().length > 0 && !!timetableId && days.length > 0 && !saving;
+
+  const onSave = async () => {
+    if (!canSave) return;
+    setSaving(true);
+    try {
+      const startHour = parseTimeStr(time);
+      const base = {
+        title: title.trim(),
+        category: cat.toLowerCase(),
+        icon: active.icon,
+        color: active.color,
+        ink: active.ink,
+        who,
+        repeat,
+        startHour,
+        duration: dur,
+      };
+      for (const d of days) {
+        await add({ ...base, day: d });
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.back();
+    } catch (err) {
+      console.warn('[new-timetable-item] add failed', err);
+      Alert.alert('Save failed', 'Try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <SheetShell
       eyebrow={`NEW ITEM · ${cat.toUpperCase()}`}
       eyebrowColor={active.color}
       title="What's cooking."
-      footer={<PrimaryButton icon="plus" onPress={() => router.back()}>Add to timetable</PrimaryButton>}
+      footer={
+        <PrimaryButton icon="plus" onPress={onSave} disabled={!canSave}>
+          {saving ? 'Saving…' : 'Add to timetable'}
+        </PrimaryButton>
+      }
     >
       <View
         style={{
@@ -106,6 +162,7 @@ export default function NewTimetableItem() {
 
       <Overline style={{ marginBottom: 8 }}>Title</Overline>
       <TextInput
+        testID="new-timetable-item-title-input"
         value={title}
         onChangeText={setTitle}
         placeholder="Risotto al limone..."
@@ -128,6 +185,7 @@ export default function NewTimetableItem() {
             return (
               <Pressable
                 key={c.k}
+                testID={`new-timetable-item-cat-${c.k}`}
                 onPress={() => setCat(c.k)}
                 style={{
                   paddingVertical: 8,
@@ -161,6 +219,7 @@ export default function NewTimetableItem() {
         <View style={{ flex: 1 }}>
           <Overline style={{ marginBottom: 8 }}>Time</Overline>
           <TextInput
+            testID="new-timetable-item-time-input"
             value={time}
             onChangeText={setTime}
             placeholderTextColor={C.fog}
@@ -195,6 +254,7 @@ export default function NewTimetableItem() {
               return (
                 <Pressable
                   key={d}
+                  testID={`new-timetable-item-dur-${d}`}
                   onPress={() => setDur(d)}
                   style={{
                     flex: 1,
@@ -228,6 +288,7 @@ export default function NewTimetableItem() {
             return (
               <Pressable
                 key={i}
+                testID={`new-timetable-item-day-${i}`}
                 onPress={() => toggleDay(i)}
                 style={{
                   flex: 1,
@@ -258,7 +319,7 @@ export default function NewTimetableItem() {
             { l: 'Weekdays', d: [0, 1, 2, 3, 4] },
             { l: 'Weekends', d: [5, 6] },
           ].map((p) => (
-            <Pill key={p.l} onPress={() => setDays(p.d)}>
+            <Pill key={p.l} testID={`new-timetable-item-preset-${p.l}`} onPress={() => setDays(p.d)}>
               {p.l}
             </Pill>
           ))}
@@ -290,6 +351,7 @@ export default function NewTimetableItem() {
               return (
                 <Pressable
                   key={o.k}
+                  testID={`new-timetable-item-who-${o.k}`}
                   onPress={() => setWho(o.k)}
                   style={{
                     flex: 1,
@@ -336,6 +398,7 @@ export default function NewTimetableItem() {
               return (
                 <Pressable
                   key={o.k}
+                  testID={`new-timetable-item-repeat-${o.k}`}
                   onPress={() => setRepeat(o.k)}
                   style={{
                     flex: 1,
