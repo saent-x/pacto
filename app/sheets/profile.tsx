@@ -221,7 +221,10 @@ export default function ProfileSheet() {
             },
           ].map((s) => (
             <View key={s.l} testID={`profile-stat-${s.id}`} style={{ alignItems: 'center' }}>
-              <Text style={{ fontFamily: F.displayBold, fontSize: 22, color: C.peachInk }}>
+              <Text
+                testID={`profile-stat-${s.id}-value`}
+                style={{ fontFamily: F.displayBold, fontSize: 22, color: C.peachInk }}
+              >
                 {s.n}
               </Text>
               <Text
