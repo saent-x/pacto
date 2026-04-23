@@ -1,9 +1,11 @@
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, Text, TextInput, View } from 'react-native';
 import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon } from '@/src/components/ui/Icon';
 import { SheetShell } from '@/src/components/ui/SheetShell';
+import { useTimetables } from '@/src/hooks/useTimetables';
 import { useTheme } from '@/src/lib/theme';
 import { TEMPLATES, type TemplateKey } from '@/src/lib/timetables-data';
 
@@ -11,16 +13,43 @@ type Share = 'solo' | 'partner' | 'shared';
 
 export default function NewTimetable() {
   const { C, F } = useTheme();
+  const { create } = useTimetables();
   const [title, setTitle] = useState('');
   const [tmplKey, setTmplKey] = useState<TemplateKey>('meals');
   const [share, setShare] = useState<Share>('shared');
+  const [saving, setSaving] = useState(false);
   const tmpl = TEMPLATES.find((t) => t.key === tmplKey) ?? TEMPLATES[0];
+
+  const canSave = title.trim().length > 0 && !saving;
+
+  const onSave = async () => {
+    if (!canSave) return;
+    setSaving(true);
+    try {
+      await create({
+        title: title.trim(),
+        template: tmplKey,
+        share,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.back();
+    } catch (err) {
+      console.warn('[new-timetable] create failed', err);
+      Alert.alert('Save failed', 'Try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <SheetShell
       eyebrow="NEW TIMETABLE"
       title="Shape the week."
-      footer={<PrimaryButton icon="plus" onPress={() => router.back()}>Create timetable</PrimaryButton>}
+      footer={
+        <PrimaryButton icon="plus" onPress={onSave} disabled={!canSave}>
+          {saving ? 'Saving…' : 'Create timetable'}
+        </PrimaryButton>
+      }
     >
       <View
         style={{
@@ -85,6 +114,7 @@ export default function NewTimetable() {
 
       <Overline style={{ marginBottom: 8 }}>Title</Overline>
       <TextInput
+        testID="new-timetable-title-input"
         value={title}
         onChangeText={setTitle}
         placeholder="Our meals this week..."
@@ -107,6 +137,7 @@ export default function NewTimetable() {
             return (
               <Pressable
                 key={t.key}
+                testID={`new-timetable-tmpl-${t.key}`}
                 onPress={() => setTmplKey(t.key)}
                 style={{
                   width: '48%',
@@ -175,6 +206,7 @@ export default function NewTimetable() {
             return (
               <Pressable
                 key={o.k}
+                testID={`new-timetable-share-${o.k}`}
                 onPress={() => setShare(o.k)}
                 style={{
                   flex: 1,
