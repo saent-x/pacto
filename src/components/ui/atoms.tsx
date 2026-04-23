@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Pressable,
   StyleProp,
@@ -8,9 +8,19 @@ import {
   ViewStyle,
 } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
+import Animated, {
+  Easing,
+  useAnimatedProps,
+  useReducedMotion,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from 'react-native-reanimated';
 import { useTheme } from '@/src/lib/theme';
 import { Icon, IconName } from './Icon';
 import { PressScale } from './PressScale';
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 // ───────── Avatar ─────────
 export function Avatar({
@@ -526,6 +536,104 @@ export function TripleRing({
           </React.Fragment>
         );
       })}
+    </Svg>
+  );
+}
+
+// ───────── AnimatedTripleRing (mount-stagger fill) ─────────
+export function AnimatedTripleRing({
+  size = 36,
+  stroke = 3.5,
+  gap = 1.5,
+  values = [0, 0, 0] as [number, number, number],
+  colors,
+  bg = 'rgba(255,255,255,0.08)',
+  delay = 0,
+  duration = 500,
+  enabled = true,
+}: {
+  size?: number;
+  stroke?: number;
+  gap?: number;
+  values: [number, number, number];
+  colors?: [string, string, string];
+  bg?: string;
+  delay?: number;
+  duration?: number;
+  enabled?: boolean;
+}) {
+  const { C } = useTheme();
+  const cs = colors ?? [C.peach, C.gold, C.lavender];
+  const reduced = useReducedMotion();
+  const s = stroke;
+  const g = gap;
+  const r0 = (size - s) / 2;
+  const r1 = r0 - (s + g);
+  const r2 = r1 - (s + g);
+  const c0 = 2 * Math.PI * r0;
+  const c1 = 2 * Math.PI * r1;
+  const c2 = 2 * Math.PI * r2;
+
+  const p0 = useSharedValue(0);
+  const p1 = useSharedValue(0);
+  const p2 = useSharedValue(0);
+
+  useEffect(() => {
+    const ease = Easing.bezier(0.2, 0.8, 0.2, 1);
+    const apply = (sv: ReturnType<typeof useSharedValue<number>>, v: number, ringDelay: number) => {
+      if (!enabled || reduced) {
+        sv.value = v;
+      } else {
+        sv.value = withDelay(delay + ringDelay, withTiming(v, { duration, easing: ease }));
+      }
+    };
+    apply(p0, values[0], 0);
+    apply(p1, values[1], 40);
+    apply(p2, values[2], 80);
+  }, [values, delay, duration, enabled, reduced, p0, p1, p2]);
+
+  const a0 = useAnimatedProps(() => ({ strokeDashoffset: c0 * (1 - p0.value) }));
+  const a1 = useAnimatedProps(() => ({ strokeDashoffset: c1 * (1 - p1.value) }));
+  const a2 = useAnimatedProps(() => ({ strokeDashoffset: c2 * (1 - p2.value) }));
+
+  return (
+    <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
+      <Circle cx={size / 2} cy={size / 2} r={r0} fill="none" stroke={bg} strokeWidth={s} />
+      <AnimatedCircle
+        cx={size / 2}
+        cy={size / 2}
+        r={r0}
+        fill="none"
+        stroke={cs[0]}
+        strokeWidth={s}
+        strokeDasharray={`${c0} ${c0}`}
+        strokeLinecap="round"
+        animatedProps={a0}
+      />
+      <Circle cx={size / 2} cy={size / 2} r={r1} fill="none" stroke={bg} strokeWidth={s} />
+      <AnimatedCircle
+        cx={size / 2}
+        cy={size / 2}
+        r={r1}
+        fill="none"
+        stroke={cs[1]}
+        strokeWidth={s}
+        strokeDasharray={`${c1} ${c1}`}
+        strokeLinecap="round"
+        animatedProps={a1}
+      />
+      <Circle cx={size / 2} cy={size / 2} r={r2} fill="none" stroke={bg} strokeWidth={s} />
+      <AnimatedCircle
+        cx={size / 2}
+        cy={size / 2}
+        r={r2}
+        fill="none"
+        stroke={cs[2]}
+        strokeWidth={s}
+        strokeDasharray={`${c2} ${c2}`}
+        strokeLinecap="round"
+        animatedProps={a2}
+      />
     </Svg>
   );
 }
