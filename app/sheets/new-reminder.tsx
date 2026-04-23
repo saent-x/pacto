@@ -1,9 +1,12 @@
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Overline, Pill, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
 import { SheetShell } from '@/src/components/ui/SheetShell';
+import { useReminders } from '@/src/hooks/useReminders';
+import { useSession } from '@/src/hooks/useSession';
 import { useTheme } from '@/src/lib/theme';
 
 const CATS = ['General', 'Date night', 'Anniversary', 'Health', 'Bills', 'Travel'];
@@ -19,24 +22,98 @@ const ASSIGNEES: { k: 'both' | 'me' | 'sofia'; l: string }[] = [
   { k: 'sofia', l: 'Sofia' },
 ];
 
+const PRIORITY_MAP: Record<'low' | 'med' | 'high', number> = { low: 1, med: 2, high: 3 };
+
+const MONTH = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const pad = (n: number) => String(n).padStart(2, '0');
+const formatDate = (d: Date) => `${MONTH[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+const formatTime = (d: Date) => {
+  const h = d.getHours();
+  const m = pad(d.getMinutes());
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const h12 = ((h + 11) % 12) + 1;
+  return `${h12}:${m} ${suffix}`;
+};
+
+function mergeDate(base: Date, picked: Date, mode: 'date' | 'time'): Date {
+  const next = new Date(base);
+  if (mode === 'date') {
+    next.setFullYear(picked.getFullYear(), picked.getMonth(), picked.getDate());
+  } else {
+    next.setHours(picked.getHours(), picked.getMinutes(), 0, 0);
+  }
+  return next;
+}
+
 export default function NewReminder() {
   const { C, F } = useTheme();
+  const { user, activeCouple, isSolo } = useSession();
+  const { create } = useReminders();
+
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [priority, setPriority] = useState<'low' | 'med' | 'high'>('med');
   const [assignee, setAssignee] = useState<'both' | 'me' | 'sofia'>('both');
   const [cat, setCat] = useState('General');
   const [repeat, setRepeat] = useState('None');
+  const [due, setDue] = useState<Date>(() => {
+    const d = new Date(Date.now() + 60 * 60000);
+    d.setSeconds(0, 0);
+    return d;
+  });
+  const [picker, setPicker] = useState<'date' | 'time' | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const partnerName = activeCouple?.partner?.displayName ?? 'Partner';
+  const assigneeOptions = useMemo(
+    () => (isSolo ? [ASSIGNEES[1]] : ASSIGNEES.map((a) => (a.k === 'sofia' ? { ...a, l: partnerName } : a))),
+    [isSolo, partnerName],
+  );
+
+  const onPickerChange = (_event: DateTimePickerEvent, picked?: Date) => {
+    if (Platform.OS !== 'ios') setPicker(null);
+    if (picked && picker) setDue((prev) => mergeDate(prev, picked, picker));
+  };
+
+  const onSave = async () => {
+    if (!title.trim() || saving) return;
+    setSaving(true);
+    const assignedId =
+      assignee === 'both'
+        ? null
+        : assignee === 'me'
+          ? user?.id ?? null
+          : activeCouple?.partner?.id ?? null;
+    try {
+      await create({
+        title: title.trim(),
+        description: notes.trim() || null,
+        due_at: due.toISOString(),
+        priority: PRIORITY_MAP[priority],
+        category: cat,
+        recurrence: repeat === 'None' ? null : repeat.toLowerCase(),
+        assigned_to: assignedId,
+      });
+      router.back();
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <SheetShell
       eyebrow="NEW REMINDER"
       eyebrowColor={C.reminders}
       title="Don't forget."
-      footer={<PrimaryButton icon="check" onPress={() => router.back()}>Save reminder</PrimaryButton>}
+      footer={
+        <PrimaryButton icon="check" onPress={onSave} disabled={!title.trim() || saving}>
+          {saving ? 'Saving…' : 'Save reminder'}
+        </PrimaryButton>
+      }
     >
       <Overline style={{ marginBottom: 8 }}>What to remember</Overline>
       <TextInput
+        testID="new-reminder-title"
         value={title}
         onChangeText={setTitle}
         placeholder="Call Sofia's mom for her birthday..."
@@ -77,9 +154,43 @@ export default function NewReminder() {
       <View style={{ marginTop: 22 }}>
         <Overline style={{ marginBottom: 10 }}>When</Overline>
         <View style={{ flexDirection: 'row', gap: 10 }}>
-          <Field icon="calendar" label="Apr 18, 2026" />
-          <Field icon="clock" label="6:00 PM" />
+          <Field
+            icon="calendar"
+            label={formatDate(due)}
+            testID="new-reminder-date"
+            onPress={() => setPicker(picker === 'date' ? null : 'date')}
+            active={picker === 'date'}
+          />
+          <Field
+            icon="clock"
+            label={formatTime(due)}
+            testID="new-reminder-time"
+            onPress={() => setPicker(picker === 'time' ? null : 'time')}
+            active={picker === 'time'}
+          />
         </View>
+        {picker ? (
+          <View
+            testID={`new-reminder-picker-${picker}`}
+            style={{
+              marginTop: 12,
+              backgroundColor: C.card,
+              borderWidth: 1,
+              borderColor: C.line,
+              borderRadius: 14,
+              overflow: 'hidden',
+            }}
+          >
+            <DateTimePicker
+              value={due}
+              mode={picker}
+              display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              onChange={onPickerChange}
+              themeVariant="dark"
+              minimumDate={picker === 'date' ? new Date() : undefined}
+            />
+          </View>
+        ) : null}
       </View>
 
       <View style={{ marginTop: 22 }}>
@@ -90,6 +201,7 @@ export default function NewReminder() {
             return (
               <Pressable
                 key={p.k}
+                testID={`new-reminder-priority-${p.k}`}
                 onPress={() => setPriority(p.k)}
                 style={{
                   flex: 1,
@@ -168,11 +280,12 @@ export default function NewReminder() {
       <View style={{ marginTop: 22 }}>
         <Overline style={{ marginBottom: 10 }}>Assign to</Overline>
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          {ASSIGNEES.map((a) => {
+          {assigneeOptions.map((a) => {
             const active = assignee === a.k;
             return (
               <Pressable
                 key={a.k}
+                testID={`new-reminder-assignee-${a.k}`}
                 onPress={() => setAssignee(a.k)}
                 style={{
                   flex: 1,
@@ -202,15 +315,29 @@ export default function NewReminder() {
   );
 }
 
-function Field({ icon, label }: { icon: IconName; label: string }) {
+function Field({
+  icon,
+  label,
+  testID,
+  onPress,
+  active,
+}: {
+  icon: IconName;
+  label: string;
+  testID?: string;
+  onPress?: () => void;
+  active?: boolean;
+}) {
   const { C, F } = useTheme();
   return (
-    <View
+    <Pressable
+      testID={testID}
+      onPress={onPress}
       style={{
         flex: 1,
-        backgroundColor: C.card,
+        backgroundColor: active ? C.cardHi : C.card,
         borderWidth: 1,
-        borderColor: C.line,
+        borderColor: active ? C.reminders : C.line,
         borderRadius: 12,
         paddingVertical: 12,
         paddingHorizontal: 14,
@@ -221,6 +348,6 @@ function Field({ icon, label }: { icon: IconName; label: string }) {
     >
       <Icon name={icon} size={16} color={C.reminders} />
       <Text style={{ color: C.bone, fontSize: 13, fontFamily: F.bodyBold }}>{label}</Text>
-    </View>
+    </Pressable>
   );
 }

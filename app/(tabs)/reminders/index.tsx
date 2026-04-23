@@ -1,6 +1,6 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import {
   BlockCard,
   DateSectioned,
@@ -11,145 +11,111 @@ import {
 } from '@/src/components/ui/atoms';
 import { Icon } from '@/src/components/ui/Icon';
 import { Screen } from '@/src/components/ui/Screen';
+import { ReminderRow } from '@/src/components/reminders/ReminderRow';
+import {
+  bucketOfDue,
+  isOverdue,
+  orderReminderBuckets,
+} from '@/src/components/reminders/buckets';
+import { useReminders } from '@/src/hooks/useReminders';
+import { useSession } from '@/src/hooks/useSession';
 import { useTheme } from '@/src/lib/theme';
+import type { Reminder } from '@/src/types/database';
 
-type Item = {
-  id: number;
-  title: string;
-  bucket: string;
-  when: string;
-  who: string;
-  priority: 'low' | 'med' | 'high';
-  done: boolean;
-  overdue?: boolean;
-};
-
-const SEED: Item[] = [
-  { id: 1, title: 'Call mom for her birthday', bucket: 'Today', when: '18:00', who: 'Mattia', priority: 'high', done: false },
-  { id: 2, title: 'Pick up flowers', bucket: 'Today', when: '12:30', who: 'Both', priority: 'med', done: false },
-  { id: 3, title: 'Water the plants', bucket: 'Overdue', when: 'Yesterday', who: 'Both', priority: 'low', done: false, overdue: true },
-  { id: 4, title: 'Book Venice flights', bucket: 'Tomorrow', when: '14:00', who: 'Both', priority: 'high', done: false },
-  { id: 5, title: 'Renew gym membership', bucket: 'This week', when: 'Fri', who: 'Sofia', priority: 'med', done: false },
-  { id: 6, title: 'Dentist appointment', bucket: 'This week', when: 'Sat · 10:00', who: 'Mattia', priority: 'high', done: false },
-  { id: 7, title: "Sofia's mom birthday", bucket: 'Apr 28', when: '', who: 'Both', priority: 'high', done: false },
-  { id: 8, title: "Grandma's visit reminder", bucket: 'Apr 28', when: '09:00', who: 'Mattia', priority: 'med', done: false },
-  { id: 9, title: 'Insurance renewal', bucket: 'May', when: 'May 3', who: 'Both', priority: 'high', done: false },
-  { id: 10, title: 'Anniversary prep', bucket: 'May', when: 'May 18', who: 'Both', priority: 'high', done: false },
-  { id: 11, title: 'Tax deadline', bucket: 'May', when: 'May 30', who: 'Mattia', priority: 'high', done: false },
-  { id: 12, title: 'Summer rental check', bucket: 'Jun', when: 'Jun 6', who: 'Both', priority: 'med', done: false },
-  { id: 13, title: 'Pay the rent', bucket: 'Done', when: 'Tue', who: 'Mattia', priority: 'high', done: true },
-  { id: 14, title: 'Pick up dry cleaning', bucket: 'Done', when: 'Mon', who: 'Sofia', priority: 'low', done: true },
-];
-
-const FILTERS = ['All', 'Mine', "Sofia's", 'Shared', 'Overdue'];
-const BUCKET_ORDER = ['Overdue', 'Today', 'Tomorrow', 'This week', 'Apr 28', 'May', 'Jun', 'Later'];
+type FilterKey = 'All' | 'Mine' | "Sofia's" | 'Shared' | 'Overdue';
 
 export default function RemindersScreen() {
   const { C, F } = useTheme();
-  const [filter, setFilter] = useState('All');
-  const [items, setItems] = useState(SEED);
-  const toggle = (id: number) =>
-    setItems((xs) => xs.map((x) => (x.id === id ? { ...x, done: !x.done } : x)));
+  const { user, activeCouple, isSolo } = useSession();
+  const {
+    reminders,
+    upcoming,
+    completed,
+    isLoading,
+    error,
+    toggleComplete,
+    snooze,
+    remove,
+  } = useReminders();
 
-  const matchFilter = (x: Item) => {
+  const [filter, setFilter] = useState<FilterKey>('All');
+  const [errorDismissed, setErrorDismissed] = useState(false);
+
+  const youId = user?.id ?? null;
+  const partnerId = activeCouple?.partner?.id ?? null;
+
+  const filters: FilterKey[] = useMemo(
+    () => (isSolo ? ['All', 'Overdue'] : ['All', 'Mine', "Sofia's", 'Shared', 'Overdue']),
+    [isSolo],
+  );
+
+  const matchFilter = (r: Reminder) => {
     if (filter === 'All') return true;
-    if (filter === 'Mine') return x.who === 'Mattia';
-    if (filter === "Sofia's") return x.who === 'Sofia';
-    if (filter === 'Shared') return x.who === 'Both';
-    if (filter === 'Overdue') return !!x.overdue;
+    if (filter === 'Mine') return youId != null && r.assigned_to === youId;
+    if (filter === "Sofia's") return partnerId != null && r.assigned_to === partnerId;
+    if (filter === 'Shared') return r.assigned_to == null;
+    if (filter === 'Overdue') return isOverdue(r.due_at, r.is_completed);
     return true;
   };
-  const active = items.filter((x) => !x.done && matchFilter(x));
-  const done = items.filter((x) => x.done && matchFilter(x));
+
+  const active = upcoming.filter(matchFilter);
+  const done = completed.filter(matchFilter);
 
   const bucketColor: Record<string, string> = {
     Overdue: C.error,
     Today: C.gold,
     Tomorrow: C.peach,
     'This week': C.lavender,
-    'Apr 28': C.mint,
-    May: C.sky,
-    Jun: C.butter,
-    Later: C.fog,
+    JAN: C.sky, FEB: C.sky, MAR: C.sky, APR: C.mint,
+    MAY: C.sky, JUN: C.butter, JUL: C.butter, AUG: C.butter,
+    SEP: C.rose, OCT: C.rose, NOV: C.rose, DEC: C.rose,
   };
-  const sections = BUCKET_ORDER.map((b) => ({
-    label: b.toUpperCase(),
-    color: bucketColor[b],
-    items: active.filter((x) => x.bucket === b),
-  })).filter((s) => s.items.length);
+
+  const sections = useMemo(() => {
+    const grouped = new Map<string, Reminder[]>();
+    active.forEach((r) => {
+      const b = bucketOfDue(r.due_at);
+      if (!grouped.has(b)) grouped.set(b, []);
+      grouped.get(b)!.push(r);
+    });
+    return orderReminderBuckets(Array.from(grouped.keys())).map((label) => ({
+      label: label.toUpperCase(),
+      color: bucketColor[label] ?? C.fog,
+      items: grouped.get(label)!,
+    }));
+  }, [active, bucketColor, C.fog]);
+
+  const todayCount = upcoming.filter((r) => bucketOfDue(r.due_at) === 'Today').length;
+  const overdueCount = upcoming.filter((r) => isOverdue(r.due_at, r.is_completed)).length;
+  const partnerCount = partnerId
+    ? upcoming.filter((r) => r.assigned_to === partnerId).length
+    : 0;
+
+  if (error && !errorDismissed) {
+    return <ErrorState onRetry={() => setErrorDismissed(true)} />;
+  }
+  if (isLoading && reminders.length === 0) {
+    return <IndexSkeleton />;
+  }
+
+  const hasAny = reminders.length > 0;
 
   return (
     <Screen>
-      <BlockCard bg={C.lavender} ink={C.lavenderInk} style={{ marginBottom: 16, padding: 22 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <View style={{ flex: 1 }}>
-            <Overline color="rgba(31,22,53,0.7)">This week</Overline>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginTop: 8 }}>
-              <Display size={54} color={C.lavenderInk}>{`${active.length}`}</Display>
-              <Text
-                style={{
-                  fontSize: 14,
-                  color: 'rgba(31,22,53,0.6)',
-                  fontFamily: F.bodyBold,
-                  marginBottom: 8,
-                }}
-              >
-                active
-              </Text>
-            </View>
-            <Text
-              style={{
-                fontSize: 12,
-                color: 'rgba(31,22,53,0.7)',
-                marginTop: 6,
-                fontFamily: F.body,
-              }}
-            >
-              {items.filter((x) => x.bucket === 'Today').length} due today ·{' '}
-              {items.filter((x) => x.overdue).length} overdue
-            </Text>
-          </View>
-          <IconTile
-            icon="bell"
-            bg="rgba(31,22,53,0.15)"
-            color={C.lavenderInk}
-            size={44}
-            radius={14}
-            iconSize={20}
-          />
-        </View>
-        <View style={{ marginTop: 16, flexDirection: 'row', gap: 4, height: 6 }}>
-          {[
-            { w: 40, c: C.lavenderInk },
-            { w: 25, c: 'rgba(31,22,53,0.45)' },
-            { w: 20, c: 'rgba(31,22,53,0.3)' },
-            { w: 15, c: 'rgba(31,22,53,0.18)' },
-          ].map((s, i) => (
-            <View key={i} style={{ flex: s.w, backgroundColor: s.c, borderRadius: 3 }} />
-          ))}
-        </View>
-        <View style={{ marginTop: 8, flexDirection: 'row', justifyContent: 'space-between' }}>
-          {[`DONE ${done.length}`, `OPEN ${active.length}`, 'SNOOZED 2', 'PARTNER 4'].map((t) => (
-            <Text
-              key={t}
-              style={{
-                fontSize: 10,
-                fontFamily: F.bodyBold,
-                letterSpacing: 0.5,
-                color: 'rgba(31,22,53,0.75)',
-              }}
-            >
-              {t}
-            </Text>
-          ))}
-        </View>
-      </BlockCard>
+      <SummaryCard
+        activeCount={active.length}
+        doneCount={done.length}
+        todayCount={todayCount}
+        overdueCount={overdueCount}
+        partnerCount={partnerCount}
+      />
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 18 }}>
         <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 4 }}>
-          {FILTERS.map((f) => (
+          {filters.map((f) => (
             <Pill
               key={f}
+              testID={`reminder-filter-${f}`}
               active={filter === f}
               activeBg={C.reminders}
               activeColor="#fff"
@@ -161,13 +127,30 @@ export default function RemindersScreen() {
         </View>
       </ScrollView>
 
-      <DateSectioned
-        sections={sections}
-        maxOpen={3}
-        renderItem={(it) => <Row key={it.id} item={it} onToggle={() => toggle(it.id)} />}
-      />
+      {!hasAny ? (
+        <EmptyReminders />
+      ) : sections.length === 0 && done.length === 0 ? (
+        <EmptyFiltered />
+      ) : (
+        <DateSectioned
+          sections={sections}
+          maxOpen={3}
+          renderItem={(r) => (
+            <ReminderRow
+              key={r.id}
+              reminder={r}
+              youId={youId}
+              partnerId={partnerId}
+              testID={`reminder-row-${r.id}`}
+              onToggle={() => void toggleComplete(r)}
+              onSnooze={() => void snooze(r, 60)}
+              onDelete={() => void remove(r.id)}
+            />
+          )}
+        />
+      )}
 
-      {done.length > 0 && (
+      {done.length > 0 ? (
         <View style={{ marginTop: 4 }}>
           <View
             style={{
@@ -192,99 +175,220 @@ export default function RemindersScreen() {
             </Text>
           </View>
           <View style={{ gap: 10 }}>
-            {done.map((it) => (
-              <Row key={it.id} item={it} onToggle={() => toggle(it.id)} />
+            {done.map((r) => (
+              <ReminderRow
+                key={r.id}
+                reminder={r}
+                youId={youId}
+                partnerId={partnerId}
+                testID={`reminder-row-${r.id}`}
+                onToggle={() => void toggleComplete(r)}
+                onSnooze={() => void snooze(r, 60)}
+                onDelete={() => void remove(r.id)}
+              />
             ))}
           </View>
         </View>
-      )}
+      ) : null}
     </Screen>
   );
 }
 
-function Row({ item, onToggle }: { item: Item; onToggle: () => void }) {
+function SummaryCard({
+  activeCount,
+  doneCount,
+  todayCount,
+  overdueCount,
+  partnerCount,
+}: {
+  activeCount: number;
+  doneCount: number;
+  todayCount: number;
+  overdueCount: number;
+  partnerCount: number;
+}) {
   const { C, F } = useTheme();
-  const done = item.done;
+  const total = Math.max(1, doneCount + activeCount + overdueCount + partnerCount);
+  const w = (n: number) => Math.max(4, Math.round((n / total) * 100));
+  const segs = [
+    { w: w(doneCount), c: C.lavenderInk },
+    { w: w(activeCount), c: 'rgba(31,22,53,0.45)' },
+    { w: w(overdueCount), c: 'rgba(31,22,53,0.3)' },
+    { w: w(partnerCount), c: 'rgba(31,22,53,0.18)' },
+  ];
   return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 14,
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        borderRadius: 18,
-        backgroundColor: C.card,
-        borderWidth: 1,
-        borderColor: C.line,
-      }}
-    >
-      <Pressable
-        onPress={onToggle}
-        style={{
-          width: 24,
-          height: 24,
-          borderRadius: 12,
-          borderWidth: done ? 0 : 1.5,
-          borderColor: C.ash,
-          backgroundColor: done ? C.reminders : 'transparent',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        {done && <Icon name="check" size={14} color="#fff" strokeWidth={3} />}
-      </Pressable>
-      <View style={{ flex: 1 }}>
-        <Text
-          numberOfLines={1}
-          style={{
-            fontSize: 14,
-            fontFamily: F.body,
-            color: done ? C.fog : C.bone,
-            textDecorationLine: done ? 'line-through' : 'none',
-          }}
-        >
-          {item.title}
-        </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
-          {!!item.when && (
-            <>
-              <Icon name="clock" size={10} color={item.overdue ? C.error : C.fog} />
-              <Text
-                style={{
-                  fontSize: 10,
-                  color: item.overdue ? C.error : C.fog,
-                  fontFamily: F.bodyBold,
-                  letterSpacing: 0.4,
-                }}
-              >
-                {item.when}
-              </Text>
-              <Text style={{ color: C.ash }}>·</Text>
-            </>
-          )}
+    <BlockCard bg={C.lavender} ink={C.lavenderInk} style={{ marginBottom: 16, padding: 22 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <View style={{ flex: 1 }}>
+          <Overline color="rgba(31,22,53,0.7)">This week</Overline>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginTop: 8 }}>
+            <Display size={54} color={C.lavenderInk}>{`${activeCount}`}</Display>
+            <Text
+              style={{
+                fontSize: 14,
+                color: 'rgba(31,22,53,0.6)',
+                fontFamily: F.bodyBold,
+                marginBottom: 8,
+              }}
+            >
+              active
+            </Text>
+          </View>
           <Text
             style={{
+              fontSize: 12,
+              color: 'rgba(31,22,53,0.7)',
+              marginTop: 6,
+              fontFamily: F.body,
+            }}
+          >
+            {todayCount} due today · {overdueCount} overdue
+          </Text>
+        </View>
+        <IconTile
+          icon="bell"
+          bg="rgba(31,22,53,0.15)"
+          color={C.lavenderInk}
+          size={44}
+          radius={14}
+          iconSize={20}
+        />
+      </View>
+      <View style={{ marginTop: 16, flexDirection: 'row', gap: 4, height: 6 }}>
+        {segs.map((s, i) => (
+          <View key={i} style={{ flex: s.w, backgroundColor: s.c, borderRadius: 3 }} />
+        ))}
+      </View>
+      <View style={{ marginTop: 8, flexDirection: 'row', justifyContent: 'space-between' }}>
+        {[`DONE ${doneCount}`, `OPEN ${activeCount}`, `SNOOZED ${overdueCount}`, `PARTNER ${partnerCount}`].map((t) => (
+          <Text
+            key={t}
+            style={{
               fontSize: 10,
-              color: C.mist,
               fontFamily: F.bodyBold,
-              letterSpacing: 0.4,
+              letterSpacing: 0.5,
+              color: 'rgba(31,22,53,0.75)',
+            }}
+          >
+            {t}
+          </Text>
+        ))}
+      </View>
+    </BlockCard>
+  );
+}
+
+function EmptyReminders() {
+  const { C, F } = useTheme();
+  return (
+    <View
+      testID="reminders-empty"
+      style={{
+        marginTop: 18,
+        padding: 22,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderStyle: 'dashed',
+        borderColor: C.line,
+        alignItems: 'center',
+        gap: 6,
+      }}
+    >
+      <Icon name="bell" size={22} color={C.fog} />
+      <Text style={{ fontFamily: F.displayBold, fontSize: 16, color: C.mist }}>
+        Nothing on deck
+      </Text>
+      <Text style={{ fontSize: 12, color: C.fog, fontFamily: F.body, textAlign: 'center' }}>
+        Tap + in the header to add the first reminder.
+      </Text>
+    </View>
+  );
+}
+
+function EmptyFiltered() {
+  const { C, F } = useTheme();
+  return (
+    <View
+      testID="reminders-empty-filtered"
+      style={{
+        marginTop: 6,
+        padding: 18,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderStyle: 'dashed',
+        borderColor: C.line,
+        alignItems: 'center',
+      }}
+    >
+      <Text style={{ fontSize: 12, color: C.fog, fontFamily: F.body }}>
+        Nothing here yet.
+      </Text>
+    </View>
+  );
+}
+
+function IndexSkeleton() {
+  const { C } = useTheme();
+  return (
+    <Screen>
+      <Animated.View
+        entering={FadeInDown.duration(360)}
+        testID="reminders-hero-skeleton"
+        style={{
+          marginBottom: 16,
+          backgroundColor: C.lavender,
+          borderRadius: 22,
+          height: 160,
+          opacity: 0.6,
+        }}
+      />
+      {[0, 1, 2, 3].map((i) => (
+        <View
+          key={i}
+          style={{
+            height: 62,
+            borderRadius: 18,
+            backgroundColor: C.card,
+            borderWidth: 1,
+            borderColor: C.line,
+            marginBottom: 10,
+            opacity: 0.6,
+          }}
+        />
+      ))}
+    </Screen>
+  );
+}
+
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  const { C, F } = useTheme();
+  return (
+    <Screen>
+      <Pressable testID="reminders-error-retry" onPress={onRetry}>
+        <View
+          style={{
+            backgroundColor: C.rose,
+            borderRadius: 22,
+            padding: 18,
+            marginBottom: 14,
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: F.bodyBold,
+              fontSize: 10,
+              letterSpacing: 1.4,
+              color: 'rgba(0,0,0,0.6)',
               textTransform: 'uppercase',
             }}
           >
-            {item.who}
+            Couldn't load reminders
+          </Text>
+          <Text style={{ color: C.ink, fontFamily: F.body, marginTop: 4 }}>
+            Tap to retry
           </Text>
         </View>
-      </View>
-      <View
-        style={{
-          width: 8,
-          height: 8,
-          borderRadius: 4,
-          backgroundColor:
-            item.priority === 'high' ? C.error : item.priority === 'med' ? C.butter : C.ash,
-        }}
-      />
-    </View>
+      </Pressable>
+    </Screen>
   );
 }
