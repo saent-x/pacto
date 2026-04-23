@@ -1,4 +1,5 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
@@ -94,6 +95,7 @@ export default function NewReminder() {
         recurrence: repeat === 'None' ? null : repeat.toLowerCase(),
         assigned_to: assignedId,
       });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } finally {
       setSaving(false);
