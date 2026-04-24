@@ -1,7 +1,16 @@
 import * as Haptics from 'expo-haptics';
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import Animated, { LinearTransition, ZoomIn } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  LinearTransition,
+  ZoomIn,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import ReanimatedSwipeable, {
   type SwipeableMethods,
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -35,6 +44,21 @@ export function ReminderRow({
 
   const done = reminder.is_completed;
   const overdue = isOverdue(reminder.due_at, done);
+  const reduced = useReducedMotion();
+  const checkScale = useSharedValue(1);
+  const prevDone = useRef(done);
+  useEffect(() => {
+    if (prevDone.current !== done && done && !reduced) {
+      checkScale.value = withSequence(
+        withTiming(1.18, { duration: 100, easing: Easing.out(Easing.cubic) }),
+        withTiming(1, { duration: 150, easing: Easing.inOut(Easing.cubic) }),
+      );
+    }
+    prevDone.current = done;
+  }, [done, reduced, checkScale]);
+  const checkStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: checkScale.value }],
+  }));
   const whoLabel =
     reminder.assigned_to == null
       ? 'SHARED'
@@ -138,25 +162,27 @@ export function ReminderRow({
             borderColor: C.line,
           }}
         >
-          <Pressable
-            testID={`${rootTestID}-checkbox`}
-            onPress={() => {
-              Haptics.selectionAsync().catch(() => undefined);
-              onToggle();
-            }}
-            style={{
-              width: 24,
-              height: 24,
-              borderRadius: 12,
-              borderWidth: done ? 0 : 1.5,
-              borderColor: C.ash,
-              backgroundColor: done ? C.reminders : 'transparent',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {done ? <Icon name="check" size={14} color="#fff" strokeWidth={3} /> : null}
-          </Pressable>
+          <Animated.View style={checkStyle}>
+            <Pressable
+              testID={`${rootTestID}-checkbox`}
+              onPress={() => {
+                Haptics.selectionAsync().catch(() => undefined);
+                onToggle();
+              }}
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: 12,
+                borderWidth: done ? 0 : 1.5,
+                borderColor: C.ash,
+                backgroundColor: done ? C.reminders : 'transparent',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {done ? <Icon name="check" size={14} color="#fff" strokeWidth={3} /> : null}
+            </Pressable>
+          </Animated.View>
           <View style={{ flex: 1 }}>
             <Text
               numberOfLines={1}

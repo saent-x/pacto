@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import React from 'react';
-import { ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { useTheme } from '@/src/lib/theme';
 import { Display, Overline, RoundBtn } from './atoms';
 
@@ -18,7 +18,13 @@ export function SheetShell({
   footer?: React.ReactNode;
 }) {
   const { C } = useTheme();
+  const Wrapper: any = Platform.OS === 'ios' ? KeyboardAvoidingView : View;
+  const wrapperProps =
+    Platform.OS === 'ios'
+      ? { behavior: 'padding' as const, keyboardVerticalOffset: 0 }
+      : {};
   return (
+    <Wrapper {...wrapperProps} style={{ flex: 1, backgroundColor: C.coal }}>
     <ScrollView
       style={{ backgroundColor: C.coal }}
       contentContainerStyle={{ padding: 20, paddingBottom: 24 }}
@@ -47,5 +53,6 @@ export function SheetShell({
       {children}
       {footer && <View style={{ marginTop: 28 }}>{footer}</View>}
     </ScrollView>
+    </Wrapper>
   );
 }

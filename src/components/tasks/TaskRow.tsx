@@ -1,8 +1,17 @@
 // src/components/tasks/TaskRow.tsx
 import * as Haptics from 'expo-haptics';
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import Animated, { LinearTransition, ZoomIn } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  LinearTransition,
+  ZoomIn,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import ReanimatedSwipeable, {
   type SwipeableMethods,
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -48,6 +57,21 @@ export function TaskRow({
   };
   const prioKey = task.priority >= 3 ? 'high' : task.priority === 2 ? 'med' : task.priority === 1 ? 'low' : 'none';
   const dueChip = formatDueChip(task.due_date);
+  const reduced = useReducedMotion();
+  const checkScale = useSharedValue(1);
+  const prevDone = useRef(task.is_completed);
+  useEffect(() => {
+    if (prevDone.current !== task.is_completed && task.is_completed && !reduced) {
+      checkScale.value = withSequence(
+        withTiming(1.18, { duration: 100, easing: Easing.out(Easing.cubic) }),
+        withTiming(1, { duration: 150, easing: Easing.inOut(Easing.cubic) }),
+      );
+    }
+    prevDone.current = task.is_completed;
+  }, [task.is_completed, reduced, checkScale]);
+  const checkStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: checkScale.value }],
+  }));
 
   const renderRightActions = () => (
     <View
@@ -123,27 +147,29 @@ export function TaskRow({
             borderColor: state === 'reordering' ? listColor : C.line,
           }}
         >
-          <Pressable
-            testID={`${testID ?? 'task-row'}-checkbox`}
-            onPress={() => {
-              Haptics.selectionAsync().catch(() => undefined);
-              onToggle();
-            }}
-            style={{
-              width: 22,
-              height: 22,
-              borderRadius: 11,
-              borderWidth: task.is_completed ? 0 : 1.5,
-              borderColor: C.ash,
-              backgroundColor: task.is_completed ? listColor : 'transparent',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {task.is_completed ? (
-              <Icon name="check" size={12} color={C.ink} strokeWidth={3} />
-            ) : null}
-          </Pressable>
+          <Animated.View style={checkStyle}>
+            <Pressable
+              testID={`${testID ?? 'task-row'}-checkbox`}
+              onPress={() => {
+                Haptics.selectionAsync().catch(() => undefined);
+                onToggle();
+              }}
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: 11,
+                borderWidth: task.is_completed ? 0 : 1.5,
+                borderColor: C.ash,
+                backgroundColor: task.is_completed ? listColor : 'transparent',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {task.is_completed ? (
+                <Icon name="check" size={12} color={C.ink} strokeWidth={3} />
+              ) : null}
+            </Pressable>
+          </Animated.View>
           <Text
             numberOfLines={1}
             style={{
