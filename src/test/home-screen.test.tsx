@@ -76,11 +76,15 @@ vi.mock('react-native-reanimated', () => {
     ScrollView: MockScrollView,
     FadeInDown: fadeInDown,
     FadeIn: fadeInDown,
-    Easing: { inOut: () => 0, ease: 0 },
+    Easing: { inOut: () => 0, out: (fn: any) => fn ?? 0, cubic: (v: any) => v, bezier: () => 0, ease: 0 },
     useSharedValue: (v: any) => ({ value: v }),
     useAnimatedStyle: (fn: any) => fn(),
     withRepeat: (v: any) => v,
     withTiming: (v: any) => v,
+    withDelay: (_d: any, v: any) => v,
+    useReducedMotion: () => false,
+    useAnimatedProps: (fn: any) => fn(),
+    interpolateColor: () => "#000000",
     interpolate: () => 0,
   };
 });

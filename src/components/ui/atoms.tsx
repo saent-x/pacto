@@ -1,16 +1,21 @@
 import React, { useEffect } from 'react';
 import {
+  LayoutAnimation,
+  Platform,
   Pressable,
   StyleProp,
   Text,
   TextStyle,
+  UIManager,
   View,
   ViewStyle,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import Animated, {
   Easing,
   useAnimatedProps,
+  useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
   withDelay,
@@ -19,6 +24,20 @@ import Animated, {
 import { useTheme } from '@/src/lib/theme';
 import { Icon, IconName } from './Icon';
 import { PressScale } from './PressScale';
+
+if (
+  Platform.OS === 'android' &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+const tapHaptic = () => {
+  Haptics.selectionAsync().catch(() => undefined);
+};
+const impactHaptic = () => {
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+};
 
 const AnimatedCircle =
   (Animated as any)?.createAnimatedComponent?.(Circle) ?? Circle;
@@ -147,9 +166,15 @@ export function BlockCard({
 }) {
   const { C } = useTheme();
   const Wrapper: any = onPress ? PressScale : View;
+  const handlePress = onPress
+    ? () => {
+        tapHaptic();
+        onPress();
+      }
+    : undefined;
   return (
     <Wrapper
-      onPress={onPress}
+      onPress={handlePress}
       testID={testID}
       style={[
         {
@@ -181,9 +206,15 @@ export function DarkCard({
 }) {
   const { C } = useTheme();
   const Wrapper: any = onPress ? PressScale : View;
+  const handlePress = onPress
+    ? () => {
+        tapHaptic();
+        onPress();
+      }
+    : undefined;
   return (
     <Wrapper
-      onPress={onPress}
+      onPress={handlePress}
       style={[
         {
           backgroundColor: C.card,
@@ -228,36 +259,59 @@ export function Pill({
   const padV = size === 'sm' ? 6 : 8;
   const padH = size === 'sm' ? 12 : 14;
   const fs = size === 'sm' ? 11 : 12;
+  const reduced = useReducedMotion();
+  const scale = useSharedValue(active ? 1.04 : 1);
+  useEffect(() => {
+    if (reduced) {
+      scale.value = 1;
+      return;
+    }
+    scale.value = withTiming(active ? 1.04 : 1, {
+      duration: 200,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [active, reduced, scale]);
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+  const handlePress = onPress
+    ? () => {
+        tapHaptic();
+        onPress();
+      }
+    : undefined;
   return (
-    <PressScale
-      onPress={onPress}
-      hitSlop={8}
-      testID={testID}
-      style={[
-        {
-          backgroundColor: active ? activeBg ?? bg ?? C.goldSoft : 'transparent',
-          borderWidth: active ? 0 : 1,
-          borderColor: C.line,
-          borderRadius: 999,
-          paddingVertical: padV,
-          paddingHorizontal: padH,
-          alignSelf: 'flex-start',
-        },
-        style,
-      ]}
-    >
-      <Text
-        style={{
-          color: active ? activeColor ?? color ?? C.gold : C.mist,
-          fontFamily: F.bodyBold,
-          fontSize: fs,
-          letterSpacing: 0.3,
-          textTransform: 'uppercase',
-        }}
+    <Animated.View style={[{ alignSelf: 'flex-start' }, animStyle]}>
+      <PressScale
+        onPress={handlePress}
+        hitSlop={8}
+        testID={testID}
+        style={[
+          {
+            backgroundColor: active ? activeBg ?? bg ?? C.goldSoft : 'transparent',
+            borderWidth: active ? 0 : 1,
+            borderColor: C.line,
+            borderRadius: 999,
+            paddingVertical: padV,
+            paddingHorizontal: padH,
+            alignSelf: 'flex-start',
+          },
+          style,
+        ]}
       >
-        {children}
-      </Text>
-    </PressScale>
+        <Text
+          style={{
+            color: active ? activeColor ?? color ?? C.gold : C.mist,
+            fontFamily: F.bodyBold,
+            fontSize: fs,
+            letterSpacing: 0.3,
+            textTransform: 'uppercase',
+          }}
+        >
+          {children}
+        </Text>
+      </PressScale>
+    </Animated.View>
   );
 }
 
@@ -352,9 +406,15 @@ export function PrimaryButton({
   style?: StyleProp<ViewStyle>;
 }) {
   const { C, F } = useTheme();
+  const handlePress = onPress
+    ? () => {
+        impactHaptic();
+        onPress();
+      }
+    : undefined;
   return (
     <PressScale
-      onPress={onPress}
+      onPress={handlePress}
       disabled={disabled}
       style={[
         {
@@ -409,9 +469,15 @@ export function RoundBtn({
   const borderColor = border === null ? null : border ?? C.line;
   // Extend hit area to 40×40 minimum
   const hitPad = Math.max(0, (40 - size) / 2);
+  const handlePress = onPress
+    ? () => {
+        tapHaptic();
+        onPress();
+      }
+    : undefined;
   return (
     <PressScale
-      onPress={onPress}
+      onPress={handlePress}
       hitSlop={hitPad}
       style={[
         {
@@ -454,7 +520,22 @@ export function ProgressRing({
   const cs = colors ?? [C.peach, C.butter, C.lavender];
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
-  const id = `rg-${size}-${value}`;
+  const id = `rg-${size}`;
+  const reduced = useReducedMotion();
+  const progress = useSharedValue(reduced ? value : 0);
+  useEffect(() => {
+    if (reduced) {
+      progress.value = value;
+      return;
+    }
+    progress.value = withTiming(value, {
+      duration: 900,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [value, reduced, progress]);
+  const animProps = useAnimatedProps(() => ({
+    strokeDashoffset: c * (1 - progress.value),
+  }));
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
@@ -466,7 +547,7 @@ export function ProgressRing({
           </LinearGradient>
         </Defs>
         <Circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={bg} strokeWidth={stroke} />
-        <Circle
+        <AnimatedCircle
           cx={size / 2}
           cy={size / 2}
           r={r}
@@ -474,7 +555,7 @@ export function ProgressRing({
           stroke={`url(#${id})`}
           strokeWidth={stroke}
           strokeDasharray={`${c} ${c}`}
-          strokeDashoffset={c * (1 - value)}
+          animatedProps={animProps}
           strokeLinecap="round"
         />
       </Svg>
@@ -765,9 +846,15 @@ export function StickyDate({
 }) {
   const { C, F } = useTheme();
   const Wrapper: any = collapsible ? Pressable : View;
+  const handlePress = collapsible && onToggle
+    ? () => {
+        tapHaptic();
+        onToggle();
+      }
+    : undefined;
   return (
     <Wrapper
-      onPress={onToggle}
+      onPress={handlePress}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -827,7 +914,12 @@ export function DateSectioned<T>({
       {sections.map((s, i) => {
         const collapsible = i >= maxOpen;
         const open = !collapsible || expanded[s.label];
-        const toggle = () => setExpanded((e) => ({ ...e, [s.label]: !e[s.label] }));
+        const toggle = () => {
+          LayoutAnimation.configureNext(
+            LayoutAnimation.create(260, 'easeInEaseOut', 'opacity'),
+          );
+          setExpanded((e) => ({ ...e, [s.label]: !e[s.label] }));
+        };
         return (
           <View key={s.label} style={{ marginBottom: 18 }}>
             <StickyDate

@@ -5,6 +5,17 @@ import { vi } from 'vitest';
 // crypto.getRandomValues, so mock it as a no-op.
 vi.mock('react-native-get-random-values', () => ({}));
 
+// expo-haptics pulls in expo-modules-core which references __DEV__ at
+// module scope. Provide a global mock so components importing haptics
+// (Pill, BlockCard, etc.) don't crash test loading.
+vi.mock('expo-haptics', () => ({
+  selectionAsync: vi.fn(async () => undefined),
+  impactAsync: vi.fn(async () => undefined),
+  notificationAsync: vi.fn(async () => undefined),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
+  NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
+}));
+
 // @instantdb/react-native transitively imports react-native-get-random-values
 // (CJS) which cannot be loaded in Vitest's ESM context. Mock the SDK.
 vi.mock('@instantdb/react-native', () => {

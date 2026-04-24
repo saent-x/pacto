@@ -1,10 +1,19 @@
 import { format } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import Animated, {
+  Easing,
+  interpolateColor,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
 import { SheetShell } from '@/src/components/ui/SheetShell';
 import { useJournal } from '@/src/hooks/useJournal';
 import { useTheme } from '@/src/lib/theme';
@@ -23,6 +32,29 @@ export default function NewEntry() {
   const now = useMemo(() => new Date(), []);
   const eyebrow = format(now, 'EEEE, MMMM d').toUpperCase();
   const entryDate = format(now, 'yyyy-MM-dd');
+
+  const reduced = useReducedMotion();
+  const toggleProgress = useSharedValue(isPrivate ? 1 : 0);
+  useEffect(() => {
+    if (reduced) {
+      toggleProgress.value = isPrivate ? 1 : 0;
+      return;
+    }
+    toggleProgress.value = withTiming(isPrivate ? 1 : 0, {
+      duration: 200,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [isPrivate, reduced, toggleProgress]);
+  const thumbStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: toggleProgress.value * 18 }],
+  }));
+  const trackStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(
+      toggleProgress.value,
+      [0, 1],
+      [C.line, C.lavender],
+    ),
+  }));
 
   const moods: { k: Mood; icon: IconName; color: string; label: string }[] = [
     { k: 'great', icon: 'sun', color: C.mint, label: 'Great' },
@@ -111,10 +143,13 @@ export default function NewEntry() {
             {moods.map((m) => {
               const active = mood === m.k;
               return (
-                <Pressable
+                <PressScale
                   key={m.k}
                   testID={`new-entry-mood-${m.k}`}
-                  onPress={() => setMood(m.k)}
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => undefined);
+                    setMood(m.k);
+                  }}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
@@ -137,7 +172,7 @@ export default function NewEntry() {
                   >
                     {m.label}
                   </Text>
-                </Pressable>
+                </PressScale>
               );
             })}
           </View>
@@ -167,26 +202,37 @@ export default function NewEntry() {
         </View>
         <Pressable
           testID="new-entry-private-toggle"
-          onPress={() => setIsPrivate((v) => !v)}
-          style={{
-            width: 44,
-            height: 26,
-            borderRadius: 13,
-            backgroundColor: isPrivate ? C.lavender : C.line,
-            justifyContent: 'center',
+          onPress={() => {
+            Haptics.selectionAsync().catch(() => undefined);
+            setIsPrivate((v) => !v);
           }}
         >
-          <View
-            style={{
-              position: 'absolute',
-              top: 3,
-              left: isPrivate ? 21 : 3,
-              width: 20,
-              height: 20,
-              borderRadius: 10,
-              backgroundColor: '#fff',
-            }}
-          />
+          <Animated.View
+            style={[
+              {
+                width: 44,
+                height: 26,
+                borderRadius: 13,
+                justifyContent: 'center',
+              },
+              trackStyle,
+            ]}
+          >
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  top: 3,
+                  left: 3,
+                  width: 20,
+                  height: 20,
+                  borderRadius: 10,
+                  backgroundColor: '#fff',
+                },
+                thumbStyle,
+              ]}
+            />
+          </Animated.View>
         </Pressable>
       </View>
     </SheetShell>

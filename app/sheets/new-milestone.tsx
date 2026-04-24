@@ -1,10 +1,19 @@
 import { format } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
+import Animated, {
+  Easing,
+  interpolateColor,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
 import { SheetShell } from '@/src/components/ui/SheetShell';
 import { useMilestones } from '@/src/hooks/useMilestones';
 import { useTheme } from '@/src/lib/theme';
@@ -36,6 +45,29 @@ export default function NewMilestone() {
   const dateValue = format(now, 'yyyy-MM-dd');
 
   const canSave = title.trim().length > 0 && !saving;
+
+  const reduced = useReducedMotion();
+  const repeatProgress = useSharedValue(repeat ? 1 : 0);
+  useEffect(() => {
+    if (reduced) {
+      repeatProgress.value = repeat ? 1 : 0;
+      return;
+    }
+    repeatProgress.value = withTiming(repeat ? 1 : 0, {
+      duration: 200,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [repeat, reduced, repeatProgress]);
+  const thumbStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: repeatProgress.value * 18 }],
+  }));
+  const trackStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(
+      repeatProgress.value,
+      [0, 1],
+      [C.line, color],
+    ),
+  }));
 
   const onSave = async () => {
     if (!canSave) return;
@@ -128,10 +160,13 @@ export default function NewMilestone() {
           {ICONS.map((i) => {
             const sel = icon === i;
             return (
-              <Pressable
+              <PressScale
                 key={i}
                 testID={`new-milestone-icon-${i}`}
-                onPress={() => setIcon(i)}
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => undefined);
+                  setIcon(i);
+                }}
                 style={{
                   width: 42,
                   height: 42,
@@ -144,7 +179,7 @@ export default function NewMilestone() {
                 }}
               >
                 <Icon name={i} size={17} color={sel ? color : C.mist} />
-              </Pressable>
+              </PressScale>
             );
           })}
         </View>
@@ -154,10 +189,13 @@ export default function NewMilestone() {
         <Overline style={{ marginBottom: 10 }}>Color</Overline>
         <View style={{ flexDirection: 'row', gap: 10 }}>
           {colors.map((c) => (
-            <Pressable
+            <PressScale
               key={c}
               testID={`new-milestone-color-${c}`}
-              onPress={() => setColor(c)}
+              onPress={() => {
+                Haptics.selectionAsync().catch(() => undefined);
+                setColor(c);
+              }}
               style={{
                 width: 32,
                 height: 32,
@@ -196,26 +234,37 @@ export default function NewMilestone() {
         </View>
         <Pressable
           testID="new-milestone-repeat-toggle"
-          onPress={() => setRepeat((v) => !v)}
-          style={{
-            width: 44,
-            height: 26,
-            borderRadius: 13,
-            backgroundColor: repeat ? color : C.line,
-            justifyContent: 'center',
+          onPress={() => {
+            Haptics.selectionAsync().catch(() => undefined);
+            setRepeat((v) => !v);
           }}
         >
-          <View
-            style={{
-              position: 'absolute',
-              top: 3,
-              left: repeat ? 21 : 3,
-              width: 20,
-              height: 20,
-              borderRadius: 10,
-              backgroundColor: '#fff',
-            }}
-          />
+          <Animated.View
+            style={[
+              {
+                width: 44,
+                height: 26,
+                borderRadius: 13,
+                justifyContent: 'center',
+              },
+              trackStyle,
+            ]}
+          >
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  top: 3,
+                  left: 3,
+                  width: 20,
+                  height: 20,
+                  borderRadius: 10,
+                  backgroundColor: '#fff',
+                },
+                thumbStyle,
+              ]}
+            />
+          </Animated.View>
         </Pressable>
       </View>
     </SheetShell>
