@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { differenceInCalendarDays, format, parseISO } from 'date-fns';
 import { BlockCard, CouplRings, IconTile, Overline } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
 import { SheetShell } from '@/src/components/ui/SheetShell';
 import { useTheme } from '@/src/lib/theme';
 import { useSession } from '@/src/lib/session';
@@ -254,10 +255,13 @@ export default function ProfileSheet() {
         ).map((t) => {
           const sel = mode === t.k;
           return (
-            <Pressable
+            <PressScale
               key={t.k}
               testID={`profile-theme-${t.k}`}
-              onPress={() => setMode(t.k)}
+              onPress={() => {
+                Haptics.selectionAsync().catch(() => undefined);
+                setMode(t.k);
+              }}
               style={{
                 flex: 1,
                 paddingVertical: 14,
@@ -299,7 +303,7 @@ export default function ProfileSheet() {
                   {sel ? 'ACTIVE' : 'TAP TO TRY'}
                 </Text>
               </View>
-            </Pressable>
+            </PressScale>
           );
         })}
       </View>

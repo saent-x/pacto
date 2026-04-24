@@ -1,9 +1,10 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, ScrollView, Text, TextInput, View } from 'react-native';
 import { Overline, Pill, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
 import { SheetShell } from '@/src/components/ui/SheetShell';
 import { usePlans } from '@/src/hooks/usePlans';
 import { useTheme } from '@/src/lib/theme';
@@ -191,10 +192,13 @@ export default function NewPlan() {
           {buckets.map((b) => {
             const sel = bucket === b.k;
             return (
-              <Pressable
+              <PressScale
                 key={b.k}
                 testID={`new-plan-bucket-${b.k}`}
-                onPress={() => setBucket(b.k)}
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => undefined);
+                  setBucket(b.k);
+                }}
                 style={{
                   width: '48%',
                   paddingVertical: 12,
@@ -225,7 +229,7 @@ export default function NewPlan() {
                 >
                   {b.sub}
                 </Text>
-              </Pressable>
+              </PressScale>
             );
           })}
         </View>
@@ -257,10 +261,13 @@ export default function NewPlan() {
           {ICONS.map((i) => {
             const sel = icon === i;
             return (
-              <Pressable
+              <PressScale
                 key={i}
                 testID={`new-plan-icon-${i}`}
-                onPress={() => setIcon(i)}
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => undefined);
+                  setIcon(i);
+                }}
                 style={{
                   width: 42,
                   height: 42,
@@ -273,7 +280,7 @@ export default function NewPlan() {
                 }}
               >
                 <Icon name={i} size={17} color={sel ? color : C.mist} />
-              </Pressable>
+              </PressScale>
             );
           })}
         </View>
@@ -283,10 +290,13 @@ export default function NewPlan() {
         <Overline style={{ marginBottom: 10 }}>Color</Overline>
         <View style={{ flexDirection: 'row', gap: 10 }}>
           {colors.map((c) => (
-            <Pressable
+            <PressScale
               key={c}
               testID={`new-plan-color-${c}`}
-              onPress={() => setColor(c)}
+              onPress={() => {
+                Haptics.selectionAsync().catch(() => undefined);
+                setColor(c);
+              }}
               style={{
                 width: 32,
                 height: 32,

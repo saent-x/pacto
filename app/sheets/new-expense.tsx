@@ -2,9 +2,10 @@ import { format } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, ScrollView, Text, TextInput, View } from 'react-native';
 import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
 import { SheetShell } from '@/src/components/ui/SheetShell';
 import { useExpenses } from '@/src/hooks/useExpenses';
 import { useSession } from '@/src/hooks/useSession';
@@ -141,10 +142,13 @@ export default function NewExpense() {
             {cats.map((c) => {
               const sel = cat === c.k;
               return (
-                <Pressable
+                <PressScale
                   key={c.k}
                   testID={`new-expense-cat-${c.k}`}
-                  onPress={() => setCat(c.k)}
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => undefined);
+                    setCat(c.k);
+                  }}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
@@ -167,7 +171,7 @@ export default function NewExpense() {
                   >
                     {c.label}
                   </Text>
-                </Pressable>
+                </PressScale>
               );
             })}
           </View>
@@ -187,11 +191,12 @@ export default function NewExpense() {
               const sel = by === p.k;
               const disabled = p.k === 'sofia' && isSolo;
               return (
-                <Pressable
+                <PressScale
                   key={p.k}
                   testID={`new-expense-paidby-${p.k}`}
                   onPress={() => {
                     if (disabled) return;
+                    Haptics.selectionAsync().catch(() => undefined);
                     setBy(p.k);
                   }}
                   disabled={disabled}
@@ -209,7 +214,7 @@ export default function NewExpense() {
                   <Text style={{ color: sel ? C.bone : C.mist, fontFamily: F.bodyBold, fontSize: 12 }}>
                     {p.l}
                   </Text>
-                </Pressable>
+                </PressScale>
               );
             })}
           </View>
@@ -220,10 +225,13 @@ export default function NewExpense() {
             {(['50/50', 'Me', 'Them'] as SplitKey[]).map((s) => {
               const sel = split === s;
               return (
-                <Pressable
+                <PressScale
                   key={s}
                   testID={`new-expense-split-${s}`}
-                  onPress={() => setSplit(s)}
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => undefined);
+                    setSplit(s);
+                  }}
                   style={{
                     flex: 1,
                     paddingVertical: 11,
@@ -237,7 +245,7 @@ export default function NewExpense() {
                   <Text style={{ color: sel ? C.bone : C.mist, fontFamily: F.bodyBold, fontSize: 11 }}>
                     {s}
                   </Text>
-                </Pressable>
+                </PressScale>
               );
             })}
           </View>

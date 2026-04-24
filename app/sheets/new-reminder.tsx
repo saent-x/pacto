@@ -2,9 +2,10 @@ import DateTimePicker, { type DateTimePickerEvent } from '@react-native-communit
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Platform, ScrollView, Text, TextInput, View } from 'react-native';
 import { Overline, Pill, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
 import { SheetShell } from '@/src/components/ui/SheetShell';
 import { useReminders } from '@/src/hooks/useReminders';
 import { useSession } from '@/src/hooks/useSession';
@@ -201,10 +202,13 @@ export default function NewReminder() {
           {PRIORITIES.map((p) => {
             const active = priority === p.k;
             return (
-              <Pressable
+              <PressScale
                 key={p.k}
                 testID={`new-reminder-priority-${p.k}`}
-                onPress={() => setPriority(p.k)}
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => undefined);
+                  setPriority(p.k);
+                }}
                 style={{
                   flex: 1,
                   paddingVertical: 14,
@@ -237,7 +241,7 @@ export default function NewReminder() {
                     />
                   ))}
                 </View>
-              </Pressable>
+              </PressScale>
             );
           })}
         </View>
@@ -285,10 +289,13 @@ export default function NewReminder() {
           {assigneeOptions.map((a) => {
             const active = assignee === a.k;
             return (
-              <Pressable
+              <PressScale
                 key={a.k}
                 testID={`new-reminder-assignee-${a.k}`}
-                onPress={() => setAssignee(a.k)}
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => undefined);
+                  setAssignee(a.k);
+                }}
                 style={{
                   flex: 1,
                   paddingVertical: 12,
@@ -308,7 +315,7 @@ export default function NewReminder() {
                 >
                   {a.l}
                 </Text>
-              </Pressable>
+              </PressScale>
             );
           })}
         </View>
@@ -332,9 +339,12 @@ function Field({
 }) {
   const { C, F } = useTheme();
   return (
-    <Pressable
+    <PressScale
       testID={testID}
-      onPress={onPress}
+      onPress={() => {
+        Haptics.selectionAsync().catch(() => undefined);
+        onPress?.();
+      }}
       style={{
         flex: 1,
         backgroundColor: active ? C.cardHi : C.card,
@@ -350,6 +360,6 @@ function Field({
     >
       <Icon name={icon} size={16} color={C.reminders} />
       <Text style={{ color: C.bone, fontSize: 13, fontFamily: F.bodyBold }}>{label}</Text>
-    </Pressable>
+    </PressScale>
   );
 }

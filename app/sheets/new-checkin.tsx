@@ -1,9 +1,10 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, Text, TextInput, View } from 'react-native';
+import { Alert, Text, TextInput, View } from 'react-native';
 import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
 import { SheetShell } from '@/src/components/ui/SheetShell';
 import { useCheckIns } from '@/src/hooks/useCheckIns';
 import { useTheme } from '@/src/lib/theme';
@@ -65,10 +66,13 @@ export default function NewCheckin() {
         {moods.map((m) => {
           const sel = mood === m.n;
           return (
-            <Pressable
+            <PressScale
               key={m.n}
               testID={`new-checkin-mood-${m.n}`}
-              onPress={() => setMood(m.n)}
+              onPress={() => {
+                Haptics.selectionAsync().catch(() => undefined);
+                setMood(m.n);
+              }}
               style={{
                 flex: 1,
                 paddingVertical: 16,
@@ -106,7 +110,7 @@ export default function NewCheckin() {
               >
                 {m.label}
               </Text>
-            </Pressable>
+            </PressScale>
           );
         })}
       </View>

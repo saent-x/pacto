@@ -1,9 +1,10 @@
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, Text, TextInput, View } from 'react-native';
+import { Alert, Text, TextInput, View } from 'react-native';
 import { Overline, Pill, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
 import { SheetShell } from '@/src/components/ui/SheetShell';
 import { useTimetable } from '@/src/hooks/useTimetables';
 import { useTheme } from '@/src/lib/theme';
@@ -183,10 +184,13 @@ export default function NewTimetableItem() {
           {CATS.map((c) => {
             const sel = cat === c.k;
             return (
-              <Pressable
+              <PressScale
                 key={c.k}
                 testID={`new-timetable-item-cat-${c.k}`}
-                onPress={() => setCat(c.k)}
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => undefined);
+                  setCat(c.k);
+                }}
                 style={{
                   paddingVertical: 8,
                   paddingHorizontal: 12,
@@ -209,7 +213,7 @@ export default function NewTimetableItem() {
                 >
                   {c.k}
                 </Text>
-              </Pressable>
+              </PressScale>
             );
           })}
         </View>
@@ -252,10 +256,13 @@ export default function NewTimetableItem() {
             {DURATIONS.map((d) => {
               const sel = dur === d;
               return (
-                <Pressable
+                <PressScale
                   key={d}
                   testID={`new-timetable-item-dur-${d}`}
-                  onPress={() => setDur(d)}
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => undefined);
+                    setDur(d);
+                  }}
                   style={{
                     flex: 1,
                     paddingVertical: 8,
@@ -273,7 +280,7 @@ export default function NewTimetableItem() {
                   >
                     {d < 60 ? `${d}m` : d === 60 ? '1h' : `${(d / 60).toString().replace('.5', '½')}h`}
                   </Text>
-                </Pressable>
+                </PressScale>
               );
             })}
           </View>
@@ -286,10 +293,13 @@ export default function NewTimetableItem() {
           {DAYS_LETTER.map((d, i) => {
             const sel = days.includes(i);
             return (
-              <Pressable
+              <PressScale
                 key={i}
                 testID={`new-timetable-item-day-${i}`}
-                onPress={() => toggleDay(i)}
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => undefined);
+                  toggleDay(i);
+                }}
                 style={{
                   flex: 1,
                   paddingVertical: 12,
@@ -309,7 +319,7 @@ export default function NewTimetableItem() {
                 >
                   {d}
                 </Text>
-              </Pressable>
+              </PressScale>
             );
           })}
         </View>
@@ -349,10 +359,13 @@ export default function NewTimetableItem() {
             ).map((o) => {
               const sel = who === o.k;
               return (
-                <Pressable
+                <PressScale
                   key={o.k}
                   testID={`new-timetable-item-who-${o.k}`}
-                  onPress={() => setWho(o.k)}
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => undefined);
+                    setWho(o.k);
+                  }}
                   style={{
                     flex: 1,
                     paddingVertical: 8,
@@ -370,7 +383,7 @@ export default function NewTimetableItem() {
                   >
                     {o.l}
                   </Text>
-                </Pressable>
+                </PressScale>
               );
             })}
           </View>
@@ -396,10 +409,13 @@ export default function NewTimetableItem() {
             ).map((o) => {
               const sel = repeat === o.k;
               return (
-                <Pressable
+                <PressScale
                   key={o.k}
                   testID={`new-timetable-item-repeat-${o.k}`}
-                  onPress={() => setRepeat(o.k)}
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => undefined);
+                    setRepeat(o.k);
+                  }}
                   style={{
                     flex: 1,
                     paddingVertical: 8,
@@ -417,7 +433,7 @@ export default function NewTimetableItem() {
                   >
                     {o.l}
                   </Text>
-                </Pressable>
+                </PressScale>
               );
             })}
           </View>

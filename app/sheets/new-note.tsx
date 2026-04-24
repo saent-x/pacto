@@ -1,9 +1,10 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, ScrollView, Text, TextInput, View } from 'react-native';
 import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
 import { SheetShell } from '@/src/components/ui/SheetShell';
 import { useLoveNotes, type LoveNoteVibe } from '@/src/hooks/useLoveNotes';
 import { useTheme } from '@/src/lib/theme';
@@ -96,10 +97,13 @@ export default function NewNote() {
             {vibes.map((v) => {
               const sel = vibe === v.k;
               return (
-                <Pressable
+                <PressScale
                   key={v.k}
                   testID={`new-note-vibe-${v.k}`}
-                  onPress={() => setVibe(v.k)}
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => undefined);
+                    setVibe(v.k);
+                  }}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
@@ -122,7 +126,7 @@ export default function NewNote() {
                   >
                     {v.label}
                   </Text>
-                </Pressable>
+                </PressScale>
               );
             })}
           </View>

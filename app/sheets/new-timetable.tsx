@@ -1,9 +1,10 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, Text, TextInput, View } from 'react-native';
+import { Alert, Text, TextInput, View } from 'react-native';
 import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
 import { SheetShell } from '@/src/components/ui/SheetShell';
 import { useTimetables } from '@/src/hooks/useTimetables';
 import { useTheme } from '@/src/lib/theme';
@@ -135,10 +136,13 @@ export default function NewTimetable() {
           {TEMPLATES.map((t) => {
             const sel = tmplKey === t.key;
             return (
-              <Pressable
+              <PressScale
                 key={t.key}
                 testID={`new-timetable-tmpl-${t.key}`}
-                onPress={() => setTmplKey(t.key)}
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => undefined);
+                  setTmplKey(t.key);
+                }}
                 style={{
                   width: '48%',
                   padding: 12,
@@ -186,7 +190,7 @@ export default function NewTimetable() {
                     {t.sample}
                   </Text>
                 </View>
-              </Pressable>
+              </PressScale>
             );
           })}
         </View>
@@ -204,10 +208,13 @@ export default function NewTimetable() {
           ).map((o) => {
             const sel = share === o.k;
             return (
-              <Pressable
+              <PressScale
                 key={o.k}
                 testID={`new-timetable-share-${o.k}`}
-                onPress={() => setShare(o.k)}
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => undefined);
+                  setShare(o.k);
+                }}
                 style={{
                   flex: 1,
                   paddingVertical: 12,
@@ -239,7 +246,7 @@ export default function NewTimetable() {
                 >
                   {o.s}
                 </Text>
-              </Pressable>
+              </PressScale>
             );
           })}
         </View>

@@ -1,9 +1,10 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, TextInput, View } from 'react-native';
+import { Alert, TextInput, View } from 'react-native';
 import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
 import { SheetShell } from '@/src/components/ui/SheetShell';
 import { useTheme } from '@/src/lib/theme';
 import { useTaskLists, type PastelKey } from '@/src/hooks/useTaskLists';
@@ -74,10 +75,13 @@ export default function NewList() {
           {ICONS.map((i) => {
             const active = icon === i;
             return (
-              <Pressable
+              <PressScale
                 key={i}
                 testID={`new-list-icon-${i}`}
-                onPress={() => setIcon(i)}
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => undefined);
+                  setIcon(i);
+                }}
                 style={{
                   width: 44,
                   height: 44,
@@ -90,7 +94,7 @@ export default function NewList() {
                 }}
               >
                 <Icon name={i} size={18} color={active ? color : C.mist} />
-              </Pressable>
+              </PressScale>
             );
           })}
         </View>
@@ -100,10 +104,13 @@ export default function NewList() {
         <Overline style={{ marginBottom: 10 }}>Color</Overline>
         <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
           {COLOR_KEYS.map((ck) => (
-            <Pressable
+            <PressScale
               key={ck}
               testID={`new-list-color-${ck}`}
-              onPress={() => setColorKey(ck)}
+              onPress={() => {
+                Haptics.selectionAsync().catch(() => undefined);
+                setColorKey(ck);
+              }}
               style={{
                 width: 34,
                 height: 34,
