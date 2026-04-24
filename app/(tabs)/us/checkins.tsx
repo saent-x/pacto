@@ -1,7 +1,16 @@
 import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeInDown,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
+import { useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
 import { addDays, format, startOfWeek } from 'date-fns';
 import { Icon, IconName } from '@/src/components/ui/Icon';
@@ -135,9 +144,7 @@ export default function Checkins() {
             overflow: 'hidden',
           }}
         >
-          <View
-            style={{ width: `${pct}%`, height: '100%', backgroundColor: C.butterInk }}
-          />
+          <AnimatedBar pct={pct} color={C.butterInk} />
         </View>
       </Animated.View>
 
@@ -353,5 +360,28 @@ function IndexSkeleton() {
         }}
       />
     </Screen>
+  );
+}
+
+function AnimatedBar({ pct, color }: { pct: number; color: string }) {
+  const reduced = useReducedMotion();
+  const w = useSharedValue(reduced ? pct : 0);
+  useEffect(() => {
+    if (reduced) {
+      w.value = pct;
+      return;
+    }
+    w.value = withTiming(pct, {
+      duration: 700,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [pct, reduced, w]);
+  const style = useAnimatedStyle(() => ({
+    width: `${w.value}%`,
+  }));
+  return (
+    <Animated.View
+      style={[{ height: '100%', backgroundColor: color }, style]}
+    />
   );
 }

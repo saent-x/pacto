@@ -1,5 +1,13 @@
+import { useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  FadeInDown,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { Icon } from '@/src/components/ui/Icon';
 import { useTheme } from '@/src/lib/theme';
 import type { ListRow } from '@/src/hooks/useTaskLists';
@@ -71,7 +79,7 @@ export function ListCard({
               overflow: 'hidden',
             }}
           >
-            <View style={{ width: `${pct * 100}%`, height: '100%', backgroundColor: ink }} />
+            <AnimatedBar pct={pct * 100} color={ink} delay={index * 40 + 200} />
           </View>
           <View style={{ marginTop: 8, flexDirection: 'row', justifyContent: 'space-between' }}>
             <Text style={labelStyle(F, ink)}>{list.done}/{list.total}</Text>
@@ -91,6 +99,32 @@ function labelStyle(F: { bodyBold: string }, ink: string) {
     color: ink,
     opacity: 0.6,
   } as const;
+}
+
+function AnimatedBar({ pct, color, delay = 0 }: { pct: number; color: string; delay?: number }) {
+  const reduced = useReducedMotion();
+  const w = useSharedValue(reduced ? pct : 0);
+  useEffect(() => {
+    if (reduced) {
+      w.value = pct;
+      return;
+    }
+    const timer = setTimeout(() => {
+      w.value = withTiming(pct, {
+        duration: 700,
+        easing: Easing.out(Easing.cubic),
+      });
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [pct, reduced, w, delay]);
+  const style = useAnimatedStyle(() => ({
+    width: `${w.value}%`,
+  }));
+  return (
+    <Animated.View
+      style={[{ height: '100%', backgroundColor: color }, style]}
+    />
+  );
 }
 
 export function ListCardSkeleton({ index = 0 }: { index?: number }) {

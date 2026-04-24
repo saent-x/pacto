@@ -11,7 +11,7 @@ import {
   Overline,
   Pill,
   SectionHeader,
-  TripleRing,
+  AnimatedTripleRing,
 } from "@/src/components/ui/atoms";
 import { Icon, IconName } from "@/src/components/ui/Icon";
 import { Screen } from "@/src/components/ui/Screen";
@@ -380,13 +380,15 @@ export default function HomeRoute() {
               }}
             >
               <View>
-                <TripleRing
+                <AnimatedTripleRing
                   size={150}
                   stroke={12}
                   gap={3}
                   values={[rings.together, rings.plans, rings.focus]}
                   colors={[C.peachInk, C.gold, C.lavender]}
                   bg="rgba(58,31,20,0.15)"
+                  delay={200}
+                  duration={900}
                 />
                 <View
                   style={{

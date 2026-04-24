@@ -1,7 +1,15 @@
 import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeInDown,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { differenceInCalendarDays, format, parseISO } from 'date-fns';
 import {
   BlockCard,
@@ -240,7 +248,7 @@ export default function PlansScreen() {
           overflow: 'hidden',
         }}
       >
-        <View style={{ width: `${p.prog * 100}%`, height: '100%', backgroundColor: p.ink }} />
+        <AnimatedBar pct={p.prog * 100} color={p.ink} />
       </View>
       <View
         style={{
@@ -324,7 +332,7 @@ export default function PlansScreen() {
               overflow: 'hidden',
             }}
           >
-            <View style={{ width: `${avgProg * 100}%`, height: '100%', backgroundColor: C.skyInk }} />
+            <AnimatedBar pct={avgProg * 100} color={C.skyInk} />
           </View>
           <View style={{ marginTop: 8, flexDirection: 'row', justifyContent: 'space-between' }}>
             {[
@@ -420,5 +428,28 @@ function IndexSkeleton() {
         />
       ))}
     </Screen>
+  );
+}
+
+function AnimatedBar({ pct, color }: { pct: number; color: string }) {
+  const reduced = useReducedMotion();
+  const w = useSharedValue(reduced ? pct : 0);
+  useEffect(() => {
+    if (reduced) {
+      w.value = pct;
+      return;
+    }
+    w.value = withTiming(pct, {
+      duration: 700,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [pct, reduced, w]);
+  const style = useAnimatedStyle(() => ({
+    width: `${w.value}%`,
+  }));
+  return (
+    <Animated.View
+      style={[{ height: '100%', backgroundColor: color }, style]}
+    />
   );
 }

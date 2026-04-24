@@ -2,7 +2,15 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  FadeInDown,
+  LinearTransition,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Display, Pill, RoundBtn } from '@/src/components/ui/atoms';
 import { Icon } from '@/src/components/ui/Icon';
@@ -147,7 +155,7 @@ export default function TaskListDetail() {
               overflow: 'hidden',
             }}
           >
-            <View style={{ width: `${pct * 100}%`, height: '100%', backgroundColor: color }} />
+            <AnimatedBar pct={pct * 100} color={color} />
           </View>
           <Text style={{ fontFamily: F.displayBold, fontSize: 13, color: C.bone }}>
             {done.length}
@@ -367,5 +375,28 @@ function DetailSkeleton() {
         />
       ))}
     </View>
+  );
+}
+
+function AnimatedBar({ pct, color }: { pct: number; color: string }) {
+  const reduced = useReducedMotion();
+  const w = useSharedValue(reduced ? pct : 0);
+  useEffect(() => {
+    if (reduced) {
+      w.value = pct;
+      return;
+    }
+    w.value = withTiming(pct, {
+      duration: 700,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [pct, reduced, w]);
+  const style = useAnimatedStyle(() => ({
+    width: `${w.value}%`,
+  }));
+  return (
+    <Animated.View
+      style={[{ height: '100%', backgroundColor: color }, style]}
+    />
   );
 }
