@@ -108,7 +108,24 @@ export function useQuickAddWishItem() {
     [coupleId, user, existingId],
   );
 
-  return { add };
+  const update = useCallback(
+    async (itemId: string, input: Partial<QuickAddWishInput>) => {
+      const updates: Record<string, unknown> = {};
+      if (input.title !== undefined) updates.title = input.title;
+      if (input.price !== undefined) updates.price = input.price ?? null;
+      if (input.currency !== undefined) updates.currency = input.currency;
+      if (input.tag !== undefined) updates.tag = input.tag ?? null;
+      if (input.url !== undefined) updates.url = input.url ?? null;
+      await db.transact(db.tx.wishlistItems[itemId].update(updates));
+    },
+    [],
+  );
+
+  const remove = useCallback(async (itemId: string) => {
+    await db.transact(db.tx.wishlistItems[itemId].delete());
+  }, []);
+
+  return { add, update, remove };
 }
 
 export function useAllWishlistItems() {

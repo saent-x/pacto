@@ -13,11 +13,13 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import * as WebBrowser from 'expo-web-browser';
 import { ThemeProvider, useTheme } from '@/src/lib/theme';
 import { SessionProvider } from '@/src/lib/session';
 import { SessionGate } from '@/src/lib/session-gate';
 import { ErrorBoundary } from '@/src/lib/error-boundary';
+import { ActionMenuProvider } from '@/src/components/ui/ActionMenu';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -44,11 +46,15 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#0E0B0A' }}>
         <SafeAreaProvider>
           <ThemeProvider>
-            <SessionProvider>
-              <SessionGate>
-                <ThemedRoot />
-              </SessionGate>
-            </SessionProvider>
+            <BottomSheetModalProvider>
+              <SessionProvider>
+                <SessionGate>
+                  <ActionMenuProvider>
+                    <ThemedRoot />
+                  </ActionMenuProvider>
+                </SessionGate>
+              </SessionProvider>
+            </BottomSheetModalProvider>
           </ThemeProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>

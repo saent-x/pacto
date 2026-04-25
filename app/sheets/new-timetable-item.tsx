@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert, Text, TextInput, View } from 'react-native';
 import { Overline, Pill, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
@@ -33,21 +33,61 @@ function parseTimeStr(s: string): number {
   return h + min / 60;
 }
 
+function formatTimeStr(startHour: number): string {
+  const total = Math.round(startHour * 60);
+  const h24 = Math.floor(total / 60) % 24;
+  const m = total % 60;
+  const suffix = h24 >= 12 ? 'PM' : 'AM';
+  const h12 = ((h24 + 11) % 12) + 1;
+  return `${h12}:${m.toString().padStart(2, '0')} ${suffix}`;
+}
+
+function categoryFor(raw: string | undefined): Cat {
+  if (raw === 'breakfast') return 'Breakfast';
+  if (raw === 'lunch') return 'Lunch';
+  if (raw === 'snack') return 'Snack';
+  return 'Dinner';
+}
+
+function whoFor(raw: string | undefined): Who {
+  if (raw === 'me' || raw === 'sofia' || raw === 'both') return raw;
+  return 'both';
+}
+
+function repeatFor(raw: string | undefined): Repeat {
+  return raw === 'once' ? 'once' : 'weekly';
+}
+
 export default function NewTimetableItem() {
   const { C, F } = useTheme();
-  const params = useLocalSearchParams<{ timetableId?: string }>();
+  const params = useLocalSearchParams<{ timetableId?: string; id?: string }>();
   const timetableId =
     typeof params.timetableId === 'string' && params.timetableId.length > 0
       ? params.timetableId
       : null;
-  const { add } = useTimetable(timetableId);
-  const [title, setTitle] = useState('');
-  const [cat, setCat] = useState<Cat>('Dinner');
-  const [time, setTime] = useState('7:00 PM');
-  const [dur, setDur] = useState(90);
-  const [days, setDays] = useState<number[]>([2]);
-  const [who, setWho] = useState<Who>('both');
-  const [repeat, setRepeat] = useState<Repeat>('weekly');
+  const editId = typeof params.id === 'string' && params.id.length > 0 ? params.id : null;
+  const isEdit = Boolean(editId);
+  const { add, update, items } = useTimetable(timetableId);
+  const existingRaw = useMemo(
+    () => (isEdit && editId ? (items as any[]).find((i) => i.id === editId) : undefined),
+    [isEdit, editId, items],
+  );
+
+  const [title, setTitle] = useState(existingRaw?.title ?? '');
+  const [cat, setCat] = useState<Cat>(
+    existingRaw ? categoryFor((existingRaw as any).cat) : 'Dinner',
+  );
+  const [time, setTime] = useState(
+    existingRaw ? formatTimeStr(Number((existingRaw as any).start ?? 19)) : '7:00 PM',
+  );
+  const [dur, setDur] = useState(existingRaw ? Number((existingRaw as any).dur ?? 90) : 90);
+  const [days, setDays] = useState<number[]>(
+    existingRaw ? [Number((existingRaw as any).day ?? 2)] : [2],
+  );
+  const [who, setWho] = useState<Who>(existingRaw ? whoFor((existingRaw as any).who) : 'both');
+  const [repeat, setRepeat] = useState<Repeat>(
+    existingRaw ? repeatFor((existingRaw as any).repeat) : 'weekly',
+  );
   const [saving, setSaving] = useState(false);
 
   const active = CATS.find((c) => c.k === cat) ?? CATS[0];
@@ -73,13 +113,17 @@ export default function NewTimetableItem() {
         startHour,
         duration: dur,
       };
-      for (const d of days) {
-        await add({ ...base, day: d });
+      if (isEdit && editId) {
+        await update(editId, { ...base, day: days[0] });
+      } else {
+        for (const d of days) {
+          await add({ ...base, day: d });
+        }
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (err) {
-      console.warn('[new-timetable-item] add failed', err);
+      console.warn('[new-timetable-item] save failed', err);
       Alert.alert('Save failed', 'Try again.');
     } finally {
       setSaving(false);
@@ -88,12 +132,12 @@ export default function NewTimetableItem() {
 
   return (
     <SheetShell
-      eyebrow={`NEW ITEM · ${cat.toUpperCase()}`}
+      eyebrow={`${isEdit ? 'EDIT' : 'NEW'} ITEM · ${cat.toUpperCase()}`}
       eyebrowColor={active.color}
-      title="What's cooking."
+      title={isEdit ? 'Edit item.' : "What's cooking."}
       footer={
-        <PrimaryButton icon="plus" onPress={onSave} disabled={!canSave}>
-          {saving ? 'Saving…' : 'Add to timetable'}
+        <PrimaryButton icon={isEdit ? 'check' : 'plus'} onPress={onSave} disabled={!canSave}>
+          {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add to timetable'}
         </PrimaryButton>
       }
     >

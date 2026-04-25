@@ -1,12 +1,14 @@
 // app/(tabs)/tasks/index.tsx
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Display, Overline, Pill, ProgressRing } from '@/src/components/ui/atoms';
 import { Icon } from '@/src/components/ui/Icon';
 import { Screen } from '@/src/components/ui/Screen';
 import { ListCard, ListCardSkeleton } from '@/src/components/tasks/ListCard';
+import { useActionMenu } from '@/src/components/ui/ActionMenu';
+import { confirmDestructive } from '@/src/lib/confirm';
 import { useTaskLists, type ListRow } from '@/src/hooks/useTaskLists';
 import { useTheme } from '@/src/lib/theme';
 
@@ -14,9 +16,41 @@ const BASE_FILTERS = ['All'] as const;
 
 export default function TasksList() {
   const { C, F } = useTheme();
-  const { lists, isLoading, error } = useTaskLists();
+  const { lists, isLoading, error, remove } = useTaskLists();
+  const actionMenu = useActionMenu();
   const [filter, setFilter] = useState<string>('All');
   const [dismissedError, setDismissedError] = useState(false);
+
+  const openListMenu = useCallback(
+    (list: ListRow) => {
+      actionMenu.open({
+        title: list.name,
+        subtitle: list.category ?? undefined,
+        actions: [
+          {
+            key: 'edit',
+            label: 'Edit',
+            icon: 'edit',
+            onPress: () => router.push(`/sheets/new-list?id=${list.id}` as any),
+          },
+          {
+            key: 'delete',
+            label: 'Delete',
+            icon: 'trash',
+            destructive: true,
+            onPress: () => {
+              confirmDestructive(
+                'Delete list?',
+                `"${list.name}" and all its tasks will be removed.`,
+                () => remove(list.id),
+              );
+            },
+          },
+        ],
+      });
+    },
+    [actionMenu, remove],
+  );
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -73,6 +107,7 @@ export default function TasksList() {
               list={l}
               index={i}
               onPress={() => router.push(`/tasks/${l.id}` as any)}
+              onLongPress={() => openListMenu(l)}
             />
           ))}
         </View>

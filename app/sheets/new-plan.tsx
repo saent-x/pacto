@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, ScrollView, Text, TextInput, View } from 'react-native';
 import { Overline, Pill, PrimaryButton } from '@/src/components/ui/atoms';
@@ -33,16 +33,37 @@ const BUCKET_CANON: Record<Bucket, string> = {
   Someday: 'Someday',
 };
 
+function bucketFromCanon(canonical: string | null | undefined): Bucket {
+  switch (canonical) {
+    case 'Ongoing':
+      return 'Ongoing';
+    case 'Later this year':
+      return 'Later';
+    case 'Someday':
+      return 'Someday';
+    default:
+      return 'Soon';
+  }
+}
+
 export default function NewPlan() {
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const isEdit = Boolean(id);
   const { C, F } = useTheme();
-  const { create } = usePlans();
+  const { create, update, plans } = usePlans();
+  const existing = useMemo(
+    () => (isEdit && id ? plans.find((p) => p.id === id) : undefined),
+    [isEdit, id, plans],
+  );
   const colors = [C.sky, C.peach, C.butter, C.mint, C.rose, C.lavender, C.gold];
-  const [title, setTitle] = useState('');
-  const [sub, setSub] = useState('');
-  const [icon, setIcon] = useState<IconName>('compass');
-  const [color, setColor] = useState<string>(C.sky);
-  const [bucket, setBucket] = useState<Bucket>('Soon');
-  const [target, setTarget] = useState('This month');
+  const [title, setTitle] = useState(existing?.title ?? '');
+  const [sub, setSub] = useState(existing?.description ?? '');
+  const [icon, setIcon] = useState<IconName>((existing?.icon as IconName) ?? 'compass');
+  const [color, setColor] = useState<string>(existing?.color ?? C.sky);
+  const [bucket, setBucket] = useState<Bucket>(
+    existing ? bucketFromCanon(existing.bucket) : 'Soon',
+  );
+  const [target, setTarget] = useState(existing?.category ?? 'This month');
   const [saving, setSaving] = useState(false);
 
   const canSave = title.trim().length > 0 && !saving;
@@ -51,20 +72,25 @@ export default function NewPlan() {
     if (!canSave) return;
     setSaving(true);
     try {
-      await create({
+      const payload = {
         title: title.trim(),
-        description: sub.trim() || undefined,
+        description: sub.trim() || null,
         category: target,
         bucket: BUCKET_CANON[bucket],
         icon,
         color,
-        priority: 0,
-        status: 'active',
-      });
+        priority: existing?.priority ?? 0,
+        status: existing?.status ?? 'active',
+      };
+      if (isEdit && id) {
+        await update(id, payload);
+      } else {
+        await create(payload);
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (err) {
-      console.warn('[new-plan] create failed', err);
+      console.warn('[new-plan] save failed', err);
       Alert.alert('Save failed', 'Try again.');
     } finally {
       setSaving(false);
@@ -83,12 +109,12 @@ export default function NewPlan() {
 
   return (
     <SheetShell
-      eyebrow="NEW PLAN"
+      eyebrow={isEdit ? 'EDIT PLAN' : 'NEW PLAN'}
       eyebrowColor={color}
-      title="Something to build."
+      title={isEdit ? 'Edit plan.' : 'Something to build.'}
       footer={
-        <PrimaryButton icon="plus" onPress={onSave} disabled={!canSave}>
-          {saving ? 'Saving…' : 'Create plan'}
+        <PrimaryButton icon={isEdit ? 'check' : 'plus'} onPress={onSave} disabled={!canSave}>
+          {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create plan'}
         </PrimaryButton>
       }
     >

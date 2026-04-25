@@ -1,10 +1,12 @@
 import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { format } from 'date-fns';
 import { Icon } from '@/src/components/ui/Icon';
 import { Screen } from '@/src/components/ui/Screen';
+import { useActionMenu } from '@/src/components/ui/ActionMenu';
+import { confirmDestructive } from '@/src/lib/confirm';
 import { useLoveNotes } from '@/src/hooks/useLoveNotes';
 import { useSession } from '@/src/hooks/useSession';
 import { useTheme } from '@/src/lib/theme';
@@ -19,7 +21,44 @@ type NoteRow = {
 export default function LoveNotes() {
   const { C, F } = useTheme();
   const { user, partner, isSolo } = useSession();
-  const { notes, isLoading } = useLoveNotes();
+  const { notes, isLoading, remove } = useLoveNotes();
+  const actionMenu = useActionMenu();
+
+  const openNoteMenu = useCallback(
+    (note: NoteRow, isMine: boolean) => {
+      const baseActions = [
+        {
+          key: 'delete',
+          label: 'Delete',
+          icon: 'trash' as const,
+          destructive: true,
+          onPress: () => {
+            confirmDestructive(
+              'Delete note?',
+              'This love note will be removed.',
+              () => remove(note.id),
+            );
+          },
+        },
+      ];
+      actionMenu.open({
+        title: note.body.length > 40 ? `${note.body.slice(0, 40)}…` : note.body,
+        subtitle: format(new Date(note.createdAt), 'MMM d · h:mm a'),
+        actions: isMine
+          ? [
+              {
+                key: 'edit',
+                label: 'Edit',
+                icon: 'edit' as const,
+                onPress: () => router.push(`/sheets/new-note?id=${note.id}` as any),
+              },
+              ...baseActions,
+            ]
+          : baseActions,
+      });
+    },
+    [actionMenu, remove],
+  );
 
   const userId = user?.id ?? null;
   const partnerName = partner?.displayName ?? 'Partner';
@@ -52,7 +91,13 @@ export default function LoveNotes() {
       {featured ? (
         <Animated.View
           entering={FadeInDown.duration(400)}
-          style={{ backgroundColor: C.rose, borderRadius: 24, padding: 22, marginBottom: 18 }}
+          style={{ marginBottom: 18 }}
+        >
+        <Pressable
+          testID={`note-bubble-${featured.id}`}
+          onLongPress={() => openNoteMenu(featured, featured.authorId === userId)}
+          delayLongPress={350}
+          style={{ backgroundColor: C.rose, borderRadius: 24, padding: 22 }}
         >
           <Text
             style={{
@@ -102,6 +147,7 @@ export default function LoveNotes() {
               </View>
             ))}
           </View>
+        </Pressable>
         </Animated.View>
       ) : null}
 
@@ -132,7 +178,10 @@ export default function LoveNotes() {
               marginBottom: 10,
             }}
           >
-            <View
+            <Pressable
+              testID={`note-bubble-${n.id}`}
+              onLongPress={() => openNoteMenu(n, me)}
+              delayLongPress={350}
               style={{
                 maxWidth: '80%',
                 paddingVertical: 12,
@@ -167,7 +216,7 @@ export default function LoveNotes() {
               >
                 {format(new Date(n.createdAt), 'EEE · h:mm a')}
               </Text>
-            </View>
+            </Pressable>
           </Animated.View>
         );
       })}

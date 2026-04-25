@@ -1,22 +1,31 @@
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useMemo, useState } from 'react';
 import { Alert, Text, TextInput, View } from 'react-native';
 import { Overline, Pill, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon } from '@/src/components/ui/Icon';
 import { SheetShell } from '@/src/components/ui/SheetShell';
-import { useQuickAddWishItem } from '@/src/hooks/useWishlists';
+import { useAllWishlistItems, useQuickAddWishItem } from '@/src/hooks/useWishlists';
 import { useTheme } from '@/src/lib/theme';
 
 const TAGS = ['HOME', 'TRAVEL', 'TREATS', 'BIG', 'KITCHEN', 'CLOTHES'];
 
 export default function NewWish() {
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const isEdit = Boolean(id);
   const { C, F } = useTheme();
-  const { add } = useQuickAddWishItem();
-  const [title, setTitle] = useState('');
-  const [price, setPrice] = useState('');
-  const [tag, setTag] = useState('HOME');
-  const [url, setUrl] = useState('');
+  const { add, update } = useQuickAddWishItem();
+  const { items } = useAllWishlistItems();
+  const existing = useMemo(
+    () => (isEdit && id ? (items as any[]).find((i) => i.id === id) : undefined),
+    [isEdit, id, items],
+  );
+  const [title, setTitle] = useState(existing?.title ?? '');
+  const [price, setPrice] = useState(
+    existing?.price != null ? String(existing.price) : '',
+  );
+  const [tag, setTag] = useState(existing?.tag ?? 'HOME');
+  const [url, setUrl] = useState(existing?.url ?? '');
   const [saving, setSaving] = useState(false);
 
   const canSave = title.trim().length > 0 && !saving;
@@ -26,17 +35,22 @@ export default function NewWish() {
     setSaving(true);
     try {
       const priceNum = price ? Number(price) : null;
-      await add({
+      const payload = {
         title: title.trim(),
         price: priceNum != null && !Number.isNaN(priceNum) ? priceNum : null,
         currency: 'EUR',
         tag: tag || null,
         url: url.trim() || null,
-      });
+      };
+      if (isEdit && id) {
+        await update(id, payload);
+      } else {
+        await add(payload);
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (err) {
-      console.warn('[new-wish] add failed', err);
+      console.warn('[new-wish] save failed', err);
       Alert.alert('Save failed', 'Try again.');
     } finally {
       setSaving(false);
@@ -45,12 +59,12 @@ export default function NewWish() {
 
   return (
     <SheetShell
-      eyebrow="NEW WISH"
+      eyebrow={isEdit ? 'EDIT WISH' : 'NEW WISH'}
       eyebrowColor={C.peach}
-      title="Something for us."
+      title={isEdit ? 'Edit wish.' : 'Something for us.'}
       footer={
-        <PrimaryButton icon="plus" onPress={onSave} disabled={!canSave}>
-          {saving ? 'Saving…' : 'Add to wishlist'}
+        <PrimaryButton icon={isEdit ? 'check' : 'plus'} onPress={onSave} disabled={!canSave}>
+          {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add to wishlist'}
         </PrimaryButton>
       }
     >

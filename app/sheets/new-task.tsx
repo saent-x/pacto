@@ -48,20 +48,45 @@ function dueIso(offsetDays: number | null): string | null {
   return d.toISOString().slice(0, 10);
 }
 
+function bucketLabelFor(buckets: Bucket[], dueDate: string | null): string {
+  if (!dueDate) return 'Later';
+  for (const b of buckets) {
+    if (b.offsetDays === null) continue;
+    if (dueIso(b.offsetDays) === dueDate) return b.label;
+  }
+  return 'Later';
+}
+
 export default function NewTask() {
-  const { listId } = useLocalSearchParams<{ listId?: string }>();
+  const { listId, id } = useLocalSearchParams<{ listId?: string; id?: string }>();
+  const isEdit = Boolean(id);
   const { C, F } = useTheme();
   const { lists } = useTaskLists();
-  const { create } = useTaskItems(listId ?? null);
+  const taskItems = useTaskItems(listId ?? null) as ReturnType<typeof useTaskItems>;
+  const { create, update, tasks } = taskItems;
 
   const list = lists.find((l) => l.id === listId) ?? null;
   const color = list ? ((C as any)[list.colorKey] as string) : C.gold;
   const listInk = list ? (((C as any)[`${list.colorKey}Ink`] as string | undefined) ?? C.ink) : C.ink;
 
   const buckets = useMemo(() => buildBuckets(), []);
-  const [title, setTitle] = useState('');
-  const [bucketLabel, setBucketLabel] = useState<string>(buckets[0].label);
-  const [priority, setPriority] = useState<'low' | 'med' | 'high'>('med');
+  const existing = useMemo(
+    () => (isEdit && id ? tasks.find((t) => t.id === id) : undefined),
+    [isEdit, id, tasks],
+  );
+
+  const initialPriority = ((): 'low' | 'med' | 'high' => {
+    if (!existing) return 'med';
+    if (existing.priority >= 3) return 'high';
+    if (existing.priority === 1) return 'low';
+    return 'med';
+  })();
+
+  const [title, setTitle] = useState(existing?.title ?? '');
+  const [bucketLabel, setBucketLabel] = useState<string>(
+    existing ? bucketLabelFor(buckets, existing.due_date) : buckets[0].label,
+  );
+  const [priority, setPriority] = useState<'low' | 'med' | 'high'>(initialPriority);
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -71,15 +96,23 @@ export default function NewTask() {
     try {
       const prio = PRIORITIES.find((p) => p.k === priority)!.num;
       const bucket = buckets.find((b) => b.label === bucketLabel) ?? buckets[0];
-      await create({
-        title: trimmed,
-        due_date: dueIso(bucket.offsetDays),
-        priority: prio,
-      });
+      if (isEdit && id) {
+        await update(id, {
+          title: trimmed,
+          due_date: dueIso(bucket.offsetDays),
+          priority: prio,
+        });
+      } else {
+        await create({
+          title: trimmed,
+          due_date: dueIso(bucket.offsetDays),
+          priority: prio,
+        });
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (err) {
-      console.warn('[new-task] create failed', err);
+      console.warn('[new-task] save failed', err);
       Alert.alert('Save failed', 'Try again.');
     } finally {
       setSaving(false);
@@ -88,16 +121,16 @@ export default function NewTask() {
 
   return (
     <SheetShell
-      eyebrow="NEW TASK"
+      eyebrow={isEdit ? 'EDIT TASK' : 'NEW TASK'}
       eyebrowColor={color}
-      title={list?.name ?? 'Quick task.'}
+      title={list?.name ?? (isEdit ? 'Edit task.' : 'Quick task.')}
       footer={
         <PrimaryButton
           icon="check"
           onPress={handleSave}
           disabled={!title.trim() || !listId || saving}
         >
-          {saving ? 'Saving…' : 'Add task'}
+          {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add task'}
         </PrimaryButton>
       }
     >
@@ -207,7 +240,11 @@ export default function NewTask() {
             <Icon name={list.icon} size={14} color={listInk} />
           </View>
           <Text style={{ flex: 1, color: C.mist, fontFamily: F.body, fontSize: 13 }}>
-            Adding to <Text style={{ color: C.bone, fontFamily: F.bodyBold }}>{list.name}</Text>
+            {isEdit ? (
+              <>Editing in <Text style={{ color: C.bone, fontFamily: F.bodyBold }}>{list.name}</Text></>
+            ) : (
+              <>Adding to <Text style={{ color: C.bone, fontFamily: F.bodyBold }}>{list.name}</Text></>
+            )}
           </Text>
         </View>
       ) : null}

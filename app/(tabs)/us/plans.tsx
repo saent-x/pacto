@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -20,6 +20,8 @@ import {
 } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
 import { Screen } from '@/src/components/ui/Screen';
+import { useActionMenu } from '@/src/components/ui/ActionMenu';
+import { confirmDestructive } from '@/src/lib/confirm';
 import { usePlans } from '@/src/hooks/usePlans';
 import { useTheme } from '@/src/lib/theme';
 
@@ -90,7 +92,39 @@ function iconFromCategory(category: string | null | undefined): IconName {
 
 export default function PlansScreen() {
   const { C, F } = useTheme();
-  const { plans, isLoading } = usePlans();
+  const { plans, isLoading, remove } = usePlans();
+  const actionMenu = useActionMenu();
+
+  const openPlanMenu = useCallback(
+    (p: { id: string; title: string; tag?: string }) => {
+      actionMenu.open({
+        title: p.title,
+        subtitle: p.tag,
+        actions: [
+          {
+            key: 'edit',
+            label: 'Edit',
+            icon: 'edit',
+            onPress: () => router.push(`/sheets/new-plan?id=${p.id}` as any),
+          },
+          {
+            key: 'delete',
+            label: 'Delete',
+            icon: 'trash',
+            destructive: true,
+            onPress: () => {
+              confirmDestructive(
+                'Delete plan?',
+                `"${p.title}" will be removed.`,
+                () => remove(p.id),
+              );
+            },
+          },
+        ],
+      });
+    },
+    [actionMenu, remove],
+  );
 
   const rows = useMemo<PlanRow[]>(() => {
     return plans.map((raw: any, i: number): PlanRow => {
@@ -177,6 +211,11 @@ export default function PlansScreen() {
     <Animated.View
       key={p.id}
       entering={FadeInDown.delay(Math.min(j, 10) * 60 + 80).duration(400)}
+    >
+    <Pressable
+      testID={`plan-row-${p.id}`}
+      onLongPress={() => openPlanMenu(p)}
+      delayLongPress={350}
       style={{
         backgroundColor: p.color,
         borderRadius: 24,
@@ -280,6 +319,7 @@ export default function PlansScreen() {
           {Math.round(p.prog * 100)}%
         </Text>
       </View>
+    </Pressable>
     </Animated.View>
   );
 

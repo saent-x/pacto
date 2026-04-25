@@ -16,6 +16,8 @@ import { Display, Pill, RoundBtn } from '@/src/components/ui/atoms';
 import { Icon } from '@/src/components/ui/Icon';
 import { TaskRow } from '@/src/components/tasks/TaskRow';
 import { bucketOf, orderBuckets } from '@/src/components/tasks/buckets';
+import { useActionMenu } from '@/src/components/ui/ActionMenu';
+import { confirmDestructive } from '@/src/lib/confirm';
 import { useTaskLists, type ListRow } from '@/src/hooks/useTaskLists';
 import { useTaskItems } from '@/src/hooks/useTasks';
 import { useTheme } from '@/src/lib/theme';
@@ -34,6 +36,7 @@ export default function TaskListDetail() {
 
   const { tasks, isLoading: tasksLoading, toggleComplete, remove, reorder } =
     useTaskItems(listId ?? null);
+  const actionMenu = useActionMenu();
 
   const color = list ? ((C as any)[list.colorKey] as string) : C.gold;
 
@@ -112,6 +115,47 @@ export default function TaskListDetail() {
       });
     },
     [],
+  );
+
+  const openTaskMenu = useCallback(
+    (task: Task, bucketLabel: string, bucketIds: string[]) => {
+      actionMenu.open({
+        title: task.title,
+        subtitle: list?.name,
+        actions: [
+          {
+            key: 'edit',
+            label: 'Edit',
+            icon: 'edit',
+            onPress: () => {
+              if (!listId) return;
+              router.push(`/sheets/new-task?listId=${listId}&id=${task.id}` as any);
+            },
+          },
+          {
+            key: 'reorder',
+            label: 'Reorder',
+            icon: 'chevronsUp',
+            disabled: bucketIds.length < 2,
+            onPress: () => enterReorder(bucketLabel, bucketIds),
+          },
+          {
+            key: 'delete',
+            label: 'Delete',
+            icon: 'trash',
+            destructive: true,
+            onPress: () => {
+              confirmDestructive(
+                'Delete task?',
+                `"${task.title}" will be removed.`,
+                () => remove(task.id),
+              );
+            },
+          },
+        ],
+      });
+    },
+    [actionMenu, enterReorder, list?.name, listId, remove],
   );
 
   return (
@@ -249,10 +293,9 @@ export default function TaskListDetail() {
                           state={isReorderingHere ? 'reordering' : 'idle'}
                           testID={`task-row-${t.id}`}
                           onToggle={() => toggleComplete(t)}
-                          onDelete={() => remove(t.id)}
                           onLongPress={() => {
                             if (isReorderingHere) return;
-                            enterReorder(s.label, s.items.map((x) => x.id));
+                            openTaskMenu(t, s.label, s.items.map((x) => x.id));
                           }}
                           onMoveUp={isReorderingHere ? () => move(tid, -1) : undefined}
                           onMoveDown={isReorderingHere ? () => move(tid, 1) : undefined}
@@ -267,7 +310,12 @@ export default function TaskListDetail() {
             ))}
 
             {done.length > 0 ? (
-              <CompletedSection color={color} done={done} onToggle={toggleComplete} />
+              <CompletedSection
+                color={color}
+                done={done}
+                onToggle={toggleComplete}
+                onLongPress={(t) => openTaskMenu(t, 'COMPLETED', done.map((x) => x.id))}
+              />
             ) : null}
           </>
         )}
@@ -280,7 +328,13 @@ function CompletedSection({
   color,
   done,
   onToggle,
-}: { color: string; done: Task[]; onToggle: (t: Task) => void }) {
+  onLongPress,
+}: {
+  color: string;
+  done: Task[];
+  onToggle: (t: Task) => void;
+  onLongPress: (t: Task) => void;
+}) {
   const { C, F } = useTheme();
   return (
     <View style={{ marginTop: 4 }}>
@@ -314,7 +368,7 @@ function CompletedSection({
             listColor={color}
             testID={`task-row-${t.id}`}
             onToggle={() => onToggle(t)}
-            onDelete={() => undefined}
+            onLongPress={() => onLongPress(t)}
           />
         ))}
       </Animated.View>

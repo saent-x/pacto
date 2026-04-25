@@ -16,11 +16,13 @@ export function ListCard({
   list,
   index = 0,
   onPress,
+  onLongPress,
   testID,
 }: {
   list: ListRow;
   index?: number;
   onPress: () => void;
+  onLongPress?: () => void;
   testID?: string;
 }) {
   const { C, F } = useTheme();
@@ -36,6 +38,8 @@ export function ListCard({
       <Pressable
         testID={testID ?? `task-list-card-${list.id}`}
         onPress={onPress}
+        onLongPress={onLongPress}
+        delayLongPress={350}
         style={{
           backgroundColor: color,
           borderRadius: 22,

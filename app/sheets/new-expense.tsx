@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, ScrollView, Text, TextInput, View } from 'react-native';
 import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
@@ -22,14 +22,30 @@ const SPLIT_TYPE: Record<SplitKey, string> = {
 };
 
 export default function NewExpense() {
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const isEdit = Boolean(id);
   const { C, F } = useTheme();
-  const { create } = useExpenses();
+  const { create, update, expenses } = useExpenses();
   const { user, partner, isSolo } = useSession();
-  const [amt, setAmt] = useState('');
-  const [what, setWhat] = useState('');
-  const [cat, setCat] = useState<Cat>('food');
-  const [split, setSplit] = useState<SplitKey>('50/50');
-  const [by, setBy] = useState<PayerKey>('mattia');
+  const existing = useMemo(
+    () => (isEdit && id ? expenses.find((e) => e.id === id) : undefined),
+    [isEdit, id, expenses],
+  );
+  const initialBy: PayerKey = (() => {
+    if (!existing || !user) return 'mattia';
+    return existing.paidBy === user.id ? 'mattia' : 'sofia';
+  })();
+  const initialSplit: SplitKey = (() => {
+    if (!existing) return '50/50';
+    if (existing.splitType === 'payer') return 'Me';
+    if (existing.splitType === 'other') return 'Them';
+    return '50/50';
+  })();
+  const [amt, setAmt] = useState(existing ? String(existing.amount ?? '') : '');
+  const [what, setWhat] = useState(existing?.title ?? '');
+  const [cat, setCat] = useState<Cat>((existing?.category as Cat) ?? 'food');
+  const [split, setSplit] = useState<SplitKey>(initialSplit);
+  const [by, setBy] = useState<PayerKey>(initialBy);
   const [saving, setSaving] = useState(false);
 
   const cats: { k: Cat; label: string; icon: IconName; color: string }[] = useMemo(
@@ -53,19 +69,24 @@ export default function NewExpense() {
     try {
       const payerId =
         by === 'mattia' ? user.id : (partner?.id ?? user.id);
-      await create({
+      const payload = {
         title: what.trim(),
         amount: parsedAmount,
         paidBy: payerId,
         currency: 'EUR',
         splitType: SPLIT_TYPE[split],
         category: cat,
-        date: format(new Date(), 'yyyy-MM-dd'),
-      });
+        date: existing?.date ?? format(new Date(), 'yyyy-MM-dd'),
+      };
+      if (isEdit && id) {
+        await update(id, payload);
+      } else {
+        await create(payload);
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (err) {
-      console.warn('[new-expense] create failed', err);
+      console.warn('[new-expense] save failed', err);
       Alert.alert('Save failed', 'Try again.');
     } finally {
       setSaving(false);
@@ -74,16 +95,16 @@ export default function NewExpense() {
 
   return (
     <SheetShell
-      eyebrow="NEW EXPENSE"
+      eyebrow={isEdit ? 'EDIT EXPENSE' : 'NEW EXPENSE'}
       eyebrowColor={C.mint}
-      title="Keep tabs."
+      title={isEdit ? 'Edit expense.' : 'Keep tabs.'}
       footer={
         <PrimaryButton
           icon="check"
           onPress={onSave}
           disabled={!canSave}
         >
-          {saving ? 'Saving…' : 'Add expense'}
+          {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add expense'}
         </PrimaryButton>
       }
     >

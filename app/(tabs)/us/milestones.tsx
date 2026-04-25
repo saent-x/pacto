@@ -1,10 +1,12 @@
 import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { differenceInCalendarDays, format, parseISO } from 'date-fns';
 import { Icon } from '@/src/components/ui/Icon';
 import { Screen } from '@/src/components/ui/Screen';
+import { useActionMenu } from '@/src/components/ui/ActionMenu';
+import { confirmDestructive } from '@/src/lib/confirm';
 import { useMilestones } from '@/src/hooks/useMilestones';
 import { useTheme } from '@/src/lib/theme';
 
@@ -40,7 +42,39 @@ function toRow(m: unknown): MilestoneRow {
 
 export default function Milestones() {
   const { C, F } = useTheme();
-  const { milestones, upcoming, isLoading } = useMilestones();
+  const { milestones, upcoming, isLoading, remove } = useMilestones();
+  const actionMenu = useActionMenu();
+
+  const openMilestoneMenu = useCallback(
+    (stone: { id: string; title: string; date: string }) => {
+      actionMenu.open({
+        title: stone.title,
+        subtitle: stone.date,
+        actions: [
+          {
+            key: 'edit',
+            label: 'Edit',
+            icon: 'edit',
+            onPress: () => router.push(`/sheets/new-milestone?id=${stone.id}` as any),
+          },
+          {
+            key: 'delete',
+            label: 'Delete',
+            icon: 'trash',
+            destructive: true,
+            onPress: () => {
+              confirmDestructive(
+                'Delete milestone?',
+                `"${stone.title}" will be removed.`,
+                () => remove(stone.id),
+              );
+            },
+          },
+        ],
+      });
+    },
+    [actionMenu, remove],
+  );
 
   const rows = useMemo(() => milestones.map(toRow), [milestones]);
 
@@ -128,7 +162,10 @@ export default function Milestones() {
                 {month}
               </Text>
             </View>
-            <View
+            <Pressable
+              testID={`milestone-row-${stone.id}`}
+              onLongPress={() => openMilestoneMenu(stone)}
+              delayLongPress={350}
               style={{
                 flex: 1,
                 backgroundColor: color,
@@ -178,7 +215,7 @@ export default function Milestones() {
                   REPEATS YEARLY
                 </Text>
               ) : null}
-            </View>
+            </Pressable>
           </Animated.View>
         );
       })}

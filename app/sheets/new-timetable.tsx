@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useMemo, useState } from 'react';
 import { Alert, Text, TextInput, View } from 'react-native';
 import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon } from '@/src/components/ui/Icon';
@@ -13,11 +13,19 @@ import { TEMPLATES, type TemplateKey } from '@/src/lib/timetables-data';
 type Share = 'solo' | 'partner' | 'shared';
 
 export default function NewTimetable() {
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const isEdit = Boolean(id);
   const { C, F } = useTheme();
-  const { create } = useTimetables();
-  const [title, setTitle] = useState('');
-  const [tmplKey, setTmplKey] = useState<TemplateKey>('meals');
-  const [share, setShare] = useState<Share>('shared');
+  const { create, update, timetables } = useTimetables();
+  const existing = useMemo(
+    () => (isEdit && id ? timetables.find((t) => t.id === id) : undefined),
+    [isEdit, id, timetables],
+  );
+  const [title, setTitle] = useState(existing?.title ?? '');
+  const [tmplKey, setTmplKey] = useState<TemplateKey>(
+    (existing?.template as TemplateKey) ?? 'meals',
+  );
+  const [share, setShare] = useState<Share>((existing?.share as Share) ?? 'shared');
   const [saving, setSaving] = useState(false);
   const tmpl = TEMPLATES.find((t) => t.key === tmplKey) ?? TEMPLATES[0];
 
@@ -27,15 +35,20 @@ export default function NewTimetable() {
     if (!canSave) return;
     setSaving(true);
     try {
-      await create({
+      const payload = {
         title: title.trim(),
         template: tmplKey,
         share,
-      });
+      };
+      if (isEdit && id) {
+        await update(id, payload);
+      } else {
+        await create(payload);
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (err) {
-      console.warn('[new-timetable] create failed', err);
+      console.warn('[new-timetable] save failed', err);
       Alert.alert('Save failed', 'Try again.');
     } finally {
       setSaving(false);
@@ -44,11 +57,11 @@ export default function NewTimetable() {
 
   return (
     <SheetShell
-      eyebrow="NEW TIMETABLE"
-      title="Shape the week."
+      eyebrow={isEdit ? 'EDIT TIMETABLE' : 'NEW TIMETABLE'}
+      title={isEdit ? 'Edit timetable.' : 'Shape the week.'}
       footer={
-        <PrimaryButton icon="plus" onPress={onSave} disabled={!canSave}>
-          {saving ? 'Saving…' : 'Create timetable'}
+        <PrimaryButton icon={isEdit ? 'check' : 'plus'} onPress={onSave} disabled={!canSave}>
+          {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create timetable'}
         </PrimaryButton>
       }
     >

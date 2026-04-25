@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
 import Animated, {
@@ -31,18 +31,26 @@ const ICONS: IconName[] = [
 ];
 
 export default function NewMilestone() {
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const isEdit = Boolean(id);
   const { C, F } = useTheme();
-  const { create } = useMilestones();
+  const { create, update, milestones } = useMilestones();
+  const existing = useMemo(
+    () => (isEdit && id ? milestones.find((m) => m.id === id) : undefined),
+    [isEdit, id, milestones],
+  );
   const colors = [C.rose, C.peach, C.butter, C.mint, C.sky, C.lavender, C.gold];
-  const [title, setTitle] = useState('');
-  const [icon, setIcon] = useState<IconName>('heart');
-  const [color, setColor] = useState<string>(C.rose);
-  const [repeat, setRepeat] = useState(false);
+  const [title, setTitle] = useState(existing?.title ?? '');
+  const [icon, setIcon] = useState<IconName>((existing?.icon as IconName) ?? 'heart');
+  const [color, setColor] = useState<string>(existing?.color ?? C.rose);
+  const [repeat, setRepeat] = useState(Boolean(existing?.repeatYearly));
   const [saving, setSaving] = useState(false);
 
   const now = useMemo(() => new Date(), []);
-  const dateLabel = format(now, 'MMM d, yyyy');
-  const dateValue = format(now, 'yyyy-MM-dd');
+  const dateLabel = existing?.date
+    ? format(new Date(existing.date), 'MMM d, yyyy')
+    : format(now, 'MMM d, yyyy');
+  const dateValue = existing?.date ?? format(now, 'yyyy-MM-dd');
 
   const canSave = title.trim().length > 0 && !saving;
 
@@ -73,17 +81,22 @@ export default function NewMilestone() {
     if (!canSave) return;
     setSaving(true);
     try {
-      await create({
+      const payload = {
         title: title.trim(),
         date: dateValue,
         icon,
         color,
         repeatYearly: repeat,
-      });
+      };
+      if (isEdit && id) {
+        await update(id, payload);
+      } else {
+        await create(payload);
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (err) {
-      console.warn('[new-milestone] create failed', err);
+      console.warn('[new-milestone] save failed', err);
       Alert.alert('Save failed', 'Try again.');
     } finally {
       setSaving(false);
@@ -92,16 +105,16 @@ export default function NewMilestone() {
 
   return (
     <SheetShell
-      eyebrow="NEW MILESTONE"
+      eyebrow={isEdit ? 'EDIT MILESTONE' : 'NEW MILESTONE'}
       eyebrowColor={color}
-      title="Mark the day."
+      title={isEdit ? 'Edit milestone.' : 'Mark the day.'}
       footer={
         <PrimaryButton
-          icon="star"
+          icon={isEdit ? 'check' : 'star'}
           onPress={onSave}
           disabled={!canSave}
         >
-          {saving ? 'Saving…' : 'Save milestone'}
+          {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Save milestone'}
         </PrimaryButton>
       }
     >

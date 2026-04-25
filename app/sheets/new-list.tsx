@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useMemo, useState } from 'react';
 import { Alert, TextInput, View } from 'react-native';
 import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
@@ -16,11 +16,20 @@ const ICONS: IconName[] = [
 const COLOR_KEYS: PastelKey[] = ['peach', 'lavender', 'butter', 'mint', 'rose', 'sky', 'gold', 'journal'];
 
 export default function NewList() {
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const isEdit = Boolean(id);
   const { C, F } = useTheme();
-  const { create } = useTaskLists();
-  const [name, setName] = useState('');
-  const [icon, setIcon] = useState<IconName>('shoppingBag');
-  const [colorKey, setColorKey] = useState<PastelKey>('peach');
+  const { create, update, lists } = useTaskLists();
+  const existing = useMemo(
+    () => (isEdit && id ? lists.find((l) => l.id === id) : undefined),
+    [isEdit, id, lists],
+  );
+
+  const [name, setName] = useState(existing?.name ?? '');
+  const [icon, setIcon] = useState<IconName>((existing?.icon as IconName) ?? 'shoppingBag');
+  const [colorKey, setColorKey] = useState<PastelKey>(
+    (existing?.colorKey as PastelKey) ?? 'peach',
+  );
   const [saving, setSaving] = useState(false);
 
   const color = (C as any)[colorKey] as string;
@@ -30,12 +39,16 @@ export default function NewList() {
     if (!trimmed || saving) return;
     setSaving(true);
     try {
-      await create({ name: trimmed, icon, colorKey });
+      if (isEdit && id) {
+        await update(id, { name: trimmed, icon, colorKey });
+      } else {
+        await create({ name: trimmed, icon, colorKey });
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (err) {
-      console.warn('[new-list] create failed', err);
-      Alert.alert('Create failed', 'Try again.');
+      console.warn('[new-list] save failed', err);
+      Alert.alert('Save failed', 'Try again.');
     } finally {
       setSaving(false);
     }
@@ -43,12 +56,12 @@ export default function NewList() {
 
   return (
     <SheetShell
-      eyebrow="NEW LIST"
+      eyebrow={isEdit ? 'EDIT LIST' : 'NEW LIST'}
       eyebrowColor={color}
-      title="Make a list."
+      title={isEdit ? 'Edit list.' : 'Make a list.'}
       footer={
-        <PrimaryButton icon="plus" onPress={handleSave} disabled={!name.trim() || saving}>
-          Create list
+        <PrimaryButton icon={isEdit ? 'check' : 'plus'} onPress={handleSave} disabled={!name.trim() || saving}>
+          {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create list'}
         </PrimaryButton>
       }
     >

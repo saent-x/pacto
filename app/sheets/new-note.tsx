@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, ScrollView, Text, TextInput, View } from 'react-native';
 import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
@@ -10,10 +10,16 @@ import { useLoveNotes, type LoveNoteVibe } from '@/src/hooks/useLoveNotes';
 import { useTheme } from '@/src/lib/theme';
 
 export default function NewNote() {
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const isEdit = Boolean(id);
   const { C, F } = useTheme();
-  const { create } = useLoveNotes();
-  const [body, setBody] = useState('');
-  const [vibe, setVibe] = useState<LoveNoteVibe>('sweet');
+  const { create, update, notes } = useLoveNotes();
+  const existing = useMemo(
+    () => (isEdit && id ? notes.find((n) => n.id === id) : undefined),
+    [isEdit, id, notes],
+  );
+  const [body, setBody] = useState(existing?.body ?? '');
+  const [vibe, setVibe] = useState<LoveNoteVibe>((existing?.vibe as LoveNoteVibe) ?? 'sweet');
   const [saving, setSaving] = useState(false);
 
   const vibes: { k: LoveNoteVibe; label: string; icon: IconName; color: string }[] = useMemo(
@@ -33,12 +39,16 @@ export default function NewNote() {
     if (!trimmed || saving) return;
     setSaving(true);
     try {
-      await create({ body: trimmed, vibe });
+      if (isEdit && id) {
+        await update(id, { body: trimmed, vibe });
+      } else {
+        await create({ body: trimmed, vibe });
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (err) {
-      console.warn('[new-note] create failed', err);
-      Alert.alert('Send failed', 'Try again.');
+      console.warn('[new-note] save failed', err);
+      Alert.alert('Save failed', 'Try again.');
     } finally {
       setSaving(false);
     }
@@ -46,16 +56,16 @@ export default function NewNote() {
 
   return (
     <SheetShell
-      eyebrow="NEW LOVE NOTE"
+      eyebrow={isEdit ? 'EDIT NOTE' : 'NEW LOVE NOTE'}
       eyebrowColor={active.color}
-      title="Tell them."
+      title={isEdit ? 'Edit note.' : 'Tell them.'}
       footer={
         <PrimaryButton
-          icon="heart"
+          icon={isEdit ? 'check' : 'heart'}
           onPress={onSave}
           disabled={!body.trim() || saving}
         >
-          {saving ? 'Sending…' : 'Send note'}
+          {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Send note'}
         </PrimaryButton>
       }
     >

@@ -1,10 +1,12 @@
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Icon } from '@/src/components/ui/Icon';
 import { Screen } from '@/src/components/ui/Screen';
-import { useAllWishlistItems } from '@/src/hooks/useWishlists';
+import { useActionMenu } from '@/src/components/ui/ActionMenu';
+import { confirmDestructive } from '@/src/lib/confirm';
+import { useAllWishlistItems, useQuickAddWishItem } from '@/src/hooks/useWishlists';
 import { useSession } from '@/src/hooks/useSession';
 import { useTheme } from '@/src/lib/theme';
 
@@ -35,6 +37,39 @@ export default function Wishlists() {
   const { C, F } = useTheme();
   const { user, activeCouple, isSolo } = useSession();
   const { items, isLoading } = useAllWishlistItems();
+  const { remove } = useQuickAddWishItem();
+  const actionMenu = useActionMenu();
+
+  const openWishMenu = useCallback(
+    (row: WishRow) => {
+      actionMenu.open({
+        title: row.title,
+        subtitle: row.tag ?? undefined,
+        actions: [
+          {
+            key: 'edit',
+            label: 'Edit',
+            icon: 'edit',
+            onPress: () => router.push(`/sheets/new-wish?id=${row.id}` as any),
+          },
+          {
+            key: 'delete',
+            label: 'Delete',
+            icon: 'trash',
+            destructive: true,
+            onPress: () => {
+              confirmDestructive(
+                'Delete wish?',
+                `"${row.title}" will be removed.`,
+                () => remove(row.id),
+              );
+            },
+          },
+        ],
+      });
+    },
+    [actionMenu, remove],
+  );
 
   const userId = user?.id ?? '';
   const partnerId = activeCouple?.partner?.id ?? '';
@@ -201,6 +236,12 @@ export default function Wishlists() {
             <Animated.View
               key={it.id}
               entering={FadeInDown.delay(Math.min(i, 10) * 60 + 80).duration(400)}
+              style={{ marginBottom: 8 }}
+            >
+            <Pressable
+              testID={`wish-row-${it.id}`}
+              onLongPress={() => openWishMenu(it)}
+              delayLongPress={350}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -210,7 +251,6 @@ export default function Wishlists() {
                 borderRadius: 18,
                 borderWidth: 1,
                 borderColor: C.line,
-                marginBottom: 8,
                 opacity: it.claimed ? 0.5 : 1,
               }}
             >
@@ -272,6 +312,7 @@ export default function Wishlists() {
                   </Text>
                 )}
               </View>
+            </Pressable>
             </Animated.View>
           );
         })

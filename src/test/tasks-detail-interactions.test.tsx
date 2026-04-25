@@ -12,7 +12,9 @@ vi.mock('expo-constants', () => ({ default: { statusBarHeight: 44 } }));
 vi.mock('expo-haptics', () => ({
   notificationAsync: vi.fn(async () => undefined),
   selectionAsync: vi.fn(async () => undefined),
+  impactAsync: vi.fn(async () => undefined),
   NotificationFeedbackType: { Success: 'success', Warning: 'warning' },
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
 }));
 
 vi.mock('react-native-safe-area-context', () => ({
@@ -46,6 +48,7 @@ vi.mock('react-native-reanimated', () => {
     useAnimatedStyle: (fn: any) => fn(),
     withTiming: (v: any) => v,
     withDelay: (_d: any, v: any) => v,
+    withSequence: (...args: any[]) => args[args.length - 1],
     useReducedMotion: () => false,
     useAnimatedProps: (fn: any) => fn(),
     interpolateColor: () => "#000000",
@@ -66,19 +69,18 @@ vi.mock('react-native-gesture-handler', () => ({
   },
 }));
 
-vi.mock('react-native-gesture-handler/ReanimatedSwipeable', () => ({
-  __esModule: true,
-  default: ({ children, onSwipeableOpen, renderLeftActions, renderRightActions }: any) => {
-    const Reactx = require('react');
-    return Reactx.createElement(
-      'Swipeable',
-      {
-        triggerLeft: () => onSwipeableOpen?.('left'),
-        triggerRight: () => onSwipeableOpen?.('right'),
-      },
-      [renderLeftActions?.(), renderRightActions?.(), children],
-    );
-  },
+const menuState = vi.hoisted(() => ({
+  lastOpened: null as any,
+}));
+
+vi.mock('@/src/components/ui/ActionMenu', () => ({
+  useActionMenu: () => ({
+    open: (payload: any) => {
+      menuState.lastOpened = payload;
+    },
+    close: () => undefined,
+  }),
+  ActionMenuProvider: ({ children }: any) => <>{children}</>,
 }));
 
 const taskState = vi.hoisted(() => ({
@@ -87,6 +89,7 @@ const taskState = vi.hoisted(() => ({
   toggle: vi.fn(async () => undefined),
   remove: vi.fn(async () => undefined),
   reorder: vi.fn(async () => undefined),
+  update: vi.fn(async () => undefined),
 }));
 
 const listState = vi.hoisted(() => ({
@@ -106,10 +109,13 @@ vi.mock('@/src/hooks/useTasks', () => ({
     toggleComplete: taskState.toggle,
     remove: taskState.remove,
     reorder: taskState.reorder,
+    update: taskState.update,
   }),
 }));
 
+import { Alert } from 'react-native';
 import TaskListDetail from '@/app/(tabs)/tasks/[listId]';
+import { router } from 'expo-router';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -141,6 +147,12 @@ function makeTask(over: any = {}) {
   };
 }
 
+function pickAction(key: string) {
+  const action = menuState.lastOpened?.actions.find((a: any) => a.key === key);
+  if (!action) throw new Error(`Action "${key}" not found in menu`);
+  return action.onPress();
+}
+
 describe('Task list detail interactions', () => {
   beforeEach(() => {
     listState.lists = [
@@ -150,6 +162,9 @@ describe('Task list detail interactions', () => {
     taskState.toggle.mockClear();
     taskState.remove.mockClear();
     taskState.reorder.mockClear();
+    taskState.update.mockClear();
+    menuState.lastOpened = null;
+    (router.push as any).mockClear?.();
   });
 
   it('renders the list header with name + task title', async () => {
@@ -174,21 +189,50 @@ describe('Task list detail interactions', () => {
     act(() => renderer.unmount());
   });
 
-  it('toggles complete on left-swipe open', async () => {
+  it('opens the action menu on long-press with edit/reorder/delete', async () => {
+    taskState.tasks = [makeTask({ id: 't1' }), makeTask({ id: 't2', title: 'Other' })];
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<TaskListDetail />); await flush(); });
-    const swipeable = renderer.root.findAll((n: any) => n.type === 'Swipeable')[0];
-    await act(async () => { swipeable.props.triggerLeft(); await flush(); });
-    expect(taskState.toggle).toHaveBeenCalledTimes(1);
+    const pressable = renderer.root.findAll(
+      (n: any) => typeof n.props?.onLongPress === 'function'
+        && n.findAll((c: any) => c.props?.testID === 'task-row-t1-checkbox').length,
+    )[0];
+    await act(async () => { pressable.props.onLongPress(); await flush(); });
+    expect(menuState.lastOpened).toBeTruthy();
+    const keys = menuState.lastOpened.actions.map((a: any) => a.key);
+    expect(keys).toEqual(['edit', 'reorder', 'delete']);
     act(() => renderer.unmount());
   });
 
-  it('deletes on right-swipe open', async () => {
+  it('routes Edit to /sheets/new-task with id and listId', async () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<TaskListDetail />); await flush(); });
-    const swipeable = renderer.root.findAll((n: any) => n.type === 'Swipeable')[0];
-    await act(async () => { swipeable.props.triggerRight(); await flush(); });
+    const pressable = renderer.root.findAll(
+      (n: any) => typeof n.props?.onLongPress === 'function'
+        && n.findAll((c: any) => c.props?.testID === 'task-row-t1-checkbox').length,
+    )[0];
+    await act(async () => { pressable.props.onLongPress(); await flush(); });
+    await act(async () => { pickAction('edit'); await flush(); });
+    expect(router.push).toHaveBeenCalledWith('/sheets/new-task?listId=l1&id=t1');
+    act(() => renderer.unmount());
+  });
+
+  it('confirms then deletes via native Alert', async () => {
+    const alertSpy = vi.spyOn(Alert, 'alert').mockImplementation((_t, _m, buttons: any) => {
+      const destructive = buttons?.find((b: any) => b.style === 'destructive');
+      destructive?.onPress?.();
+    });
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<TaskListDetail />); await flush(); });
+    const pressable = renderer.root.findAll(
+      (n: any) => typeof n.props?.onLongPress === 'function'
+        && n.findAll((c: any) => c.props?.testID === 'task-row-t1-checkbox').length,
+    )[0];
+    await act(async () => { pressable.props.onLongPress(); await flush(); });
+    await act(async () => { pickAction('delete'); await flush(); });
+    expect(alertSpy).toHaveBeenCalledTimes(1);
     expect(taskState.remove).toHaveBeenCalledWith('t1');
+    alertSpy.mockRestore();
     act(() => renderer.unmount());
   });
 
@@ -203,28 +247,23 @@ describe('Task list detail interactions', () => {
     act(() => renderer.unmount());
   });
 
-  it('enters reorder mode on long-press and persists the new order on Done', async () => {
+  it('enters reorder mode via menu and persists the new order on Done', async () => {
     taskState.tasks = [makeTask({ id: 't1', title: 'A' }), makeTask({ id: 't2', title: 'B' })];
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<TaskListDetail />); await flush(); });
 
-    const rowA = renderer.root.findAll(
-      (n: any) => n.props?.testID === 'task-row-t1',
-    )[0];
-    // The long-press is wired onto the inner Pressable; walk down to it.
     const rowAPressable = renderer.root.findAll(
       (n: any) => typeof n.props?.onLongPress === 'function'
         && n.findAll((c: any) => c.props?.testID === 'task-row-t1-checkbox').length,
     )[0];
     await act(async () => { rowAPressable.props.onLongPress(); await flush(); });
+    await act(async () => { pickAction('reorder'); await flush(); });
 
-    // In reorder mode, the move-down on t1 should swap with t2.
     const moveDown = renderer.root.findAll(
       (n: any) => n.props?.testID === 'task-row-t1-move-down',
     )[0];
     await act(async () => { moveDown.props.onPress(); await flush(); });
 
-    // Press Done (section label is 'TODAY' after upper-casing).
     const doneBtn = renderer.root.findAll(
       (n: any) => typeof n.props?.testID === 'string' && n.props.testID.startsWith('task-reorder-done-'),
     )[0];
