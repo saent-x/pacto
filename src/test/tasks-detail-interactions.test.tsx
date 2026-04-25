@@ -5,6 +5,10 @@ vi.mock('expo-router', () => ({
   router: { push: vi.fn(), back: vi.fn() },
   useLocalSearchParams: () => ({ listId: 'l1' }),
   useRouter: () => ({ push: vi.fn(), back: vi.fn() }),
+  Stack: {
+    Screen: ({ options }: any) =>
+      typeof options?.header === 'function' ? options.header() : null,
+  },
 }));
 
 vi.mock('expo-constants', () => ({ default: { statusBarHeight: 44 } }));

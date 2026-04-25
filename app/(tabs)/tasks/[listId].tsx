@@ -1,5 +1,5 @@
 // app/(tabs)/tasks/[listId].tsx
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import Animated, {
@@ -160,53 +160,23 @@ export default function TaskListDetail() {
 
   return (
     <View style={{ flex: 1, backgroundColor: C.ink }}>
-      <View
-        style={{
-          paddingTop: insets.top + 6,
-          paddingHorizontal: 18,
-          paddingBottom: 18,
-          backgroundColor: C.coal,
-          borderBottomLeftRadius: 28,
-          borderBottomRightRadius: 28,
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          header: () => (
+            <TaskListDetailHeader
+              listName={listName}
+              color={color}
+              pct={pct}
+              doneCount={done.length}
+              totalCount={tasks.length}
+              onAdd={() =>
+                list && router.push(`/sheets/new-task?listId=${list.id}` as any)
+              }
+            />
+          ),
         }}
-      >
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: 18,
-          }}
-        >
-          <RoundBtn icon="chevronLeft" size={38} onPress={() => router.back()} />
-          <Pill active bg={`${color}25`} color={color} size="sm">
-            {listName.toUpperCase()}
-          </Pill>
-          <RoundBtn
-            icon="plus"
-            size={38}
-            onPress={() => list && router.push(`/sheets/new-task?listId=${list.id}` as any)}
-          />
-        </View>
-        <Display size={34}>{listName}</Display>
-        <View style={{ marginTop: 14, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-          <View
-            style={{
-              flex: 1,
-              height: 4,
-              backgroundColor: C.line,
-              borderRadius: 2,
-              overflow: 'hidden',
-            }}
-          >
-            <AnimatedBar pct={pct * 100} color={color} />
-          </View>
-          <Text style={{ fontFamily: F.displayBold, fontSize: 13, color: C.bone }}>
-            {done.length}
-            <Text style={{ color: C.fog }}>/{tasks.length}</Text>
-          </Text>
-        </View>
-      </View>
+      />
 
       <ScrollView
         style={{ flex: 1 }}
@@ -320,6 +290,70 @@ export default function TaskListDetail() {
           </>
         )}
       </ScrollView>
+    </View>
+  );
+}
+
+function TaskListDetailHeader({
+  listName,
+  color,
+  pct,
+  doneCount,
+  totalCount,
+  onAdd,
+}: {
+  listName: string;
+  color: string;
+  pct: number;
+  doneCount: number;
+  totalCount: number;
+  onAdd: () => void;
+}) {
+  const { C, F } = useTheme();
+  const insets = useSafeAreaInsets();
+  return (
+    <View
+      style={{
+        paddingTop: insets.top + 6,
+        paddingHorizontal: 18,
+        paddingBottom: 18,
+        backgroundColor: C.coal,
+        borderBottomLeftRadius: 28,
+        borderBottomRightRadius: 28,
+      }}
+    >
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 18,
+        }}
+      >
+        <RoundBtn icon="chevronLeft" size={38} onPress={() => router.back()} />
+        <Pill active bg={`${color}25`} color={color} size="sm">
+          {listName.toUpperCase()}
+        </Pill>
+        <RoundBtn icon="plus" size={38} onPress={onAdd} />
+      </View>
+      <Display size={34}>{listName}</Display>
+      <View style={{ marginTop: 14, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+        <View
+          style={{
+            flex: 1,
+            height: 4,
+            backgroundColor: C.line,
+            borderRadius: 2,
+            overflow: 'hidden',
+          }}
+        >
+          <AnimatedBar pct={pct * 100} color={color} />
+        </View>
+        <Text style={{ fontFamily: F.displayBold, fontSize: 13, color: C.bone }}>
+          {doneCount}
+          <Text style={{ color: C.fog }}>/{totalCount}</Text>
+        </Text>
+      </View>
     </View>
   );
 }

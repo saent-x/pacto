@@ -1,9 +1,9 @@
-import { useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { CouplRings, Display, Overline, PrimaryButton } from '@/src/components/ui/atoms';
 import { GoldRule } from '@/src/components/ui/WarmBlock';
-import { Icon } from '@/src/components/ui/Icon';
+import { HeaderLeft } from '@/src/components/ui/HeaderLeft';
 import { useTheme } from '@/src/lib/theme';
 import { useSession } from '@/src/lib/session';
 import { ensureUserRow, joinSpaceByCode } from '@/src/lib/space-actions';
@@ -12,7 +12,6 @@ import { isValidInviteCode } from '@/src/lib/invite-code';
 const SLOTS = 6;
 
 export default function Invite() {
-  const router = useRouter();
   const { C, F } = useTheme();
   const { user } = useSession();
   const [code, setCode] = useState<string[]>(Array(SLOTS).fill(''));
@@ -52,9 +51,16 @@ export default function Invite() {
 
   return (
     <View style={[styles.root, { backgroundColor: C.ink }]}>
-      <Pressable onPress={() => router.back()} style={{ marginBottom: 40 }}>
-        <Icon name="chevronLeft" size={22} color={C.mist} />
-      </Pressable>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerShadowVisible: false,
+          headerBackground: () => null,
+          headerStyle: { backgroundColor: 'transparent' },
+          title: '',
+          headerLeft: () => <HeaderLeft mode="back" />,
+        }}
+      />
 
       <CouplRings size={48} a={C.peach} b={C.lavender} />
       <Display size={36} style={{ marginTop: 18 }}>
@@ -103,7 +109,7 @@ export default function Invite() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, padding: 24, paddingTop: 60, paddingBottom: 40 },
+  root: { flex: 1, padding: 24, paddingTop: 24, paddingBottom: 40 },
   slot: {
     width: 48, height: 56, borderWidth: 1, borderRadius: 12,
     textAlign: 'center', fontSize: 24, fontWeight: '700',
