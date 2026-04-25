@@ -5,7 +5,10 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { Icon } from '@/src/components/ui/Icon';
 import { Screen } from '@/src/components/ui/Screen';
-import { useActionMenu } from '@/src/components/ui/ActionMenu';
+import {
+  RowActionMenu,
+  type ActionMenuPayload,
+} from '@/src/components/ui/RowActionMenu';
 import { confirmDestructive } from '@/src/lib/confirm';
 import { useTimetables, type TimetableRow } from '@/src/hooks/useTimetables';
 import { useTheme } from '@/src/lib/theme';
@@ -14,37 +17,34 @@ import { TEMPLATES, shareBadge, tmplByKey } from '@/src/lib/timetables-data';
 export default function TimetablesHub() {
   const { C, F } = useTheme();
   const { timetables, isLoading, remove } = useTimetables();
-  const actionMenu = useActionMenu();
 
-  const openTimetableMenu = useCallback(
-    (t: TimetableRow) => {
-      actionMenu.open({
-        title: t.title,
-        subtitle: t.template,
-        actions: [
-          {
-            key: 'edit',
-            label: 'Edit',
-            icon: 'edit',
-            onPress: () => router.push(`/sheets/new-timetable?id=${t.id}` as any),
+  const buildTimetableMenu = useCallback(
+    (t: TimetableRow): ActionMenuPayload => ({
+      title: t.title,
+      subtitle: t.template,
+      actions: [
+        {
+          key: 'edit',
+          label: 'Edit',
+          icon: 'edit',
+          onPress: () => router.push(`/sheets/new-timetable?id=${t.id}` as any),
+        },
+        {
+          key: 'delete',
+          label: 'Delete',
+          icon: 'trash',
+          destructive: true,
+          onPress: () => {
+            confirmDestructive(
+              'Delete timetable?',
+              `"${t.title}" and all its items will be removed.`,
+              () => remove(t.id),
+            );
           },
-          {
-            key: 'delete',
-            label: 'Delete',
-            icon: 'trash',
-            destructive: true,
-            onPress: () => {
-              confirmDestructive(
-                'Delete timetable?',
-                `"${t.title}" and all its items will be removed.`,
-                () => remove(t.id),
-              );
-            },
-          },
-        ],
-      });
-    },
-    [actionMenu, remove],
+        },
+      ],
+    }),
+    [remove],
   );
 
   const stats = useMemo(() => {
@@ -253,11 +253,12 @@ export default function TimetablesHub() {
             key={t.id}
             entering={FadeInDown.delay(Math.min(i, 10) * 60 + 80).duration(400)}
           >
-            <TimetableCard
-              t={t}
-              onPress={() => router.push(`/us/timetables/${t.id}` as any)}
-              onLongPress={() => openTimetableMenu(t)}
-            />
+            <RowActionMenu {...buildTimetableMenu(t)}>
+              <TimetableCard
+                t={t}
+                onPress={() => router.push(`/us/timetables/${t.id}` as any)}
+              />
+            </RowActionMenu>
           </Animated.View>
         ))}
       </View>
@@ -290,11 +291,9 @@ export default function TimetablesHub() {
 function TimetableCard({
   t,
   onPress,
-  onLongPress,
 }: {
   t: TimetableRow;
   onPress: () => void;
-  onLongPress?: () => void;
 }) {
   const { C, F } = useTheme();
   const tmpl = tmplByKey(t.template);
@@ -306,8 +305,6 @@ function TimetableCard({
     <Pressable
       testID={`timetable-row-${t.id}`}
       onPress={onPress}
-      onLongPress={onLongPress}
-      delayLongPress={350}
       style={{
         backgroundColor: C.card,
         borderWidth: 1,

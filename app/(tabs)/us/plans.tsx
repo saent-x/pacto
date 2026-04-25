@@ -20,7 +20,10 @@ import {
 } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
 import { Screen } from '@/src/components/ui/Screen';
-import { useActionMenu } from '@/src/components/ui/ActionMenu';
+import {
+  RowActionMenu,
+  type ActionMenuPayload,
+} from '@/src/components/ui/RowActionMenu';
 import { confirmDestructive } from '@/src/lib/confirm';
 import { usePlans } from '@/src/hooks/usePlans';
 import { useTheme } from '@/src/lib/theme';
@@ -93,37 +96,34 @@ function iconFromCategory(category: string | null | undefined): IconName {
 export default function PlansScreen() {
   const { C, F } = useTheme();
   const { plans, isLoading, remove } = usePlans();
-  const actionMenu = useActionMenu();
 
-  const openPlanMenu = useCallback(
-    (p: { id: string; title: string; tag?: string }) => {
-      actionMenu.open({
-        title: p.title,
-        subtitle: p.tag,
-        actions: [
-          {
-            key: 'edit',
-            label: 'Edit',
-            icon: 'edit',
-            onPress: () => router.push(`/sheets/new-plan?id=${p.id}` as any),
+  const buildPlanMenu = useCallback(
+    (p: { id: string; title: string; tag?: string }): ActionMenuPayload => ({
+      title: p.title,
+      subtitle: p.tag,
+      actions: [
+        {
+          key: 'edit',
+          label: 'Edit',
+          icon: 'edit',
+          onPress: () => router.push(`/sheets/new-plan?id=${p.id}` as any),
+        },
+        {
+          key: 'delete',
+          label: 'Delete',
+          icon: 'trash',
+          destructive: true,
+          onPress: () => {
+            confirmDestructive(
+              'Delete plan?',
+              `"${p.title}" will be removed.`,
+              () => remove(p.id),
+            );
           },
-          {
-            key: 'delete',
-            label: 'Delete',
-            icon: 'trash',
-            destructive: true,
-            onPress: () => {
-              confirmDestructive(
-                'Delete plan?',
-                `"${p.title}" will be removed.`,
-                () => remove(p.id),
-              );
-            },
-          },
-        ],
-      });
-    },
-    [actionMenu, remove],
+        },
+      ],
+    }),
+    [remove],
   );
 
   const rows = useMemo<PlanRow[]>(() => {
@@ -212,10 +212,9 @@ export default function PlansScreen() {
       key={p.id}
       entering={FadeInDown.delay(Math.min(j, 10) * 60 + 80).duration(400)}
     >
+    <RowActionMenu {...buildPlanMenu(p)}>
     <Pressable
       testID={`plan-row-${p.id}`}
-      onLongPress={() => openPlanMenu(p)}
-      delayLongPress={350}
       style={{
         backgroundColor: p.color,
         borderRadius: 24,
@@ -320,6 +319,7 @@ export default function PlansScreen() {
         </Text>
       </View>
     </Pressable>
+    </RowActionMenu>
     </Animated.View>
   );
 

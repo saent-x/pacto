@@ -4,7 +4,10 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Icon } from '@/src/components/ui/Icon';
 import { Screen } from '@/src/components/ui/Screen';
-import { useActionMenu } from '@/src/components/ui/ActionMenu';
+import {
+  RowActionMenu,
+  type ActionMenuPayload,
+} from '@/src/components/ui/RowActionMenu';
 import { confirmDestructive } from '@/src/lib/confirm';
 import { useAllWishlistItems, useQuickAddWishItem } from '@/src/hooks/useWishlists';
 import { useSession } from '@/src/hooks/useSession';
@@ -38,37 +41,34 @@ export default function Wishlists() {
   const { user, activeCouple, isSolo } = useSession();
   const { items, isLoading } = useAllWishlistItems();
   const { remove } = useQuickAddWishItem();
-  const actionMenu = useActionMenu();
 
-  const openWishMenu = useCallback(
-    (row: WishRow) => {
-      actionMenu.open({
-        title: row.title,
-        subtitle: row.tag ?? undefined,
-        actions: [
-          {
-            key: 'edit',
-            label: 'Edit',
-            icon: 'edit',
-            onPress: () => router.push(`/sheets/new-wish?id=${row.id}` as any),
+  const buildWishMenu = useCallback(
+    (row: WishRow): ActionMenuPayload => ({
+      title: row.title,
+      subtitle: row.tag ?? undefined,
+      actions: [
+        {
+          key: 'edit',
+          label: 'Edit',
+          icon: 'edit',
+          onPress: () => router.push(`/sheets/new-wish?id=${row.id}` as any),
+        },
+        {
+          key: 'delete',
+          label: 'Delete',
+          icon: 'trash',
+          destructive: true,
+          onPress: () => {
+            confirmDestructive(
+              'Delete wish?',
+              `"${row.title}" will be removed.`,
+              () => remove(row.id),
+            );
           },
-          {
-            key: 'delete',
-            label: 'Delete',
-            icon: 'trash',
-            destructive: true,
-            onPress: () => {
-              confirmDestructive(
-                'Delete wish?',
-                `"${row.title}" will be removed.`,
-                () => remove(row.id),
-              );
-            },
-          },
-        ],
-      });
-    },
-    [actionMenu, remove],
+        },
+      ],
+    }),
+    [remove],
   );
 
   const userId = user?.id ?? '';
@@ -238,10 +238,9 @@ export default function Wishlists() {
               entering={FadeInDown.delay(Math.min(i, 10) * 60 + 80).duration(400)}
               style={{ marginBottom: 8 }}
             >
+            <RowActionMenu {...buildWishMenu(it)}>
             <Pressable
               testID={`wish-row-${it.id}`}
-              onLongPress={() => openWishMenu(it)}
-              delayLongPress={350}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -313,6 +312,7 @@ export default function Wishlists() {
                 )}
               </View>
             </Pressable>
+            </RowActionMenu>
             </Animated.View>
           );
         })

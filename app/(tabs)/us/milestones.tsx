@@ -5,7 +5,10 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { differenceInCalendarDays, format, parseISO } from 'date-fns';
 import { Icon } from '@/src/components/ui/Icon';
 import { Screen } from '@/src/components/ui/Screen';
-import { useActionMenu } from '@/src/components/ui/ActionMenu';
+import {
+  RowActionMenu,
+  type ActionMenuPayload,
+} from '@/src/components/ui/RowActionMenu';
 import { confirmDestructive } from '@/src/lib/confirm';
 import { useMilestones } from '@/src/hooks/useMilestones';
 import { useTheme } from '@/src/lib/theme';
@@ -43,37 +46,34 @@ function toRow(m: unknown): MilestoneRow {
 export default function Milestones() {
   const { C, F } = useTheme();
   const { milestones, upcoming, isLoading, remove } = useMilestones();
-  const actionMenu = useActionMenu();
 
-  const openMilestoneMenu = useCallback(
-    (stone: { id: string; title: string; date: string }) => {
-      actionMenu.open({
-        title: stone.title,
-        subtitle: stone.date,
-        actions: [
-          {
-            key: 'edit',
-            label: 'Edit',
-            icon: 'edit',
-            onPress: () => router.push(`/sheets/new-milestone?id=${stone.id}` as any),
+  const buildMilestoneMenu = useCallback(
+    (stone: { id: string; title: string; date: string }): ActionMenuPayload => ({
+      title: stone.title,
+      subtitle: stone.date,
+      actions: [
+        {
+          key: 'edit',
+          label: 'Edit',
+          icon: 'edit',
+          onPress: () => router.push(`/sheets/new-milestone?id=${stone.id}` as any),
+        },
+        {
+          key: 'delete',
+          label: 'Delete',
+          icon: 'trash',
+          destructive: true,
+          onPress: () => {
+            confirmDestructive(
+              'Delete milestone?',
+              `"${stone.title}" will be removed.`,
+              () => remove(stone.id),
+            );
           },
-          {
-            key: 'delete',
-            label: 'Delete',
-            icon: 'trash',
-            destructive: true,
-            onPress: () => {
-              confirmDestructive(
-                'Delete milestone?',
-                `"${stone.title}" will be removed.`,
-                () => remove(stone.id),
-              );
-            },
-          },
-        ],
-      });
-    },
-    [actionMenu, remove],
+        },
+      ],
+    }),
+    [remove],
   );
 
   const rows = useMemo(() => milestones.map(toRow), [milestones]);
@@ -162,10 +162,9 @@ export default function Milestones() {
                 {month}
               </Text>
             </View>
+            <RowActionMenu {...buildMilestoneMenu(stone)} style={{ flex: 1 }}>
             <Pressable
               testID={`milestone-row-${stone.id}`}
-              onLongPress={() => openMilestoneMenu(stone)}
-              delayLongPress={350}
               style={{
                 flex: 1,
                 backgroundColor: color,
@@ -216,6 +215,7 @@ export default function Milestones() {
                 </Text>
               ) : null}
             </Pressable>
+            </RowActionMenu>
           </Animated.View>
         );
       })}

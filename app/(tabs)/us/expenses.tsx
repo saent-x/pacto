@@ -5,7 +5,10 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { format, parseISO } from 'date-fns';
 import { Icon } from '@/src/components/ui/Icon';
 import { Screen } from '@/src/components/ui/Screen';
-import { useActionMenu } from '@/src/components/ui/ActionMenu';
+import {
+  RowActionMenu,
+  type ActionMenuPayload,
+} from '@/src/components/ui/RowActionMenu';
 import { confirmDestructive } from '@/src/lib/confirm';
 import { useExpenses } from '@/src/hooks/useExpenses';
 import { useSession } from '@/src/hooks/useSession';
@@ -59,37 +62,34 @@ export default function Expenses() {
   const { C, F } = useTheme();
   const { user, activeCouple, isSolo } = useSession();
   const { expenses, unsettled, isLoading, settle, remove } = useExpenses();
-  const actionMenu = useActionMenu();
 
-  const openExpenseMenu = useCallback(
-    (row: ExpenseRow) => {
-      actionMenu.open({
-        title: row.title,
-        subtitle: `${fmtMoney(row.amount, row.currency)}`,
-        actions: [
-          {
-            key: 'edit',
-            label: 'Edit',
-            icon: 'edit',
-            onPress: () => router.push(`/sheets/new-expense?id=${row.id}` as any),
+  const buildExpenseMenu = useCallback(
+    (row: ExpenseRow): ActionMenuPayload => ({
+      title: row.title,
+      subtitle: `${fmtMoney(row.amount, row.currency)}`,
+      actions: [
+        {
+          key: 'edit',
+          label: 'Edit',
+          icon: 'edit',
+          onPress: () => router.push(`/sheets/new-expense?id=${row.id}` as any),
+        },
+        {
+          key: 'delete',
+          label: 'Delete',
+          icon: 'trash',
+          destructive: true,
+          onPress: () => {
+            confirmDestructive(
+              'Delete expense?',
+              `"${row.title}" will be removed.`,
+              () => remove(row.id),
+            );
           },
-          {
-            key: 'delete',
-            label: 'Delete',
-            icon: 'trash',
-            destructive: true,
-            onPress: () => {
-              confirmDestructive(
-                'Delete expense?',
-                `"${row.title}" will be removed.`,
-                () => remove(row.id),
-              );
-            },
-          },
-        ],
-      });
-    },
-    [actionMenu, remove],
+        },
+      ],
+    }),
+    [remove],
   );
 
   const userId = user?.id ?? '';
@@ -266,10 +266,9 @@ export default function Expenses() {
             entering={FadeInDown.delay(Math.min(i, 10) * 60 + 80).duration(400)}
             style={{ marginBottom: 8 }}
           >
+          <RowActionMenu {...buildExpenseMenu(x)}>
           <Pressable
             testID={`expense-row-${x.id}`}
-            onLongPress={() => openExpenseMenu(x)}
-            delayLongPress={350}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -329,6 +328,7 @@ export default function Expenses() {
               {fmtMoney(x.amount, x.currency)}
             </Text>
           </Pressable>
+          </RowActionMenu>
           </Animated.View>
         );
       })}

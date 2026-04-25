@@ -7,7 +7,10 @@ import { Display, Overline, Pill, ProgressRing } from '@/src/components/ui/atoms
 import { Icon } from '@/src/components/ui/Icon';
 import { Screen } from '@/src/components/ui/Screen';
 import { ListCard, ListCardSkeleton } from '@/src/components/tasks/ListCard';
-import { useActionMenu } from '@/src/components/ui/ActionMenu';
+import {
+  RowActionMenu,
+  type ActionMenuPayload,
+} from '@/src/components/ui/RowActionMenu';
 import { confirmDestructive } from '@/src/lib/confirm';
 import { useTaskLists, type ListRow } from '@/src/hooks/useTaskLists';
 import { useTheme } from '@/src/lib/theme';
@@ -17,39 +20,36 @@ const BASE_FILTERS = ['All'] as const;
 export default function TasksList() {
   const { C, F } = useTheme();
   const { lists, isLoading, error, remove } = useTaskLists();
-  const actionMenu = useActionMenu();
   const [filter, setFilter] = useState<string>('All');
   const [dismissedError, setDismissedError] = useState(false);
 
-  const openListMenu = useCallback(
-    (list: ListRow) => {
-      actionMenu.open({
-        title: list.name,
-        subtitle: list.category ?? undefined,
-        actions: [
-          {
-            key: 'edit',
-            label: 'Edit',
-            icon: 'edit',
-            onPress: () => router.push(`/sheets/new-list?id=${list.id}` as any),
+  const buildListMenu = useCallback(
+    (list: ListRow): ActionMenuPayload => ({
+      title: list.name,
+      subtitle: list.category ?? undefined,
+      actions: [
+        {
+          key: 'edit',
+          label: 'Edit',
+          icon: 'edit',
+          onPress: () => router.push(`/sheets/new-list?id=${list.id}` as any),
+        },
+        {
+          key: 'delete',
+          label: 'Delete',
+          icon: 'trash',
+          destructive: true,
+          onPress: () => {
+            confirmDestructive(
+              'Delete list?',
+              `"${list.name}" and all its tasks will be removed.`,
+              () => remove(list.id),
+            );
           },
-          {
-            key: 'delete',
-            label: 'Delete',
-            icon: 'trash',
-            destructive: true,
-            onPress: () => {
-              confirmDestructive(
-                'Delete list?',
-                `"${list.name}" and all its tasks will be removed.`,
-                () => remove(list.id),
-              );
-            },
-          },
-        ],
-      });
-    },
-    [actionMenu, remove],
+        },
+      ],
+    }),
+    [remove],
   );
 
   const categories = useMemo(() => {
@@ -102,13 +102,13 @@ export default function TasksList() {
       ) : (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
           {visible.map((l, i) => (
-            <ListCard
-              key={l.id}
-              list={l}
-              index={i}
-              onPress={() => router.push(`/tasks/${l.id}` as any)}
-              onLongPress={() => openListMenu(l)}
-            />
+            <RowActionMenu key={l.id} {...buildListMenu(l)} style={{ width: '48%' }}>
+              <ListCard
+                list={l}
+                index={i}
+                onPress={() => router.push(`/tasks/${l.id}` as any)}
+              />
+            </RowActionMenu>
           ))}
         </View>
       )}

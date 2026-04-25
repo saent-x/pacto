@@ -5,7 +5,10 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Icon, IconName } from '@/src/components/ui/Icon';
 import { Screen } from '@/src/components/ui/Screen';
 import { WhoDot } from '@/src/components/ui/WhoDot';
-import { useActionMenu } from '@/src/components/ui/ActionMenu';
+import {
+  RowActionMenu,
+  type ActionMenuPayload,
+} from '@/src/components/ui/RowActionMenu';
 import { confirmDestructive } from '@/src/lib/confirm';
 import { useTimetable } from '@/src/hooks/useTimetables';
 import { useTheme } from '@/src/lib/theme';
@@ -26,44 +29,41 @@ export default function TimetableDetail() {
   const idString = Array.isArray(id) ? id[0] : id;
   const { C, F } = useTheme();
   const { timetable, items, isLoading, remove } = useTimetable(idString ?? null);
-  const actionMenu = useActionMenu();
 
   const [layout, setLayout] = useState<Layout>('grid');
   const [selectedDay, setSelectedDay] = useState(2);
   const [weekOffset, setWeekOffset] = useState(0);
 
-  const openItemMenu = useCallback(
-    (item: TimetableItem) => {
-      actionMenu.open({
-        title: item.title,
-        subtitle: item.cat?.toUpperCase(),
-        actions: [
-          {
-            key: 'edit',
-            label: 'Edit',
-            icon: 'edit',
-            onPress: () => {
-              if (!idString) return;
-              router.push(`/sheets/new-timetable-item?timetableId=${idString}&id=${String(item.id)}` as any);
-            },
+  const buildItemMenu = useCallback(
+    (item: TimetableItem): ActionMenuPayload => ({
+      title: item.title,
+      subtitle: item.cat?.toUpperCase(),
+      actions: [
+        {
+          key: 'edit',
+          label: 'Edit',
+          icon: 'edit',
+          onPress: () => {
+            if (!idString) return;
+            router.push(`/sheets/new-timetable-item?timetableId=${idString}&id=${String(item.id)}` as any);
           },
-          {
-            key: 'delete',
-            label: 'Delete',
-            icon: 'trash',
-            destructive: true,
-            onPress: () => {
-              confirmDestructive(
-                'Delete item?',
-                `"${item.title}" will be removed.`,
-                () => remove(String(item.id)),
-              );
-            },
+        },
+        {
+          key: 'delete',
+          label: 'Delete',
+          icon: 'trash',
+          destructive: true,
+          onPress: () => {
+            confirmDestructive(
+              'Delete item?',
+              `"${item.title}" will be removed.`,
+              () => remove(String(item.id)),
+            );
           },
-        ],
-      });
-    },
-    [actionMenu, idString, remove],
+        },
+      ],
+    }),
+    [idString, remove],
   );
 
   if (isLoading && !timetable) return <DetailSkeleton />;
@@ -287,16 +287,16 @@ export default function TimetableDetail() {
           items={items}
           selectedDay={selectedDay}
           setSelectedDay={setSelectedDay}
-          onItemLongPress={openItemMenu}
+          buildItemMenu={buildItemMenu}
         />
       ) : layout === 'list' ? (
-        <ListView items={items} onItemLongPress={openItemMenu} />
+        <ListView items={items} buildItemMenu={buildItemMenu} />
       ) : (
         <TimelineView
           items={items}
           selectedDay={selectedDay}
           setSelectedDay={setSelectedDay}
-          onItemLongPress={openItemMenu}
+          buildItemMenu={buildItemMenu}
         />
       )}
 
@@ -333,12 +333,12 @@ function GridView({
   items,
   selectedDay,
   setSelectedDay,
-  onItemLongPress,
+  buildItemMenu,
 }: {
   items: TimetableItem[];
   selectedDay: number;
   setSelectedDay: (n: number) => void;
-  onItemLongPress?: (item: TimetableItem) => void;
+  buildItemMenu: (item: TimetableItem) => ActionMenuPayload;
 }) {
   const { C, F } = useTheme();
   const dayItems = items.filter((i) => i.day === selectedDay).sort((a, b) => a.start - b.start);
@@ -455,7 +455,9 @@ function GridView({
             key={item.id}
             entering={FadeInDown.delay(Math.min(i, 10) * 60 + 80).duration(400)}
           >
-            <ItemCard item={item} onLongPress={onItemLongPress ? () => onItemLongPress(item) : undefined} />
+            <RowActionMenu {...buildItemMenu(item)}>
+              <ItemCard item={item} />
+            </RowActionMenu>
           </Animated.View>
         ))}
       </View>
@@ -463,13 +465,11 @@ function GridView({
   );
 }
 
-function ItemCard({ item, onLongPress }: { item: TimetableItem; onLongPress?: () => void }) {
+function ItemCard({ item }: { item: TimetableItem }) {
   const { F } = useTheme();
   return (
     <Pressable
       testID={`timetable-item-${item.id}`}
-      onLongPress={onLongPress}
-      delayLongPress={350}
       style={{
         backgroundColor: item.color,
         borderRadius: 22,
@@ -545,10 +545,10 @@ function ItemCard({ item, onLongPress }: { item: TimetableItem; onLongPress?: ()
 
 function ListView({
   items,
-  onItemLongPress,
+  buildItemMenu,
 }: {
   items: TimetableItem[];
-  onItemLongPress?: (item: TimetableItem) => void;
+  buildItemMenu: (item: TimetableItem) => ActionMenuPayload;
 }) {
   const { C, F } = useTheme();
   const byDay = DAYS_FULL.map((name, i) => ({
@@ -591,10 +591,9 @@ function ListView({
                     key={item.id}
                     entering={FadeInDown.delay(Math.min(i, 10) * 40 + 40).duration(360)}
                   >
+                  <RowActionMenu {...buildItemMenu(item)}>
                   <Pressable
                     testID={`timetable-item-list-${item.id}`}
-                    onLongPress={onItemLongPress ? () => onItemLongPress(item) : undefined}
-                    delayLongPress={350}
                     style={{
                       backgroundColor: C.card,
                       borderWidth: 1,
@@ -643,6 +642,7 @@ function ListView({
                     </View>
                     <WhoDot who={item.who} size={18} borderColor={C.card} />
                   </Pressable>
+                  </RowActionMenu>
                   </Animated.View>
                 ))}
               </View>
@@ -657,12 +657,12 @@ function TimelineView({
   items,
   selectedDay,
   setSelectedDay,
-  onItemLongPress,
+  buildItemMenu,
 }: {
   items: TimetableItem[];
   selectedDay: number;
   setSelectedDay: (n: number) => void;
-  onItemLongPress?: (item: TimetableItem) => void;
+  buildItemMenu: (item: TimetableItem) => ActionMenuPayload;
 }) {
   const { C, F } = useTheme();
   const dayItems = items.filter((i) => i.day === selectedDay).sort((a, b) => a.start - b.start);
@@ -793,10 +793,9 @@ function TimelineView({
                 height,
               }}
             >
+            <RowActionMenu {...buildItemMenu(item)} style={{ flex: 1 }}>
             <Pressable
               testID={`timetable-item-timeline-${item.id}`}
-              onLongPress={onItemLongPress ? () => onItemLongPress(item) : undefined}
-              delayLongPress={350}
               style={{
                 flex: 1,
                 backgroundColor: item.color,
@@ -856,6 +855,7 @@ function TimelineView({
                 </Text>
               )}
             </Pressable>
+            </RowActionMenu>
             </Animated.View>
           );
         })}

@@ -73,19 +73,13 @@ vi.mock('react-native-gesture-handler', () => ({
   },
 }));
 
-const menuState = vi.hoisted(() => ({
-  lastOpened: null as any,
-}));
-
-vi.mock('@/src/components/ui/ActionMenu', () => ({
-  useActionMenu: () => ({
-    open: (payload: any) => {
-      menuState.lastOpened = payload;
-    },
-    close: () => undefined,
-  }),
-  ActionMenuProvider: ({ children }: any) => <>{children}</>,
-}));
+vi.mock('@react-native-menu/menu', () => {
+  const Reactx = require('react');
+  return {
+    MenuView: (props: any) =>
+      Reactx.createElement('MockMenuView', props, props.children),
+  };
+});
 
 const taskState = vi.hoisted(() => ({
   tasks: [] as any[],
@@ -151,10 +145,26 @@ function makeTask(over: any = {}) {
   };
 }
 
-function pickAction(key: string) {
-  const action = menuState.lastOpened?.actions.find((a: any) => a.key === key);
-  if (!action) throw new Error(`Action "${key}" not found in menu`);
-  return action.onPress();
+function findMenuFor(root: any, predicate: (n: any) => boolean) {
+  const menus = root.findAll((n: any) => n.type === 'MockMenuView');
+  return menus.find((m: any) => m.findAll(predicate).length > 0);
+}
+
+function findRowMenu(root: any, taskId: string) {
+  const menu = findMenuFor(
+    root,
+    (n: any) => n.props?.testID === `task-row-${taskId}-checkbox`,
+  );
+  if (!menu) throw new Error(`MockMenuView for task ${taskId} not found`);
+  return menu;
+}
+
+function actionKeys(menu: any): string[] {
+  return (menu.props.actions || []).map((a: any) => a.id);
+}
+
+async function fireMenuAction(menu: any, key: string) {
+  await menu.props.onPressAction({ nativeEvent: { event: key } });
 }
 
 describe('Task list detail interactions', () => {
@@ -167,7 +177,6 @@ describe('Task list detail interactions', () => {
     taskState.remove.mockClear();
     taskState.reorder.mockClear();
     taskState.update.mockClear();
-    menuState.lastOpened = null;
     (router.push as any).mockClear?.();
   });
 
@@ -193,30 +202,23 @@ describe('Task list detail interactions', () => {
     act(() => renderer.unmount());
   });
 
-  it('opens the action menu on long-press with edit/reorder/delete', async () => {
+  it('mounts the native menu on each task row with edit/reorder/delete', async () => {
     taskState.tasks = [makeTask({ id: 't1' }), makeTask({ id: 't2', title: 'Other' })];
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<TaskListDetail />); await flush(); });
-    const pressable = renderer.root.findAll(
-      (n: any) => typeof n.props?.onLongPress === 'function'
-        && n.findAll((c: any) => c.props?.testID === 'task-row-t1-checkbox').length,
-    )[0];
-    await act(async () => { pressable.props.onLongPress(); await flush(); });
-    expect(menuState.lastOpened).toBeTruthy();
-    const keys = menuState.lastOpened.actions.map((a: any) => a.key);
-    expect(keys).toEqual(['edit', 'reorder', 'delete']);
+    const menu = findRowMenu(renderer.root, 't1');
+    expect(menu.props.shouldOpenOnLongPress).toBe(true);
+    expect(actionKeys(menu)).toEqual(['edit', 'reorder', 'delete']);
+    const deleteAction = menu.props.actions.find((a: any) => a.id === 'delete');
+    expect(deleteAction.attributes.destructive).toBe(true);
     act(() => renderer.unmount());
   });
 
   it('routes Edit to /sheets/new-task with id and listId', async () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<TaskListDetail />); await flush(); });
-    const pressable = renderer.root.findAll(
-      (n: any) => typeof n.props?.onLongPress === 'function'
-        && n.findAll((c: any) => c.props?.testID === 'task-row-t1-checkbox').length,
-    )[0];
-    await act(async () => { pressable.props.onLongPress(); await flush(); });
-    await act(async () => { pickAction('edit'); await flush(); });
+    const menu = findRowMenu(renderer.root, 't1');
+    await act(async () => { await fireMenuAction(menu, 'edit'); await flush(); });
     expect(router.push).toHaveBeenCalledWith('/sheets/new-task?listId=l1&id=t1');
     act(() => renderer.unmount());
   });
@@ -228,12 +230,8 @@ describe('Task list detail interactions', () => {
     });
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<TaskListDetail />); await flush(); });
-    const pressable = renderer.root.findAll(
-      (n: any) => typeof n.props?.onLongPress === 'function'
-        && n.findAll((c: any) => c.props?.testID === 'task-row-t1-checkbox').length,
-    )[0];
-    await act(async () => { pressable.props.onLongPress(); await flush(); });
-    await act(async () => { pickAction('delete'); await flush(); });
+    const menu = findRowMenu(renderer.root, 't1');
+    await act(async () => { await fireMenuAction(menu, 'delete'); await flush(); });
     expect(alertSpy).toHaveBeenCalledTimes(1);
     expect(taskState.remove).toHaveBeenCalledWith('t1');
     alertSpy.mockRestore();
@@ -256,12 +254,8 @@ describe('Task list detail interactions', () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<TaskListDetail />); await flush(); });
 
-    const rowAPressable = renderer.root.findAll(
-      (n: any) => typeof n.props?.onLongPress === 'function'
-        && n.findAll((c: any) => c.props?.testID === 'task-row-t1-checkbox').length,
-    )[0];
-    await act(async () => { rowAPressable.props.onLongPress(); await flush(); });
-    await act(async () => { pickAction('reorder'); await flush(); });
+    const menu = findRowMenu(renderer.root, 't1');
+    await act(async () => { await fireMenuAction(menu, 'reorder'); await flush(); });
 
     const moveDown = renderer.root.findAll(
       (n: any) => n.props?.testID === 'task-row-t1-move-down',

@@ -48,19 +48,13 @@ vi.mock('react-native-reanimated', () => {
   };
 });
 
-const menuState = vi.hoisted(() => ({
-  lastOpened: null as any,
-}));
-
-vi.mock('@/src/components/ui/ActionMenu', () => ({
-  useActionMenu: () => ({
-    open: (payload: any) => {
-      menuState.lastOpened = payload;
-    },
-    close: () => undefined,
-  }),
-  ActionMenuProvider: ({ children }: any) => <>{children}</>,
-}));
+vi.mock('@react-native-menu/menu', () => {
+  const Reactx = require('react');
+  return {
+    MenuView: (props: any) =>
+      Reactx.createElement('MockMenuView', props, props.children),
+  };
+});
 
 const sessionState = vi.hoisted(() => ({
   user: { id: 'u-mine' } as any,
@@ -93,10 +87,26 @@ const { act } = TestRenderer;
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
-function pickAction(key: string) {
-  const action = menuState.lastOpened?.actions.find((a: any) => a.key === key);
-  if (!action) throw new Error(`Action "${key}" not found in menu`);
-  return action.onPress();
+function findMenuFor(root: any, predicate: (n: any) => boolean) {
+  const menus = root.findAll((n: any) => n.type === 'MockMenuView');
+  return menus.find((m: any) => m.findAll(predicate).length > 0);
+}
+
+function findBubbleMenu(root: any, noteId: string) {
+  const menu = findMenuFor(
+    root,
+    (n: any) => n.props?.testID === `note-bubble-${noteId}`,
+  );
+  if (!menu) throw new Error(`MockMenuView for note ${noteId} not found`);
+  return menu;
+}
+
+function actionKeys(menu: any): string[] {
+  return (menu.props.actions || []).map((a: any) => a.id);
+}
+
+async function fireMenuAction(menu: any, key: string) {
+  await menu.props.onPressAction({ nativeEvent: { event: key } });
 }
 
 describe('Love notes interactions', () => {
@@ -107,34 +117,23 @@ describe('Love notes interactions', () => {
     ];
     noteHookState.remove.mockClear();
     noteHookState.update.mockClear();
-    menuState.lastOpened = null;
     (router.push as any).mockClear?.();
   });
 
-  it('opens menu with edit + delete on long-press of own note', async () => {
+  it('mounts the native menu with edit + delete on own note', async () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<LoveNotes />); await flush(); });
-    const bubble = renderer.root.findAll(
-      (n: any) => n.props?.testID === 'note-bubble-n1',
-    )[0];
-    expect(bubble).toBeTruthy();
-    await act(async () => { bubble.props.onLongPress(); await flush(); });
-    expect(menuState.lastOpened).toBeTruthy();
-    const keys = menuState.lastOpened.actions.map((a: any) => a.key);
-    expect(keys).toEqual(['edit', 'delete']);
+    const menu = findBubbleMenu(renderer.root, 'n1');
+    expect(menu.props.shouldOpenOnLongPress).toBe(true);
+    expect(actionKeys(menu)).toEqual(['edit', 'delete']);
     act(() => renderer.unmount());
   });
 
   it("hides Edit on partner's note", async () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<LoveNotes />); await flush(); });
-    const bubble = renderer.root.findAll(
-      (n: any) => n.props?.testID === 'note-bubble-n2',
-    )[0];
-    expect(bubble).toBeTruthy();
-    await act(async () => { bubble.props.onLongPress(); await flush(); });
-    const keys = menuState.lastOpened.actions.map((a: any) => a.key);
-    expect(keys).toEqual(['delete']);
+    const menu = findBubbleMenu(renderer.root, 'n2');
+    expect(actionKeys(menu)).toEqual(['delete']);
     act(() => renderer.unmount());
   });
 
@@ -145,11 +144,8 @@ describe('Love notes interactions', () => {
     });
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<LoveNotes />); await flush(); });
-    const bubble = renderer.root.findAll(
-      (n: any) => n.props?.testID === 'note-bubble-n1',
-    )[0];
-    await act(async () => { bubble.props.onLongPress(); await flush(); });
-    await act(async () => { pickAction('delete'); await flush(); });
+    const menu = findBubbleMenu(renderer.root, 'n1');
+    await act(async () => { await fireMenuAction(menu, 'delete'); await flush(); });
     expect(alertSpy).toHaveBeenCalledTimes(1);
     expect(noteHookState.remove).toHaveBeenCalledWith('n1');
     alertSpy.mockRestore();
@@ -159,11 +155,8 @@ describe('Love notes interactions', () => {
   it('routes Edit to /sheets/new-note with id', async () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<LoveNotes />); await flush(); });
-    const bubble = renderer.root.findAll(
-      (n: any) => n.props?.testID === 'note-bubble-n1',
-    )[0];
-    await act(async () => { bubble.props.onLongPress(); await flush(); });
-    await act(async () => { pickAction('edit'); await flush(); });
+    const menu = findBubbleMenu(renderer.root, 'n1');
+    await act(async () => { await fireMenuAction(menu, 'edit'); await flush(); });
     expect(router.push).toHaveBeenCalledWith('/sheets/new-note?id=n1');
     act(() => renderer.unmount());
   });

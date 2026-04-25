@@ -24,7 +24,6 @@ export function TaskRow({
   listColor,
   state = 'idle',
   onToggle,
-  onLongPress,
   onMoveUp,
   onMoveDown,
   canMoveUp = true,
@@ -35,7 +34,6 @@ export function TaskRow({
   listColor: string;
   state?: RowState;
   onToggle: () => void;
-  onLongPress?: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
   canMoveUp?: boolean;
@@ -75,8 +73,6 @@ export function TaskRow({
       style={{ transform: [{ scale: state === 'reordering' ? 1.03 : 1 }] }}
     >
       <Pressable
-        onLongPress={onLongPress}
-        delayLongPress={350}
         style={{
           flexDirection: 'row',
           alignItems: 'center',

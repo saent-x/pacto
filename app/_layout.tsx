@@ -19,7 +19,6 @@ import { ThemeProvider, useTheme } from '@/src/lib/theme';
 import { SessionProvider } from '@/src/lib/session';
 import { SessionGate } from '@/src/lib/session-gate';
 import { ErrorBoundary } from '@/src/lib/error-boundary';
-import { ActionMenuProvider } from '@/src/components/ui/ActionMenu';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -49,9 +48,7 @@ export default function RootLayout() {
             <BottomSheetModalProvider>
               <SessionProvider>
                 <SessionGate>
-                  <ActionMenuProvider>
-                    <ThemedRoot />
-                  </ActionMenuProvider>
+                  <ThemedRoot />
                 </SessionGate>
               </SessionProvider>
             </BottomSheetModalProvider>

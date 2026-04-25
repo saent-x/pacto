@@ -16,7 +16,10 @@ import { Display, Pill, RoundBtn } from '@/src/components/ui/atoms';
 import { Icon } from '@/src/components/ui/Icon';
 import { TaskRow } from '@/src/components/tasks/TaskRow';
 import { bucketOf, orderBuckets } from '@/src/components/tasks/buckets';
-import { useActionMenu } from '@/src/components/ui/ActionMenu';
+import {
+  RowActionMenu,
+  type ActionMenuPayload,
+} from '@/src/components/ui/RowActionMenu';
 import { confirmDestructive } from '@/src/lib/confirm';
 import { useTaskLists, type ListRow } from '@/src/hooks/useTaskLists';
 import { useTaskItems } from '@/src/hooks/useTasks';
@@ -36,7 +39,6 @@ export default function TaskListDetail() {
 
   const { tasks, isLoading: tasksLoading, toggleComplete, remove, reorder } =
     useTaskItems(listId ?? null);
-  const actionMenu = useActionMenu();
 
   const color = list ? ((C as any)[list.colorKey] as string) : C.gold;
 
@@ -117,45 +119,43 @@ export default function TaskListDetail() {
     [],
   );
 
-  const openTaskMenu = useCallback(
-    (task: Task, bucketLabel: string, bucketIds: string[]) => {
-      actionMenu.open({
-        title: task.title,
-        subtitle: list?.name,
-        actions: [
-          {
-            key: 'edit',
-            label: 'Edit',
-            icon: 'edit',
-            onPress: () => {
-              if (!listId) return;
-              router.push(`/sheets/new-task?listId=${listId}&id=${task.id}` as any);
-            },
+  const buildTaskMenu = useCallback(
+    (task: Task, bucketLabel: string, bucketIds: string[]): ActionMenuPayload => ({
+      title: task.title,
+      subtitle: list?.name,
+      actions: [
+        {
+          key: 'edit',
+          label: 'Edit',
+          icon: 'edit',
+          onPress: () => {
+            if (!listId) return;
+            router.push(`/sheets/new-task?listId=${listId}&id=${task.id}` as any);
           },
-          {
-            key: 'reorder',
-            label: 'Reorder',
-            icon: 'chevronsUp',
-            disabled: bucketIds.length < 2,
-            onPress: () => enterReorder(bucketLabel, bucketIds),
+        },
+        {
+          key: 'reorder',
+          label: 'Reorder',
+          icon: 'chevronsUp',
+          disabled: bucketIds.length < 2,
+          onPress: () => enterReorder(bucketLabel, bucketIds),
+        },
+        {
+          key: 'delete',
+          label: 'Delete',
+          icon: 'trash',
+          destructive: true,
+          onPress: () => {
+            confirmDestructive(
+              'Delete task?',
+              `"${task.title}" will be removed.`,
+              () => remove(task.id),
+            );
           },
-          {
-            key: 'delete',
-            label: 'Delete',
-            icon: 'trash',
-            destructive: true,
-            onPress: () => {
-              confirmDestructive(
-                'Delete task?',
-                `"${task.title}" will be removed.`,
-                () => remove(task.id),
-              );
-            },
-          },
-        ],
-      });
-    },
-    [actionMenu, enterReorder, list?.name, listId, remove],
+        },
+      ],
+    }),
+    [enterReorder, list?.name, listId, remove],
   );
 
   return (
@@ -255,23 +255,27 @@ export default function TaskListDetail() {
                     return orderedIds.map((tid, idx, arr) => {
                       const t = s.items.find((x) => x.id === tid);
                       if (!t) return null;
-                      return (
+                      const row = (
                         <TaskRow
-                          key={t.id}
                           task={t}
                           listColor={color}
                           state={isReorderingHere ? 'reordering' : 'idle'}
                           testID={`task-row-${t.id}`}
                           onToggle={() => toggleComplete(t)}
-                          onLongPress={() => {
-                            if (isReorderingHere) return;
-                            openTaskMenu(t, s.label, s.items.map((x) => x.id));
-                          }}
                           onMoveUp={isReorderingHere ? () => move(tid, -1) : undefined}
                           onMoveDown={isReorderingHere ? () => move(tid, 1) : undefined}
                           canMoveUp={isReorderingHere && idx > 0}
                           canMoveDown={isReorderingHere && idx < arr.length - 1}
                         />
+                      );
+                      if (isReorderingHere) return <React.Fragment key={t.id}>{row}</React.Fragment>;
+                      return (
+                        <RowActionMenu
+                          key={t.id}
+                          {...buildTaskMenu(t, s.label, s.items.map((x) => x.id))}
+                        >
+                          {row}
+                        </RowActionMenu>
                       );
                     });
                   })()}
@@ -284,7 +288,7 @@ export default function TaskListDetail() {
                 color={color}
                 done={done}
                 onToggle={toggleComplete}
-                onLongPress={(t) => openTaskMenu(t, 'COMPLETED', done.map((x) => x.id))}
+                buildMenu={(t) => buildTaskMenu(t, 'COMPLETED', done.map((x) => x.id))}
               />
             ) : null}
           </>
@@ -362,12 +366,12 @@ function CompletedSection({
   color,
   done,
   onToggle,
-  onLongPress,
+  buildMenu,
 }: {
   color: string;
   done: Task[];
   onToggle: (t: Task) => void;
-  onLongPress: (t: Task) => void;
+  buildMenu: (t: Task) => ActionMenuPayload;
 }) {
   const { C, F } = useTheme();
   return (
@@ -396,14 +400,14 @@ function CompletedSection({
       </View>
       <Animated.View layout={LinearTransition.springify().damping(18)} style={{ gap: 8, opacity: 0.55 }}>
         {done.map((t) => (
-          <TaskRow
-            key={t.id}
-            task={t}
-            listColor={color}
-            testID={`task-row-${t.id}`}
-            onToggle={() => onToggle(t)}
-            onLongPress={() => onLongPress(t)}
-          />
+          <RowActionMenu key={t.id} {...buildMenu(t)}>
+            <TaskRow
+              task={t}
+              listColor={color}
+              testID={`task-row-${t.id}`}
+              onToggle={() => onToggle(t)}
+            />
+          </RowActionMenu>
         ))}
       </Animated.View>
     </View>

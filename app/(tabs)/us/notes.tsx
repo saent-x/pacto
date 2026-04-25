@@ -5,7 +5,11 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { format } from 'date-fns';
 import { Icon } from '@/src/components/ui/Icon';
 import { Screen } from '@/src/components/ui/Screen';
-import { useActionMenu } from '@/src/components/ui/ActionMenu';
+import {
+  RowActionMenu,
+  type ActionMenuItem,
+  type ActionMenuPayload,
+} from '@/src/components/ui/RowActionMenu';
 import { confirmDestructive } from '@/src/lib/confirm';
 import { useLoveNotes } from '@/src/hooks/useLoveNotes';
 import { useSession } from '@/src/hooks/useSession';
@@ -22,15 +26,14 @@ export default function LoveNotes() {
   const { C, F } = useTheme();
   const { user, partner, isSolo } = useSession();
   const { notes, isLoading, remove } = useLoveNotes();
-  const actionMenu = useActionMenu();
 
-  const openNoteMenu = useCallback(
-    (note: NoteRow, isMine: boolean) => {
-      const baseActions = [
+  const buildNoteMenu = useCallback(
+    (note: NoteRow, isMine: boolean): ActionMenuPayload => {
+      const baseActions: ActionMenuItem[] = [
         {
           key: 'delete',
           label: 'Delete',
-          icon: 'trash' as const,
+          icon: 'trash',
           destructive: true,
           onPress: () => {
             confirmDestructive(
@@ -41,7 +44,7 @@ export default function LoveNotes() {
           },
         },
       ];
-      actionMenu.open({
+      return {
         title: note.body.length > 40 ? `${note.body.slice(0, 40)}…` : note.body,
         subtitle: format(new Date(note.createdAt), 'MMM d · h:mm a'),
         actions: isMine
@@ -49,15 +52,15 @@ export default function LoveNotes() {
               {
                 key: 'edit',
                 label: 'Edit',
-                icon: 'edit' as const,
+                icon: 'edit',
                 onPress: () => router.push(`/sheets/new-note?id=${note.id}` as any),
               },
               ...baseActions,
             ]
           : baseActions,
-      });
+      };
     },
-    [actionMenu, remove],
+    [remove],
   );
 
   const userId = user?.id ?? null;
@@ -93,10 +96,9 @@ export default function LoveNotes() {
           entering={FadeInDown.duration(400)}
           style={{ marginBottom: 18 }}
         >
+        <RowActionMenu {...buildNoteMenu(featured, featured.authorId === userId)}>
         <Pressable
           testID={`note-bubble-${featured.id}`}
-          onLongPress={() => openNoteMenu(featured, featured.authorId === userId)}
-          delayLongPress={350}
           style={{ backgroundColor: C.rose, borderRadius: 24, padding: 22 }}
         >
           <Text
@@ -148,6 +150,7 @@ export default function LoveNotes() {
             ))}
           </View>
         </Pressable>
+        </RowActionMenu>
         </Animated.View>
       ) : null}
 
@@ -178,10 +181,9 @@ export default function LoveNotes() {
               marginBottom: 10,
             }}
           >
+            <RowActionMenu {...buildNoteMenu(n, me)}>
             <Pressable
               testID={`note-bubble-${n.id}`}
-              onLongPress={() => openNoteMenu(n, me)}
-              delayLongPress={350}
               style={{
                 maxWidth: '80%',
                 paddingVertical: 12,
@@ -217,6 +219,7 @@ export default function LoveNotes() {
                 {format(new Date(n.createdAt), 'EEE · h:mm a')}
               </Text>
             </Pressable>
+            </RowActionMenu>
           </Animated.View>
         );
       })}
