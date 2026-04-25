@@ -20,7 +20,7 @@ export function HeaderBrand({
       {!!eyebrow && (
         <Overline style={{ marginBottom: 4, textAlign: 'center' }}>{eyebrow}</Overline>
       )}
-      <Display size={size} style={{ textAlign: 'center' }}>
+      <Display size={size} style={{ textAlign: 'center', lineHeight: size * 1.15, paddingBottom: 2 }}>
         {title}
         <Text style={{ color: acc }}>.</Text>
       </Display>
