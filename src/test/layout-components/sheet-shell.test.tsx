@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text } from 'react-native';
+import { ScrollView, Text } from 'react-native';
 import { describe, expect, it, vi } from 'vitest';
 
 const { routerBack, overlineSpy, displaySpy, roundBtnSpy } = vi.hoisted(() => ({
@@ -108,5 +108,19 @@ describe('SheetShell', () => {
     });
 
     expect(overlineSpy.mock.calls.at(-1)?.[0]?.color).toBe('#FF00FF');
+  });
+
+  it('renders ScrollView as the native form sheet root', () => {
+    let tree: any;
+
+    act(() => {
+      tree = TestRenderer.create(
+        <SheetShell>
+          <Text>BODY</Text>
+        </SheetShell>,
+      );
+    });
+
+    expect(tree.root.findByType(SheetShell).children[0].type).toBe(ScrollView);
   });
 });
