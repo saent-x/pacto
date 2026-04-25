@@ -8,16 +8,10 @@ import {
   selectFeaturedSignal,
 } from '@/src/lib/home/builders';
 import { getCuratedDailyVerse } from '@/src/lib/home/dailyVerse';
+import { buildTodayRingSummary, type TodayRingSummary } from '@/src/lib/home/todayRings';
 import { useSession } from '@/src/hooks/useSession';
 
-export type TodaySummary = {
-  plans: { done: number; total: number };
-  focus: { done: number; total: number };
-};
-
-function toDateString(ts: number) {
-  return new Date(ts).toISOString().slice(0, 10);
-}
+export type TodaySummary = TodayRingSummary;
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? '';
 
@@ -131,41 +125,13 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
         }
       : getCuratedDailyVerse(todayKey);
 
-    const today = toDateString(now);
-    let plansDone = 0;
-    let plansTotal = 0;
-    for (const plan of data?.plans ?? []) {
-      if (plan.isPrivate) continue;
-      if ((plan.targetDate ?? null) !== today) continue;
-      plansTotal += 1;
-      const status = (plan.status ?? '').toLowerCase();
-      if (status === 'done' || status === 'completed') plansDone += 1;
-    }
-    for (const event of data?.events ?? []) {
-      if (event.isPrivate) continue;
-      if (!event.startsAt || toDateString(event.startsAt) !== today) continue;
-      plansTotal += 1;
-      if (event.startsAt < now) plansDone += 1;
-    }
-
-    let focusDone = 0;
-    let focusTotal = 0;
-    for (const task of data?.tasks ?? []) {
-      if ((task.dueDate ?? null) !== today) continue;
-      focusTotal += 1;
-      if (task.isCompleted) focusDone += 1;
-    }
-    for (const reminder of data?.reminders ?? []) {
-      if (reminder.dueAt == null) continue;
-      if (toDateString(reminder.dueAt) !== today) continue;
-      focusTotal += 1;
-      if (reminder.isCompleted) focusDone += 1;
-    }
-
-    const todaySummary: TodaySummary = {
-      plans: { done: plansDone, total: plansTotal },
-      focus: { done: focusDone, total: focusTotal },
-    };
+    const todaySummary = buildTodayRingSummary({
+      now,
+      plans: data?.plans ?? [],
+      events: data?.events ?? [],
+      tasks: data?.tasks ?? [],
+      reminders: data?.reminders ?? [],
+    });
 
     return {
       hero,
