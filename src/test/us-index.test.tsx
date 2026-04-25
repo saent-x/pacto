@@ -1,5 +1,5 @@
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const routerSpy = vi.hoisted(() => ({
   push: vi.fn(),
@@ -227,41 +227,23 @@ function resetAll() {
 
 describe('UsIndex', () => {
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-04-23T09:00:00'));
     resetAll();
   });
 
-  it('renders the date pill copy', async () => {
-    const renderer = await render();
-    expect(readText(renderer.root)).toContain('THU · 17 · 11 · MATTIA × SOFIA');
-    act(() => renderer.unmount());
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
-  it('renders mood slabs and sync kicker', async () => {
+  it('starts from shared spaces and omits removed editorial sections', async () => {
     const renderer = await render();
     const text = readText(renderer.root);
-    expect(text).toContain('YOU');
-    expect(text).toContain('SOFIA');
-    expect(text).toContain('Good');
-    expect(text).toContain('Bright');
-    expect(text).toContain('◇ 86% IN SYNC · 4-DAY STREAK');
-    act(() => renderer.unmount());
-  });
-
-  it('renders quote overline + italic body', async () => {
-    const renderer = await render();
-    const text = readText(renderer.root);
-    expect(text).toContain('NOTE OF THE DAY · FROM SOFIA · 7:14 AM');
-    expect(text.some((t: string) => t.startsWith('Morning sunshine'))).toBe(true);
-    act(() => renderer.unmount());
-  });
-
-  it('tapping countdown navigates to /us/milestones', async () => {
-    const renderer = await render();
-    const cd = findByTestID(renderer.root, 'us-countdown')[0];
-    await act(async () => {
-      await cd.props.onPress();
-    });
-    expect(routerSpy.push).toHaveBeenCalledWith('/us/milestones');
+    expect(text.join('')).toContain('OUR SHARED SPACES · 8');
+    expect(text).not.toContain('MOOD · TODAY');
+    expect(text).not.toContain('NOTE OF THE DAY · FROM SOFIA · 7:14 AM');
+    expect(text).not.toContain('COUNTDOWN · FRIDAY');
+    expect(text).not.toContain('ON THIS DAY · ONE YEAR AGO');
     act(() => renderer.unmount());
   });
 
