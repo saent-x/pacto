@@ -2,11 +2,20 @@ import { format } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, Text, TextInput, View } from 'react-native';
 import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
-import { Icon, IconName } from '@/src/components/ui/Icon';
-import { PressScale } from '@/src/components/ui/PressScale';
-import { SheetShell } from '@/src/components/ui/SheetShell';
+import { IconName } from '@/src/components/ui/Icon';
+import {
+  SheetDateField,
+  SheetIconLabelPicker,
+  SheetRow,
+  SheetSection,
+  SheetSegment,
+  SheetShell,
+  SheetTitleField,
+  type IconLabelOption,
+  type SegmentOption,
+} from '@/src/components/ui/SheetShell';
 import { useExpenses } from '@/src/hooks/useExpenses';
 import { useSession } from '@/src/hooks/useSession';
 import { useTheme } from '@/src/lib/theme';
@@ -46,18 +55,32 @@ export default function NewExpense() {
   const [cat, setCat] = useState<Cat>((existing?.category as Cat) ?? 'food');
   const [split, setSplit] = useState<SplitKey>(initialSplit);
   const [by, setBy] = useState<PayerKey>(initialBy);
+  const [date, setDate] = useState<Date>(() =>
+    existing?.date ? new Date(`${existing.date}T00:00:00`) : new Date(),
+  );
+  const [dateOpen, setDateOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const cats: { k: Cat; label: string; icon: IconName; color: string }[] = useMemo(
+  const cats: IconLabelOption<Cat>[] = useMemo(
     () => [
-      { k: 'food', label: 'Food', icon: 'coffee', color: C.butter },
-      { k: 'home', label: 'Home', icon: 'home', color: C.mint },
-      { k: 'fun', label: 'Fun', icon: 'heart', color: C.rose },
-      { k: 'travel', label: 'Travel', icon: 'mapPin', color: C.sky },
-      { k: 'other', label: 'Other', icon: 'moreH', color: C.lavender },
+      { key: 'food', icon: 'coffee' as IconName, label: 'Food', color: C.butter },
+      { key: 'home', icon: 'home' as IconName, label: 'Home', color: C.mint },
+      { key: 'fun', icon: 'heart' as IconName, label: 'Fun', color: C.rose },
+      { key: 'travel', icon: 'mapPin' as IconName, label: 'Travel', color: C.sky },
+      { key: 'other', icon: 'moreH' as IconName, label: 'Other', color: C.lavender },
     ],
-    [C]
+    [C],
   );
+
+  const payerOptions: SegmentOption<PayerKey>[] = [
+    { key: 'mattia', label: 'Me' },
+    { key: 'sofia', label: partner?.displayName ?? 'Sofia', disabled: isSolo },
+  ];
+  const splitOptions: SegmentOption<SplitKey>[] = [
+    { key: '50/50', label: '50/50' },
+    { key: 'Me', label: 'Me' },
+    { key: 'Them', label: 'Them' },
+  ];
 
   const parsedAmount = Number(amt.replace(',', '.'));
   const amountValid = Number.isFinite(parsedAmount) && parsedAmount > 0;
@@ -67,8 +90,7 @@ export default function NewExpense() {
     if (!canSave || !user?.id) return;
     setSaving(true);
     try {
-      const payerId =
-        by === 'mattia' ? user.id : (partner?.id ?? user.id);
+      const payerId = by === 'mattia' ? user.id : (partner?.id ?? user.id);
       const payload = {
         title: what.trim(),
         amount: parsedAmount,
@@ -76,7 +98,7 @@ export default function NewExpense() {
         currency: 'EUR',
         splitType: SPLIT_TYPE[split],
         category: cat,
-        date: existing?.date ?? format(new Date(), 'yyyy-MM-dd'),
+        date: format(date, 'yyyy-MM-dd'),
       };
       if (isEdit && id) {
         await update(id, payload);
@@ -99,11 +121,7 @@ export default function NewExpense() {
       eyebrowColor={C.mint}
       title={isEdit ? 'Edit expense.' : 'Keep tabs.'}
       footer={
-        <PrimaryButton
-          icon="check"
-          onPress={onSave}
-          disabled={!canSave}
-        >
+        <PrimaryButton icon="check" onPress={onSave} disabled={!canSave}>
           {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add expense'}
         </PrimaryButton>
       }
@@ -139,139 +157,60 @@ export default function NewExpense() {
         </View>
       </View>
 
-      <Overline style={{ marginBottom: 8 }}>For what</Overline>
-      <TextInput
-        testID="new-expense-what-input"
-        value={what}
-        onChangeText={setWhat}
-        placeholder="Groceries, dinner, rent..."
-        placeholderTextColor={C.fog}
-        style={{
-          color: C.bone,
-          fontFamily: F.displayBold,
-          fontSize: 20,
-          paddingVertical: 6,
-          borderBottomWidth: 2,
-          borderBottomColor: what ? C.mint : C.line,
-        }}
-      />
+      <SheetSection title="For what" first>
+        <SheetTitleField
+          testID="new-expense-what-input"
+          value={what}
+          onChangeText={setWhat}
+          placeholder="Groceries, dinner, rent..."
+          accent={C.mint}
+        />
+      </SheetSection>
 
-      <View style={{ marginTop: 22 }}>
-        <Overline style={{ marginBottom: 10 }}>Category</Overline>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={{ flexDirection: 'row', gap: 8, paddingRight: 12 }}>
-            {cats.map((c) => {
-              const sel = cat === c.k;
-              return (
-                <PressScale
-                  key={c.k}
-                  testID={`new-expense-cat-${c.k}`}
-                  onPress={() => {
-                    Haptics.selectionAsync().catch(() => undefined);
-                    setCat(c.k);
-                  }}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 8,
-                    paddingVertical: 10,
-                    paddingHorizontal: 14,
-                    borderRadius: 999,
-                    backgroundColor: sel ? `${c.color}26` : 'transparent',
-                    borderWidth: 1,
-                    borderColor: sel ? c.color : C.line,
-                  }}
-                >
-                  <Icon name={c.icon} size={14} color={sel ? c.color : C.fog} />
-                  <Text
-                    style={{
-                      color: sel ? c.color : C.mist,
-                      fontFamily: F.bodyBold,
-                      fontSize: 12,
-                    }}
-                  >
-                    {c.label}
-                  </Text>
-                </PressScale>
-              );
-            })}
-          </View>
-        </ScrollView>
-      </View>
+      <SheetSection title="Category">
+        <SheetIconLabelPicker
+          options={cats}
+          selected={cat}
+          onChange={setCat}
+          testIDPrefix="new-expense-cat"
+        />
+      </SheetSection>
 
-      <View style={{ marginTop: 20, flexDirection: 'row', gap: 10 }}>
+      <SheetSection title="Date">
+        <SheetRow>
+          <SheetDateField
+            pressTestID="new-expense-date"
+            value={date}
+            onChange={setDate}
+            accent={C.mint}
+            open={dateOpen}
+            onPress={() => setDateOpen((v) => !v)}
+          />
+        </SheetRow>
+      </SheetSection>
+
+      <SheetRow style={{ marginTop: 22 }}>
         <View style={{ flex: 1 }}>
           <Overline style={{ marginBottom: 10 }}>Paid by</Overline>
-          <View style={{ flexDirection: 'row', gap: 6 }}>
-            {(
-              [
-                { k: 'mattia', l: 'Me' },
-                { k: 'sofia', l: partner?.displayName ?? 'Sofia' },
-              ] as const
-            ).map((p) => {
-              const sel = by === p.k;
-              const disabled = p.k === 'sofia' && isSolo;
-              return (
-                <PressScale
-                  key={p.k}
-                  testID={`new-expense-paidby-${p.k}`}
-                  onPress={() => {
-                    if (disabled) return;
-                    Haptics.selectionAsync().catch(() => undefined);
-                    setBy(p.k);
-                  }}
-                  disabled={disabled}
-                  style={{
-                    flex: 1,
-                    paddingVertical: 11,
-                    borderRadius: 12,
-                    backgroundColor: sel ? C.cardHi : 'transparent',
-                    borderWidth: 1,
-                    borderColor: sel ? C.gold : C.line,
-                    alignItems: 'center',
-                    opacity: disabled ? 0.4 : 1,
-                  }}
-                >
-                  <Text style={{ color: sel ? C.bone : C.mist, fontFamily: F.bodyBold, fontSize: 12 }}>
-                    {p.l}
-                  </Text>
-                </PressScale>
-              );
-            })}
-          </View>
+          <SheetSegment
+            options={payerOptions}
+            selected={by}
+            onChange={setBy}
+            accent={C.mint}
+            testIDPrefix="new-expense-paidby"
+          />
         </View>
         <View style={{ flex: 1 }}>
           <Overline style={{ marginBottom: 10 }}>Split</Overline>
-          <View style={{ flexDirection: 'row', gap: 6 }}>
-            {(['50/50', 'Me', 'Them'] as SplitKey[]).map((s) => {
-              const sel = split === s;
-              return (
-                <PressScale
-                  key={s}
-                  testID={`new-expense-split-${s}`}
-                  onPress={() => {
-                    Haptics.selectionAsync().catch(() => undefined);
-                    setSplit(s);
-                  }}
-                  style={{
-                    flex: 1,
-                    paddingVertical: 11,
-                    borderRadius: 12,
-                    backgroundColor: sel ? C.cardHi : 'transparent',
-                    borderWidth: 1,
-                    borderColor: sel ? C.gold : C.line,
-                    alignItems: 'center',
-                  }}
-                >
-                  <Text style={{ color: sel ? C.bone : C.mist, fontFamily: F.bodyBold, fontSize: 11 }}>
-                    {s}
-                  </Text>
-                </PressScale>
-              );
-            })}
-          </View>
+          <SheetSegment
+            options={splitOptions}
+            selected={split}
+            onChange={setSplit}
+            accent={C.mint}
+            testIDPrefix="new-expense-split"
+          />
         </View>
-      </View>
+      </SheetRow>
     </SheetShell>
   );
 }

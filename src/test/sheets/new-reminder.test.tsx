@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('expo-router', () => ({
   router: { back: vi.fn(), push: vi.fn() },
   Stack: { Screen: () => null },
+  useLocalSearchParams: () => ({}),
 }));
 
 vi.mock('expo-haptics', () => ({
@@ -60,12 +61,12 @@ describe('new-reminder sheet', () => {
     sessionState.isSolo = false;
   });
 
-  it('renders 3 priority buttons', async () => {
+  it('renders all 6 category icons', async () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<NewReminder />); await flush(); });
-    expect(findByTestID(renderer.root, 'new-reminder-priority-low')).toBeDefined();
-    expect(findByTestID(renderer.root, 'new-reminder-priority-med')).toBeDefined();
-    expect(findByTestID(renderer.root, 'new-reminder-priority-high')).toBeDefined();
+    for (const k of ['General', 'DateNight', 'Anniversary', 'Health', 'Bills', 'Travel']) {
+      expect(findByTestID(renderer.root, `new-reminder-cat-${k}`)).toBeDefined();
+    }
     act(() => renderer.unmount());
   });
 
@@ -91,12 +92,12 @@ describe('new-reminder sheet', () => {
     act(() => renderer.unmount());
   });
 
-  it('toggles the inline date picker when the date field is tapped', async () => {
+  it('toggles the native date picker when the date field is tapped', async () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<NewReminder />); await flush(); });
-    expect(findByTestID(renderer.root, 'new-reminder-picker-date')).toBeUndefined();
+    expect(findByTestID(renderer.root, 'new-reminder-date-picker')).toBeUndefined();
     await act(async () => { findByTestID(renderer.root, 'new-reminder-date').props.onPress(); await flush(); });
-    expect(findByTestID(renderer.root, 'new-reminder-picker-date')).toBeDefined();
+    expect(findByTestID(renderer.root, 'new-reminder-date-picker')).toBeDefined();
     act(() => renderer.unmount());
   });
 

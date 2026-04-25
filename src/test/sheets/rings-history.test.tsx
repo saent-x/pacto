@@ -6,6 +6,7 @@ vi.mock('expo-router', () => ({
   router: routerSpy,
   useRouter: () => routerSpy,
   Stack: { Screen: () => null },
+  useLocalSearchParams: () => ({}),
 }));
 
 vi.mock('expo-haptics', () => ({

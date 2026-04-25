@@ -2,13 +2,29 @@ import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, Text, TextInput, View } from 'react-native';
-import { Overline, Pill, PrimaryButton } from '@/src/components/ui/atoms';
+import { PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon } from '@/src/components/ui/Icon';
-import { SheetShell } from '@/src/components/ui/SheetShell';
+import {
+  SheetIconGrid,
+  SheetRow,
+  SheetSection,
+  SheetShell,
+  SheetTitleField,
+  type IconOption,
+} from '@/src/components/ui/SheetShell';
 import { useAllWishlistItems, useQuickAddWishItem } from '@/src/hooks/useWishlists';
 import { useTheme } from '@/src/lib/theme';
 
-const TAGS = ['HOME', 'TRAVEL', 'TREATS', 'BIG', 'KITCHEN', 'CLOTHES'];
+type Tag = 'HOME' | 'TRAVEL' | 'TREATS' | 'BIG' | 'KITCHEN' | 'CLOTHES';
+
+const TAGS: IconOption<Tag>[] = [
+  { key: 'HOME', icon: 'home' },
+  { key: 'TRAVEL', icon: 'mapPin' },
+  { key: 'TREATS', icon: 'gift' },
+  { key: 'BIG', icon: 'star' },
+  { key: 'KITCHEN', icon: 'coffee' },
+  { key: 'CLOTHES', icon: 'shoppingBag' },
+];
 
 export default function NewWish() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -24,7 +40,7 @@ export default function NewWish() {
   const [price, setPrice] = useState(
     existing?.price != null ? String(existing.price) : '',
   );
-  const [tag, setTag] = useState(existing?.tag ?? 'HOME');
+  const [tag, setTag] = useState<Tag>((existing?.tag as Tag) ?? 'HOME');
   const [url, setUrl] = useState(existing?.url ?? '');
   const [saving, setSaving] = useState(false);
 
@@ -68,26 +84,30 @@ export default function NewWish() {
         </PrimaryButton>
       }
     >
-      <Overline style={{ marginBottom: 8 }}>What</Overline>
-      <TextInput
-        testID="new-wish-title-input"
-        value={title}
-        onChangeText={setTitle}
-        placeholder="Linen throw, oatmeal..."
-        placeholderTextColor={C.fog}
-        style={{
-          color: C.bone,
-          fontFamily: F.displayBold,
-          fontSize: 22,
-          paddingVertical: 6,
-          borderBottomWidth: 2,
-          borderBottomColor: title ? C.peach : C.line,
-        }}
-      />
+      <SheetSection title="What" first>
+        <SheetTitleField
+          testID="new-wish-title-input"
+          value={title}
+          onChangeText={setTitle}
+          placeholder="Linen throw, oatmeal..."
+          accent={C.peach}
+        />
+      </SheetSection>
 
-      <View style={{ marginTop: 22, flexDirection: 'row', gap: 10 }}>
+      <SheetRow style={{ marginTop: 22 }}>
         <View style={{ flex: 1 }}>
-          <Overline style={{ marginBottom: 8 }}>Price</Overline>
+          <Text
+            style={{
+              fontFamily: F.bodyBold,
+              fontSize: 10,
+              letterSpacing: 1.4,
+              textTransform: 'uppercase',
+              color: C.fog,
+              marginBottom: 10,
+            }}
+          >
+            Price
+          </Text>
           <View
             style={{
               flexDirection: 'row',
@@ -96,9 +116,9 @@ export default function NewWish() {
               backgroundColor: C.card,
               borderWidth: 1,
               borderColor: C.line,
-              borderRadius: 12,
+              borderRadius: 14,
               paddingHorizontal: 14,
-              paddingVertical: 10,
+              paddingVertical: 12,
             }}
           >
             <Text style={{ color: C.fog, fontFamily: F.bodyBold }}>€</Text>
@@ -119,7 +139,18 @@ export default function NewWish() {
           </View>
         </View>
         <View style={{ flex: 1.3 }}>
-          <Overline style={{ marginBottom: 8 }}>Link</Overline>
+          <Text
+            style={{
+              fontFamily: F.bodyBold,
+              fontSize: 10,
+              letterSpacing: 1.4,
+              textTransform: 'uppercase',
+              color: C.fog,
+              marginBottom: 10,
+            }}
+          >
+            Link
+          </Text>
           <View
             style={{
               flexDirection: 'row',
@@ -128,9 +159,9 @@ export default function NewWish() {
               backgroundColor: C.card,
               borderWidth: 1,
               borderColor: C.line,
-              borderRadius: 12,
+              borderRadius: 14,
               paddingHorizontal: 14,
-              paddingVertical: 10,
+              paddingVertical: 12,
             }}
           >
             <Icon name="link" size={14} color={C.fog} />
@@ -149,25 +180,17 @@ export default function NewWish() {
             />
           </View>
         </View>
-      </View>
+      </SheetRow>
 
-      <View style={{ marginTop: 22 }}>
-        <Overline style={{ marginBottom: 10 }}>Tag</Overline>
-        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-          {TAGS.map((t) => (
-            <Pill
-              key={t}
-              testID={`new-wish-tag-${t}`}
-              active={tag === t}
-              activeBg={`${C.peach}33`}
-              activeColor={C.peach}
-              onPress={() => setTag(t)}
-            >
-              {t}
-            </Pill>
-          ))}
-        </View>
-      </View>
+      <SheetSection title="Tag">
+        <SheetIconGrid
+          options={TAGS}
+          selected={tag}
+          onChange={setTag}
+          accent={C.peach}
+          testIDPrefix="new-wish-tag"
+        />
+      </SheetSection>
     </SheetShell>
   );
 }

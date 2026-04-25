@@ -84,6 +84,50 @@ vi.mock('react-native-svg', () => {
   };
 });
 
+// SheetShell imports DateTimePicker at module scope. Its web build uses
+// Flow-style type imports that Vitest's parser can't handle. Stub it.
+vi.mock('@react-native-community/datetimepicker', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
+// SheetShell + atoms use reanimated for ToggleRow, Pill scale, etc. Tests
+// that don't already mock reanimated would hit native bindings. Provide a
+// passthrough mock matching the shape used across the suite.
+vi.mock('react-native-reanimated', () => {
+  const Reactx = require('react');
+  const MockView = (props: any) => Reactx.createElement('AnimatedView', props, props.children);
+  const MockScrollView = (props: any) => Reactx.createElement('AnimatedScrollView', props, props.children);
+  const chainable: any = {
+    duration: () => chainable,
+    delay: () => chainable,
+    springify: () => chainable,
+    damping: () => chainable,
+    stiffness: () => chainable,
+  };
+  return {
+    __esModule: true,
+    default: { View: MockView, ScrollView: MockScrollView, createAnimatedComponent: (C: any) => C },
+    View: MockView,
+    ScrollView: MockScrollView,
+    createAnimatedComponent: (C: any) => C,
+    FadeIn: chainable,
+    FadeInDown: chainable,
+    LinearTransition: chainable,
+    ZoomIn: chainable,
+    Easing: { inOut: () => 0, out: (fn: any) => fn ?? 0, cubic: (v: any) => v, bezier: () => 0, ease: 0 },
+    useSharedValue: (v: any) => ({ value: v }),
+    useAnimatedStyle: (fn: any) => fn(),
+    withTiming: (v: any) => v,
+    withDelay: (_d: any, v: any) => v,
+    useReducedMotion: () => false,
+    useAnimatedProps: (fn: any) => fn(),
+    interpolateColor: () => '#000000',
+    withSpring: (v: any) => v,
+    runOnJS: (fn: any) => fn,
+  };
+});
+
 const reactActEnv = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
 };

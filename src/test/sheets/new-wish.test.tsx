@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('expo-router', () => ({
   router: { back: vi.fn(), push: vi.fn() },
   Stack: { Screen: () => null },
+  useLocalSearchParams: () => ({}),
 }));
 
 vi.mock('expo-haptics', () => ({
@@ -31,6 +32,7 @@ const wishState = vi.hoisted(() => ({
 
 vi.mock('@/src/hooks/useWishlists', () => ({
   useQuickAddWishItem: () => ({ add: wishState.add }),
+  useAllWishlistItems: () => ({ items: [] }),
 }));
 
 import NewWish from '@/app/sheets/new-wish';

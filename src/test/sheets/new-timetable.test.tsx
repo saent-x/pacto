@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('expo-router', () => ({
   router: { back: vi.fn(), push: vi.fn() },
   Stack: { Screen: () => null },
+  useLocalSearchParams: () => ({}),
 }));
 
 vi.mock('expo-haptics', () => ({

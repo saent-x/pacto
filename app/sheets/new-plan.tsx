@@ -1,28 +1,33 @@
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, ScrollView, Text, TextInput, View } from 'react-native';
-import { Overline, Pill, PrimaryButton } from '@/src/components/ui/atoms';
+import { Alert, Text, View } from 'react-native';
+import { PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
-import { PressScale } from '@/src/components/ui/PressScale';
-import { SheetShell } from '@/src/components/ui/SheetShell';
+import {
+  SheetColorGrid,
+  SheetIconGrid,
+  SheetPreviewCard,
+  SheetSection,
+  SheetShell,
+  SheetTitleField,
+  type IconOption,
+} from '@/src/components/ui/SheetShell';
 import { usePlans } from '@/src/hooks/usePlans';
 import { useTheme } from '@/src/lib/theme';
 
-const ICONS: IconName[] = [
-  'compass',
-  'mapPin',
-  'home',
-  'heart',
-  'gift',
-  'star',
-  'coffee',
-  'camera',
-  'briefcase',
-  'book',
+const ICONS: IconOption<IconName>[] = [
+  { key: 'compass', icon: 'compass' },
+  { key: 'mapPin', icon: 'mapPin' },
+  { key: 'home', icon: 'home' },
+  { key: 'heart', icon: 'heart' },
+  { key: 'gift', icon: 'gift' },
+  { key: 'star', icon: 'star' },
+  { key: 'coffee', icon: 'coffee' },
+  { key: 'camera', icon: 'camera' },
+  { key: 'briefcase', icon: 'briefcase' },
+  { key: 'book', icon: 'book' },
 ];
-
-const TARGETS = ['This month', 'Next month', '3 months', '6 months', 'This year', '2027+'];
 
 type Bucket = 'Soon' | 'Ongoing' | 'Later' | 'Someday';
 
@@ -32,6 +37,13 @@ const BUCKET_CANON: Record<Bucket, string> = {
   Later: 'Later this year',
   Someday: 'Someday',
 };
+
+const BUCKETS: { key: Bucket; icon: IconName }[] = [
+  { key: 'Soon', icon: 'zap' },
+  { key: 'Ongoing', icon: 'repeat' },
+  { key: 'Later', icon: 'clock' },
+  { key: 'Someday', icon: 'star' },
+];
 
 function bucketFromCanon(canonical: string | null | undefined): Bucket {
   switch (canonical) {
@@ -55,15 +67,16 @@ export default function NewPlan() {
     () => (isEdit && id ? plans.find((p) => p.id === id) : undefined),
     [isEdit, id, plans],
   );
-  const colors = [C.sky, C.peach, C.butter, C.mint, C.rose, C.lavender, C.gold];
+  const colorOptions = useMemo(
+    () => [C.sky, C.peach, C.butter, C.mint, C.rose, C.lavender, C.gold].map((v) => ({ key: v, value: v })),
+    [C],
+  );
   const [title, setTitle] = useState(existing?.title ?? '');
-  const [sub, setSub] = useState(existing?.description ?? '');
   const [icon, setIcon] = useState<IconName>((existing?.icon as IconName) ?? 'compass');
   const [color, setColor] = useState<string>(existing?.color ?? C.sky);
   const [bucket, setBucket] = useState<Bucket>(
     existing ? bucketFromCanon(existing.bucket) : 'Soon',
   );
-  const [target, setTarget] = useState(existing?.category ?? 'This month');
   const [saving, setSaving] = useState(false);
 
   const canSave = title.trim().length > 0 && !saving;
@@ -74,8 +87,8 @@ export default function NewPlan() {
     try {
       const payload = {
         title: title.trim(),
-        description: sub.trim() || null,
-        category: target,
+        description: null,
+        category: BUCKET_CANON[bucket],
         bucket: BUCKET_CANON[bucket],
         icon,
         color,
@@ -97,16 +110,6 @@ export default function NewPlan() {
     }
   };
 
-  const buckets: { k: Bucket; sub: string; color: string }[] = useMemo(
-    () => [
-      { k: 'Soon', sub: 'weeks', color: C.peach },
-      { k: 'Ongoing', sub: 'always-on', color: C.butter },
-      { k: 'Later', sub: 'months', color: C.mint },
-      { k: 'Someday', sub: 'dreamy', color: C.lavender },
-    ],
-    [C]
-  );
-
   return (
     <SheetShell
       eyebrow={isEdit ? 'EDIT PLAN' : 'NEW PLAN'}
@@ -118,8 +121,7 @@ export default function NewPlan() {
         </PrimaryButton>
       }
     >
-      {/* Preview card */}
-      <View style={{ backgroundColor: color, borderRadius: 20, padding: 18, marginBottom: 20 }}>
+      <SheetPreviewCard bg={color} ink="#1A0F0A">
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <View style={{ flex: 1 }}>
             <Text
@@ -146,17 +148,6 @@ export default function NewPlan() {
             >
               {title || 'Your plan title'}
             </Text>
-            <Text
-              style={{
-                fontSize: 11,
-                color: '#1A0F0A',
-                opacity: 0.6,
-                fontFamily: F.body,
-                marginTop: 2,
-              }}
-            >
-              {sub || target}
-            </Text>
           </View>
           <View
             style={{
@@ -171,170 +162,46 @@ export default function NewPlan() {
             <Icon name={icon} size={16} color="#1A0F0A" />
           </View>
         </View>
-      </View>
+      </SheetPreviewCard>
 
-      <Overline style={{ marginBottom: 8 }}>Title</Overline>
-      <TextInput
-        testID="new-plan-title-input"
-        value={title}
-        onChangeText={setTitle}
-        placeholder="Venice weekend, buy the apartment..."
-        placeholderTextColor={C.fog}
-        style={{
-          color: C.bone,
-          fontFamily: F.displayBold,
-          fontSize: 22,
-          paddingVertical: 6,
-          borderBottomWidth: 2,
-          borderBottomColor: title ? color : C.line,
-        }}
-      />
-
-      <View style={{ marginTop: 20 }}>
-        <Overline style={{ marginBottom: 8 }}>Subtitle</Overline>
-        <TextInput
-          testID="new-plan-sub-input"
-          value={sub}
-          onChangeText={setSub}
-          placeholder="3 days, weekends, target late 2026..."
-          placeholderTextColor={C.fog}
-          style={{
-            backgroundColor: C.card,
-            borderWidth: 1,
-            borderColor: C.line,
-            borderRadius: 12,
-            color: C.bone,
-            fontFamily: F.body,
-            fontSize: 14,
-            paddingVertical: 12,
-            paddingHorizontal: 14,
-          }}
+      <SheetSection title="Title" first>
+        <SheetTitleField
+          testID="new-plan-title-input"
+          value={title}
+          onChangeText={setTitle}
+          placeholder="Venice weekend, buy the apartment..."
+          accent={color}
         />
-      </View>
+      </SheetSection>
 
-      <View style={{ marginTop: 22 }}>
-        <Overline style={{ marginBottom: 10 }}>Bucket</Overline>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {buckets.map((b) => {
-            const sel = bucket === b.k;
-            return (
-              <PressScale
-                key={b.k}
-                testID={`new-plan-bucket-${b.k}`}
-                onPress={() => {
-                  Haptics.selectionAsync().catch(() => undefined);
-                  setBucket(b.k);
-                }}
-                style={{
-                  width: '48%',
-                  paddingVertical: 12,
-                  paddingHorizontal: 14,
-                  borderRadius: 14,
-                  backgroundColor: sel ? `${b.color}26` : C.card,
-                  borderWidth: 1,
-                  borderColor: sel ? b.color : C.line,
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontFamily: F.bodyBold,
-                    color: sel ? b.color : C.bone,
-                  }}
-                >
-                  {b.k}
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 10,
-                    fontFamily: F.bodyBold,
-                    color: C.fog,
-                    marginTop: 2,
-                    letterSpacing: 0.4,
-                  }}
-                >
-                  {b.sub}
-                </Text>
-              </PressScale>
-            );
-          })}
-        </View>
-      </View>
+      <SheetSection title="Bucket">
+        <SheetIconGrid
+          options={BUCKETS}
+          selected={bucket}
+          onChange={setBucket}
+          accent={color}
+          testIDPrefix="new-plan-bucket"
+        />
+      </SheetSection>
 
-      <View style={{ marginTop: 22 }}>
-        <Overline style={{ marginBottom: 10 }}>Target</Overline>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={{ flexDirection: 'row', gap: 8, paddingRight: 12 }}>
-            {TARGETS.map((t) => (
-              <Pill
-                key={t}
-                testID={`new-plan-target-${t}`}
-                active={target === t}
-                activeBg={`${color}33`}
-                activeColor={color}
-                onPress={() => setTarget(t)}
-              >
-                {t}
-              </Pill>
-            ))}
-          </View>
-        </ScrollView>
-      </View>
+      <SheetSection title="Icon">
+        <SheetIconGrid
+          options={ICONS}
+          selected={icon}
+          onChange={setIcon}
+          accent={color}
+          testIDPrefix="new-plan-icon"
+        />
+      </SheetSection>
 
-      <View style={{ marginTop: 22 }}>
-        <Overline style={{ marginBottom: 10 }}>Icon</Overline>
-        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-          {ICONS.map((i) => {
-            const sel = icon === i;
-            return (
-              <PressScale
-                key={i}
-                testID={`new-plan-icon-${i}`}
-                onPress={() => {
-                  Haptics.selectionAsync().catch(() => undefined);
-                  setIcon(i);
-                }}
-                style={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: 13,
-                  backgroundColor: sel ? `${color}33` : C.card,
-                  borderWidth: 1,
-                  borderColor: sel ? color : C.line,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Icon name={i} size={17} color={sel ? color : C.mist} />
-              </PressScale>
-            );
-          })}
-        </View>
-      </View>
-
-      <View style={{ marginTop: 22 }}>
-        <Overline style={{ marginBottom: 10 }}>Color</Overline>
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          {colors.map((c) => (
-            <PressScale
-              key={c}
-              testID={`new-plan-color-${c}`}
-              onPress={() => {
-                Haptics.selectionAsync().catch(() => undefined);
-                setColor(c);
-              }}
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 16,
-                backgroundColor: c,
-                borderWidth: 3,
-                borderColor: color === c ? 'rgba(255,255,255,0.35)' : 'transparent',
-              }}
-            />
-          ))}
-        </View>
-      </View>
+      <SheetSection title="Color">
+        <SheetColorGrid
+          colors={colorOptions}
+          selected={color}
+          onChange={setColor}
+          testIDPrefix="new-plan-color"
+        />
+      </SheetSection>
     </SheetShell>
   );
 }

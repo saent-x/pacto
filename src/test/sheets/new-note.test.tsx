@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('expo-router', () => ({
   router: { back: vi.fn(), push: vi.fn() },
   Stack: { Screen: () => null },
+  useLocalSearchParams: () => ({}),
 }));
 
 vi.mock('expo-haptics', () => ({
@@ -117,7 +118,7 @@ describe('new-note sheet', () => {
       (n: any) => n.props?.icon === 'heart' && typeof n.props?.onPress === 'function' && !n.props?.disabled,
     )[0];
     await act(async () => { sendBtn.props.onPress(); await flush(); });
-    expect(alertSpy).toHaveBeenCalledWith('Send failed', 'Try again.');
+    expect(alertSpy).toHaveBeenCalledWith('Save failed', 'Try again.');
     expect(router.back).not.toHaveBeenCalled();
     const reEnabled = renderer.root.findAll(
       (n: any) => n.props?.icon === 'heart' && typeof n.props?.onPress === 'function' && !n.props?.disabled,

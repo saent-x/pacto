@@ -1,18 +1,27 @@
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, Text, TextInput, View } from 'react-native';
+import { Alert, Text, View } from 'react-native';
 import { Overline, Pill, PrimaryButton } from '@/src/components/ui/atoms';
-import { Icon, IconName } from '@/src/components/ui/Icon';
-import { SheetShell } from '@/src/components/ui/SheetShell';
+import { Icon } from '@/src/components/ui/Icon';
+import {
+  SheetSection,
+  SheetSegment,
+  SheetShell,
+  SheetTitleField,
+  type SegmentOption,
+} from '@/src/components/ui/SheetShell';
 import { useTheme } from '@/src/lib/theme';
 import { useTaskLists } from '@/src/hooks/useTaskLists';
 import { useTaskItems } from '@/src/hooks/useTasks';
 
-const PRIORITIES: { k: 'low' | 'med' | 'high'; icon: IconName; dots: number; num: number }[] = [
-  { k: 'low', icon: 'arrowDown', dots: 1, num: 1 },
-  { k: 'med', icon: 'minus', dots: 2, num: 2 },
-  { k: 'high', icon: 'chevronsUp', dots: 3, num: 3 },
+type Priority = 'low' | 'med' | 'high';
+
+const PRIORITY_NUM: Record<Priority, number> = { low: 1, med: 2, high: 3 };
+const PRIORITY_OPTS: SegmentOption<Priority>[] = [
+  { key: 'low', label: 'Low' },
+  { key: 'med', label: 'Med' },
+  { key: 'high', label: 'High' },
 ];
 
 const MONTH_LABELS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -75,7 +84,7 @@ export default function NewTask() {
     [isEdit, id, tasks],
   );
 
-  const initialPriority = ((): 'low' | 'med' | 'high' => {
+  const initialPriority: Priority = (() => {
     if (!existing) return 'med';
     if (existing.priority >= 3) return 'high';
     if (existing.priority === 1) return 'low';
@@ -86,7 +95,7 @@ export default function NewTask() {
   const [bucketLabel, setBucketLabel] = useState<string>(
     existing ? bucketLabelFor(buckets, existing.due_date) : buckets[0].label,
   );
-  const [priority, setPriority] = useState<'low' | 'med' | 'high'>(initialPriority);
+  const [priority, setPriority] = useState<Priority>(initialPriority);
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -94,20 +103,16 @@ export default function NewTask() {
     if (!trimmed || !listId || saving) return;
     setSaving(true);
     try {
-      const prio = PRIORITIES.find((p) => p.k === priority)!.num;
       const bucket = buckets.find((b) => b.label === bucketLabel) ?? buckets[0];
+      const payload = {
+        title: trimmed,
+        due_date: dueIso(bucket.offsetDays),
+        priority: PRIORITY_NUM[priority],
+      };
       if (isEdit && id) {
-        await update(id, {
-          title: trimmed,
-          due_date: dueIso(bucket.offsetDays),
-          priority: prio,
-        });
+        await update(id, payload);
       } else {
-        await create({
-          title: trimmed,
-          due_date: dueIso(bucket.offsetDays),
-          priority: prio,
-        });
+        await create(payload);
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
@@ -134,26 +139,19 @@ export default function NewTask() {
         </PrimaryButton>
       }
     >
-      <Overline style={{ marginBottom: 8 }}>What needs doing</Overline>
-      <TextInput
-        testID="new-task-title-input"
-        value={title}
-        onChangeText={setTitle}
-        placeholder="Pack travel documents..."
-        placeholderTextColor={C.fog}
-        autoFocus
-        style={{
-          color: C.bone,
-          fontFamily: F.displayBold,
-          fontSize: 22,
-          paddingVertical: 6,
-          borderBottomWidth: 2,
-          borderBottomColor: title ? color : C.line,
-        }}
-      />
+      <SheetSection title="What needs doing" first>
+        <SheetTitleField
+          testID="new-task-title-input"
+          value={title}
+          onChangeText={setTitle}
+          placeholder="Pack travel documents..."
+          accent={color}
+          autoFocus
+        />
+      </SheetSection>
 
-      <View style={{ marginTop: 22 }}>
-        <Overline style={{ marginBottom: 10 }}>When</Overline>
+      <SheetSection title="When">
+        {/* EXCEPTION: relative-time labels (Today/Tomorrow/etc) — no meaningful icon mapping */}
         <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
           {buckets.map((b) => (
             <Pill
@@ -168,49 +166,17 @@ export default function NewTask() {
             </Pill>
           ))}
         </View>
-      </View>
+      </SheetSection>
 
-      <View style={{ marginTop: 22 }}>
-        <Overline style={{ marginBottom: 10 }}>Priority</Overline>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          {PRIORITIES.map((p) => {
-            const sel = priority === p.k;
-            return (
-              <Pressable
-                key={p.k}
-                testID={`new-task-priority-${p.k}`}
-                onPress={() => setPriority(p.k)}
-                style={{
-                  flex: 1,
-                  paddingVertical: 14,
-                  borderRadius: 16,
-                  backgroundColor: sel ? `${color}26` : 'transparent',
-                  borderWidth: 1,
-                  borderColor: sel ? color : C.line,
-                  alignItems: 'center',
-                  gap: 6,
-                }}
-              >
-                <Icon name={p.icon} size={18} color={sel ? color : C.mist} strokeWidth={2.5} />
-                <View style={{ flexDirection: 'row', gap: 3 }}>
-                  {[0, 1, 2].map((i) => (
-                    <View
-                      key={i}
-                      style={{
-                        width: 4,
-                        height: 4,
-                        borderRadius: 2,
-                        backgroundColor:
-                          i < p.dots ? (sel ? color : C.mist) : sel ? `${color}33` : C.line,
-                      }}
-                    />
-                  ))}
-                </View>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
+      <SheetSection title="Priority">
+        <SheetSegment
+          options={PRIORITY_OPTS}
+          selected={priority}
+          onChange={setPriority}
+          accent={color}
+          testIDPrefix="new-task-priority"
+        />
+      </SheetSection>
 
       {list ? (
         <View

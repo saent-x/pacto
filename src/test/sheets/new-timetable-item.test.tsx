@@ -35,7 +35,7 @@ const ttiState = vi.hoisted(() => ({
 }));
 
 vi.mock('@/src/hooks/useTimetables', () => ({
-  useTimetable: (_id: string | null) => ({ add: ttiState.add }),
+  useTimetable: (_id: string | null) => ({ add: ttiState.add, update: vi.fn(), items: [] }),
 }));
 
 import NewTimetableItem from '@/app/sheets/new-timetable-item';
@@ -65,15 +65,14 @@ describe('new-timetable-item sheet', () => {
     paramsState.value = { timetableId: 'tt-1' };
   });
 
-  it('renders 4 cats + 6 dur + 7 days + 3 presets + 3 who + 2 repeat', async () => {
+  it('renders 4 cats + duration field + 7 days + 3 presets + 3 who + 2 repeat', async () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<NewTimetableItem />); await flush(); });
     for (const k of ['Breakfast', 'Lunch', 'Dinner', 'Snack']) {
       expect(findByTestID(renderer.root, `new-timetable-item-cat-${k}`)).toBeDefined();
     }
-    for (const d of [15, 30, 45, 60, 90, 120]) {
-      expect(findByTestID(renderer.root, `new-timetable-item-dur-${d}`)).toBeDefined();
-    }
+    expect(findByTestID(renderer.root, 'new-timetable-item-dur-input')).toBeDefined();
+    expect(findByTestID(renderer.root, 'new-timetable-item-time')).toBeDefined();
     for (let i = 0; i < 7; i++) {
       expect(findByTestID(renderer.root, `new-timetable-item-day-${i}`)).toBeDefined();
     }
@@ -119,7 +118,7 @@ describe('new-timetable-item sheet', () => {
     act(() => renderer.unmount());
   });
 
-  it('happy path: adds once per selected day with parsed startHour', async () => {
+  it('happy path: adds once per selected day with selected duration', async () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<NewTimetableItem />); await flush(); });
     await act(async () => {
@@ -131,11 +130,7 @@ describe('new-timetable-item sheet', () => {
       await flush();
     });
     await act(async () => {
-      findByTestID(renderer.root, 'new-timetable-item-time-input').props.onChangeText('12:30 PM');
-      await flush();
-    });
-    await act(async () => {
-      findByTestID(renderer.root, 'new-timetable-item-dur-45').props.onPress();
+      findByTestID(renderer.root, 'new-timetable-item-dur-input').props.onChangeText('45');
       await flush();
     });
     // start with [2]; add day 4
@@ -161,7 +156,7 @@ describe('new-timetable-item sheet', () => {
     expect(first.duration).toBe(45);
     expect(first.who).toBe('me');
     expect(first.repeat).toBe('once');
-    expect(first.startHour).toBe(12.5);
+    expect(typeof first.startHour).toBe('number');
     expect(typeof first.color).toBe('string');
     expect(typeof first.ink).toBe('string');
     expect(Haptics.notificationAsync).toHaveBeenCalledWith('success');

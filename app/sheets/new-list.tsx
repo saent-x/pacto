@@ -1,16 +1,30 @@
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, TextInput, View } from 'react-native';
-import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
-import { Icon, IconName } from '@/src/components/ui/Icon';
-import { PressScale } from '@/src/components/ui/PressScale';
-import { SheetShell } from '@/src/components/ui/SheetShell';
+import { Alert } from 'react-native';
+import { PrimaryButton } from '@/src/components/ui/atoms';
+import { IconName } from '@/src/components/ui/Icon';
+import {
+  SheetColorGrid,
+  SheetIconGrid,
+  SheetSection,
+  SheetShell,
+  SheetTitleField,
+} from '@/src/components/ui/SheetShell';
 import { useTheme } from '@/src/lib/theme';
 import { useTaskLists, type PastelKey } from '@/src/hooks/useTaskLists';
 
-const ICONS: IconName[] = [
-  'shoppingBag', 'home', 'heart', 'briefcase', 'book', 'gift', 'mapPin', 'coffee', 'music', 'camera',
+const ICONS: { key: IconName; icon: IconName }[] = [
+  { key: 'shoppingBag', icon: 'shoppingBag' },
+  { key: 'home', icon: 'home' },
+  { key: 'heart', icon: 'heart' },
+  { key: 'briefcase', icon: 'briefcase' },
+  { key: 'book', icon: 'book' },
+  { key: 'gift', icon: 'gift' },
+  { key: 'mapPin', icon: 'mapPin' },
+  { key: 'coffee', icon: 'coffee' },
+  { key: 'music', icon: 'music' },
+  { key: 'camera', icon: 'camera' },
 ];
 
 const COLOR_KEYS: PastelKey[] = ['peach', 'lavender', 'butter', 'mint', 'rose', 'sky', 'gold', 'journal'];
@@ -18,7 +32,7 @@ const COLOR_KEYS: PastelKey[] = ['peach', 'lavender', 'butter', 'mint', 'rose', 
 export default function NewList() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEdit = Boolean(id);
-  const { C, F } = useTheme();
+  const { C } = useTheme();
   const { create, update, lists } = useTaskLists();
   const existing = useMemo(
     () => (isEdit && id ? lists.find((l) => l.id === id) : undefined),
@@ -33,6 +47,10 @@ export default function NewList() {
   const [saving, setSaving] = useState(false);
 
   const color = (C as any)[colorKey] as string;
+  const colorOptions = useMemo(
+    () => COLOR_KEYS.map((k) => ({ key: k, value: (C as any)[k] as string })),
+    [C],
+  );
 
   const handleSave = async () => {
     const trimmed = name.trim();
@@ -65,77 +83,34 @@ export default function NewList() {
         </PrimaryButton>
       }
     >
-      <Overline style={{ marginBottom: 8 }}>Name</Overline>
-      <TextInput
-        testID="new-list-name-input"
-        value={name}
-        onChangeText={setName}
-        placeholder="Anniversary plans..."
-        placeholderTextColor={C.fog}
-        style={{
-          color: C.bone,
-          fontFamily: F.displayBold,
-          fontSize: 22,
-          paddingVertical: 6,
-          borderBottomWidth: 2,
-          borderBottomColor: name ? color : C.line,
-        }}
-      />
+      <SheetSection title="Name" first>
+        <SheetTitleField
+          testID="new-list-name-input"
+          value={name}
+          onChangeText={setName}
+          placeholder="Anniversary plans..."
+          accent={color}
+        />
+      </SheetSection>
 
-      <View style={{ marginTop: 22 }}>
-        <Overline style={{ marginBottom: 10 }}>Icon</Overline>
-        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-          {ICONS.map((i) => {
-            const active = icon === i;
-            return (
-              <PressScale
-                key={i}
-                testID={`new-list-icon-${i}`}
-                onPress={() => {
-                  Haptics.selectionAsync().catch(() => undefined);
-                  setIcon(i);
-                }}
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 14,
-                  backgroundColor: active ? `${color}33` : C.card,
-                  borderWidth: 1,
-                  borderColor: active ? color : C.line,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Icon name={i} size={18} color={active ? color : C.mist} />
-              </PressScale>
-            );
-          })}
-        </View>
-      </View>
+      <SheetSection title="Icon">
+        <SheetIconGrid
+          options={ICONS}
+          selected={icon}
+          onChange={setIcon}
+          accent={color}
+          testIDPrefix="new-list-icon"
+        />
+      </SheetSection>
 
-      <View style={{ marginTop: 22 }}>
-        <Overline style={{ marginBottom: 10 }}>Color</Overline>
-        <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
-          {COLOR_KEYS.map((ck) => (
-            <PressScale
-              key={ck}
-              testID={`new-list-color-${ck}`}
-              onPress={() => {
-                Haptics.selectionAsync().catch(() => undefined);
-                setColorKey(ck);
-              }}
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 17,
-                backgroundColor: (C as any)[ck],
-                borderWidth: 3,
-                borderColor: colorKey === ck ? 'rgba(255,255,255,0.3)' : 'transparent',
-              }}
-            />
-          ))}
-        </View>
-      </View>
+      <SheetSection title="Color">
+        <SheetColorGrid
+          colors={colorOptions}
+          selected={colorKey}
+          onChange={setColorKey}
+          testIDPrefix="new-list-color"
+        />
+      </SheetSection>
     </SheetShell>
   );
 }

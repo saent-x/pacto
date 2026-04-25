@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('expo-router', () => ({
   router: { back: vi.fn(), push: vi.fn() },
   Stack: { Screen: () => null },
+  useLocalSearchParams: () => ({}),
 }));
 
 vi.mock('expo-haptics', () => ({
@@ -30,7 +31,7 @@ const planState = vi.hoisted(() => ({
 }));
 
 vi.mock('@/src/hooks/usePlans', () => ({
-  usePlans: () => ({ create: planState.create }),
+  usePlans: () => ({ create: planState.create, update: vi.fn(), plans: [] }),
 }));
 
 import NewPlan from '@/app/sheets/new-plan';
@@ -59,16 +60,11 @@ describe('new-plan sheet', () => {
     alertSpy.mockClear();
   });
 
-  it('renders 4 bucket pressables + 6 target pills + 10 icons + 7 colors', async () => {
+  it('renders 4 bucket tiles + 10 icons + 7 colors', async () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<NewPlan />); await flush(); });
     for (const b of ['Soon', 'Ongoing', 'Later', 'Someday']) {
       expect(findByTestID(renderer.root, `new-plan-bucket-${b}`)).toBeDefined();
-    }
-    for (const t of ['This month', 'Next month', '3 months', '6 months', 'This year', '2027+']) {
-      expect(
-        renderer.root.findAll((n: any) => n.props?.testID === `new-plan-target-${t}`).length,
-      ).toBeGreaterThan(0);
     }
     for (const i of ['compass', 'mapPin', 'home', 'heart', 'gift', 'star', 'coffee', 'camera', 'briefcase', 'book']) {
       expect(findByTestID(renderer.root, `new-plan-icon-${i}`)).toBeDefined();
@@ -99,15 +95,11 @@ describe('new-plan sheet', () => {
     act(() => renderer.unmount());
   });
 
-  it('happy path: bucket "Later" maps to "Later this year"; icon + target persist', async () => {
+  it('happy path: bucket "Later" maps to "Later this year"; icon persists', async () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<NewPlan />); await flush(); });
     await act(async () => {
       findByTestID(renderer.root, 'new-plan-title-input').props.onChangeText('Buy apartment');
-      await flush();
-    });
-    await act(async () => {
-      findByTestID(renderer.root, 'new-plan-sub-input').props.onChangeText('6-month savings plan');
       await flush();
     });
     await act(async () => {
@@ -118,17 +110,10 @@ describe('new-plan sheet', () => {
       findByTestID(renderer.root, 'new-plan-icon-home').props.onPress();
       await flush();
     });
-    await act(async () => {
-      const pill = renderer.root.findAll((n: any) => n.props?.testID === 'new-plan-target-6 months')[0];
-      pill.props.onPress();
-      await flush();
-    });
     await act(async () => { findSaveBtn(renderer.root, { enabled: true }).props.onPress(); await flush(); });
     const call = planState.create.mock.calls[0][0];
     expect(call.title).toBe('Buy apartment');
-    expect(call.description).toBe('6-month savings plan');
     expect(call.bucket).toBe('Later this year');
-    expect(call.category).toBe('6 months');
     expect(call.icon).toBe('home');
     expect(call.status).toBe('active');
     expect(typeof call.color).toBe('string');
