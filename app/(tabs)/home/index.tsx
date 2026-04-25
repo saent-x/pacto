@@ -181,12 +181,14 @@ export default function HomeRoute() {
     });
   }, [todayDate]);
 
+  const myMoodSet = !!myTodayCheckIn?.mood;
+  const partnerMoodSet = !!partnerTodayCheckIn?.mood;
   const rings = useMemo(() => {
     const together = isSolo
-      ? myTodayCheckIn
+      ? myMoodSet
         ? 1
         : 0
-      : ((myTodayCheckIn ? 1 : 0) + (partnerTodayCheckIn ? 1 : 0)) / 2;
+      : ((myMoodSet ? 1 : 0) + (partnerMoodSet ? 1 : 0)) / 2;
     const plans = todaySummary?.plans.total
       ? todaySummary.plans.done / todaySummary.plans.total
       : 0;
@@ -194,7 +196,7 @@ export default function HomeRoute() {
       ? todaySummary.focus.done / todaySummary.focus.total
       : 0;
     return { together, plans, focus };
-  }, [isSolo, myTodayCheckIn, partnerTodayCheckIn, todaySummary]);
+  }, [isSolo, myMoodSet, partnerMoodSet, todaySummary]);
 
   const ringAvg = (rings.together + rings.plans + rings.focus) / 3;
   const ringPct = Math.round(ringAvg * 100);
@@ -421,10 +423,10 @@ export default function HomeRoute() {
                     {
                       lbl: "TOGETHER",
                       v: isSolo
-                        ? myTodayCheckIn
+                        ? myMoodSet
                           ? "1/1"
                           : "0/1"
-                        : `${(myTodayCheckIn ? 1 : 0) + (partnerTodayCheckIn ? 1 : 0)}/2`,
+                        : `${(myMoodSet ? 1 : 0) + (partnerMoodSet ? 1 : 0)}/2`,
                       dot: C.peachInk,
                     },
                     {
