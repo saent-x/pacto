@@ -230,10 +230,24 @@ describe('UsIndex', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-04-23T09:00:00'));
     resetAll();
+    sessionState.isSolo = false;
+    sessionState.isCouple = true;
   });
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it('solo mode hides love-notes card and relabels header', async () => {
+    sessionState.isSolo = true;
+    sessionState.isCouple = false;
+    const renderer = await render();
+    const text = readText(renderer.root);
+    expect(text.join('')).toContain('MY SPACES · 7');
+    expect(text.join('')).not.toContain('OUR SHARED SPACES');
+    expect(findByTestID(renderer.root, 'us-card-notes').length).toBe(0);
+    expect(findByTestID(renderer.root, 'us-card-checkins').length).toBeGreaterThan(0);
+    act(() => renderer.unmount());
   });
 
   it('starts from shared spaces and omits removed editorial sections', async () => {

@@ -118,6 +118,20 @@ describe('Love notes interactions', () => {
     noteHookState.remove.mockClear();
     noteHookState.update.mockClear();
     (router.push as any).mockClear?.();
+    sessionState.isSolo = false;
+  });
+
+  it('solo mode renders empty state and no note bubbles', async () => {
+    sessionState.isSolo = true;
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<LoveNotes />); await flush(); });
+    const empty = renderer.root.findAll((n: any) => n.props?.testID === 'love-notes-solo-empty');
+    expect(empty.length).toBe(1);
+    const bubbles = renderer.root.findAll(
+      (n: any) => typeof n.props?.testID === 'string' && n.props.testID.startsWith('note-bubble-'),
+    );
+    expect(bubbles.length).toBe(0);
+    act(() => renderer.unmount());
   });
 
   it('mounts the native menu with edit + delete on own note', async () => {

@@ -31,12 +31,19 @@ const checkInState = vi.hoisted(() => ({
   isSubmitting: false,
 }));
 
+const sessionState = vi.hoisted(() => ({
+  user: { id: 'u-me', displayName: 'Me' },
+  partner: { id: 'u-sofia', displayName: 'Sofia', avatarUrl: null },
+  isSolo: false,
+}));
+
 vi.mock('@/src/hooks/useCheckIns', () => ({
   useCheckIns: () => ({
     createOrUpdate: checkInState.createOrUpdate,
     isSubmitting: checkInState.isSubmitting,
   }),
 }));
+vi.mock('@/src/hooks/useSession', () => ({ useSession: () => sessionState }));
 
 import NewCheckin from '@/app/sheets/new-checkin';
 import { router } from 'expo-router';
@@ -63,6 +70,18 @@ describe('new-checkin sheet', () => {
     (router.back as any).mockClear();
     (Haptics.notificationAsync as any).mockClear();
     alertSpy.mockClear();
+    sessionState.isSolo = false;
+    sessionState.partner = { id: 'u-sofia', displayName: 'Sofia', avatarUrl: null };
+  });
+
+  it('solo mode hides the partner-aware Privacy info card', async () => {
+    sessionState.isSolo = true;
+    sessionState.partner = null as any;
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<NewCheckin />); await flush(); });
+    const eyeIcons = renderer.root.findAll((n: any) => n.props?.name === 'eye');
+    expect(eyeIcons.length).toBe(0);
+    act(() => renderer.unmount());
   });
 
   it('renders all 5 mood tiles', async () => {

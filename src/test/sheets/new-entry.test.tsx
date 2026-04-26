@@ -30,9 +30,16 @@ const journalState = vi.hoisted(() => ({
   create: vi.fn(async () => undefined),
 }));
 
+const sessionState = vi.hoisted(() => ({
+  user: { id: 'u-me', displayName: 'Me' },
+  partner: { id: 'u-sofia', displayName: 'Sofia', avatarUrl: null },
+  isSolo: false,
+}));
+
 vi.mock('@/src/hooks/useJournal', () => ({
   useJournal: () => ({ create: journalState.create }),
 }));
+vi.mock('@/src/hooks/useSession', () => ({ useSession: () => sessionState }));
 
 import NewEntry from '@/app/sheets/new-entry';
 import { router } from 'expo-router';
@@ -58,6 +65,8 @@ describe('new-entry sheet', () => {
     (router.back as any).mockClear();
     (Haptics.notificationAsync as any).mockClear();
     alertSpy.mockClear();
+    sessionState.isSolo = false;
+    sessionState.partner = { id: 'u-sofia', displayName: 'Sofia', avatarUrl: null };
   });
 
   it('renders all 5 mood pills', async () => {
@@ -121,6 +130,22 @@ describe('new-entry sheet', () => {
     });
     await act(async () => { findSaveBtn(renderer.root, { enabled: true }).props.onPress(); await flush(); });
     expect(journalState.create.mock.calls[0][0].title).toBeNull();
+    act(() => renderer.unmount());
+  });
+
+  it('solo mode hides Private toggle and forces is_private:false', async () => {
+    sessionState.isSolo = true;
+    sessionState.partner = null as any;
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<NewEntry />); await flush(); });
+    expect(findByTestID(renderer.root, 'new-entry-private-toggle')).toBeUndefined();
+    await act(async () => {
+      findByTestID(renderer.root, 'new-entry-body-input').props.onChangeText('alone today');
+      await flush();
+    });
+    await act(async () => { findSaveBtn(renderer.root, { enabled: true }).props.onPress(); await flush(); });
+    const call = journalState.create.mock.calls[0][0];
+    expect(call.is_private).toBe(false);
     act(() => renderer.unmount());
   });
 

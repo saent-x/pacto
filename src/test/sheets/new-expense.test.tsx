@@ -151,13 +151,28 @@ describe('new-expense sheet', () => {
     act(() => renderer.unmount());
   });
 
-  it('solo mode disables Sofia payer', async () => {
+  it('solo mode hides Paid by + Split row and forces self payer + even split', async () => {
     sessionState.isSolo = true;
     sessionState.partner = null as any;
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<NewExpense />); await flush(); });
-    const sofiaBtn = findByTestID(renderer.root, 'new-expense-paidby-sofia');
-    expect(sofiaBtn.props.disabled).toBe(true);
+    expect(findByTestID(renderer.root, 'new-expense-paidby-mattia')).toBeUndefined();
+    expect(findByTestID(renderer.root, 'new-expense-paidby-sofia')).toBeUndefined();
+    for (const s of ['50/50', 'Me', 'Them']) {
+      expect(findByTestID(renderer.root, `new-expense-split-${s}`)).toBeUndefined();
+    }
+    await act(async () => {
+      findByTestID(renderer.root, 'new-expense-amount-input').props.onChangeText('20');
+      await flush();
+    });
+    await act(async () => {
+      findByTestID(renderer.root, 'new-expense-what-input').props.onChangeText('Lunch');
+      await flush();
+    });
+    await act(async () => { findSaveBtn(renderer.root, { enabled: true }).props.onPress(); await flush(); });
+    const call = expenseState.create.mock.calls[0][0];
+    expect(call.paidBy).toBe('u-me');
+    expect(call.splitType).toBe('even');
     act(() => renderer.unmount());
   });
 });

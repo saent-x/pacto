@@ -30,9 +30,16 @@ const noteState = vi.hoisted(() => ({
   create: vi.fn(async () => undefined),
 }));
 
+const sessionState = vi.hoisted(() => ({
+  user: { id: 'u-me', displayName: 'Me' },
+  partner: { id: 'u-sofia', displayName: 'Sofia', avatarUrl: null },
+  isSolo: false,
+}));
+
 vi.mock('@/src/hooks/useLoveNotes', () => ({
   useLoveNotes: () => ({ create: noteState.create, notes: [], isLoading: false }),
 }));
+vi.mock('@/src/hooks/useSession', () => ({ useSession: () => sessionState }));
 
 import NewNote from '@/app/sheets/new-note';
 import { router } from 'expo-router';
@@ -50,6 +57,16 @@ describe('new-note sheet', () => {
     (router.back as any).mockClear();
     (Haptics.notificationAsync as any).mockClear();
     alertSpy.mockClear();
+    sessionState.isSolo = false;
+  });
+
+  it('solo mode redirects out and renders nothing', async () => {
+    sessionState.isSolo = true;
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<NewNote />); await flush(); });
+    expect(findByTestID(renderer.root, 'new-note-body-input')).toBeUndefined();
+    expect(router.back).toHaveBeenCalled();
+    act(() => renderer.unmount());
   });
 
   it('renders all 5 vibe pills in order', async () => {

@@ -30,9 +30,16 @@ const milestoneState = vi.hoisted(() => ({
   create: vi.fn(async () => undefined),
 }));
 
+const sessionState = vi.hoisted(() => ({
+  user: { id: 'u-me', displayName: 'Me' },
+  partner: { id: 'u-sofia', displayName: 'Sofia', avatarUrl: null },
+  isSolo: false,
+}));
+
 vi.mock('@/src/hooks/useMilestones', () => ({
   useMilestones: () => ({ create: milestoneState.create }),
 }));
+vi.mock('@/src/hooks/useSession', () => ({ useSession: () => sessionState }));
 
 import NewMilestone from '@/app/sheets/new-milestone';
 import { router } from 'expo-router';
@@ -58,6 +65,7 @@ describe('new-milestone sheet', () => {
     (router.back as any).mockClear();
     (Haptics.notificationAsync as any).mockClear();
     alertSpy.mockClear();
+    sessionState.isSolo = false;
   });
 
   it('renders 9 icon tiles + 7 color swatches + repeat toggle', async () => {

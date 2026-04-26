@@ -34,9 +34,16 @@ const ttiState = vi.hoisted(() => ({
   add: vi.fn(async () => undefined),
 }));
 
+const sessionState = vi.hoisted(() => ({
+  user: { id: 'u-me', displayName: 'Me' },
+  partner: { id: 'u-sofia', displayName: 'Sofia', avatarUrl: null },
+  isSolo: false,
+}));
+
 vi.mock('@/src/hooks/useTimetables', () => ({
   useTimetable: (_id: string | null) => ({ add: ttiState.add, update: vi.fn(), items: [] }),
 }));
+vi.mock('@/src/hooks/useSession', () => ({ useSession: () => sessionState }));
 
 import NewTimetableItem from '@/app/sheets/new-timetable-item';
 import { router } from 'expo-router';
@@ -63,6 +70,26 @@ describe('new-timetable-item sheet', () => {
     (Haptics.notificationAsync as any).mockClear();
     alertSpy.mockClear();
     paramsState.value = { timetableId: 'tt-1' };
+    sessionState.isSolo = false;
+    sessionState.partner = { id: 'u-sofia', displayName: 'Sofia', avatarUrl: null };
+  });
+
+  it('solo mode hides For segment and forces who:"me"', async () => {
+    sessionState.isSolo = true;
+    sessionState.partner = null as any;
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<NewTimetableItem />); await flush(); });
+    expect(findByTestID(renderer.root, 'new-timetable-item-who-me')).toBeUndefined();
+    expect(findByTestID(renderer.root, 'new-timetable-item-who-sofia')).toBeUndefined();
+    expect(findByTestID(renderer.root, 'new-timetable-item-who-both')).toBeUndefined();
+    await act(async () => {
+      findByTestID(renderer.root, 'new-timetable-item-title-input').props.onChangeText('Solo lunch');
+      await flush();
+    });
+    await act(async () => { findSaveBtn(renderer.root, { enabled: true }).props.onPress(); await flush(); });
+    const call = ttiState.add.mock.calls[0][0];
+    expect(call.who).toBe('me');
+    act(() => renderer.unmount());
   });
 
   it('renders 4 cats + duration field + 7 days + 3 presets + 3 who + 2 repeat', async () => {

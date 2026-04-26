@@ -30,9 +30,16 @@ const ttState = vi.hoisted(() => ({
   create: vi.fn(async () => undefined),
 }));
 
+const sessionState = vi.hoisted(() => ({
+  user: { id: 'u-me', displayName: 'Me' },
+  partner: { id: 'u-sofia', displayName: 'Sofia', avatarUrl: null },
+  isSolo: false,
+}));
+
 vi.mock('@/src/hooks/useTimetables', () => ({
   useTimetables: () => ({ create: ttState.create }),
 }));
+vi.mock('@/src/hooks/useSession', () => ({ useSession: () => sessionState }));
 
 import NewTimetable from '@/app/sheets/new-timetable';
 import { router } from 'expo-router';
@@ -58,6 +65,26 @@ describe('new-timetable sheet', () => {
     (router.back as any).mockClear();
     (Haptics.notificationAsync as any).mockClear();
     alertSpy.mockClear();
+    sessionState.isSolo = false;
+    sessionState.partner = { id: 'u-sofia', displayName: 'Sofia', avatarUrl: null };
+  });
+
+  it('solo mode hides Share-with picker and forces share:"solo"', async () => {
+    sessionState.isSolo = true;
+    sessionState.partner = null as any;
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<NewTimetable />); await flush(); });
+    for (const s of ['solo', 'partner', 'shared']) {
+      expect(findByTestID(renderer.root, `new-timetable-share-${s}`)).toBeUndefined();
+    }
+    await act(async () => {
+      findByTestID(renderer.root, 'new-timetable-title-input').props.onChangeText('My week');
+      await flush();
+    });
+    await act(async () => { findSaveBtn(renderer.root, { enabled: true }).props.onPress(); await flush(); });
+    const call = ttState.create.mock.calls[0][0];
+    expect(call.share).toBe('solo');
+    act(() => renderer.unmount());
   });
 
   it('renders 6 template tiles + 3 share options', async () => {
