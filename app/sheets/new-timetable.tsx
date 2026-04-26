@@ -13,17 +13,21 @@ import {
   SheetTitleField,
   type IconLabelOption,
 } from '@/src/components/ui/SheetShell';
+import { useSession } from '@/src/hooks/useSession';
 import { useTimetables } from '@/src/hooks/useTimetables';
 import { useTheme } from '@/src/lib/theme';
 import { TEMPLATES, type TemplateKey } from '@/src/lib/timetables-data';
 
 type Share = 'solo' | 'partner' | 'shared';
 
+// solo-mode: share-with hidden — defaults to solo
 export default function NewTimetable() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEdit = Boolean(id);
   const { C, F } = useTheme();
   const { create, update, timetables } = useTimetables();
+  const { isSolo, partner } = useSession();
+  const partnerName = partner?.displayName ?? 'Sofia';
   const existing = useMemo(
     () => (isEdit && id ? timetables.find((t) => t.id === id) : undefined),
     [isEdit, id, timetables],
@@ -32,17 +36,19 @@ export default function NewTimetable() {
   const [tmplKey, setTmplKey] = useState<TemplateKey>(
     (existing?.template as TemplateKey) ?? 'meals',
   );
-  const [share, setShare] = useState<Share>((existing?.share as Share) ?? 'shared');
+  const [share, setShare] = useState<Share>(
+    (existing?.share as Share) ?? (isSolo ? 'solo' : 'shared'),
+  );
   const [saving, setSaving] = useState(false);
   const tmpl = TEMPLATES.find((t) => t.key === tmplKey) ?? TEMPLATES[0];
 
   const shareOptions: IconLabelOption<Share>[] = useMemo(
     () => [
       { key: 'solo', icon: 'user', label: 'Just me', color: C.sky },
-      { key: 'partner', icon: 'heart', label: "Sofia's", color: C.lavender },
+      { key: 'partner', icon: 'heart', label: `${partnerName}'s`, color: C.lavender },
       { key: 'shared', icon: 'users', label: 'Together', color: C.gold },
     ],
-    [C],
+    [C, partnerName],
   );
 
   const canSave = title.trim().length > 0 && !saving;
@@ -51,7 +57,11 @@ export default function NewTimetable() {
     if (!canSave) return;
     setSaving(true);
     try {
-      const payload = { title: title.trim(), template: tmplKey, share };
+      const payload = {
+        title: title.trim(),
+        template: tmplKey,
+        share: isSolo ? ('solo' as Share) : share,
+      };
       if (isEdit && id) {
         await update(id, payload);
       } else {
@@ -89,7 +99,11 @@ export default function NewTimetable() {
                 color: tmpl.ink,
               }}
             >
-              {share === 'shared' ? 'SHARED' : share === 'partner' ? "SOFIA'S" : 'SOLO'} ·{' '}
+              {share === 'shared'
+                ? 'SHARED'
+                : share === 'partner'
+                  ? `${partnerName.toUpperCase()}'S`
+                  : 'SOLO'}{' '}·{' '}
               {tmpl.label.toUpperCase()}
             </Text>
             <Text
@@ -183,14 +197,16 @@ export default function NewTimetable() {
         </View>
       </SheetSection>
 
-      <SheetSection title="Share with">
-        <SheetIconLabelPicker
-          options={shareOptions}
-          selected={share}
-          onChange={setShare}
-          testIDPrefix="new-timetable-share"
-        />
-      </SheetSection>
+      {!isSolo && (
+        <SheetSection title="Share with">
+          <SheetIconLabelPicker
+            options={shareOptions}
+            selected={share}
+            onChange={setShare}
+            testIDPrefix="new-timetable-share"
+          />
+        </SheetSection>
+      )}
     </SheetShell>
   );
 }

@@ -17,6 +17,7 @@ import {
   type IconLabelOption,
   type SegmentOption,
 } from '@/src/components/ui/SheetShell';
+import { useSession } from '@/src/hooks/useSession';
 import { useTimetable } from '@/src/hooks/useTimetables';
 import { useTheme } from '@/src/lib/theme';
 import { DAYS_LETTER } from '@/src/lib/timetables-data';
@@ -60,6 +61,7 @@ function repeatFor(raw: string | undefined): Repeat {
   return raw === 'once' ? 'once' : 'weekly';
 }
 
+// solo-mode: who-for hidden — defaults to me
 export default function NewTimetableItem() {
   const { C, F } = useTheme();
   const params = useLocalSearchParams<{ timetableId?: string; id?: string }>();
@@ -70,6 +72,8 @@ export default function NewTimetableItem() {
   const editId = typeof params.id === 'string' && params.id.length > 0 ? params.id : null;
   const isEdit = Boolean(editId);
   const { add, update, items } = useTimetable(timetableId);
+  const { isSolo, partner } = useSession();
+  const partnerName = partner?.displayName ?? 'Sofia';
   const existingRaw = useMemo(
     () => (isEdit && editId ? (items as any[]).find((i) => i.id === editId) : undefined),
     [isEdit, editId, items],
@@ -87,7 +91,9 @@ export default function NewTimetableItem() {
   const [days, setDays] = useState<number[]>(
     existingRaw ? [Number((existingRaw as any).day ?? 2)] : [2],
   );
-  const [who, setWho] = useState<Who>(existingRaw ? whoFor((existingRaw as any).who) : 'both');
+  const [who, setWho] = useState<Who>(
+    existingRaw ? whoFor((existingRaw as any).who) : isSolo ? 'me' : 'both',
+  );
   const [repeat, setRepeat] = useState<Repeat>(
     existingRaw ? repeatFor((existingRaw as any).repeat) : 'weekly',
   );
@@ -102,8 +108,8 @@ export default function NewTimetableItem() {
     [],
   );
   const whoOptions: SegmentOption<Who>[] = [
-    { key: 'me', label: 'Mattia' },
-    { key: 'sofia', label: 'Sofia' },
+    { key: 'me', label: 'Me' },
+    { key: 'sofia', label: partnerName },
     { key: 'both', label: 'Both' },
   ];
   const repeatOptions: SegmentOption<Repeat>[] = [
@@ -124,7 +130,7 @@ export default function NewTimetableItem() {
         icon: active.icon,
         color: active.color,
         ink: active.ink,
-        who,
+        who: isSolo ? 'me' : who,
         repeat,
         startHour: hourFromDate(time),
         duration: dur,
@@ -247,17 +253,8 @@ export default function NewTimetableItem() {
         </View>
       </SheetSection>
 
-      <SheetRow style={{ marginTop: 22 }}>
-        <View style={{ flex: 1 }}>
-          <Overline style={{ marginBottom: 10 }}>For</Overline>
-          <SheetSegment
-            options={whoOptions}
-            selected={who}
-            onChange={setWho}
-            testIDPrefix="new-timetable-item-who"
-          />
-        </View>
-        <View style={{ flex: 1 }}>
+      {isSolo ? (
+        <View style={{ marginTop: 22 }}>
           <Overline style={{ marginBottom: 10 }}>Repeats</Overline>
           <SheetSegment
             options={repeatOptions}
@@ -266,7 +263,28 @@ export default function NewTimetableItem() {
             testIDPrefix="new-timetable-item-repeat"
           />
         </View>
-      </SheetRow>
+      ) : (
+        <SheetRow style={{ marginTop: 22 }}>
+          <View style={{ flex: 1 }}>
+            <Overline style={{ marginBottom: 10 }}>For</Overline>
+            <SheetSegment
+              options={whoOptions}
+              selected={who}
+              onChange={setWho}
+              testIDPrefix="new-timetable-item-who"
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Overline style={{ marginBottom: 10 }}>Repeats</Overline>
+            <SheetSegment
+              options={repeatOptions}
+              selected={repeat}
+              onChange={setRepeat}
+              testIDPrefix="new-timetable-item-repeat"
+            />
+          </View>
+        </SheetRow>
+      )}
     </SheetShell>
   );
 }

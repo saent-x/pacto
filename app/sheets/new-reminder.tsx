@@ -41,13 +41,14 @@ const REPEAT_OPTS: SegmentOption<Repeat>[] = [
   { key: 'Yearly', label: 'Yearly' },
 ];
 
+// solo-mode: assignee restricted to ['me'] — initial 'me'
 export default function NewReminder() {
   const { C } = useTheme();
   const { user, activeCouple, isSolo } = useSession();
   const { create } = useReminders();
 
   const [title, setTitle] = useState('');
-  const [assignee, setAssignee] = useState<Assignee>('both');
+  const [assignee, setAssignee] = useState<Assignee>(isSolo ? 'me' : 'both');
   const [cat, setCat] = useState<CatKey>('General');
   const [repeat, setRepeat] = useState<Repeat>('None');
   const [due, setDue] = useState<Date>(() => {

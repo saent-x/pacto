@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, TextInput, View } from 'react-native';
 import { PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon } from '@/src/components/ui/Icon';
@@ -11,13 +11,19 @@ import {
   type IconLabelOption,
 } from '@/src/components/ui/SheetShell';
 import { useLoveNotes, type LoveNoteVibe } from '@/src/hooks/useLoveNotes';
+import { useSession } from '@/src/hooks/useSession';
 import { useTheme } from '@/src/lib/theme';
 
+// solo-mode: route blocked — love notes require a partner
 export default function NewNote() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEdit = Boolean(id);
   const { C, F } = useTheme();
   const { create, update, notes } = useLoveNotes();
+  const { isSolo } = useSession();
+  useEffect(() => {
+    if (isSolo) router.back();
+  }, [isSolo]);
   const existing = useMemo(
     () => (isEdit && id ? notes.find((n) => n.id === id) : undefined),
     [isEdit, id, notes],
@@ -57,6 +63,8 @@ export default function NewNote() {
       setSaving(false);
     }
   };
+
+  if (isSolo) return null;
 
   return (
     <SheetShell

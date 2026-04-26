@@ -16,6 +16,7 @@ import {
   type IconOption,
 } from '@/src/components/ui/SheetShell';
 import { useMilestones } from '@/src/hooks/useMilestones';
+import { useSession } from '@/src/hooks/useSession';
 import { useTheme } from '@/src/lib/theme';
 
 const ICONS: IconOption<IconName>[] = [
@@ -30,11 +31,13 @@ const ICONS: IconOption<IconName>[] = [
   { key: 'music', icon: 'music' },
 ];
 
+// solo-mode: repeat copy adjusted (no partner)
 export default function NewMilestone() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEdit = Boolean(id);
   const { C } = useTheme();
   const { create, update, milestones } = useMilestones();
+  const { isSolo } = useSession();
   const existing = useMemo(
     () => (isEdit && id ? milestones.find((m) => m.id === id) : undefined),
     [isEdit, id, milestones],
@@ -147,7 +150,13 @@ export default function NewMilestone() {
         <SheetToggleRow
           icon="repeat"
           label="Remind me every year"
-          sublabel={repeat ? 'We’ll nudge you both 3 days before' : 'One-time only'}
+          sublabel={
+            repeat
+              ? isSolo
+                ? 'We’ll nudge you 3 days before'
+                : 'We’ll nudge you both 3 days before'
+              : 'One-time only'
+          }
           value={repeat}
           onChange={setRepeat}
           accent={color}

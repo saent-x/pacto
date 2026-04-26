@@ -30,6 +30,7 @@ const SPLIT_TYPE: Record<SplitKey, string> = {
   Them: 'other',
 };
 
+// solo-mode: payer + split hidden — defaults to me + 50/50
 export default function NewExpense() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEdit = Boolean(id);
@@ -74,7 +75,7 @@ export default function NewExpense() {
 
   const payerOptions: SegmentOption<PayerKey>[] = [
     { key: 'mattia', label: 'Me' },
-    { key: 'sofia', label: partner?.displayName ?? 'Sofia', disabled: isSolo },
+    { key: 'sofia', label: partner?.displayName ?? 'Sofia' },
   ];
   const splitOptions: SegmentOption<SplitKey>[] = [
     { key: '50/50', label: '50/50' },
@@ -90,13 +91,17 @@ export default function NewExpense() {
     if (!canSave || !user?.id) return;
     setSaving(true);
     try {
-      const payerId = by === 'mattia' ? user.id : (partner?.id ?? user.id);
+      const payerId = isSolo
+        ? user.id
+        : by === 'mattia'
+          ? user.id
+          : (partner?.id ?? user.id);
       const payload = {
         title: what.trim(),
         amount: parsedAmount,
         paidBy: payerId,
         currency: 'EUR',
-        splitType: SPLIT_TYPE[split],
+        splitType: isSolo ? 'even' : SPLIT_TYPE[split],
         category: cat,
         date: format(date, 'yyyy-MM-dd'),
       };
@@ -189,28 +194,30 @@ export default function NewExpense() {
         </SheetRow>
       </SheetSection>
 
-      <SheetRow style={{ marginTop: 22 }}>
-        <View style={{ flex: 1 }}>
-          <Overline style={{ marginBottom: 10 }}>Paid by</Overline>
-          <SheetSegment
-            options={payerOptions}
-            selected={by}
-            onChange={setBy}
-            accent={C.mint}
-            testIDPrefix="new-expense-paidby"
-          />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Overline style={{ marginBottom: 10 }}>Split</Overline>
-          <SheetSegment
-            options={splitOptions}
-            selected={split}
-            onChange={setSplit}
-            accent={C.mint}
-            testIDPrefix="new-expense-split"
-          />
-        </View>
-      </SheetRow>
+      {!isSolo && (
+        <SheetRow style={{ marginTop: 22 }}>
+          <View style={{ flex: 1 }}>
+            <Overline style={{ marginBottom: 10 }}>Paid by</Overline>
+            <SheetSegment
+              options={payerOptions}
+              selected={by}
+              onChange={setBy}
+              accent={C.mint}
+              testIDPrefix="new-expense-paidby"
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Overline style={{ marginBottom: 10 }}>Split</Overline>
+            <SheetSegment
+              options={splitOptions}
+              selected={split}
+              onChange={setSplit}
+              accent={C.mint}
+              testIDPrefix="new-expense-split"
+            />
+          </View>
+        </SheetRow>
+      )}
     </SheetShell>
   );
 }

@@ -14,18 +14,22 @@ import {
   type IconLabelOption,
 } from '@/src/components/ui/SheetShell';
 import { useJournal } from '@/src/hooks/useJournal';
+import { useSession } from '@/src/hooks/useSession';
 import { useTheme } from '@/src/lib/theme';
 
 type Mood = 'great' | 'good' | 'okay' | 'low' | 'rough';
 
+// solo-mode: private toggle hidden — entries are always personal
 export default function NewEntry() {
   const { C, F } = useTheme();
   const { create } = useJournal();
+  const { isSolo, partner } = useSession();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [mood, setMood] = useState<Mood>('good');
   const [isPrivate, setIsPrivate] = useState(false);
   const [saving, setSaving] = useState(false);
+  const partnerName = partner?.displayName ?? 'Sofia';
 
   const now = useMemo(() => new Date(), []);
   const eyebrow = format(now, 'EEEE, MMMM d').toUpperCase();
@@ -53,7 +57,7 @@ export default function NewEntry() {
         title: title.trim() || null,
         body: body.trim(),
         mood,
-        is_private: isPrivate,
+        is_private: isSolo ? false : isPrivate,
         entry_date: entryDate,
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -121,17 +125,19 @@ export default function NewEntry() {
         />
       </SheetSection>
 
-      <View style={{ marginTop: 22 }}>
-        <SheetToggleRow
-          icon="lock"
-          label="Private"
-          sublabel={isPrivate ? 'Only you can see this entry' : 'Sofia can see this entry'}
-          value={isPrivate}
-          onChange={setIsPrivate}
-          accent={C.lavender}
-          pressTestID="new-entry-private-toggle"
-        />
-      </View>
+      {!isSolo && (
+        <View style={{ marginTop: 22 }}>
+          <SheetToggleRow
+            icon="lock"
+            label="Private"
+            sublabel={isPrivate ? 'Only you can see this entry' : `${partnerName} can see this entry`}
+            value={isPrivate}
+            onChange={setIsPrivate}
+            accent={C.lavender}
+            pressTestID="new-entry-private-toggle"
+          />
+        </View>
+      )}
     </SheetShell>
   );
 }

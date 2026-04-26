@@ -13,6 +13,7 @@ import {
   type IconLabelOption,
 } from '@/src/components/ui/SheetShell';
 import { useCheckIns } from '@/src/hooks/useCheckIns';
+import { useSession } from '@/src/hooks/useSession';
 import { useTheme } from '@/src/lib/theme';
 
 type MoodKey = '1' | '2' | '3' | '4' | '5';
@@ -25,12 +26,15 @@ type Mood = {
   vibe: string;
 };
 
+// solo-mode: partner-aware info card hidden
 export default function NewCheckin() {
   const { C } = useTheme();
   const { createOrUpdate, isSubmitting } = useCheckIns();
+  const { isSolo, partner } = useSession();
   const [mood, setMood] = useState<MoodKey>('4');
   const [one, setOne] = useState('');
   const [saving, setSaving] = useState(false);
+  const partnerName = partner?.displayName ?? 'Sofia';
 
   const moods: Mood[] = useMemo(
     () => [
@@ -100,11 +104,13 @@ export default function NewCheckin() {
         />
       </SheetSection>
 
-      <SheetSection title="Privacy">
-        <SheetInfoCard icon="eye">
-          Sofia will see your mood — not the one-thing, unless you tap to share.
-        </SheetInfoCard>
-      </SheetSection>
+      {!isSolo && (
+        <SheetSection title="Privacy">
+          <SheetInfoCard icon="eye">
+            {partnerName} will see your mood — not the one-thing, unless you tap to share.
+          </SheetInfoCard>
+        </SheetSection>
+      )}
     </SheetShell>
   );
 }
