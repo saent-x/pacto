@@ -16,6 +16,7 @@ import { Display, Pill, RoundBtn } from '@/src/components/ui/atoms';
 import { Icon } from '@/src/components/ui/Icon';
 import { TaskRow } from '@/src/components/tasks/TaskRow';
 import { bucketOf, orderBuckets } from '@/src/components/tasks/buckets';
+import { taskTokens } from '@/src/components/tasks/tokens';
 import {
   RowActionMenu,
   type ActionMenuPayload,
@@ -456,9 +457,9 @@ function DetailSkeleton() {
         <View
           key={i}
           style={{
-            height: 54,
+            height: taskTokens.rowMinHeight,
             backgroundColor: C.card,
-            borderRadius: 16,
+            borderRadius: taskTokens.rowRadius,
             borderWidth: 1,
             borderColor: C.line,
             marginBottom: 10,

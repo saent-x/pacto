@@ -11,6 +11,7 @@ import Animated, {
 import { Icon } from '@/src/components/ui/Icon';
 import { useTheme } from '@/src/lib/theme';
 import type { ListRow } from '@/src/hooks/useTaskLists';
+import { taskTokens } from './tokens';
 
 export function ListCard({
   list,
@@ -38,11 +39,10 @@ export function ListCard({
         onPress={onPress}
         style={{
           backgroundColor: color,
-          borderRadius: 22,
-          paddingHorizontal: 16,
-          paddingTop: 18,
-          paddingBottom: 16,
-          minHeight: 136,
+          borderRadius: taskTokens.cardRadius,
+          paddingHorizontal: taskTokens.cardPadX,
+          paddingVertical: taskTokens.cardPadY,
+          minHeight: taskTokens.cardMinHeight,
           justifyContent: 'space-between',
         }}
       >
@@ -134,8 +134,8 @@ export function ListCardSkeleton({ index = 0 }: { index?: number }) {
       entering={FadeInDown.delay(index * 40).duration(360)}
       style={{
         width: '48%',
-        minHeight: 136,
-        borderRadius: 22,
+        minHeight: taskTokens.cardMinHeight,
+        borderRadius: taskTokens.cardRadius,
         backgroundColor: C.cardHi,
         opacity: 0.6,
       }}

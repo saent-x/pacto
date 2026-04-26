@@ -16,6 +16,7 @@ import { Icon } from '@/src/components/ui/Icon';
 import { useTheme } from '@/src/lib/theme';
 import type { Task } from '@/src/types/database';
 import { formatDueChip } from './buckets';
+import { taskTokens } from './tokens';
 
 export type RowState = 'idle' | 'reordering';
 
@@ -76,10 +77,11 @@ export function TaskRow({
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          gap: 14,
-          paddingVertical: 13,
-          paddingHorizontal: 14,
-          borderRadius: 16,
+          gap: taskTokens.rowGap,
+          paddingVertical: taskTokens.rowPadY,
+          paddingHorizontal: taskTokens.rowPadX,
+          minHeight: taskTokens.rowMinHeight,
+          borderRadius: taskTokens.rowRadius,
           backgroundColor: C.card,
           borderWidth: 1,
           borderColor: state === 'reordering' ? listColor : C.line,
