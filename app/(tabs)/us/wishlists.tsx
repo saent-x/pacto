@@ -36,6 +36,7 @@ function fmtWorth(total: number) {
   return `€${total.toFixed(0)}`;
 }
 
+// solo-mode: PARTNER'S + SHARED filters hidden — neither applies without a partner
 export default function Wishlists() {
   const { C, F } = useTheme();
   const { user, activeCouple, isSolo } = useSession();
@@ -123,13 +124,18 @@ export default function Wishlists() {
   if (isLoading && rows.length === 0) return <IndexSkeleton />;
   if (rows.length === 0) return <EmptyWishlists />;
 
-  const filters: { key: FilterKind; label: string }[] = [
-    { key: 'ALL', label: 'ALL' },
-    ...(isSolo ? [] : [{ key: 'PARTNER' as const, label: `${partnerName.toUpperCase()}'S` }]),
-    { key: 'MINE', label: 'MINE' },
-    { key: 'SHARED', label: 'SHARED' },
-    { key: 'CLAIMED', label: 'CLAIMED' },
-  ];
+  const filters: { key: FilterKind; label: string }[] = isSolo
+    ? [
+        { key: 'ALL', label: 'ALL' },
+        { key: 'CLAIMED', label: 'CLAIMED' },
+      ]
+    : [
+        { key: 'ALL', label: 'ALL' },
+        { key: 'PARTNER', label: `${partnerName.toUpperCase()}'S` },
+        { key: 'MINE', label: 'MINE' },
+        { key: 'SHARED', label: 'SHARED' },
+        { key: 'CLAIMED', label: 'CLAIMED' },
+      ];
 
   return (
     <Screen>

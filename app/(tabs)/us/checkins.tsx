@@ -60,6 +60,7 @@ function buildWeek(
   });
 }
 
+// solo-mode: partner column + sync metric hidden (legend, cells, label)
 export default function Checkins() {
   const { C, F } = useTheme();
   const { isSolo, partner, user } = useSession();

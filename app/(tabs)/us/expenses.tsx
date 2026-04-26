@@ -58,6 +58,7 @@ function formatRelativeDay(iso: string) {
   }
 }
 
+// solo-mode: balance + partner split hidden — hero shows monthly total instead
 export default function Expenses() {
   const { C, F } = useTheme();
   const { user, activeCouple, isSolo } = useSession();
@@ -130,13 +131,15 @@ export default function Expenses() {
   if (isLoading && rows.length === 0) return <IndexSkeleton />;
   if (rows.length === 0) return <EmptyExpenses />;
 
-  const direction =
-    balance > 0.005
-      ? `${isSolo ? 'YOU ARE OWED' : `${partnerUpper} OWES YOU`}`
+  const direction = isSolo
+    ? 'THIS MONTH'
+    : balance > 0.005
+      ? `${partnerUpper} OWES YOU`
       : balance < -0.005
         ? `YOU OWE ${partnerUpper}`
         : 'ALL SETTLED';
 
+  const heroAmount = isSolo ? monthStats.total : Math.abs(balance);
   const youPct = monthStats.total > 0 ? (monthStats.youPaid / monthStats.total) * 100 : 50;
   const partnerPct = monthStats.total > 0 ? 100 - youPct : 50;
 
@@ -145,9 +148,8 @@ export default function Expenses() {
     await Promise.all(unsettled.map((e: any) => settle(String(e.id))));
   };
 
-  const absBalance = Math.abs(balance);
-  const whole = Math.floor(absBalance);
-  const cents = Math.round((absBalance - whole) * 100).toString().padStart(2, '0');
+  const whole = Math.floor(heroAmount);
+  const cents = Math.round((heroAmount - whole) * 100).toString().padStart(2, '0');
   const symbol = currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : currency === 'USD' ? '$' : '';
 
   return (
@@ -183,9 +185,11 @@ export default function Expenses() {
         </Text>
         <View style={{ marginTop: 14, flexDirection: 'row', justifyContent: 'space-between' }}>
           <Text style={{ fontSize: 11, color: C.mintInk, opacity: 0.7, fontFamily: F.bodyBold }}>
-            This month · {fmtMoney(monthStats.total, currency)} total
+            {isSolo
+              ? `${rows.filter((r) => r.date.startsWith(format(new Date(), 'yyyy-MM'))).length} expenses`
+              : `This month · ${fmtMoney(monthStats.total, currency)} total`}
           </Text>
-          {unsettled.length > 0 ? (
+          {!isSolo && unsettled.length > 0 ? (
             <Pressable onPress={settleAll} hitSlop={8}>
               <Text
                 style={{
@@ -201,45 +205,47 @@ export default function Expenses() {
             </Pressable>
           ) : null}
         </View>
-        <View
-          style={{
-            marginTop: 12,
-            height: 6,
-            backgroundColor: 'rgba(0,0,0,0.12)',
-            borderRadius: 3,
-            overflow: 'hidden',
-            flexDirection: 'row',
-          }}
-        >
-          <View style={{ width: `${youPct}%`, backgroundColor: C.mintInk }} />
-          <View style={{ width: `${partnerPct}%`, backgroundColor: 'rgba(15,44,26,0.45)' }} />
-        </View>
-        <View style={{ marginTop: 8, flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Text
-            style={{
-              fontSize: 10,
-              color: C.mintInk,
-              opacity: 0.6,
-              fontFamily: F.bodyBold,
-              letterSpacing: 0.8,
-            }}
-          >
-            YOU · {fmtMoney(monthStats.youPaid, currency)}
-          </Text>
-          {!isSolo ? (
-            <Text
+        {!isSolo && (
+          <>
+            <View
               style={{
-                fontSize: 10,
-                color: C.mintInk,
-                opacity: 0.6,
-                fontFamily: F.bodyBold,
-                letterSpacing: 0.8,
+                marginTop: 12,
+                height: 6,
+                backgroundColor: 'rgba(0,0,0,0.12)',
+                borderRadius: 3,
+                overflow: 'hidden',
+                flexDirection: 'row',
               }}
             >
-              {partnerUpper} · {fmtMoney(monthStats.partnerPaid, currency)}
-            </Text>
-          ) : null}
-        </View>
+              <View style={{ width: `${youPct}%`, backgroundColor: C.mintInk }} />
+              <View style={{ width: `${partnerPct}%`, backgroundColor: 'rgba(15,44,26,0.45)' }} />
+            </View>
+            <View style={{ marginTop: 8, flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text
+                style={{
+                  fontSize: 10,
+                  color: C.mintInk,
+                  opacity: 0.6,
+                  fontFamily: F.bodyBold,
+                  letterSpacing: 0.8,
+                }}
+              >
+                YOU · {fmtMoney(monthStats.youPaid, currency)}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 10,
+                  color: C.mintInk,
+                  opacity: 0.6,
+                  fontFamily: F.bodyBold,
+                  letterSpacing: 0.8,
+                }}
+              >
+                {partnerUpper} · {fmtMoney(monthStats.partnerPaid, currency)}
+              </Text>
+            </View>
+          </>
+        )}
       </Animated.View>
 
       <Text
@@ -260,6 +266,7 @@ export default function Expenses() {
         const splitLabel =
           x.splitType === 'even' ? '50/50' : x.splitAmount != null ? `${x.splitAmount}` : 'custom';
         const day = formatRelativeDay(x.date);
+        const meta = isSolo ? day : `${day} · ${by} paid · ${splitLabel}`;
         return (
           <Animated.View
             key={x.id}
@@ -314,7 +321,7 @@ export default function Expenses() {
                   textTransform: 'uppercase',
                 }}
               >
-                {day} · {by} paid · {splitLabel}
+                {meta}
               </Text>
             </View>
             <Text

@@ -44,6 +44,7 @@ function formatEntryDate(entryDate: string) {
   }
 }
 
+// solo-mode: shared filter, partner-featured fallback, partner badges all gated via isSolo + author check
 export default function Journal() {
   const { C, F } = useTheme();
   const { user, partner, isSolo } = useSession();

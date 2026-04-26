@@ -22,10 +22,12 @@ type NoteRow = {
   createdAt: number;
 };
 
+// solo-mode: full screen replaced with empty state — partner required
 export default function LoveNotes() {
   const { C, F } = useTheme();
   const { user, partner, isSolo } = useSession();
   const { notes, isLoading, remove } = useLoveNotes();
+  if (isSolo) return <SoloNotesEmpty />;
 
   const buildNoteMenu = useCallback(
     (note: NoteRow, isMine: boolean): ActionMenuPayload => {
@@ -259,6 +261,43 @@ function EmptyNotes() {
           Leave a first one. A sentence is enough.
         </Text>
       </Pressable>
+    </Screen>
+  );
+}
+
+function SoloNotesEmpty() {
+  const { C, F } = useTheme();
+  return (
+    <Screen>
+      <View
+        testID="love-notes-solo-empty"
+        style={{
+          marginTop: 4,
+          padding: 28,
+          borderRadius: 22,
+          borderWidth: 1,
+          borderStyle: 'dashed',
+          borderColor: C.line,
+          alignItems: 'center',
+          gap: 10,
+        }}
+      >
+        <Icon name="heart" size={26} color={C.fog} />
+        <Text style={{ fontFamily: F.displayBold, fontSize: 18, color: C.mist }}>
+          Love notes need a partner
+        </Text>
+        <Text
+          style={{
+            fontSize: 13,
+            color: C.fog,
+            fontFamily: F.body,
+            textAlign: 'center',
+            lineHeight: 19,
+          }}
+        >
+          Invite someone from settings to start sending notes.
+        </Text>
+      </View>
     </Screen>
   );
 }

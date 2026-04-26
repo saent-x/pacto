@@ -52,9 +52,10 @@ function daysUntil(dateISO: string): number {
   return Math.round((target.getTime() - today.getTime()) / 86400000);
 }
 
+// solo-mode: love-notes card hidden, header relabelled
 export default function UsEditorial() {
   const { C, F } = useTheme();
-  const { activeCouple } = useSession();
+  const { activeCouple, isSolo } = useSession();
   const coupleId = activeCouple?.couple?.id ?? null;
 
   const loveNotes = useLoveNotes();
@@ -138,7 +139,7 @@ export default function UsEditorial() {
           sub: `${journal.allEntries.length} entries`,
         };
 
-    return [
+    const all: Feature[] = [
       { key: 'notes', href: '/us/notes', label: 'Love notes', icon: 'heart', color: 'rose', ...notes },
       { key: 'checkins', href: '/us/checkins', label: 'Check-ins', icon: 'sun', color: 'butter', ...cin },
       { key: 'expenses', href: '/us/expenses', label: 'Expenses', icon: 'dollarSign', color: 'mint', ...exp },
@@ -148,7 +149,9 @@ export default function UsEditorial() {
       { key: 'timetables', href: '/us/timetables', label: 'Timetables', icon: 'calendar', color: 'peach', ...tt },
       { key: 'journal', href: '/us/journal', label: 'Journal', icon: 'feather', color: 'butter', ...jr },
     ];
+    return isSolo ? all.filter((f) => f.key !== 'notes') : all;
   }, [
+    isSolo,
     loveNotes.isLoading, loveNotes.notes,
     checkins.isLoading, checkins.todayCheckIns, checkins.myTodayCheckIn,
     expenses.isLoading, expenses.unsettled,
@@ -183,7 +186,7 @@ export default function UsEditorial() {
             letterSpacing: 1.4,
           }}
         >
-          OUR SHARED SPACES · {features.length}
+          {isSolo ? 'MY SPACES' : 'OUR SHARED SPACES'} · {features.length}
         </Text>
         <Text
           style={{

@@ -87,6 +87,7 @@ function iconForTimeline(type: TimelineItem["type"]): IconName {
   }
 }
 
+// solo-mode: partner mood pill hidden, TOGETHER ring relabelled TODAY, day-count suffix dropped
 export default function HomeRoute() {
   const { C, F } = useTheme();
   const { activeCouple, isSolo, space } = useSession();
@@ -291,7 +292,8 @@ export default function HomeRoute() {
     const day = todayDate.getDate();
     const mon = MONTH_SHORT[todayDate.getMonth()];
     const prefix = `${dow} · ${day} ${mon}`;
-    return dayCount ? `${prefix} · DAY ${dayCount} TOGETHER` : prefix;
+    if (!dayCount) return prefix;
+    return isSolo ? `${prefix} · DAY ${dayCount}` : `${prefix} · DAY ${dayCount} TOGETHER`;
   })();
 
   return (
@@ -421,7 +423,7 @@ export default function HomeRoute() {
                 <View style={{ marginTop: 12, gap: 8 }}>
                   {[
                     {
-                      lbl: "TOGETHER",
+                      lbl: isSolo ? "TODAY" : "TOGETHER",
                       v: isSolo
                         ? myMoodSet
                           ? "1/1"

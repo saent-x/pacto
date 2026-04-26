@@ -24,6 +24,7 @@ import type { Reminder } from '@/src/types/database';
 
 type FilterKey = 'All' | 'Mine' | "Sofia's" | 'Shared' | 'Overdue';
 
+// solo-mode: filter set restricted to All/Overdue, partner stat segment hidden
 export default function RemindersScreen() {
   const { C, F } = useTheme();
   const { user, activeCouple, isSolo } = useSession();
@@ -108,6 +109,7 @@ export default function RemindersScreen() {
         todayCount={todayCount}
         overdueCount={overdueCount}
         partnerCount={partnerCount}
+        showPartner={!isSolo}
       />
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 18 }}>
@@ -200,22 +202,32 @@ function SummaryCard({
   todayCount,
   overdueCount,
   partnerCount,
+  showPartner,
 }: {
   activeCount: number;
   doneCount: number;
   todayCount: number;
   overdueCount: number;
   partnerCount: number;
+  showPartner: boolean;
 }) {
   const { C, F } = useTheme();
-  const total = Math.max(1, doneCount + activeCount + overdueCount + partnerCount);
+  const total = Math.max(
+    1,
+    doneCount + activeCount + overdueCount + (showPartner ? partnerCount : 0),
+  );
   const w = (n: number) => Math.max(4, Math.round((n / total) * 100));
-  const segs = [
+  const baseSegs = [
     { w: w(doneCount), c: C.lavenderInk },
     { w: w(activeCount), c: 'rgba(31,22,53,0.45)' },
     { w: w(overdueCount), c: 'rgba(31,22,53,0.3)' },
-    { w: w(partnerCount), c: 'rgba(31,22,53,0.18)' },
   ];
+  const segs = showPartner
+    ? [...baseSegs, { w: w(partnerCount), c: 'rgba(31,22,53,0.18)' }]
+    : baseSegs;
+  const labels = showPartner
+    ? [`DONE ${doneCount}`, `OPEN ${activeCount}`, `SNOOZED ${overdueCount}`, `PARTNER ${partnerCount}`]
+    : [`DONE ${doneCount}`, `OPEN ${activeCount}`, `SNOOZED ${overdueCount}`];
   return (
     <BlockCard bg={C.lavender} ink={C.lavenderInk} style={{ marginBottom: 16, padding: 22 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -260,7 +272,7 @@ function SummaryCard({
         ))}
       </View>
       <View style={{ marginTop: 8, flexDirection: 'row', justifyContent: 'space-between' }}>
-        {[`DONE ${doneCount}`, `OPEN ${activeCount}`, `SNOOZED ${overdueCount}`, `PARTNER ${partnerCount}`].map((t) => (
+        {labels.map((t) => (
           <Text
             key={t}
             style={{

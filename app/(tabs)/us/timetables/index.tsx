@@ -10,12 +10,15 @@ import {
   type ActionMenuPayload,
 } from '@/src/components/ui/RowActionMenu';
 import { confirmDestructive } from '@/src/lib/confirm';
+import { useSession } from '@/src/hooks/useSession';
 import { useTimetables, type TimetableRow } from '@/src/hooks/useTimetables';
 import { useTheme } from '@/src/lib/theme';
 import { TEMPLATES, shareBadge, tmplByKey } from '@/src/lib/timetables-data';
 
+// solo-mode: PARTNER'S + SHARED stat columns hidden — neither applies without a partner
 export default function TimetablesHub() {
   const { C, F } = useTheme();
+  const { isSolo } = useSession();
   const { timetables, isLoading, remove } = useTimetables();
 
   const buildTimetableMenu = useCallback(
@@ -170,11 +173,14 @@ export default function TimetablesHub() {
           </Text>
         </View>
         <View style={{ marginTop: 14, flexDirection: 'row', gap: 20 }}>
-          {[
-            { n: String(timetables.length), l: 'TIMETABLES' },
-            { n: String(stats.shared), l: 'SHARED' },
-            { n: String(stats.partner), l: "PARTNER'S" },
-          ].map((s) => (
+          {(isSolo
+            ? [{ n: String(timetables.length), l: 'TIMETABLES' }]
+            : [
+                { n: String(timetables.length), l: 'TIMETABLES' },
+                { n: String(stats.shared), l: 'SHARED' },
+                { n: String(stats.partner), l: "PARTNER'S" },
+              ]
+          ).map((s) => (
             <View key={s.l}>
               <Text
                 style={{
