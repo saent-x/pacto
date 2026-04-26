@@ -34,7 +34,7 @@ export default function NewCheckin() {
   const [mood, setMood] = useState<MoodKey>('4');
   const [one, setOne] = useState('');
   const [saving, setSaving] = useState(false);
-  const partnerName = partner?.displayName ?? 'Sofia';
+  const partnerName = partner?.displayName ?? 'Partner';
 
   const moods: Mood[] = useMemo(
     () => [
@@ -99,7 +99,7 @@ export default function NewCheckin() {
           testID="new-checkin-note-input"
           value={one}
           onChangeText={setOne}
-          placeholder="that made today what it was..."
+          placeholder="What stood out today…"
           accent={active.color}
         />
       </SheetSection>

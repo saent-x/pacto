@@ -128,7 +128,7 @@ export default function NewTask() {
     <SheetShell
       eyebrow={isEdit ? 'EDIT TASK' : 'NEW TASK'}
       eyebrowColor={color}
-      title={list?.name ?? (isEdit ? 'Edit task.' : 'Quick task.')}
+      title={list?.name ?? (isEdit ? 'Edit task' : 'New task')}
       footer={
         <PrimaryButton
           icon="check"
@@ -144,7 +144,7 @@ export default function NewTask() {
           testID="new-task-title-input"
           value={title}
           onChangeText={setTitle}
-          placeholder="Pack travel documents..."
+          placeholder="What needs doing…"
           accent={color}
           autoFocus
         />

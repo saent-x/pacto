@@ -73,7 +73,7 @@ export default function NewTimetableItem() {
   const isEdit = Boolean(editId);
   const { add, update, items } = useTimetable(timetableId);
   const { isSolo, partner } = useSession();
-  const partnerName = partner?.displayName ?? 'Sofia';
+  const partnerName = partner?.displayName ?? 'Partner';
   const existingRaw = useMemo(
     () => (isEdit && editId ? (items as any[]).find((i) => i.id === editId) : undefined),
     [isEdit, editId, items],
@@ -156,7 +156,7 @@ export default function NewTimetableItem() {
     <SheetShell
       eyebrow={`${isEdit ? 'EDIT' : 'NEW'} ITEM · ${cat.toUpperCase()}`}
       eyebrowColor={active.color}
-      title={isEdit ? 'Edit item.' : "What's cooking."}
+      title={isEdit ? 'Edit item' : 'New item'}
       footer={
         <PrimaryButton icon={isEdit ? 'check' : 'plus'} onPress={onSave} disabled={!canSave}>
           {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add to timetable'}
@@ -168,7 +168,7 @@ export default function NewTimetableItem() {
           testID="new-timetable-item-title-input"
           value={title}
           onChangeText={setTitle}
-          placeholder="Risotto al limone..."
+          placeholder="Name this item…"
           accent={active.color}
         />
       </SheetSection>

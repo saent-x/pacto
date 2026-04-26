@@ -27,7 +27,7 @@ export default function NewTimetable() {
   const { C, F } = useTheme();
   const { create, update, timetables } = useTimetables();
   const { isSolo, partner } = useSession();
-  const partnerName = partner?.displayName ?? 'Sofia';
+  const partnerName = partner?.displayName ?? 'Partner';
   const existing = useMemo(
     () => (isEdit && id ? timetables.find((t) => t.id === id) : undefined),
     [isEdit, id, timetables],
@@ -80,7 +80,7 @@ export default function NewTimetable() {
   return (
     <SheetShell
       eyebrow={isEdit ? 'EDIT TIMETABLE' : 'NEW TIMETABLE'}
-      title={isEdit ? 'Edit timetable.' : 'Shape the week.'}
+      title={isEdit ? 'Edit timetable' : 'New timetable'}
       footer={
         <PrimaryButton icon={isEdit ? 'check' : 'plus'} onPress={onSave} disabled={!canSave}>
           {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create timetable'}
@@ -116,7 +116,7 @@ export default function NewTimetable() {
                 marginTop: 6,
               }}
             >
-              {title || `${tmpl.label} — our week`}
+              {title || `${tmpl.label} — your week`}
             </Text>
           </View>
           <View
@@ -139,7 +139,7 @@ export default function NewTimetable() {
           testID="new-timetable-title-input"
           value={title}
           onChangeText={setTitle}
-          placeholder="Our meals this week..."
+          placeholder="Name this timetable…"
           accent={C.gold}
         />
       </SheetSection>

@@ -114,7 +114,7 @@ export default function NewPlan() {
     <SheetShell
       eyebrow={isEdit ? 'EDIT PLAN' : 'NEW PLAN'}
       eyebrowColor={color}
-      title={isEdit ? 'Edit plan.' : 'Something to build.'}
+      title={isEdit ? 'Edit plan' : 'New plan'}
       footer={
         <PrimaryButton icon={isEdit ? 'check' : 'plus'} onPress={onSave} disabled={!canSave}>
           {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create plan'}
@@ -169,7 +169,7 @@ export default function NewPlan() {
           testID="new-plan-title-input"
           value={title}
           onChangeText={setTitle}
-          placeholder="Venice weekend, buy the apartment..."
+          placeholder="Name your plan…"
           accent={color}
         />
       </SheetSection>

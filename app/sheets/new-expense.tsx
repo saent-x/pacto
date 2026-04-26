@@ -75,7 +75,7 @@ export default function NewExpense() {
 
   const payerOptions: SegmentOption<PayerKey>[] = [
     { key: 'mattia', label: 'Me' },
-    { key: 'sofia', label: partner?.displayName ?? 'Sofia' },
+    { key: 'sofia', label: partner?.displayName ?? 'Partner' },
   ];
   const splitOptions: SegmentOption<SplitKey>[] = [
     { key: '50/50', label: '50/50' },
@@ -124,7 +124,7 @@ export default function NewExpense() {
     <SheetShell
       eyebrow={isEdit ? 'EDIT EXPENSE' : 'NEW EXPENSE'}
       eyebrowColor={C.mint}
-      title={isEdit ? 'Edit expense.' : 'Keep tabs.'}
+      title={isEdit ? 'Edit expense' : 'New expense'}
       footer={
         <PrimaryButton icon="check" onPress={onSave} disabled={!canSave}>
           {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add expense'}
@@ -167,7 +167,7 @@ export default function NewExpense() {
           testID="new-expense-what-input"
           value={what}
           onChangeText={setWhat}
-          placeholder="Groceries, dinner, rent..."
+          placeholder="Groceries, dinner…"
           accent={C.mint}
         />
       </SheetSection>

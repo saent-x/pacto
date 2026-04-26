@@ -127,30 +127,6 @@ export default function LoveNotes() {
           >
             {`"${featured.body}"`}
           </Text>
-          <View style={{ marginTop: 16, flexDirection: 'row', gap: 8 }}>
-            {['♥ REACT', 'REPLY'].map((t) => (
-              <View
-                key={t}
-                style={{
-                  paddingVertical: 7,
-                  paddingHorizontal: 14,
-                  borderRadius: 999,
-                  backgroundColor: 'rgba(0,0,0,0.14)',
-                }}
-              >
-                <Text
-                  style={{
-                    color: C.roseInk,
-                    fontSize: 11,
-                    fontFamily: F.bodyBold,
-                    letterSpacing: 0.8,
-                  }}
-                >
-                  {t}
-                </Text>
-              </View>
-            ))}
-          </View>
         </Pressable>
         </RowActionMenu>
         </Animated.View>

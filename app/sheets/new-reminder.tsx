@@ -108,7 +108,7 @@ export default function NewReminder() {
     <SheetShell
       eyebrow="NEW REMINDER"
       eyebrowColor={C.reminders}
-      title="Don't forget."
+      title="New reminder"
       footer={
         <PrimaryButton icon="check" onPress={onSave} disabled={!title.trim() || saving}>
           {saving ? 'Saving…' : 'Save reminder'}
@@ -120,7 +120,7 @@ export default function NewReminder() {
           testID="new-reminder-title"
           value={title}
           onChangeText={setTitle}
-          placeholder="Call Sofia's mom for her birthday..."
+          placeholder="What to remember…"
           accent={C.reminders}
         />
       </SheetSection>

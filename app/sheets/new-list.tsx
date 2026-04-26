@@ -88,7 +88,7 @@ export default function NewList() {
           testID="new-list-name-input"
           value={name}
           onChangeText={setName}
-          placeholder="Anniversary plans..."
+          placeholder="Name your list…"
           accent={color}
         />
       </SheetSection>

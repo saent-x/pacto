@@ -77,7 +77,7 @@ export default function NewWish() {
     <SheetShell
       eyebrow={isEdit ? 'EDIT WISH' : 'NEW WISH'}
       eyebrowColor={C.peach}
-      title={isEdit ? 'Edit wish.' : 'Something for us.'}
+      title={isEdit ? 'Edit wish' : 'New wish'}
       footer={
         <PrimaryButton icon={isEdit ? 'check' : 'plus'} onPress={onSave} disabled={!canSave}>
           {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add to wishlist'}
@@ -89,7 +89,7 @@ export default function NewWish() {
           testID="new-wish-title-input"
           value={title}
           onChangeText={setTitle}
-          placeholder="Linen throw, oatmeal..."
+          placeholder="What's on your wishlist…"
           accent={C.peach}
         />
       </SheetSection>
@@ -169,7 +169,7 @@ export default function NewWish() {
               testID="new-wish-url-input"
               value={url}
               onChangeText={setUrl}
-              placeholder="paste url..."
+              placeholder="Paste a link…"
               placeholderTextColor={C.fog}
               style={{
                 flex: 1,

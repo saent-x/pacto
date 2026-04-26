@@ -131,7 +131,7 @@ export default function SignIn() {
               value={email}
               onChangeText={setEmail}
               editable={stage === 'email' && !busy}
-              placeholder="you@coupl.app"
+              placeholder="you@example.com"
               placeholderTextColor={C.fog}
               autoCapitalize="none"
               keyboardType="email-address"

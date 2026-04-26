@@ -318,11 +318,8 @@ describe('UsIndex', () => {
     dbState.loading = true;
     const renderer = await render();
     const text = readText(renderer.root);
-    expect(text).toContain('124'); // notes (big) ghost count placeholder
-    expect(text).toContain('You · good'); // checkins (flat) sub placeholder
-    expect(text).toContain('Sofia owes €42'); // expenses (flat) sub placeholder
-    expect(text).toContain('184'); // journal default count placeholder
-    expect(text).toContain('Venice · 3d'); // plans sub placeholder
+    expect(text).toContain('—');
+    expect(text).toContain('Loading…');
     act(() => renderer.unmount());
   });
 

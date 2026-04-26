@@ -70,7 +70,7 @@ export default function NewNote() {
     <SheetShell
       eyebrow={isEdit ? 'EDIT NOTE' : 'NEW LOVE NOTE'}
       eyebrowColor={active.color}
-      title={isEdit ? 'Edit note.' : 'Tell them.'}
+      title={isEdit ? 'Edit note' : 'New love note'}
       footer={
         <PrimaryButton
           icon={isEdit ? 'check' : 'heart'}
@@ -98,7 +98,7 @@ export default function NewNote() {
             testID="new-note-body-input"
             value={body}
             onChangeText={setBody}
-            placeholder="Say the thing you've been meaning to say..."
+            placeholder="Write a note for them…"
             placeholderTextColor={C.fog}
             multiline
             textAlignVertical="top"

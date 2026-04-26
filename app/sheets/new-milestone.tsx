@@ -93,7 +93,7 @@ export default function NewMilestone() {
     <SheetShell
       eyebrow={isEdit ? 'EDIT MILESTONE' : 'NEW MILESTONE'}
       eyebrowColor={color}
-      title={isEdit ? 'Edit milestone.' : 'Mark the day.'}
+      title={isEdit ? 'Edit milestone' : 'New milestone'}
       footer={
         <PrimaryButton
           icon={isEdit ? 'check' : 'star'}
@@ -109,7 +109,7 @@ export default function NewMilestone() {
           testID="new-milestone-title-input"
           value={title}
           onChangeText={setTitle}
-          placeholder="Anniversary, first apartment..."
+          placeholder="Name this milestone…"
           accent={color}
         />
       </SheetSection>

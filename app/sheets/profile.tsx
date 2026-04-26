@@ -138,7 +138,7 @@ export default function ProfileSheet() {
   ];
 
   return (
-    <SheetShell eyebrow="PROFILE & SETTINGS" title="You & us.">
+    <SheetShell eyebrow="PROFILE & SETTINGS" title="Profile">
       <BlockCard bg={C.peach} ink={C.peachInk} style={{ padding: 20, marginBottom: 20 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
           <CouplRings size={56} a={C.peachInk} b={C.gold} />

@@ -29,7 +29,7 @@ export default function NewEntry() {
   const [mood, setMood] = useState<Mood>('good');
   const [isPrivate, setIsPrivate] = useState(false);
   const [saving, setSaving] = useState(false);
-  const partnerName = partner?.displayName ?? 'Sofia';
+  const partnerName = partner?.displayName ?? 'Partner';
 
   const now = useMemo(() => new Date(), []);
   const eyebrow = format(now, 'EEEE, MMMM d').toUpperCase();
@@ -74,7 +74,7 @@ export default function NewEntry() {
     <SheetShell
       eyebrow={eyebrow}
       eyebrowColor={active.color}
-      title="New entry."
+      title="New entry"
       footer={
         <PrimaryButton icon="feather" onPress={onSave} disabled={!canSave}>
           {saving ? 'Saving…' : 'Save entry'}
@@ -96,7 +96,7 @@ export default function NewEntry() {
           testID="new-entry-body-input"
           value={body}
           onChangeText={setBody}
-          placeholder="Write your thoughts..."
+          placeholder="Write your thoughts…"
           placeholderTextColor={C.fog}
           multiline
           textAlignVertical="top"

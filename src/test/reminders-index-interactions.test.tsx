@@ -254,12 +254,12 @@ describe('Reminders screen interactions', () => {
     act(() => renderer.unmount());
   });
 
-  it("hides Sofia's filter when the session is solo", async () => {
+  it('hides Theirs filter when the session is solo', async () => {
     sessionState.isSolo = true;
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<RemindersScreen />); await flush(); });
-    const sofia = renderer.root.findAll((n: any) => n.props?.testID === "reminder-filter-Sofia's");
-    expect(sofia.length).toBe(0);
+    const theirs = renderer.root.findAll((n: any) => n.props?.testID === 'reminder-filter-Theirs');
+    expect(theirs.length).toBe(0);
     act(() => renderer.unmount());
   });
 

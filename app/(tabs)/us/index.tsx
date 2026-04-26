@@ -33,14 +33,14 @@ type Feature = {
 };
 
 const PLACEHOLDERS: Record<string, { count: string; sub: string }> = {
-  notes: { count: '124', sub: '2 new' },
-  checkins: { count: '86%', sub: 'You · good' },
-  expenses: { count: '€524', sub: 'Sofia owes €42' },
-  wishlists: { count: '14', sub: '6 items' },
-  milestones: { count: '3d', sub: '3 yrs Fri' },
-  plans: { count: '2', sub: 'Venice · 3d' },
-  timetables: { count: '4', sub: '4 rhythms' },
-  journal: { count: '184', sub: '4 entries' },
+  notes: { count: '—', sub: 'Loading…' },
+  checkins: { count: '—', sub: 'Loading…' },
+  expenses: { count: '—', sub: 'Loading…' },
+  wishlists: { count: '—', sub: 'Loading…' },
+  milestones: { count: '—', sub: 'Loading…' },
+  plans: { count: '—', sub: 'Loading…' },
+  timetables: { count: '—', sub: 'Loading…' },
+  journal: { count: '—', sub: 'Loading…' },
 };
 
 const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

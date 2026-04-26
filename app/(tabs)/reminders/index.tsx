@@ -22,7 +22,7 @@ import { useSession } from '@/src/hooks/useSession';
 import { useTheme } from '@/src/lib/theme';
 import type { Reminder } from '@/src/types/database';
 
-type FilterKey = 'All' | 'Mine' | "Sofia's" | 'Shared' | 'Overdue';
+type FilterKey = 'All' | 'Mine' | 'Theirs' | 'Shared' | 'Overdue';
 
 // solo-mode: filter set restricted to All/Overdue, partner stat segment hidden
 export default function RemindersScreen() {
@@ -44,16 +44,20 @@ export default function RemindersScreen() {
 
   const youId = user?.id ?? null;
   const partnerId = activeCouple?.partner?.id ?? null;
+  const partnerName = activeCouple?.partner?.displayName ?? null;
 
   const filters: FilterKey[] = useMemo(
-    () => (isSolo ? ['All', 'Overdue'] : ['All', 'Mine', "Sofia's", 'Shared', 'Overdue']),
+    () => (isSolo ? ['All', 'Overdue'] : ['All', 'Mine', 'Theirs', 'Shared', 'Overdue']),
     [isSolo],
   );
+
+  const filterLabel = (f: FilterKey) =>
+    f === 'Theirs' && partnerName ? `${partnerName}'s` : f;
 
   const matchFilter = (r: Reminder) => {
     if (filter === 'All') return true;
     if (filter === 'Mine') return youId != null && r.assigned_to === youId;
-    if (filter === "Sofia's") return partnerId != null && r.assigned_to === partnerId;
+    if (filter === 'Theirs') return partnerId != null && r.assigned_to === partnerId;
     if (filter === 'Shared') return r.assigned_to == null;
     if (filter === 'Overdue') return isOverdue(r.due_at, r.is_completed);
     return true;
@@ -123,7 +127,7 @@ export default function RemindersScreen() {
               activeColor="#fff"
               onPress={() => setFilter(f)}
             >
-              {f}
+              {filterLabel(f)}
             </Pill>
           ))}
         </View>
