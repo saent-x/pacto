@@ -98,17 +98,7 @@ export default function Invite() {
         </Text>
       </View>
 
-      <View style={[
-        styles.codeWrap,
-        {
-          backgroundColor: C.bgSoft,
-          borderColor: error ? C.error : C.line2,
-        },
-      ]}>
-        <View style={[styles.codeAccent, { backgroundColor: error ? C.error : C.accent }]} />
-        <View style={[styles.codeBadge, { backgroundColor: C.bgCard, borderColor: C.lineColor }]}>
-          <Text style={[Typography.captionMedium, { color: error ? C.error : C.accent }]}>#</Text>
-        </View>
+      <View style={styles.codeWrap}>
         <Text style={[Typography.eyebrowSm, { color: C.ink3, marginBottom: 14, textAlign: 'center' }]}>
           Invite code
         </Text>
@@ -168,32 +158,9 @@ const styles = StyleSheet.create({
   hero: { alignItems: 'center', marginTop: 44, marginBottom: 38 },
   codeWrap: {
     width: '100%',
-    maxWidth: 420,
     alignSelf: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 24,
-    paddingHorizontal: 18,
-    paddingTop: 26,
-    paddingBottom: 22,
-    marginBottom: 28,
-    overflow: 'hidden',
-  },
-  codeAccent: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 4,
-  },
-  codeBadge: {
-    width: 38,
-    height: 38,
-    borderRadius: 14,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
+    marginBottom: 30,
   },
   slotRow: {
     flexDirection: 'row',
