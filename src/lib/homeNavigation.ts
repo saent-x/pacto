@@ -1,19 +1,37 @@
 import type { MilestoneStripItem, TimelineItem } from "@/src/lib/home/types";
+import type { FeatureId } from "@/src/lib/features/registry";
 
-export function routeForTimelineItem(item: TimelineItem): string | null {
+type IsFeatureEnabled = (featureId: FeatureId) => boolean;
+
+const allFeaturesEnabled: IsFeatureEnabled = () => true;
+
+export function routeForTimelineItem(
+  item: TimelineItem,
+  isFeatureEnabled: IsFeatureEnabled = allFeaturesEnabled,
+): string | null {
   switch (item.type) {
     case "event":
-      return "/(tabs)/calendar";
+      return isFeatureEnabled("calendar") ? "/(tabs)/calendar" : null;
     case "plan":
-      return "/(tabs)/us/plans";
+      return isFeatureEnabled("goals") ? "/(tabs)/us/plans" : null;
     case "reminder":
-      return "/(tabs)/reminders";
+      return isFeatureEnabled("recurring") ? "/(tabs)/reminders" : null;
     case "task":
-      return "/(tabs)/tasks";
+      return isFeatureEnabled("tasks") ? "/(tabs)/tasks" : null;
     case "ritual":
-      return "/(tabs)/calendar";
-    case "memory":
-      return "/(tabs)/us/journal";
+      return isFeatureEnabled("recurring") && isFeatureEnabled("calendar") ? "/(tabs)/calendar" : null;
+    case "memory": {
+      if (item.sourceTable === "journalEntries") {
+        return isFeatureEnabled("journal") ? "/(tabs)/us/journal" : null;
+      }
+      if (item.sourceTable === "loveNotes" || item.sourceTable === "memories") {
+        return isFeatureEnabled("memories") ? "/(tabs)/us/notes" : null;
+      }
+      if (item.sourceTable === "milestones") {
+        return isFeatureEnabled("memories") ? "/(tabs)/us/milestones" : null;
+      }
+      return null;
+    }
     default:
       return null;
   }

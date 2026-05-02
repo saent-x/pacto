@@ -79,7 +79,6 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
 
   const homeView = useMemo(() => {
     const now = Date.now();
-    const checkinsEnabled = isFeatureEnabled('checkins');
     const memoriesEnabled = isFeatureEnabled('memories');
     const events = isFeatureEnabled('calendar') ? data?.events ?? [] : [];
     const plans = isFeatureEnabled('goals') ? data?.plans ?? [] : [];
@@ -88,7 +87,7 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
     const tasks = isFeatureEnabled('tasks') ? data?.tasks ?? [] : [];
     const journalEntries = isFeatureEnabled('journal') ? data?.journalEntries ?? [] : [];
     const loveNotes = memoriesEnabled ? data?.loveNotes ?? [] : [];
-    const checkIns = checkinsEnabled ? data?.checkIns ?? [] : [];
+    const checkIns = isFeatureEnabled('checkins') ? data?.checkIns ?? [] : [];
     const milestones = memoriesEnabled ? data?.milestones ?? [] : [];
 
     const memories = buildMemoryPreviews({
@@ -117,15 +116,13 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
       memories: memoryPreview ? [memoryPreview] : [],
     });
 
-    const hero = checkinsEnabled
-      ? selectFeaturedSignal({
-          now,
-          presence,
-          milestones: milestoneStrip,
-          memoryPreview,
-          checkIns,
-        })
-      : null;
+    const hero = selectFeaturedSignal({
+      now,
+      presence,
+      milestones: milestoneStrip,
+      memoryPreview,
+      checkIns,
+    });
 
     const verseRecord = (data?.dailyVerseCache ?? [])[0];
     const dailyVerse = verseRecord

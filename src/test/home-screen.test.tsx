@@ -299,6 +299,28 @@ describe('HomeRoute', () => {
     act(() => renderer.unmount());
   });
 
+  it('does not navigate to plan routes from empty Today or Coming Up All when goals are disabled', async () => {
+    sessionState.isFeatureEnabled = vi.fn((featureId: string) => featureId !== 'goals');
+    const renderer = await renderHome();
+
+    const empty = findByTestID(renderer, 'home-timeline-empty')[0];
+    expect(empty).toBeDefined();
+    expect(empty.props.onPress).toBeUndefined();
+    expect(findByTestID(renderer, 'home-coming-all')).toHaveLength(0);
+
+    const pressables = renderer.root.findAll((node: any) => typeof node.props?.onPress === 'function');
+    for (const pressable of pressables) {
+      await act(async () => {
+        await pressable.props.onPress();
+      });
+    }
+
+    expect(routerSpy.push).not.toHaveBeenCalledWith('/sheets/new-plan');
+    expect(routerSpy.push).not.toHaveBeenCalledWith('/(tabs)/us/plans');
+
+    act(() => renderer.unmount());
+  });
+
   it('timeline task item routes to /(tabs)/tasks', async () => {
     const occursAt = new Date();
     occursAt.setHours(12, 0, 0, 0);
@@ -375,6 +397,37 @@ describe('HomeRoute', () => {
       await btn.props.onPress();
     });
     expect(routerSpy.push).toHaveBeenCalledWith('/(tabs)/reminders');
+    act(() => renderer.unmount());
+  });
+
+  it('routes love-note memory rows to a memories destination when journal is disabled', async () => {
+    sessionState.isFeatureEnabled = vi.fn((featureId: string) => featureId !== 'journal');
+    const occursAt = new Date();
+    occursAt.setHours(11, 0, 0, 0);
+    homeState.timeline = [
+      {
+        id: 'memory:love-note-1',
+        type: 'memory',
+        sourceId: 'love-note-1',
+        sourceTable: 'loveNotes',
+        title: 'Love note',
+        subtitle: 'You made the morning easier.',
+        occursAt: occursAt.getTime(),
+        priority: -1,
+        isPrivate: false,
+        isOverdue: false,
+      },
+    ];
+
+    const renderer = await renderHome();
+    const btn = findByTestID(renderer, 'home-timeline-memory-love-note-1')[0];
+    expect(btn).toBeDefined();
+    await act(async () => {
+      await btn.props.onPress();
+    });
+
+    expect(routerSpy.push).toHaveBeenCalledWith('/(tabs)/us/notes');
+    expect(routerSpy.push).not.toHaveBeenCalledWith('/(tabs)/us/journal');
     act(() => renderer.unmount());
   });
 

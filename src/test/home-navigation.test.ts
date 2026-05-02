@@ -41,9 +41,16 @@ describe("homeNavigation", () => {
     expect(routeForTimelineItem(makeTimelineItem({ type: "ritual" }))).toBe(
       "/(tabs)/calendar",
     );
-    expect(routeForTimelineItem(makeTimelineItem({ type: "memory" }))).toBe(
-      "/(tabs)/us/journal",
-    );
+    expect(
+      routeForTimelineItem(
+        makeTimelineItem({ type: "memory", sourceTable: "journalEntries" }),
+      ),
+    ).toBe("/(tabs)/us/journal");
+    expect(
+      routeForTimelineItem(
+        makeTimelineItem({ type: "memory", sourceTable: "loveNotes" }),
+      ),
+    ).toBe("/(tabs)/us/notes");
   });
 
   it("returns a milestones route for countdown cards", () => {

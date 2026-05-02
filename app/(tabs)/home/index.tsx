@@ -181,10 +181,18 @@ export default function HomeScreen() {
     () => home.timeline.filter((row) => isOnLocalDate(row.occursAt, today)).slice(0, 5),
     [home.timeline, today],
   );
-  const comingTimeline = home.timeline[0] ?? null;
   const comingMilestone = home.milestones[0] ?? null;
-  const hasComingUp = !!comingTimeline || !!comingMilestone;
   const checkinsEnabled = isFeatureEnabled('checkins');
+  const goalsEnabled = isFeatureEnabled('goals');
+  const routedTodayRows = useMemo(
+    () => todayRows.filter((row) => routeForTimelineItem(row, isFeatureEnabled)),
+    [todayRows, isFeatureEnabled],
+  );
+  const routedComingTimeline = useMemo(
+    () => home.timeline.find((row) => routeForTimelineItem(row, isFeatureEnabled)) ?? null,
+    [home.timeline, isFeatureEnabled],
+  );
+  const hasComingUp = !!routedComingTimeline || !!comingMilestone;
   const enabledShortcuts = useMemo(
     () => SHORTCUTS.filter((s) => isFeatureEnabled(s.feature)),
     [isFeatureEnabled],
@@ -352,7 +360,7 @@ export default function HomeScreen() {
                 <Text
                   style={[Typography.captionMedium, { color: C.inkColor, marginTop: 4 }]}
                 >
-                  {comingTimeline ? comingTimeline.title : comingMilestone ? comingMilestone.title : 'Nothing scheduled yet'}
+                  {routedComingTimeline ? routedComingTimeline.title : comingMilestone ? comingMilestone.title : 'Nothing scheduled yet'}
                 </Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
@@ -378,21 +386,32 @@ export default function HomeScreen() {
             </Text>
           </View>
           <Card padded={false} elevated style={styles.todayCard}>
-            {todayRows.length === 0 ? (
-              <PressScale
-                testID="home-timeline-empty"
-                onPress={() => router.push('/sheets/new-plan' as any)}
-                style={styles.emptyBlock}
-              >
-                <Text style={[Typography.bodyMedium, { color: C.inkColor }]}>
-                  Nothing scheduled yet
-                </Text>
-                <Text style={[Typography.captionMedium, { color: C.accent, marginTop: 4 }]}>
-                  Add a plan
-                </Text>
-              </PressScale>
-            ) : todayRows.map((row, i) => {
-              const route = routeForTimelineItem(row);
+            {routedTodayRows.length === 0 ? (
+              goalsEnabled ? (
+                <PressScale
+                  testID="home-timeline-empty"
+                  onPress={() => router.push('/sheets/new-plan' as any)}
+                  style={styles.emptyBlock}
+                >
+                  <Text style={[Typography.bodyMedium, { color: C.inkColor }]}>
+                    Nothing scheduled yet
+                  </Text>
+                  <Text style={[Typography.captionMedium, { color: C.accent, marginTop: 4 }]}>
+                    Add a plan
+                  </Text>
+                </PressScale>
+              ) : (
+                <View testID="home-timeline-empty" style={styles.emptyBlock}>
+                  <Text style={[Typography.bodyMedium, { color: C.inkColor }]}>
+                    Nothing scheduled yet
+                  </Text>
+                  <Text style={[Typography.caption, { color: C.ink3, marginTop: 4 }]}>
+                    Add a task or calendar item when there is something real to track.
+                  </Text>
+                </View>
+              )
+            ) : routedTodayRows.map((row, i) => {
+              const route = routeForTimelineItem(row, isFeatureEnabled);
               return (
                 <View key={row.id}>
                   {i > 0 ? <View style={[styles.todayDivider, { backgroundColor: C.lineColor }]} /> : null}
@@ -427,36 +446,39 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.comingHeadRow}>
             <Text style={[Typography.eyebrow, { color: C.ink3 }]}>COMING UP</Text>
-            <PressScale
-              onPress={() => router.push('/(tabs)/us/plans' as any)}
-              hitSlop={8}
-              style={styles.comingAllBtn}
-            >
-              <Text style={[Typography.eyebrow, { color: C.ink3 }]}>ALL  →</Text>
-            </PressScale>
+            {goalsEnabled ? (
+              <PressScale
+                testID="home-coming-all"
+                onPress={() => router.push('/(tabs)/us/plans' as any)}
+                hitSlop={8}
+                style={styles.comingAllBtn}
+              >
+                <Text style={[Typography.eyebrow, { color: C.ink3 }]}>ALL  →</Text>
+              </PressScale>
+            ) : null}
           </View>
           {hasComingUp ? (
             <View style={styles.comingRow}>
-              {comingTimeline ? (
+              {routedComingTimeline ? (
                 <Card
                   padded={false}
                   elevated
                   style={styles.comingPlanCard}
                   onPress={() => {
-                    const route = routeForTimelineItem(comingTimeline);
+                    const route = routeForTimelineItem(routedComingTimeline, isFeatureEnabled);
                     if (route) router.push(route as any);
                   }}
                 >
                   <View style={[styles.comingCover, { backgroundColor: '#CFE8D9' }]}>
                     <View style={[styles.comingPill, { borderColor: '#7FB89B' }]}>
                       <Text style={[Typography.eyebrowSm, { color: '#3F7A5C', letterSpacing: 1.4 }]}>
-                        {dateLabelForTimeline(comingTimeline.occursAt)}
+                        {dateLabelForTimeline(routedComingTimeline.occursAt)}
                       </Text>
                     </View>
                   </View>
                   <View style={styles.comingPlanMeta}>
                     <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
-                      {comingTimeline.type.toUpperCase()}
+                      {routedComingTimeline.type.toUpperCase()}
                     </Text>
                     <Text
                       style={{
@@ -468,10 +490,10 @@ export default function HomeScreen() {
                       }}
                       numberOfLines={1}
                     >
-                      {comingTimeline.title}
+                      {routedComingTimeline.title}
                     </Text>
                     <Text style={[Typography.caption, { color: C.ink3, marginTop: 8 }]} numberOfLines={2}>
-                      {comingTimeline.subtitle ?? 'From your live timeline'}
+                      {routedComingTimeline.subtitle ?? 'From your live timeline'}
                     </Text>
                   </View>
                 </Card>

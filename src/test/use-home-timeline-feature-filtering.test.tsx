@@ -86,7 +86,7 @@ describe('useHomeTimeline feature filtering', () => {
     };
   });
 
-  it('does not expose a featured signal when checkins are disabled', async () => {
+  it('removes check-in hero content when checkins are disabled but still exposes enabled memory signals', async () => {
     sessionState.isFeatureEnabled = vi.fn((featureId: string) => featureId !== 'checkins');
     queryState.data.checkIns = [
       {
@@ -96,10 +96,52 @@ describe('useHomeTimeline feature filtering', () => {
         createdAt: Date.now(),
       },
     ];
+    queryState.data.loveNotes = [
+      {
+        id: 'love-note-1',
+        body: 'Still thinking about that walk.',
+        isPrivate: false,
+        createdAt: Date.now() - 1000,
+      },
+    ];
 
     const { latest, renderer } = await renderHookValue();
 
-    expect(latest.hero).toBeNull();
+    expect(latest.hero).toMatchObject({
+      kind: 'loveNote',
+      sourceId: 'love-note-1',
+      sourceTable: 'loveNotes',
+    });
+
+    act(() => renderer.unmount());
+  });
+
+  it('falls back to enabled milestone or presence hero when checkins are disabled', async () => {
+    sessionState.isFeatureEnabled = vi.fn((featureId: string) => featureId !== 'checkins');
+    queryState.data.checkIns = [
+      {
+        id: 'checkin-1',
+        note: 'Shared pulse',
+        isPrivate: false,
+        createdAt: Date.now(),
+      },
+    ];
+    queryState.data.milestones = [
+      {
+        id: 'milestone-1',
+        title: 'Launch day',
+        date: todayDateKey(),
+        description: null,
+      },
+    ];
+
+    const { latest, renderer } = await renderHookValue();
+
+    expect(latest.hero).toMatchObject({
+      kind: 'countdown',
+      sourceId: 'milestone:milestone-1',
+      sourceTable: 'milestones',
+    });
 
     act(() => renderer.unmount());
   });
