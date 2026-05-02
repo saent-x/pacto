@@ -26,6 +26,18 @@ import {
 
 type Mode = 'solo' | 'pair' | 'crew';
 
+const FEATURE_TILE_COPY: Record<FeatureId, string> = {
+  tasks: 'Lists & chores',
+  calendar: 'Dates & events',
+  wishlist: 'Gift ideas',
+  memories: 'Notes & moments',
+  journal: 'Private/shared',
+  checkins: 'Mood updates',
+  recurring: 'Repeating routines',
+  timetable: 'Weekly rhythm',
+  goals: 'Plans & priorities',
+};
+
 export default function Onboarding() {
   const router = useRouter();
   const { C } = useTheme();
@@ -273,6 +285,7 @@ function FeatureTile({
   onPress: () => void;
 }) {
   const { C } = useTheme();
+  const accent = featureTileAccent(feature.id, C);
   return (
     <PressScale
       testID={`feature-toggle-${feature.id}`}
@@ -282,19 +295,31 @@ function FeatureTile({
       <Card
         style={[
           styles.featureTile,
-          selected ? { borderColor: C.accent, backgroundColor: C.bgSoft } : null,
+          {
+            borderColor: selected ? accent : `${accent}55`,
+            backgroundColor: selected ? `${accent}1F` : C.bgSoft,
+          },
         ]}
       >
+        <View style={[styles.featureAccentRail, { backgroundColor: accent }]} />
         <View style={styles.featureTileTop}>
-          <View style={[styles.featureIcon, { backgroundColor: selected ? C.accentSoft : C.bgSoft }]}>
-            <Icon name={feature.icon} size={17} color={selected ? C.accent : C.ink2} />
+          <View
+            style={[
+              styles.featureIcon,
+              {
+                backgroundColor: `${accent}24`,
+                borderColor: `${accent}45`,
+              },
+            ]}
+          >
+            <Icon name={feature.icon} size={17} color={selected ? accent : C.ink2} />
           </View>
           <View
             style={[
               styles.featureCheck,
               {
-                borderColor: selected ? C.accent : C.lineColor,
-                backgroundColor: selected ? C.accent : 'transparent',
+                borderColor: selected ? accent : `${accent}4D`,
+                backgroundColor: selected ? accent : 'transparent',
               },
             ]}
           >
@@ -309,15 +334,30 @@ function FeatureTile({
             {feature.label}
           </Text>
           <Text
-            numberOfLines={2}
-            style={[Typography.small, { color: C.ink2, marginTop: 4, fontSize: 11, lineHeight: 15 }]}
+            numberOfLines={1}
+            style={[Typography.smallMedium, { color: selected ? C.ink2 : C.ink3, marginTop: 5, fontSize: 10.5, lineHeight: 14 }]}
           >
-            {feature.description}
+            {FEATURE_TILE_COPY[feature.id]}
           </Text>
         </View>
       </Card>
     </PressScale>
   );
+}
+
+function featureTileAccent(featureId: FeatureId, C: ReturnType<typeof useTheme>['C']) {
+  const map: Record<FeatureId, string> = {
+    tasks: C.accent,
+    calendar: C.accent2,
+    wishlist: C.accent3,
+    memories: C.peach,
+    journal: C.journal,
+    checkins: C.sky,
+    recurring: C.reminders,
+    timetable: C.lavender,
+    goals: C.plans,
+  };
+  return map[featureId];
 }
 
 const styles = StyleSheet.create({
@@ -347,9 +387,16 @@ const styles = StyleSheet.create({
     flexGrow: 0,
   },
   featureTile: {
-    height: 122,
+    height: 108,
     padding: 11,
     justifyContent: 'space-between',
+  },
+  featureAccentRail: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
   },
   featureTileTop: {
     flexDirection: 'row',
@@ -361,6 +408,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 10,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
