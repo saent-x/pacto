@@ -28,6 +28,7 @@ vi.mock('react-native', async () => {
 
 const wishState = vi.hoisted(() => ({
   add: vi.fn(async () => undefined),
+  update: vi.fn(async () => undefined),
 }));
 
 vi.mock('@/src/hooks/useSession', () => ({
@@ -38,7 +39,7 @@ vi.mock('@/src/hooks/useSession', () => ({
 }));
 
 vi.mock('@/src/hooks/useWishlists', () => ({
-  useQuickAddWishItem: () => ({ add: wishState.add }),
+  useQuickAddWishItem: () => ({ add: wishState.add, update: wishState.update }),
   useAllWishlistItems: () => ({ items: [] }),
 }));
 
@@ -63,6 +64,7 @@ const findSaveBtn = (root: any, opts: { enabled?: boolean } = {}) =>
 describe('new-wish sheet', () => {
   beforeEach(() => {
     wishState.add.mockClear();
+    wishState.update.mockClear();
     (router.back as any).mockClear();
     (Haptics.notificationAsync as any).mockClear();
     alertSpy.mockClear();
@@ -125,8 +127,43 @@ describe('new-wish sheet', () => {
     expect(call.currency).toBe('EUR');
     expect(call.tag).toBe('KITCHEN');
     expect(call.url).toBe('https://shop/x');
+    expect(call.scope).toBe('mine');
     expect(Haptics.notificationAsync).toHaveBeenCalledWith('success');
     expect(router.back).toHaveBeenCalledTimes(1);
+    act(() => renderer.unmount());
+  });
+
+  it('persists selected shared scope', async () => {
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<NewWish />); await flush(); });
+    await act(async () => {
+      findByTestID(renderer.root, 'new-wish-title-input').props.onChangeText('Concert tickets');
+      await flush();
+    });
+    await act(async () => {
+      findByTestID(renderer.root, 'new-wish-scope-shared').props.onPress();
+      await flush();
+    });
+    await act(async () => { findSaveBtn(renderer.root, { enabled: true }).props.onPress(); await flush(); });
+
+    expect(wishState.add.mock.calls[0][0].scope).toBe('shared');
+    act(() => renderer.unmount());
+  });
+
+  it('persists selected partner scope', async () => {
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<NewWish />); await flush(); });
+    await act(async () => {
+      findByTestID(renderer.root, 'new-wish-title-input').props.onChangeText('Watch');
+      await flush();
+    });
+    await act(async () => {
+      findByTestID(renderer.root, 'new-wish-scope-partner').props.onPress();
+      await flush();
+    });
+    await act(async () => { findSaveBtn(renderer.root, { enabled: true }).props.onPress(); await flush(); });
+
+    expect(wishState.add.mock.calls[0][0].scope).toBe('partner');
     act(() => renderer.unmount());
   });
 

@@ -2,12 +2,15 @@ import { useCallback, useMemo } from 'react';
 import { db, id } from '@/src/lib/instant';
 import { useSession } from './useSession';
 
+export type WishScope = 'mine' | 'partner' | 'shared';
+
 type WishlistItemInput = {
   title: string;
   description?: string | null;
   url?: string | null;
   price?: number | null;
   priority?: number;
+  scope?: WishScope;
 };
 
 export function useWishlists() {
@@ -65,6 +68,7 @@ export type QuickAddWishInput = {
   currency?: string;
   tag?: string | null;
   url?: string | null;
+  scope?: WishScope;
 };
 
 export function useQuickAddWishItem() {
@@ -97,6 +101,7 @@ export function useQuickAddWishItem() {
             currency: input.currency ?? 'EUR',
             tag: input.tag ?? undefined,
             url: input.url ?? undefined,
+            scope: input.scope ?? 'mine',
             isPurchased: false,
             priority: 0,
             sortOrder: 0,
@@ -116,6 +121,7 @@ export function useQuickAddWishItem() {
       if (input.currency !== undefined) updates.currency = input.currency;
       if (input.tag !== undefined) updates.tag = input.tag ?? null;
       if (input.url !== undefined) updates.url = input.url ?? null;
+      if (input.scope !== undefined) updates.scope = input.scope;
       await db.transact(db.tx.wishlistItems[itemId].update(updates));
     },
     [],
@@ -151,6 +157,7 @@ export function useAllWishlistItems() {
         addedBy: (i.addedBy as any)?.[0]?.id ?? (i.addedBy as any)?.id ?? '',
         wishlistId: (i.wishlist as any)?.[0]?.id ?? (i.wishlist as any)?.id ?? '',
         wishlistName: (i.wishlist as any)?.[0]?.name ?? (i.wishlist as any)?.name ?? null,
+        scope: (i.scope as WishScope | undefined) ?? 'mine',
       })),
     [data?.wishlistItems],
   );
@@ -171,7 +178,14 @@ export function useWishlistItems(wishlistId: string | null) {
       : null,
   );
 
-  const items = useMemo(() => data?.wishlistItems ?? [], [data?.wishlistItems]);
+  const items = useMemo(
+    () =>
+      (data?.wishlistItems ?? []).map((i) => ({
+        ...i,
+        scope: (i.scope as WishScope | undefined) ?? 'mine',
+      })),
+    [data?.wishlistItems],
+  );
 
   const add = useCallback(
     async (input: WishlistItemInput) => {
@@ -184,6 +198,7 @@ export function useWishlistItems(wishlistId: string | null) {
             description: input.description ?? undefined,
             url: input.url ?? undefined,
             price: input.price ?? undefined,
+            scope: input.scope ?? 'mine',
             isPurchased: false,
             priority: input.priority ?? 0,
             sortOrder: items.length,
@@ -203,6 +218,7 @@ export function useWishlistItems(wishlistId: string | null) {
       if (input.url !== undefined) updates.url = input.url ?? null;
       if (input.price !== undefined) updates.price = input.price ?? null;
       if (input.priority !== undefined) updates.priority = input.priority;
+      if (input.scope !== undefined) updates.scope = input.scope;
       await db.transact(db.tx.wishlistItems[itemId].update(updates));
     },
     [],

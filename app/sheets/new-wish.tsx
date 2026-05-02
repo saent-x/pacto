@@ -9,11 +9,16 @@ import {
   SheetIconGrid,
   SheetRow,
   SheetSection,
+  SheetSegment,
   SheetShell,
   SheetTitleField,
   type IconOption,
 } from '@/src/components/ui/SheetShell';
-import { useAllWishlistItems, useQuickAddWishItem } from '@/src/hooks/useWishlists';
+import {
+  useAllWishlistItems,
+  useQuickAddWishItem,
+  type WishScope,
+} from '@/src/hooks/useWishlists';
 import { useFeatureGate } from '@/src/hooks/useFeatureGate';
 import { useTheme } from '@/src/lib/theme';
 
@@ -26,6 +31,12 @@ const TAGS: IconOption<Tag>[] = [
   { key: 'BIG', icon: 'star' },
   { key: 'KITCHEN', icon: 'coffee' },
   { key: 'CLOTHES', icon: 'shoppingBag' },
+];
+
+const SCOPES: { key: WishScope; label: string }[] = [
+  { key: 'mine', label: 'Mine' },
+  { key: 'partner', label: 'Theirs' },
+  { key: 'shared', label: 'Shared' },
 ];
 
 export default function NewWish() {
@@ -50,6 +61,7 @@ function NewWishInner() {
   );
   const [tag, setTag] = useState<Tag>((existing?.tag as Tag) ?? 'HOME');
   const [url, setUrl] = useState(existing?.url ?? '');
+  const [scope, setScope] = useState<WishScope>((existing?.scope as WishScope) ?? 'mine');
   const [saving, setSaving] = useState(false);
 
   const canSave = title.trim().length > 0 && !saving;
@@ -65,6 +77,7 @@ function NewWishInner() {
         currency: 'EUR',
         tag: tag || null,
         url: url.trim() || null,
+        scope,
       };
       if (isEdit && id) {
         await update(id, payload);
@@ -197,6 +210,16 @@ function NewWishInner() {
           onChange={setTag}
           accent={C.peach}
           testIDPrefix="new-wish-tag"
+        />
+      </SheetSection>
+
+      <SheetSection title="For">
+        <SheetSegment
+          options={SCOPES}
+          selected={scope}
+          onChange={setScope}
+          accent={C.peach}
+          testIDPrefix="new-wish-scope"
         />
       </SheetSection>
     </SheetShell>

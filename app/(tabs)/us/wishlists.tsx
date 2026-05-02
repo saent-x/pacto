@@ -15,7 +15,11 @@ import {
 } from '@/src/components/ui/pacto';
 import { Icon } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
-import { useAllWishlistItems, useQuickAddWishItem } from '@/src/hooks/useWishlists';
+import {
+  useAllWishlistItems,
+  useQuickAddWishItem,
+  type WishScope,
+} from '@/src/hooks/useWishlists';
 import { useSession } from '@/src/hooks/useSession';
 import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
@@ -57,6 +61,12 @@ function fmtMoneyCompact(amount: number, currency: string) {
     body = amount.toFixed(0);
   }
   return sym ? `${sym}${body}` : `${body} ${currency}`;
+}
+
+function scopeToWho(scope: WishScope): WhoKind {
+  if (scope === 'mine') return 'me';
+  if (scope === 'partner') return 'partner';
+  return 'shared';
 }
 
 export default function WishlistsScreen() {
@@ -101,9 +111,14 @@ export default function WishlistsScreen() {
   const rows = useMemo<WishRow[]>(() => {
     return items.map((raw: any): WishRow => {
       const addedBy = String(raw.addedBy ?? '');
-      const who: WhoKind =
-        addedBy === userId ? 'me' : addedBy === partnerId ? 'partner' : 'shared';
-      const meta = authorMeta(addedBy);
+      const scope = (raw.scope ?? 'mine') as WishScope;
+      const who = scopeToWho(scope);
+      const meta =
+        who === 'shared'
+          ? { name: 'Shared', color: C.accent3 }
+          : who === 'me'
+          ? authorMeta(userId || addedBy)
+          : authorMeta(addedBy && addedBy !== userId ? addedBy : partnerId);
       return {
         id: String(raw.id),
         title: String(raw.title ?? ''),
@@ -117,7 +132,17 @@ export default function WishlistsScreen() {
         priority: Number(raw.priority ?? 0),
       };
     });
-  }, [items, userId, partnerId, partnerName, user?.displayName]);
+  }, [
+    items,
+    userId,
+    partnerId,
+    partnerName,
+    user?.displayName,
+    members,
+    C.accent,
+    C.accent2,
+    C.accent3,
+  ]);
 
   const stats = useMemo(() => {
     const total = rows.length;

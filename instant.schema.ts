@@ -175,6 +175,7 @@ const _schema = i.schema({
       price: i.number().optional(),
       currency: i.string().optional(),
       tag: i.string().optional(),
+      scope: i.string().optional(),
       isPurchased: i.boolean().optional(),
       priority: i.number().optional(),
       sortOrder: i.number().optional(),
