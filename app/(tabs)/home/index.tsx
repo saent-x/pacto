@@ -600,16 +600,16 @@ export default function HomeScreen() {
                   style={styles.emptyBlock}
                 >
                   <Text style={[Typography.bodyMedium, { color: C.inkColor }]}>
-                    Nothing scheduled yet
+                    No items dated today
                   </Text>
                   <Text style={[Typography.captionMedium, { color: C.accent, marginTop: 4 }]}>
-                    Add a plan
+                    Schedule a goal
                   </Text>
                 </PressScale>
               ) : (
                 <View testID="home-timeline-empty" style={styles.emptyBlock}>
                   <Text style={[Typography.bodyMedium, { color: C.inkColor }]}>
-                    Nothing scheduled yet
+                    No items dated today
                   </Text>
                   <Text style={[Typography.caption, { color: C.ink3, marginTop: 4 }]}>
                     Nothing from enabled features is scheduled for today.

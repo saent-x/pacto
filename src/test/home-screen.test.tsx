@@ -352,10 +352,15 @@ describe('HomeRoute', () => {
     act(() => renderer.unmount());
   });
 
-  it('empty timeline press navigates to /sheets/new-plan', async () => {
+  it('empty Today state explains there are no dated items and routes to the goal sheet', async () => {
     const renderer = await renderHome();
     const empty = findByTestID(renderer, 'home-timeline-empty')[0];
+    const text = allText(renderer).join('\n');
+
     expect(empty).toBeDefined();
+    expect(text).toContain('No items dated today');
+    expect(text).toContain('Schedule a goal');
+    expect(text).not.toContain('Add a plan');
     await act(async () => {
       await empty.props.onPress();
     });
@@ -372,7 +377,7 @@ describe('HomeRoute', () => {
     expect(empty.props.onPress).toBeUndefined();
     expect(findByTestID(renderer, 'home-coming-all')).toHaveLength(0);
     const text = allText(renderer).join('\n');
-    expect(text).not.toContain('Add a plan');
+    expect(text).not.toContain('Schedule a goal');
     expect(text).not.toContain('Add a plan or milestone');
     expect(text).not.toContain('Add a task or calendar item');
 
