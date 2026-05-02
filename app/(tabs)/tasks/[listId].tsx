@@ -1,6 +1,14 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionEmptyState } from '@/src/components/ui/pacto/ActionEmptyState';
 import { type Bucket, BucketedList } from '@/src/components/ui/pacto/BucketedList';
@@ -300,7 +308,9 @@ export default function TaskListDetail() {
         </View>
       </ScrollView>
 
-      <View
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
         style={[
           styles.quickAddWrap,
           {
@@ -353,7 +363,7 @@ export default function TaskListDetail() {
             />
           </PressScale>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }

@@ -346,4 +346,17 @@ describe('Task list detail interactions', () => {
 
     act(() => renderer.unmount());
   });
+
+  it('keeps the quick-add composer keyboard-aware', async () => {
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<TaskListDetail />); await flush(); });
+
+    const keyboardAvoider = renderer.root.findAll(
+      (n: any) => n.props?.keyboardVerticalOffset === 0 && n.props?.behavior,
+    )[0];
+    expect(keyboardAvoider).toBeDefined();
+    expect(keyboardAvoider.findAll((n: any) => n.props?.testID === 'task-detail-quickadd-input')).toHaveLength(1);
+
+    act(() => renderer.unmount());
+  });
 });
