@@ -1,19 +1,16 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  ActionEmptyState,
-  Bucket,
-  BucketedList,
-  Card,
-  Checkbox,
-  HeaderBrand,
-  HeroPactoBadge,
-  PriorityDot,
-  ScopeChip,
-  SwipeableRow,
-} from '@/src/components/ui/pacto';
+import { ActionEmptyState } from '@/src/components/ui/pacto/ActionEmptyState';
+import { type Bucket, BucketedList } from '@/src/components/ui/pacto/BucketedList';
+import { Card } from '@/src/components/ui/pacto/Card';
+import { Checkbox } from '@/src/components/ui/pacto/Checkbox';
+import { HeaderBrand } from '@/src/components/ui/pacto/HeaderBrand';
+import { HeroPactoBadge } from '@/src/components/ui/pacto/HeroPactoBadge';
+import { PriorityDot } from '@/src/components/ui/pacto/PriorityDot';
+import { ScopeChip } from '@/src/components/ui/pacto/ScopeChip';
+import { SwipeableRow } from '@/src/components/ui/pacto/SwipeableRow';
 import { Icon } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
 import { bucketOf, orderBuckets } from '@/src/components/tasks/buckets';
@@ -35,7 +32,9 @@ export default function TaskListDetail() {
     () => lists.find((l) => l.id === listId) ?? null,
     [lists, listId]
   );
-  const { tasks, toggleComplete, remove } = useTaskItems(listId ?? null);
+  const { tasks, toggleComplete, remove, create } = useTaskItems(listId ?? null);
+  const [quickAddTitle, setQuickAddTitle] = useState('');
+  const [quickAddSaving, setQuickAddSaving] = useState(false);
 
   const partnerName = partner?.displayName ?? null;
   const youId = useSession().user?.id ?? null;
@@ -102,6 +101,21 @@ export default function TaskListDetail() {
     return 'none';
   };
 
+  const handleQuickAdd = async () => {
+    const title = quickAddTitle.trim();
+    if (!title || quickAddSaving) return;
+
+    setQuickAddSaving(true);
+    try {
+      await create({ title, due_date: null, priority: 0 });
+      setQuickAddTitle('');
+    } finally {
+      setQuickAddSaving(false);
+    }
+  };
+
+  const quickAddDisabled = !quickAddTitle.trim() || quickAddSaving;
+
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <Stack.Screen
@@ -145,7 +159,7 @@ export default function TaskListDetail() {
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingTop: insets.top + 60, paddingBottom: 120 }}
+        contentContainerStyle={{ paddingTop: insets.top + 60, paddingBottom: insets.bottom + 104 }}
         showsVerticalScrollIndicator={false}
       >
         {/* Stat hero */}
@@ -282,6 +296,61 @@ export default function TaskListDetail() {
           )}
         </View>
       </ScrollView>
+
+      <View
+        style={[
+          styles.quickAddWrap,
+          {
+            paddingBottom: Math.max(insets.bottom, 12),
+            backgroundColor: C.bg,
+            borderTopColor: C.lineColor,
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.quickAddBar,
+            { backgroundColor: C.bgCard, borderColor: C.lineColor },
+          ]}
+        >
+          <TextInput
+            testID="task-detail-quickadd-input"
+            value={quickAddTitle}
+            onChangeText={setQuickAddTitle}
+            onSubmitEditing={handleQuickAdd}
+            editable={!quickAddSaving}
+            placeholder="Add a task"
+            placeholderTextColor={C.ink3}
+            returnKeyType="send"
+            style={[
+              styles.quickAddInput,
+              Typography.bodyMedium,
+              { color: C.inkColor },
+            ]}
+          />
+          <PressScale
+            testID="task-detail-quickadd-send"
+            onPress={handleQuickAdd}
+            disabled={quickAddDisabled}
+            accessibilityRole="button"
+            accessibilityLabel="Add task"
+            style={[
+              styles.quickAddSend,
+              {
+                backgroundColor: quickAddDisabled ? C.bgSoft : C.accent,
+                opacity: quickAddDisabled ? 0.58 : 1,
+              },
+            ]}
+          >
+            <Icon
+              name="send"
+              size={17}
+              color={quickAddDisabled ? C.ink3 : C.bg}
+              strokeWidth={2.3}
+            />
+          </PressScale>
+        </View>
+      </View>
     </View>
   );
 }
@@ -386,5 +455,36 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: 999,
     marginTop: 14,
+  },
+  quickAddWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingTop: 10,
+    paddingHorizontal: 18,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  quickAddBar: {
+    minHeight: 50,
+    borderWidth: 1,
+    borderRadius: 18,
+    paddingLeft: 16,
+    paddingRight: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  quickAddInput: {
+    flex: 1,
+    minHeight: 44,
+    paddingVertical: 0,
+  },
+  quickAddSend: {
+    width: 38,
+    height: 38,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

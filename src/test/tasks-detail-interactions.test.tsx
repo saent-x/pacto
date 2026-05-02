@@ -1,6 +1,17 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.hoisted(() => {
+  (globalThis as any).__DEV__ = true;
+  (globalThis as any).expo = {
+    EventEmitter: class {
+      addListener() {
+        return { remove: () => undefined };
+      }
+    },
+  };
+});
+
 vi.mock('expo-router', () => ({
   router: { push: vi.fn(), back: vi.fn() },
   useLocalSearchParams: () => ({ listId: 'l1' }),
@@ -20,6 +31,33 @@ vi.mock('expo-haptics', () => ({
   NotificationFeedbackType: { Success: 'success', Warning: 'warning' },
   ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
 }));
+
+vi.mock('@/src/components/ui/pacto/HeroPactoBadge', () => {
+  const Reactx = require('react');
+  return {
+    HeroPactoBadge: (props: any) =>
+      Reactx.createElement('MockHeroPactoBadge', props),
+  };
+});
+
+vi.mock('@/src/components/ui/pacto/Checkbox', () => {
+  const Reactx = require('react');
+  return {
+    Checkbox: (props: any) =>
+      Reactx.createElement('MockCheckbox', {
+        ...props,
+        onPress: () => props.onChange?.(!props.checked),
+      }),
+  };
+});
+
+vi.mock('@/src/components/ui/pacto/SwipeableRow', () => {
+  const Reactx = require('react');
+  return {
+    SwipeableRow: (props: any) =>
+      Reactx.createElement('MockSwipeableRow', props, props.children),
+  };
+});
 
 vi.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: any) => <>{children}</>,
@@ -88,6 +126,7 @@ const taskState = vi.hoisted(() => ({
   remove: vi.fn(async () => undefined),
   reorder: vi.fn(async () => undefined),
   update: vi.fn(async () => undefined),
+  create: vi.fn(async () => undefined),
 }));
 
 const listState = vi.hoisted(() => ({
@@ -100,6 +139,14 @@ vi.mock('@/src/hooks/useTaskLists', () => ({
   useTaskLists: () => listState,
 }));
 
+vi.mock('@/src/hooks/useSession', () => ({
+  useSession: () => ({
+    user: { id: 'u1' },
+    partner: { id: 'u2', displayName: 'Sam' },
+    mode: 'couple',
+  }),
+}));
+
 vi.mock('@/src/hooks/useTasks', () => ({
   useTaskItems: () => ({
     tasks: taskState.tasks,
@@ -108,6 +155,7 @@ vi.mock('@/src/hooks/useTasks', () => ({
     remove: taskState.remove,
     reorder: taskState.reorder,
     update: taskState.update,
+    create: taskState.create,
   }),
 }));
 
@@ -159,6 +207,10 @@ function findRowMenu(root: any, taskId: string) {
   return menu;
 }
 
+function findByTestID(root: any, testID: string) {
+  return root.findAll((n: any) => n.props?.testID === testID)[0];
+}
+
 function actionKeys(menu: any): string[] {
   return (menu.props.actions || []).map((a: any) => a.id);
 }
@@ -177,6 +229,7 @@ describe('Task list detail interactions', () => {
     taskState.remove.mockClear();
     taskState.reorder.mockClear();
     taskState.update.mockClear();
+    taskState.create.mockClear();
     (router.push as any).mockClear?.();
   });
 
@@ -246,6 +299,42 @@ describe('Task list detail interactions', () => {
       .findAll((n: any) => typeof n.children?.[0] === 'string')
       .map((n: any) => n.children.join(''));
     expect(labels).toContain('All clear.');
+    act(() => renderer.unmount());
+  });
+
+  it('quick-add creates a trimmed task in the current list', async () => {
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<TaskListDetail />); await flush(); });
+
+    const input = findByTestID(renderer.root, 'task-detail-quickadd-input');
+    await act(async () => { input.props.onChangeText('  Buy train tickets  '); await flush(); });
+
+    const send = findByTestID(renderer.root, 'task-detail-quickadd-send');
+    await act(async () => { await send.props.onPress(); await flush(); });
+
+    expect(taskState.create).toHaveBeenCalledTimes(1);
+    expect(taskState.create).toHaveBeenCalledWith({
+      title: 'Buy train tickets',
+      due_date: null,
+      priority: 0,
+    });
+    expect(findByTestID(renderer.root, 'task-detail-quickadd-input').props.value).toBe('');
+    act(() => renderer.unmount());
+  });
+
+  it('quick-add does not create for blank input', async () => {
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<TaskListDetail />); await flush(); });
+
+    const input = findByTestID(renderer.root, 'task-detail-quickadd-input');
+    await act(async () => { input.props.onChangeText('   '); await flush(); });
+
+    const send = findByTestID(renderer.root, 'task-detail-quickadd-send');
+    await act(async () => { await send.props.onPress(); await flush(); });
+    await act(async () => { input.props.onSubmitEditing(); await flush(); });
+
+    expect(taskState.create).not.toHaveBeenCalled();
+    expect(send.props.disabled).toBe(true);
     act(() => renderer.unmount());
   });
 
