@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
+import { format } from 'date-fns';
 import { db } from '@/src/lib/instant';
 import type { PresenceInfo } from '@/src/lib/home/types';
 import {
@@ -15,31 +16,52 @@ export type TodaySummary = TodayRingSummary;
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? '';
 
+function getLocalDateKey(date: Date = new Date()) {
+  return format(date, 'yyyy-MM-dd');
+}
+
 export function useHomeTimeline(options?: { previewDays?: number }) {
   const { activeCouple, profile, isFeatureEnabled } = useSession();
   const coupleId = activeCouple?.couple?.id ?? null;
   const previewDays = options?.previewDays ?? 7;
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = getLocalDateKey();
   const warmedDateRef = useRef<string | null>(null);
+  const calendarEnabled = isFeatureEnabled('calendar');
+  const goalsEnabled = isFeatureEnabled('goals');
+  const recurringEnabled = isFeatureEnabled('recurring');
+  const checkinsEnabled = isFeatureEnabled('checkins');
+  const tasksEnabled = isFeatureEnabled('tasks');
+  const memoriesEnabled = isFeatureEnabled('memories');
+  const journalEnabled = isFeatureEnabled('journal');
+
+  const query = useMemo(() => {
+    if (!coupleId) return null;
+    const spaceWhere = { $: { where: { 'couple.id': coupleId } } };
+    return {
+      ...(calendarEnabled ? { events: spaceWhere } : {}),
+      ...(goalsEnabled ? { plans: spaceWhere } : {}),
+      ...(recurringEnabled ? { rituals: spaceWhere, reminders: spaceWhere } : {}),
+      ...(checkinsEnabled ? { checkIns: spaceWhere } : {}),
+      ...(tasksEnabled ? { tasks: spaceWhere } : {}),
+      ...(memoriesEnabled ? { milestones: spaceWhere, loveNotes: spaceWhere } : {}),
+      ...(journalEnabled ? { journalEntries: spaceWhere } : {}),
+      dailyVerseCache: { $: { where: { dateKey: todayKey } } },
+    };
+  }, [
+    coupleId,
+    calendarEnabled,
+    goalsEnabled,
+    recurringEnabled,
+    checkinsEnabled,
+    tasksEnabled,
+    memoriesEnabled,
+    journalEnabled,
+    todayKey,
+  ]);
 
   const { data, isLoading: queryLoading, error: queryError } = (
     db as any
-  ).useQuery(
-    coupleId
-      ? {
-          events: { $: { where: { 'couple.id': coupleId } } },
-          plans: { $: { where: { 'couple.id': coupleId } } },
-          rituals: { $: { where: { 'couple.id': coupleId } } },
-          checkIns: { $: { where: { 'couple.id': coupleId } } },
-          reminders: { $: { where: { 'couple.id': coupleId } } },
-          tasks: { $: { where: { 'couple.id': coupleId } } },
-          milestones: { $: { where: { 'couple.id': coupleId } } },
-          journalEntries: { $: { where: { 'couple.id': coupleId } } },
-          loveNotes: { $: { where: { 'couple.id': coupleId } } },
-          dailyVerseCache: { $: { where: { dateKey: todayKey } } },
-        }
-      : null,
-  );
+  ).useQuery(query);
 
   useEffect(() => {
     if (warmedDateRef.current === todayKey || !activeCouple) return;
@@ -79,15 +101,14 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
 
   const homeView = useMemo(() => {
     const now = Date.now();
-    const memoriesEnabled = isFeatureEnabled('memories');
-    const events = isFeatureEnabled('calendar') ? data?.events ?? [] : [];
-    const plans = isFeatureEnabled('goals') ? data?.plans ?? [] : [];
-    const reminders = isFeatureEnabled('recurring') ? data?.reminders ?? [] : [];
-    const rituals = isFeatureEnabled('recurring') ? data?.rituals ?? [] : [];
-    const tasks = isFeatureEnabled('tasks') ? data?.tasks ?? [] : [];
-    const journalEntries = isFeatureEnabled('journal') ? data?.journalEntries ?? [] : [];
+    const events = calendarEnabled ? data?.events ?? [] : [];
+    const plans = goalsEnabled ? data?.plans ?? [] : [];
+    const reminders = recurringEnabled ? data?.reminders ?? [] : [];
+    const rituals = recurringEnabled ? data?.rituals ?? [] : [];
+    const tasks = tasksEnabled ? data?.tasks ?? [] : [];
+    const journalEntries = journalEnabled ? data?.journalEntries ?? [] : [];
     const loveNotes = memoriesEnabled ? data?.loveNotes ?? [] : [];
-    const checkIns = isFeatureEnabled('checkins') ? data?.checkIns ?? [] : [];
+    const checkIns = checkinsEnabled ? data?.checkIns ?? [] : [];
     const milestones = memoriesEnabled ? data?.milestones ?? [] : [];
 
     const memories = buildMemoryPreviews({
@@ -152,7 +173,21 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
       dailyVerse,
       todaySummary,
     };
-  }, [data, previewDays, coupleId, activeCouple?.couple?.anniversary, presence, todayKey, isFeatureEnabled]);
+  }, [
+    data,
+    previewDays,
+    coupleId,
+    activeCouple?.couple?.anniversary,
+    presence,
+    todayKey,
+    calendarEnabled,
+    goalsEnabled,
+    recurringEnabled,
+    checkinsEnabled,
+    tasksEnabled,
+    memoriesEnabled,
+    journalEnabled,
+  ]);
 
   return {
     isLoading: queryLoading,

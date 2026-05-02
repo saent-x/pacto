@@ -174,7 +174,8 @@ export default function HomeScreen() {
   const { C } = useTheme();
   const { partner, mode, isFeatureEnabled } = useSession();
   const home = useHomeTimeline({ previewDays: 30 });
-  const { todayCheckIn, partnerTodayCheckIn, checkIns } = useCheckInSnapshot();
+  const checkinsEnabled = isFeatureEnabled('checkins');
+  const { todayCheckIn, partnerTodayCheckIn, checkIns } = useCheckInSnapshot(checkinsEnabled);
   const today = useMemo(() => new Date(), []);
   const dateLabel = format(today, 'EEE · MMM d').toUpperCase();
   const todayRows = useMemo(
@@ -182,7 +183,6 @@ export default function HomeScreen() {
     [home.timeline, today],
   );
   const comingMilestone = home.milestones[0] ?? null;
-  const checkinsEnabled = isFeatureEnabled('checkins');
   const goalsEnabled = isFeatureEnabled('goals');
   const routedTodayRows = useMemo(
     () => todayRows.filter((row) => routeForTimelineItem(row, isFeatureEnabled)),
@@ -406,7 +406,7 @@ export default function HomeScreen() {
                     Nothing scheduled yet
                   </Text>
                   <Text style={[Typography.caption, { color: C.ink3, marginTop: 4 }]}>
-                    Add a task or calendar item when there is something real to track.
+                    Nothing from enabled features is scheduled for today.
                   </Text>
                 </View>
               )
@@ -535,7 +535,7 @@ export default function HomeScreen() {
                 Nothing coming up yet
               </Text>
               <Text style={[Typography.caption, { color: C.ink3, marginTop: 4 }]}>
-                Add a plan or milestone when there is something real to track.
+                Enable a feature or add dated items to see what is next.
               </Text>
             </Card>
           )}
@@ -576,8 +576,8 @@ const SHORTCUTS: { icon: IconName; label: string; route: string; feature: Featur
   { icon: 'calendar', label: 'Calendar', route: '/(tabs)/calendar', feature: 'calendar' },
 ];
 
-function useCheckInSnapshot() {
-  const data = useCheckIns();
+function useCheckInSnapshot(enabled: boolean) {
+  const data = useCheckIns({ enabled });
   return {
     todayCheckIn: data.myTodayCheckIn ?? null,
     partnerTodayCheckIn: data.partnerTodayCheckIn ?? null,

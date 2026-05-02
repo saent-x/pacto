@@ -26,15 +26,17 @@ const queryState = vi.hoisted(() => ({
   } as any,
 }));
 
+const dbMock = vi.hoisted(() => ({
+  useQuery: vi.fn(() => ({ data: queryState.data, isLoading: false, error: null })),
+  getAuth: vi.fn(async () => ({ refresh_token: null })),
+}));
+
 vi.mock('@/src/hooks/useSession', () => ({
   useSession: () => sessionState,
 }));
 
 vi.mock('@/src/lib/instant', () => ({
-  db: {
-    useQuery: vi.fn(() => ({ data: queryState.data, isLoading: false, error: null })),
-    getAuth: vi.fn(async () => ({ refresh_token: null })),
-  },
+  db: dbMock,
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -84,6 +86,31 @@ describe('useHomeTimeline feature filtering', () => {
       loveNotes: [],
       dailyVerseCache: [],
     };
+    dbMock.useQuery.mockClear();
+    dbMock.getAuth.mockClear();
+    dbMock.useQuery.mockReturnValue({ data: queryState.data, isLoading: false, error: null });
+  });
+
+  it('does not query disabled feature tables', async () => {
+    sessionState.isFeatureEnabled = vi.fn((featureId: string) =>
+      ['calendar', 'memories'].includes(featureId),
+    );
+
+    const { renderer } = await renderHookValue();
+    const query = dbMock.useQuery.mock.calls.at(-1)?.[0] ?? {};
+
+    expect(query.events).toBeDefined();
+    expect(query.milestones).toBeDefined();
+    expect(query.loveNotes).toBeDefined();
+    expect(query.dailyVerseCache).toBeDefined();
+    expect(query.plans).toBeUndefined();
+    expect(query.rituals).toBeUndefined();
+    expect(query.reminders).toBeUndefined();
+    expect(query.checkIns).toBeUndefined();
+    expect(query.tasks).toBeUndefined();
+    expect(query.journalEntries).toBeUndefined();
+
+    act(() => renderer.unmount());
   });
 
   it('removes check-in hero content when checkins are disabled but still exposes enabled memory signals', async () => {

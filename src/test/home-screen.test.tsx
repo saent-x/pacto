@@ -173,8 +173,10 @@ const checkInsState = vi.hoisted(() => ({
   refetch: vi.fn(async () => undefined),
 }));
 
+const checkInsHook = vi.hoisted(() => vi.fn(() => checkInsState));
+
 vi.mock('@/src/hooks/useCheckIns', () => ({
-  useCheckIns: () => checkInsState,
+  useCheckIns: checkInsHook,
   getLocalDateKey: () => new Date().toISOString().slice(0, 10),
 }));
 
@@ -232,6 +234,8 @@ describe('HomeRoute', () => {
     homeState.error = null;
     checkInsState.myTodayCheckIn = null;
     checkInsState.partnerTodayCheckIn = null;
+    checkInsHook.mockClear();
+    checkInsHook.mockReturnValue(checkInsState);
   });
 
   it('does not render demo personalized home content with empty live data', async () => {
@@ -307,6 +311,10 @@ describe('HomeRoute', () => {
     expect(empty).toBeDefined();
     expect(empty.props.onPress).toBeUndefined();
     expect(findByTestID(renderer, 'home-coming-all')).toHaveLength(0);
+    const text = allText(renderer).join('\n');
+    expect(text).not.toContain('Add a plan');
+    expect(text).not.toContain('Add a plan or milestone');
+    expect(text).not.toContain('Add a task or calendar item');
 
     const pressables = renderer.root.findAll((node: any) => typeof node.props?.onPress === 'function');
     for (const pressable of pressables) {
@@ -453,6 +461,7 @@ describe('HomeRoute', () => {
     expect(texts).not.toContain('tap to update');
     expect(texts).not.toContain("TODAY'S ARC");
     expect(texts).not.toContain('Check in');
+    expect(checkInsHook).toHaveBeenCalledWith({ enabled: false });
 
     const pressables = renderer.root.findAll((node: any) => typeof node.props?.onPress === 'function');
     for (const pressable of pressables) {

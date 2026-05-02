@@ -19,7 +19,8 @@ export function getLocalDateKey(date: Date = new Date()) {
   return format(date, 'yyyy-MM-dd');
 }
 
-export function useCheckIns() {
+export function useCheckIns(options?: { enabled?: boolean }) {
+  const enabled = options?.enabled ?? true;
   const { activeCouple, user, space } = useSession();
   const coupleId = activeCouple?.couple?.id ?? null;
   const userId = user?.id ?? null;
@@ -27,7 +28,7 @@ export function useCheckIns() {
   const today = getLocalDateKey();
 
   const { data, isLoading: queryLoading } = (db as any).useQuery(
-    coupleId
+    coupleId && enabled
       ? {
           checkIns: {
             $: { where: { 'couple.id': coupleId } },
@@ -81,7 +82,7 @@ export function useCheckIns() {
       isPrivate: boolean;
       checkInDate?: string;
     }) => {
-      if (!coupleId || !userId || submittingRef.current) return;
+      if (!enabled || !coupleId || !userId || submittingRef.current) return;
       submittingRef.current = true;
       setIsSubmitting(true);
       try {
@@ -130,12 +131,13 @@ export function useCheckIns() {
         setIsSubmitting(false);
       }
     },
-    [coupleId, userId, encrypt, today, checkIns],
+    [enabled, coupleId, userId, encrypt, today, checkIns],
   );
 
   const remove = useCallback(async (checkInId: string) => {
+    if (!enabled) return;
     await db.transact((db.tx as any).checkIns[checkInId].delete());
-  }, []);
+  }, [enabled]);
 
   const myTodayCheckIn = useMemo(
     () =>
@@ -160,7 +162,7 @@ export function useCheckIns() {
     todayCheckIns: checkIns.filter((record) => record.checkInDate === today),
     myTodayCheckIn,
     partnerTodayCheckIn,
-    isLoading: !!coupleId && queryLoading,
+    isLoading: enabled && !!coupleId && queryLoading,
     isSubmitting,
     createOrUpdate,
     remove,
