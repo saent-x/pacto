@@ -106,19 +106,21 @@ export function CrewStack({ people, size = 32 }: CrewProps) {
           { initial: 'L', color: C.accent3 },
           { initial: 'R', color: '#A89BD4' },
         ];
+  const dotSize = Math.max(18, size * 0.82);
+  const outerDotSize = dotSize + 4;
 
   return (
-    <View style={styles.pair}>
+    <View style={[styles.crew, { width: outerDotSize * 2 + 4 }]}>
       {list.map((p, i) => (
-        <View key={i} style={{ marginLeft: i === 0 ? 0 : -size * 0.32 }}>
+        <View key={i}>
           <View
             style={{
               backgroundColor: C.bg,
-              padding: i === 0 ? 0 : 2,
+              padding: 2,
               borderRadius: 999,
             }}
           >
-            <Avatar person={p} size={size} />
+            <Avatar person={p} size={dotSize} />
           </View>
         </View>
       ))}
@@ -130,5 +132,12 @@ const styles = StyleSheet.create({
   pair: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  crew: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
   },
 });

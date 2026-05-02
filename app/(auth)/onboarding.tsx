@@ -172,7 +172,7 @@ export default function Onboarding() {
 
           <View style={styles.features}>
             {supportedFeatures.map((feature) => (
-              <FeatureRow
+              <FeatureTile
                 key={feature.id}
                 feature={feature}
                 selected={selectedFeatures.includes(feature.id)}
@@ -263,7 +263,7 @@ function ModeCard({
   );
 }
 
-function FeatureRow({
+function FeatureTile({
   feature,
   selected,
   onPress,
@@ -274,29 +274,20 @@ function FeatureRow({
 }) {
   const { C } = useTheme();
   return (
-    <PressScale testID={`feature-toggle-${feature.id}`} onPress={onPress}>
+    <PressScale
+      testID={`feature-toggle-${feature.id}`}
+      onPress={onPress}
+      style={styles.featureTilePressable}
+    >
       <Card
         style={[
-          styles.featureCard,
+          styles.featureTile,
           selected ? { borderColor: C.accent, backgroundColor: C.bgSoft } : null,
         ]}
       >
-        <View style={styles.featureRow}>
-          <View
-            style={[
-              styles.featureIcon,
-              { backgroundColor: selected ? C.accentSoft : C.bgSoft },
-            ]}
-          >
-            <Icon name={feature.icon} size={18} color={selected ? C.accent : C.ink2} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[Typography.bodyMedium, { color: C.inkColor }]}>
-              {feature.label}
-            </Text>
-            <Text style={[Typography.caption, { color: C.ink2, marginTop: 3 }]}>
-              {feature.description}
-            </Text>
+        <View style={styles.featureTileTop}>
+          <View style={[styles.featureIcon, { backgroundColor: selected ? C.accentSoft : C.bgSoft }]}>
+            <Icon name={feature.icon} size={17} color={selected ? C.accent : C.ink2} />
           </View>
           <View
             style={[
@@ -309,6 +300,17 @@ function FeatureRow({
           >
             {selected ? <Icon name="check" size={13} color={C.bg} /> : null}
           </View>
+        </View>
+        <View style={styles.featureTileCopy}>
+          <Text style={[Typography.bodyMedium, { color: C.inkColor }]}>
+            {feature.label}
+          </Text>
+          <Text
+            numberOfLines={2}
+            style={[Typography.small, { color: C.ink2, marginTop: 4, lineHeight: 17 }]}
+          >
+            {feature.description}
+          </Text>
         </View>
       </Card>
     </PressScale>
@@ -326,24 +328,41 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   modeLeft: {
-    width: 56,
+    width: 64,
     alignItems: 'center',
   },
   featureSection: { marginTop: 28 },
   sectionHeader: { marginBottom: 12 },
-  features: { gap: 10 },
-  featureCard: { padding: 14 },
-  featureRow: {
+  features: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  featureTilePressable: {
+    width: '48%',
+    minWidth: 150,
+    flexGrow: 1,
+  },
+  featureTile: {
+    minHeight: 118,
+    padding: 14,
+    justifyContent: 'space-between',
+  },
+  featureTileTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'space-between',
+    gap: 8,
   },
   featureIcon: {
-    width: 38,
-    height: 38,
+    width: 36,
+    height: 36,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  featureTileCopy: {
+    marginTop: 12,
   },
   featureCheck: {
     width: 22,
