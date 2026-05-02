@@ -54,8 +54,10 @@ type RouteFeatureGate = {
 };
 
 export function routeFeatureForPath(path: string): FeatureId | null {
-  const normalized = normalizePath(path);
-  const match = ROUTE_FEATURES.find(([route]) => isRouteMatch(normalized, route));
+  const normalized = normalizeRouteGroups(normalizePath(path));
+  const match = ROUTE_FEATURES.find(([route]) =>
+    isRouteMatch(normalized, normalizeRouteGroups(route)),
+  );
   return match?.[1] ?? null;
 }
 
@@ -92,6 +94,11 @@ export function useRouteFeatureGate(path: string): RouteFeatureGate {
 function normalizePath(path: string): string {
   const clean = path.split(/[?#]/)[0]?.replace(/\/+$/, '') ?? '';
   return clean === '' ? '/' : clean;
+}
+
+function normalizeRouteGroups(path: string): string {
+  const normalized = path.replace(/\/\([^/]+\)/g, '');
+  return normalized === '' ? '/' : normalized;
 }
 
 function isRouteMatch(path: string, route: string): boolean {
