@@ -10,10 +10,15 @@ export type CheckInRecord = {
   authorId: string;
   mood: string | null;
   note: string | null;
+  energy: number | null;
   isPrivate: boolean;
   checkInDate: string;
   createdAt: number;
 };
+
+function toEnergy(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
 
 export function getLocalDateKey(date: Date = new Date()) {
   return format(date, 'yyyy-MM-dd');
@@ -44,6 +49,7 @@ export function useCheckIns(options?: { enabled?: boolean }) {
       authorId: (c.author as any)?.[0]?.id ?? (c.author as any)?.id ?? '',
       mood: c.mood ?? null,
       note: c.note ?? null,
+      energy: toEnergy(c.energy),
       isPrivate: c.isPrivate,
       checkInDate: c.checkInDate,
       createdAt: c.createdAt,
@@ -79,6 +85,7 @@ export function useCheckIns(options?: { enabled?: boolean }) {
     async (input: {
       mood: string | null;
       note: string | null;
+      energy?: number | null;
       isPrivate: boolean;
       checkInDate?: string;
     }) => {
@@ -92,27 +99,32 @@ export function useCheckIns(options?: { enabled?: boolean }) {
           (c) => c.authorId === userId && c.checkInDate === dateKey,
         );
         const now = Date.now();
+        const hasEnergy = Object.prototype.hasOwnProperty.call(input, 'energy');
         if (existing) {
+          const updatePayload = {
+            mood: input.mood ?? null,
+            note: input.note ? await encrypt(input.note) : null,
+            ...(hasEnergy ? { energy: toEnergy(input.energy) } : {}),
+            isPrivate: input.isPrivate,
+            updatedAt: now,
+          };
           await db.transact(
-            (db.tx as any).checkIns[existing.id].update({
-              mood: input.mood ?? null,
-              note: input.note ? await encrypt(input.note) : null,
-              isPrivate: input.isPrivate,
-              updatedAt: now,
-            }),
+            (db.tx as any).checkIns[existing.id].update(updatePayload),
           );
         } else {
           const checkInId = id();
+          const createPayload = {
+            mood: input.mood ?? undefined,
+            note: input.note ? await encrypt(input.note) : undefined,
+            ...(hasEnergy ? { energy: toEnergy(input.energy) ?? undefined } : {}),
+            checkInDate: dateKey,
+            isPrivate: input.isPrivate,
+            createdAt: now,
+            updatedAt: now,
+          };
           await db.transact(
             (db.tx as any).checkIns[checkInId]
-              .update({
-                mood: input.mood ?? undefined,
-                note: input.note ? await encrypt(input.note) : undefined,
-                checkInDate: dateKey,
-                isPrivate: input.isPrivate,
-                createdAt: now,
-                updatedAt: now,
-              })
+              .update(createPayload)
               .link({ couple: coupleId, author: userId }),
           );
           if (!input.isPrivate) {
@@ -131,7 +143,7 @@ export function useCheckIns(options?: { enabled?: boolean }) {
         setIsSubmitting(false);
       }
     },
-    [enabled, coupleId, userId, encrypt, today, checkIns],
+    [enabled, coupleId, userId, encrypt, today, checkIns, space?.kind, user?.displayName],
   );
 
   const remove = useCallback(async (checkInId: string) => {

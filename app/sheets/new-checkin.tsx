@@ -8,9 +8,11 @@ import {
   SheetIconLabelPicker,
   SheetInfoCard,
   SheetSection,
+  SheetSegment,
   SheetShell,
   SheetTitleField,
   type IconLabelOption,
+  type SegmentOption,
 } from '@/src/components/ui/SheetShell';
 import {
   CHECK_IN_STATES,
@@ -31,6 +33,7 @@ function NewCheckinInner() {
   const { createOrUpdate, isSubmitting } = useCheckIns();
   const { isSolo, partner } = useSession();
   const [mood, setMood] = useState<CheckInStateId>('soft');
+  const [energy, setEnergy] = useState('3');
   const [one, setOne] = useState('');
   const [saving, setSaving] = useState(false);
   const partnerName = partner?.displayName ?? 'Partner';
@@ -43,6 +46,10 @@ function NewCheckinInner() {
     label: m.label,
     color: m.color,
   })), []);
+  const energyOptions: SegmentOption[] = useMemo(() => [1, 2, 3, 4, 5].map((level) => ({
+    key: String(level),
+    label: String(level),
+  })), []);
   const busy = saving || isSubmitting;
 
   const onSave = async () => {
@@ -52,6 +59,7 @@ function NewCheckinInner() {
       await createOrUpdate({
         mood: active.id,
         note: one.trim() || null,
+        energy: Number(energy),
         isPrivate: false,
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -82,6 +90,16 @@ function NewCheckinInner() {
           onChange={setMood}
           testIDPrefix="new-checkin-mood"
           iconOnly
+        />
+      </SheetSection>
+
+      <SheetSection title="Energy">
+        <SheetSegment
+          options={energyOptions}
+          selected={energy}
+          onChange={setEnergy}
+          accent={active.color}
+          testIDPrefix="new-checkin-energy"
         />
       </SheetSection>
 

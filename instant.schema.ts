@@ -75,6 +75,7 @@ const _schema = i.schema({
     checkIns: i.entity({
       mood: i.string().optional(),
       note: i.string().optional(),
+      energy: i.number().optional(),
       isPrivate: i.boolean().optional(),
       checkInDate: i.string().indexed(),
       createdAt: i.number().indexed(),

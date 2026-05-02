@@ -95,7 +95,7 @@ describe('new-checkin sheet', () => {
     act(() => renderer.unmount());
   });
 
-  it('happy path: default soft state saves mood:"soft", haptic, back', async () => {
+  it('happy path: default soft state saves mood:"soft" with default energy, haptic, back', async () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<NewCheckin />); await flush(); });
     const btn = findSaveBtn(renderer.root, { enabled: true });
@@ -105,17 +105,22 @@ describe('new-checkin sheet', () => {
       mood: 'soft',
       note: null,
       isPrivate: false,
+      energy: 3,
     });
     expect(Haptics.notificationAsync).toHaveBeenCalledWith('success');
     expect(router.back).toHaveBeenCalledTimes(1);
     act(() => renderer.unmount());
   });
 
-  it('mood 1 maps to "rough" and note trims correctly', async () => {
+  it('mood 1 maps to "rough", note trims, and selected energy is saved', async () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<NewCheckin />); await flush(); });
     await act(async () => {
       findByTestID(renderer.root, 'new-checkin-mood-rough').props.onPress();
+      await flush();
+    });
+    await act(async () => {
+      findByTestID(renderer.root, 'new-checkin-energy-5').props.onPress();
       await flush();
     });
     await act(async () => {
@@ -127,6 +132,7 @@ describe('new-checkin sheet', () => {
       mood: 'rough',
       note: 'long day',
       isPrivate: false,
+      energy: 5,
     });
     act(() => renderer.unmount());
   });
