@@ -64,7 +64,7 @@ function TimetablesIndexInner() {
     const solo = timetables.filter((t) => t.share === 'solo').length;
     const shared = total - solo;
     const totalItems = timetables.reduce((s, t) => s + t.itemsCount, 0);
-    // Aggregate items-per-day across all boards (Monday first).
+    // Aggregate items-per-day across all timetables (Monday first).
     const dayCounts = [0, 0, 0, 0, 0, 0, 0];
     for (const t of timetables) {
       for (let i = 0; i < 7; i++) dayCounts[i] += t.dayCounts[i] ?? 0;
@@ -86,7 +86,7 @@ function TimetablesIndexInner() {
   const buckets = useMemo<Bucket<TimetableRow>[]>(() => {
     if (mode === 'solo') {
       return visible.length
-        ? [{ label: 'Boards', dotColor: C.accent, rows: visible }]
+        ? [{ label: 'Timetable', dotColor: C.accent, rows: visible }]
         : [];
     }
     const groups: Record<string, TimetableRow[]> = {
@@ -122,9 +122,9 @@ function TimetablesIndexInner() {
 
   const heroEyebrow =
     stats.total === 0
-      ? 'NO BOARDS YET'
-      : `${stats.total} ${stats.total === 1 ? 'BOARD' : 'BOARDS'} · ${stats.totalItems} ${stats.totalItems === 1 ? 'BLOCK' : 'BLOCKS'}`;
-  const heroTitle = featured?.title ?? 'Build a rhythm';
+      ? 'NO TIMETABLES YET'
+      : `${stats.total} ${stats.total === 1 ? 'TIMETABLE' : 'TIMETABLES'} · ${stats.totalItems} ${stats.totalItems === 1 ? 'ITEM' : 'ITEMS'}`;
+  const heroTitle = featured?.title ?? 'Build a timetable';
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -138,7 +138,7 @@ function TimetablesIndexInner() {
           title: '',
           headerTitleAlign: 'center',
           headerTitle: () => (
-            <HeaderBrand eyebrow={eyebrowLabel} title="timetables" />
+            <HeaderBrand eyebrow={eyebrowLabel} title="timetable" />
           ),
           headerLeft: () => (
             <PressScale
@@ -166,7 +166,7 @@ function TimetablesIndexInner() {
         contentContainerStyle={{ paddingTop: insets.top + 60, paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero — slim status row + 7-day rhythm strip */}
+        {/* Hero — slim status row + 7-day timetable strip */}
         <View style={styles.heroWrap}>
           <StatBar
             eyebrow={heroEyebrow}
@@ -256,9 +256,9 @@ function TimetablesIndexInner() {
           {buckets.length === 0 ? (
             <ActionEmptyState
               icon="grid"
-              title="No boards yet"
-              body="Build a weekly rhythm — workouts, meals, study blocks, anything that repeats."
-              actionLabel="New board"
+              title="No timetables yet"
+              body="Build a weekly timetable for workouts, meals, study blocks, or any repeating routine."
+              actionLabel="New timetable"
               onAction={() => router.push('/sheets/new-timetable' as any)}
             />
           ) : (
@@ -267,8 +267,8 @@ function TimetablesIndexInner() {
               rowKey={(t) => t.id}
               renderRow={(t) => (
                 <SwipeableRow
-                  deleteTitle="Delete board?"
-                  deleteMessage={`"${t.title}" and all its blocks will be removed.`}
+                  deleteTitle="Delete timetable?"
+                  deleteMessage={`"${t.title}" and all its items will be removed.`}
                   onEdit={() =>
                     router.push(
                       `/sheets/new-timetable?id=${t.id}` as any
@@ -310,7 +310,7 @@ function TimetablesIndexInner() {
                           ]}
                         >
                           {t.itemsCount}{' '}
-                          {t.itemsCount === 1 ? 'BLOCK' : 'BLOCKS'}
+                          {t.itemsCount === 1 ? 'ITEM' : 'ITEMS'}
                         </Text>
                       </View>
                       <View style={styles.metaRow}>

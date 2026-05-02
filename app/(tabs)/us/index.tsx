@@ -19,6 +19,7 @@ import { useWishlists } from '@/src/hooks/useWishlists';
 import { useMilestones } from '@/src/hooks/useMilestones';
 import { usePlans } from '@/src/hooks/usePlans';
 import { useJournal } from '@/src/hooks/useJournal';
+import { useTimetables } from '@/src/hooks/useTimetables';
 import { Typography } from '@/src/constants/typography';
 import { featureForUsModule } from '@/src/hooks/useFeatureGate';
 import { getFeature, isFeatureSupportedForMode } from '@/src/lib/features/registry';
@@ -92,6 +93,7 @@ export default function UsScreen() {
   const milestones = useMilestones();
   const plans = usePlans();
   const journal = useJournal();
+  const timetables = useTimetables();
 
   // Solo-mode equivalent of Together: compute earliest activity (since-when),
   // current consecutive-day streak, and best streak across user-owned items.
@@ -105,6 +107,7 @@ export default function UsScreen() {
       ...(milestones.milestones ?? []).map((x: any) => x.createdAt as number),
       ...(plans.plans ?? []).map((x: any) => x.createdAt as number),
       ...(journal.entries ?? []).map((x: any) => x.createdAt as number),
+      ...(timetables.timetables ?? []).map((x: any) => x.updatedAt as number),
     ].filter((t) => typeof t === 'number' && t > 0);
 
     if (allTs.length === 0) {
@@ -157,6 +160,7 @@ export default function UsScreen() {
     milestones.milestones,
     plans.plans,
     journal.entries,
+    timetables.timetables,
   ]);
 
   // 7-day activity ribbon for the solo card footer (last 7 days, today on right).
@@ -166,8 +170,9 @@ export default function UsScreen() {
     const dayKeys = new Set<string>();
     const collect = (arr: any[] | undefined) => {
       for (const x of arr ?? []) {
-        if (typeof x?.createdAt === 'number') {
-          dayKeys.add(format(new Date(x.createdAt), 'yyyy-MM-dd'));
+        const timestamp = x?.createdAt ?? x?.updatedAt;
+        if (typeof timestamp === 'number') {
+          dayKeys.add(format(new Date(timestamp), 'yyyy-MM-dd'));
         }
       }
     };
@@ -178,6 +183,7 @@ export default function UsScreen() {
     collect(milestones.milestones);
     collect(plans.plans);
     collect(journal.entries);
+    collect(timetables.timetables);
 
     const out: { active: boolean }[] = [];
     for (let i = 6; i >= 0; i--) {
@@ -195,6 +201,7 @@ export default function UsScreen() {
     milestones.milestones,
     plans.plans,
     journal.entries,
+    timetables.timetables,
   ]);
 
   const modules: Module[] = useMemo(
@@ -233,15 +240,15 @@ export default function UsScreen() {
         accentKey: 'a3',
       },
       {
-        id: 'wishlists',
+        id: 'wishlist',
         href: '/(tabs)/us/wishlists',
         label: wishlistFeature.label,
         icon: wishlistFeature.icon,
-        meta: countLabel(wishlists.wishlists?.length, 'wish', 'wishes'),
+        meta: countLabel(wishlists.wishlists?.length, 'item', 'items'),
         accentKey: 'a1',
       },
       {
-        id: 'plans',
+        id: 'goals',
         href: '/(tabs)/us/plans',
         label: goalsFeature.label,
         icon: goalsFeature.icon,
@@ -257,11 +264,11 @@ export default function UsScreen() {
         accentKey: 'a1',
       },
       {
-        id: 'timetables',
+        id: 'timetable',
         href: '/(tabs)/us/timetables',
         label: timetableFeature.label,
         icon: timetableFeature.icon,
-        meta: 'rhythms',
+        meta: countLabel(timetables.timetables?.length, 'timetable', 'timetables'),
         accentKey: 'a2',
       },
       ];
@@ -274,6 +281,7 @@ export default function UsScreen() {
       milestones.milestones?.length,
       plans.plans?.length,
       journal.entries?.length,
+      timetables.timetables?.length,
     ]
   );
   const visibleModules = useMemo(

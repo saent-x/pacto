@@ -200,7 +200,7 @@ function PlansScreenInner() {
     : stats.active > 0
     ? `${stats.active} ACTIVE`
     : 'DREAM SOMETHING UP';
-  const heroTitle = stats.featured?.title ?? 'Plans';
+  const heroTitle = stats.featured?.title ?? 'Goals';
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -214,7 +214,7 @@ function PlansScreenInner() {
           title: '',
           headerTitleAlign: 'center',
           headerTitle: () => (
-            <HeaderBrand eyebrow={eyebrowLabel} title="plans" />
+            <HeaderBrand eyebrow={eyebrowLabel} title="goals" />
           ),
           headerLeft: () => (
             <PressScale
@@ -321,9 +321,9 @@ function PlansScreenInner() {
           {buckets.length === 0 ? (
             <ActionEmptyState
               icon="compass"
-              title="No plans yet"
-              body="Dream something up — a trip, a project, a small idea worth chasing."
-              actionLabel="New plan"
+              title="No goals yet"
+              body="Set a trip, project, habit, or shared priority worth tracking."
+              actionLabel="New goal"
               onAction={() => router.push('/sheets/new-plan' as any)}
             />
           ) : (
@@ -332,7 +332,7 @@ function PlansScreenInner() {
               rowKey={(p) => p.id}
               renderRow={(p) => (
                 <SwipeableRow
-                  deleteTitle="Delete plan?"
+                  deleteTitle="Delete goal?"
                   deleteMessage={`"${p.title}" will be removed.`}
                   onEdit={() =>
                     router.push(`/sheets/new-plan?id=${p.id}` as any)

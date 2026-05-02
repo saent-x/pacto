@@ -29,6 +29,7 @@ function moodFor(key: string | null | undefined) {
 }
 
 type ArcSlot = { color: string | null; height: number };
+type ActivityWeeks = 6 | 12;
 
 // Bar heights tied to mood "intensity" so the arc reads as a chart, not a swatch.
 // Empty slots get a short stub.
@@ -291,6 +292,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { C } = useTheme();
   const { partner, mode, user, isFeatureEnabled } = useSession();
+  const [activityWeeks, setActivityWeeks] = useState<ActivityWeeks>(6);
   const home = useHomeTimeline({ previewDays: 30 });
   const weather = useWeatherStatus();
   const checkinsEnabled = isFeatureEnabled('checkins');
@@ -481,7 +483,7 @@ export default function HomeScreen() {
               {' ITEMS AHEAD'}
             </Text>
             <Text style={[Typography.caption, { color: C.ink3, marginTop: 6 }]}>
-              Tasks, plans, reminders, and memory dates coming up in the next month.
+              Tasks, goals, reminders, and memory dates due in the next 30 days.
             </Text>
             <View style={[styles.activityPanel, { borderTopColor: C.lineColor }]}>
               <View style={styles.activityHeader}>
@@ -491,10 +493,44 @@ export default function HomeScreen() {
                     RECENT ACTIVITY
                   </Text>
                 </View>
-                <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>12 WEEKS</Text>
+                <View
+                  style={[
+                    styles.activityRangeToggle,
+                    { backgroundColor: C.bgSoft, borderColor: C.lineColor },
+                  ]}
+                >
+                  {([6, 12] as ActivityWeeks[]).map((weeks) => {
+                    const selected = activityWeeks === weeks;
+                    return (
+                      <PressScale
+                        key={weeks}
+                        testID={`home-activity-range-${weeks}`}
+                        onPress={() => setActivityWeeks(weeks)}
+                        style={[
+                          styles.activityRangeOption,
+                          selected
+                            ? { backgroundColor: C.bgCard, borderColor: C.lineColor }
+                            : { borderColor: 'transparent' },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            Typography.eyebrowSm,
+                            {
+                              color: selected ? C.inkColor : C.ink3,
+                              fontSize: 9,
+                            },
+                          ]}
+                        >
+                          {weeks}W
+                        </Text>
+                      </PressScale>
+                    );
+                  })}
+                </View>
               </View>
               <ActivityHeatmap
-                weeks={12}
+                weeks={activityWeeks}
                 seed={activitySeed}
                 color={C.accent2}
                 showLegend={false}
@@ -992,6 +1028,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  activityRangeToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 999,
+    padding: 2,
+    gap: 2,
+  },
+  activityRangeOption: {
+    minWidth: 34,
+    height: 24,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   todayRow: {
     flexDirection: 'row',

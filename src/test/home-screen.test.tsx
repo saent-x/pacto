@@ -288,10 +288,27 @@ describe('HomeRoute', () => {
 
     expect(text).toContain('MEMORY DATES');
     expect(text).toContain('MEMORY DATE');
-    expect(text).toContain('Tasks, plans, reminders, and memory dates coming up in the next month.');
+    expect(text).toContain('Tasks, goals, reminders, and memory dates due in the next 30 days.');
     expect(text).not.toContain('MILESTONES');
     expect(texts.indexOf('RECENT ACTIVITY')).toBeGreaterThanOrEqual(0);
     expect(texts.indexOf('NEXT ITEM')).toBeGreaterThan(texts.indexOf('RECENT ACTIVITY'));
+
+    act(() => renderer.unmount());
+  });
+
+  it('defaults recent activity to 6 weeks and can switch to 12 weeks', async () => {
+    const renderer = await renderHome();
+
+    expect(findByTestID(renderer, 'activity-heatmap')[0].props.weeks).toBe(6);
+    expect(allText(renderer)).toContain('6W');
+    expect(allText(renderer)).toContain('12W');
+
+    await act(async () => {
+      findByTestID(renderer, 'home-activity-range-12')[0].props.onPress();
+      await flush();
+    });
+
+    expect(findByTestID(renderer, 'activity-heatmap')[0].props.weeks).toBe(12);
 
     act(() => renderer.unmount());
   });

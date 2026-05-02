@@ -256,7 +256,7 @@ function WishlistsScreenInner() {
           title: '',
           headerTitleAlign: 'center',
           headerTitle: () => (
-            <HeaderBrand eyebrow={eyebrowLabel} title="wishes" />
+            <HeaderBrand eyebrow={eyebrowLabel} title="wishlist" />
           ),
           headerLeft: () => (
             <PressScale

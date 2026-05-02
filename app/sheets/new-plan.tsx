@@ -120,12 +120,12 @@ function NewPlanInner() {
 
   return (
     <SheetShell
-      eyebrow={isEdit ? 'EDIT PLAN' : 'NEW PLAN'}
+      eyebrow={isEdit ? 'EDIT GOAL' : 'NEW GOAL'}
       eyebrowColor={color}
-      title={isEdit ? 'Edit plan' : 'New plan'}
+      title={isEdit ? 'Edit goal' : 'New goal'}
       footer={
         <PrimaryButton icon={isEdit ? 'check' : 'plus'} onPress={onSave} disabled={!canSave}>
-          {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create plan'}
+          {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create goal'}
         </PrimaryButton>
       }
     >
@@ -154,7 +154,7 @@ function NewPlanInner() {
                 marginTop: 4,
               }}
             >
-              {title || 'Your plan title'}
+              {title || 'Your goal title'}
             </Text>
           </View>
           <View
@@ -177,7 +177,7 @@ function NewPlanInner() {
           testID="new-plan-title-input"
           value={title}
           onChangeText={setTitle}
-          placeholder="Name your plan…"
+          placeholder="Name your goal…"
           accent={color}
         />
       </SheetSection>

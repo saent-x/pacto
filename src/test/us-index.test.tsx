@@ -110,6 +110,10 @@ vi.mock('@/src/hooks/useJournal', () => ({
   useJournal: () => ({ entries: [] }),
 }));
 
+vi.mock('@/src/hooks/useTimetables', () => ({
+  useTimetables: () => ({ timetables: [] }),
+}));
+
 import UsIndex from '@/app/(tabs)/us/index';
 
 const TestRenderer: any = require('react-test-renderer');
@@ -157,6 +161,22 @@ describe('UsIndex feature gates', () => {
     expect(text).not.toContain('Journal');
     expect(text).not.toContain('Check-ins');
     expect(text).not.toContain('Timetable');
+
+    act(() => renderer.unmount());
+  });
+
+  it('uses feature registry names for enabled modules', async () => {
+    sessionState.enabledFeatures = ['wishlist', 'goals', 'timetable'];
+
+    const renderer = await render();
+    const text = readText(renderer.root);
+
+    expect(text).toContain('Wishlist');
+    expect(text).toContain('Goals');
+    expect(text).toContain('Timetable');
+    expect(text).not.toContain('Plans');
+    expect(text).not.toContain('Timetables');
+    expect(text).not.toContain('rhythms');
 
     act(() => renderer.unmount());
   });

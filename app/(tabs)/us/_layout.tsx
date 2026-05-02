@@ -136,7 +136,7 @@ export default function UsLayout() {
         options={{
           ...baseModule,
           headerTitle: () => (
-            <HeaderBrand eyebrow={spaceLabel} title="wishes" />
+            <HeaderBrand eyebrow={spaceLabel} title="wishlist" />
           ),
           headerRight: () => (moduleEnabled('wishlist') ? <NavAddBtn href="/sheets/new-wish" /> : null),
         }}
@@ -156,7 +156,7 @@ export default function UsLayout() {
         options={{
           ...baseModule,
           headerTitle: () => (
-            <HeaderBrand eyebrow={spaceLabel} title="plans" />
+            <HeaderBrand eyebrow={spaceLabel} title="goals" />
           ),
           headerRight: () => (moduleEnabled('goals') ? <NavAddBtn href="/sheets/new-plan" /> : null),
         }}
@@ -176,7 +176,7 @@ export default function UsLayout() {
         options={{
           ...baseModule,
           headerTitle: () => (
-            <HeaderBrand eyebrow={spaceLabel} title="timetables" />
+            <HeaderBrand eyebrow={spaceLabel} title="timetable" />
           ),
           headerRight: () => (moduleEnabled('timetable') ? <NavAddBtn href="/sheets/new-timetable" /> : null),
         }}
