@@ -40,7 +40,7 @@ function todayString() {
 }
 
 export function CalendarProvider({ children }: { children: React.ReactNode }) {
-  const { activeCouple } = useSession();
+  const { activeCouple, isFeatureEnabled } = useSession();
   const coupleId = activeCouple?.couple?.id ?? null;
   const anniversary = activeCouple?.couple?.anniversary ?? null;
 
@@ -48,37 +48,56 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
   const [selectedDate, setSelectedDate] = useState(initial);
 
   const month = selectedDate.slice(0, 7);
+  const calendarEnabled = isFeatureEnabled('calendar');
+  const goalsEnabled = isFeatureEnabled('goals');
+  const recurringEnabled = isFeatureEnabled('recurring');
+  const tasksEnabled = isFeatureEnabled('tasks');
+  const memoriesEnabled = isFeatureEnabled('memories');
 
-  const { data, isLoading } = (db as any).useQuery(
-    coupleId
-      ? {
-          events: { $: { where: { 'couple.id': coupleId } } },
-          plans: { $: { where: { 'couple.id': coupleId } } },
-          reminders: { $: { where: { 'couple.id': coupleId } } },
-          tasks: { $: { where: { 'couple.id': coupleId } } },
-          rituals: { $: { where: { 'couple.id': coupleId } } },
-          milestones: { $: { where: { 'couple.id': coupleId } } },
-        }
-      : null,
-  );
+  const query = useMemo(() => {
+    if (!coupleId) return null;
+
+    const where = { 'couple.id': coupleId };
+    const sources: Record<string, { $: { where: typeof where } }> = {};
+
+    if (calendarEnabled) sources.events = { $: { where } };
+    if (goalsEnabled) sources.plans = { $: { where } };
+    if (recurringEnabled) {
+      sources.reminders = { $: { where } };
+      sources.rituals = { $: { where } };
+    }
+    if (tasksEnabled) sources.tasks = { $: { where } };
+    if (memoriesEnabled) sources.milestones = { $: { where } };
+
+    return Object.keys(sources).length > 0 ? sources : null;
+  }, [
+    coupleId,
+    calendarEnabled,
+    goalsEnabled,
+    recurringEnabled,
+    tasksEnabled,
+    memoriesEnabled,
+  ]);
+
+  const { data, isLoading } = (db as any).useQuery(query);
 
   const derived = useMemo(() => {
     const now = Date.now();
     const timeline = buildTimelineItems({
       now,
       previewDays: 400,
-      events: data?.events ?? [],
-      plans: data?.plans ?? [],
-      reminders: data?.reminders ?? [],
-      tasks: data?.tasks ?? [],
-      rituals: data?.rituals ?? [],
+      events: calendarEnabled ? (data?.events ?? []) : [],
+      plans: goalsEnabled ? (data?.plans ?? []) : [],
+      reminders: recurringEnabled ? (data?.reminders ?? []) : [],
+      tasks: tasksEnabled ? (data?.tasks ?? []) : [],
+      rituals: recurringEnabled ? (data?.rituals ?? []) : [],
       memories: [],
     });
 
     const milestones: MilestoneStripItem[] = buildMilestones({
       now,
-      couple: { id: coupleId ?? '', anniversary },
-      milestones: data?.milestones ?? [],
+      couple: { id: coupleId ?? '', anniversary: memoriesEnabled ? anniversary : null },
+      milestones: memoriesEnabled ? (data?.milestones ?? []) : [],
     });
 
     const heroStats = computeHeroStats({ now, month, items: timeline, milestones });
@@ -92,7 +111,18 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
     const tomorrow = buildTomorrowCard({ selectedDate, items: timeline, milestones });
 
     return { timeline, milestones, heroStats, week, agenda, tomorrow };
-  }, [data, coupleId, anniversary, month, selectedDate]);
+  }, [
+    data,
+    coupleId,
+    anniversary,
+    month,
+    selectedDate,
+    calendarEnabled,
+    goalsEnabled,
+    recurringEnabled,
+    tasksEnabled,
+    memoriesEnabled,
+  ]);
 
   const selectDate = useCallback((date: string) => setSelectedDate(date), []);
 
