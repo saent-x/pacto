@@ -31,14 +31,20 @@ const wishState = vi.hoisted(() => ({
   update: vi.fn(async () => undefined),
 }));
 
+const sessionState = vi.hoisted(() => ({
+  mode: 'pair' as 'solo' | 'pair' | 'crew',
+}));
+
 vi.mock('@/src/hooks/useSession', () => ({
   useSession: () => ({
-    mode: 'pair',
+    mode: sessionState.mode,
     isFeatureEnabled: () => true,
   }),
 }));
 
 vi.mock('@/src/hooks/useWishlists', () => ({
+  sanitizeWishScope: (scope: unknown) =>
+    scope === 'mine' || scope === 'partner' || scope === 'shared' ? scope : 'mine',
   useQuickAddWishItem: () => ({ add: wishState.add, update: wishState.update }),
   useAllWishlistItems: () => ({ items: [] }),
 }));
@@ -63,6 +69,7 @@ const findSaveBtn = (root: any, opts: { enabled?: boolean } = {}) =>
 
 describe('new-wish sheet', () => {
   beforeEach(() => {
+    sessionState.mode = 'pair';
     wishState.add.mockClear();
     wishState.update.mockClear();
     (router.back as any).mockClear();
@@ -164,6 +171,18 @@ describe('new-wish sheet', () => {
     await act(async () => { findSaveBtn(renderer.root, { enabled: true }).props.onPress(); await flush(); });
 
     expect(wishState.add.mock.calls[0][0].scope).toBe('partner');
+    act(() => renderer.unmount());
+  });
+
+  it('does not expose scope choices for solo spaces where wishlist is unsupported', async () => {
+    sessionState.mode = 'solo';
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<NewWish />); await flush(); });
+
+    expect(findByTestID(renderer.root, 'new-wish-scope-mine')).toBeUndefined();
+    expect(findByTestID(renderer.root, 'new-wish-scope-partner')).toBeUndefined();
+    expect(findByTestID(renderer.root, 'new-wish-scope-shared')).toBeUndefined();
+    expect(wishState.add).not.toHaveBeenCalled();
     act(() => renderer.unmount());
   });
 

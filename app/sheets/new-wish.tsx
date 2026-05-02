@@ -10,16 +10,19 @@ import {
   SheetRow,
   SheetSection,
   SheetSegment,
+  type SegmentOption,
   SheetShell,
   SheetTitleField,
   type IconOption,
 } from '@/src/components/ui/SheetShell';
 import {
+  sanitizeWishScope,
   useAllWishlistItems,
   useQuickAddWishItem,
   type WishScope,
 } from '@/src/hooks/useWishlists';
 import { useFeatureGate } from '@/src/hooks/useFeatureGate';
+import { useSession } from '@/src/hooks/useSession';
 import { useTheme } from '@/src/lib/theme';
 
 type Tag = 'HOME' | 'TRAVEL' | 'TREATS' | 'BIG' | 'KITCHEN' | 'CLOTHES';
@@ -49,6 +52,7 @@ function NewWishInner() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEdit = Boolean(id);
   const { C, F } = useTheme();
+  const { mode } = useSession();
   const { add, update } = useQuickAddWishItem();
   const { items } = useAllWishlistItems();
   const existing = useMemo(
@@ -61,9 +65,14 @@ function NewWishInner() {
   );
   const [tag, setTag] = useState<Tag>((existing?.tag as Tag) ?? 'HOME');
   const [url, setUrl] = useState(existing?.url ?? '');
-  const [scope, setScope] = useState<WishScope>((existing?.scope as WishScope) ?? 'mine');
+  const [scope, setScope] = useState<WishScope>(sanitizeWishScope(existing?.scope));
   const [saving, setSaving] = useState(false);
 
+  const scopeOptions = useMemo<SegmentOption<WishScope>[]>(
+    () => (mode === 'solo' ? SCOPES.filter((option) => option.key === 'mine') : SCOPES),
+    [mode],
+  );
+  const selectedScope = mode === 'solo' ? 'mine' : scope;
   const canSave = title.trim().length > 0 && !saving;
 
   const onSave = async () => {
@@ -77,7 +86,7 @@ function NewWishInner() {
         currency: 'EUR',
         tag: tag || null,
         url: url.trim() || null,
-        scope,
+        scope: selectedScope,
       };
       if (isEdit && id) {
         await update(id, payload);
@@ -215,8 +224,8 @@ function NewWishInner() {
 
       <SheetSection title="For">
         <SheetSegment
-          options={SCOPES}
-          selected={scope}
+          options={scopeOptions}
+          selected={selectedScope}
           onChange={setScope}
           accent={C.peach}
           testIDPrefix="new-wish-scope"

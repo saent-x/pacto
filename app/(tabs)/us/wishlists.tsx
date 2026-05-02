@@ -16,9 +16,9 @@ import {
 import { Icon } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
 import {
+  sanitizeWishScope,
   useAllWishlistItems,
   useQuickAddWishItem,
-  type WishScope,
 } from '@/src/hooks/useWishlists';
 import { useSession } from '@/src/hooks/useSession';
 import { Typography } from '@/src/constants/typography';
@@ -63,9 +63,10 @@ function fmtMoneyCompact(amount: number, currency: string) {
   return sym ? `${sym}${body}` : `${body} ${currency}`;
 }
 
-function scopeToWho(scope: WishScope): WhoKind {
-  if (scope === 'mine') return 'me';
-  if (scope === 'partner') return 'partner';
+function scopeToWho(scope: unknown): WhoKind {
+  const safeScope = sanitizeWishScope(scope);
+  if (safeScope === 'mine') return 'me';
+  if (safeScope === 'partner') return 'partner';
   return 'shared';
 }
 
@@ -111,7 +112,7 @@ export default function WishlistsScreen() {
   const rows = useMemo<WishRow[]>(() => {
     return items.map((raw: any): WishRow => {
       const addedBy = String(raw.addedBy ?? '');
-      const scope = (raw.scope ?? 'mine') as WishScope;
+      const scope = sanitizeWishScope(raw.scope);
       const who = scopeToWho(scope);
       const meta =
         who === 'shared'
@@ -326,6 +327,7 @@ export default function WishlistsScreen() {
                 f.key === 'theirs' && partnerName
                   ? `${partnerName.split(' ')[0]}'s`
                   : f.label,
+              testID: `wishlist-filter-${f.key}`,
             }))}
           />
         </View>
