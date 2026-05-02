@@ -4,7 +4,9 @@ import type { SpaceKindWire, SpaceMode } from './session';
 import { type FeatureId, sanitizeFeatureIds } from '@/src/lib/features/registry';
 import { generateInviteCode } from './invite-code';
 import {
+  isCreateSpaceInviteEligible,
   resolveCreateSpaceFeatureIds,
+  resolveCreateSpaceKind,
   resolveUpgradeSoloToCoupleFeatureIds,
 } from './space-features';
 
@@ -25,12 +27,11 @@ export async function createSpace(params: {
 }): Promise<{ spaceId: string; inviteCode: string | null }> {
   const spaceId = id();
   const membershipId = id();
-  const inviteCode =
-    params.kind === 'couple' || params.kind === 'pair' ? generateInviteCode() : null;
+  const inviteCode = isCreateSpaceInviteEligible(params) ? generateInviteCode() : null;
   const ts = now();
 
   const spaceFields: Record<string, unknown> = {
-    kind: params.kind,
+    kind: resolveCreateSpaceKind(params),
     enabledFeatures: resolveCreateSpaceFeatureIds(params),
     createdAt: ts,
     updatedAt: ts,

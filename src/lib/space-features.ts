@@ -9,11 +9,23 @@ export type CreateSpaceFeatureParams = {
 };
 
 export function resolveCreateSpaceFeatureIds(params: CreateSpaceFeatureParams): FeatureId[] {
-  const mode = params.mode ?? modeForSpaceKind(params.kind);
+  const mode = resolveCreateSpaceKind(params);
 
   return params.enabledFeatures
     ? sanitizeFeatureIds(params.enabledFeatures, mode)
     : getDefaultFeatureIds(mode);
+}
+
+export function resolveCreateSpaceKind(
+  params: Pick<CreateSpaceFeatureParams, 'kind' | 'mode'>,
+): SpaceMode {
+  return params.mode ?? modeForSpaceKind(params.kind);
+}
+
+export function isCreateSpaceInviteEligible(
+  params: Pick<CreateSpaceFeatureParams, 'kind' | 'mode'>,
+): boolean {
+  return resolveCreateSpaceKind(params) !== 'solo';
 }
 
 export function resolveUpgradeSoloToCoupleFeatureIds(): FeatureId[] {

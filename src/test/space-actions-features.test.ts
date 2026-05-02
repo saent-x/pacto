@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  isCreateSpaceInviteEligible,
   resolveCreateSpaceFeatureIds,
+  resolveCreateSpaceKind,
   resolveUpgradeSoloToCoupleFeatureIds,
 } from '@/src/lib/space-features';
 
@@ -51,5 +53,22 @@ describe('space action feature resolution', () => {
       'checkins',
       'recurring',
     ]);
+  });
+
+  it('persists crew kind when legacy couple wire kind is paired with crew mode', () => {
+    expect(resolveCreateSpaceKind({ kind: 'couple', mode: 'crew' })).toBe('crew');
+  });
+
+  it('persists pair kind for legacy couple spaces without an explicit mode', () => {
+    expect(resolveCreateSpaceKind({ kind: 'couple' })).toBe('pair');
+  });
+
+  it('treats direct crew spaces as invite eligible', () => {
+    expect(isCreateSpaceInviteEligible({ kind: 'crew' })).toBe(true);
+    expect(isCreateSpaceInviteEligible({ kind: 'crew', mode: 'crew' })).toBe(true);
+  });
+
+  it('does not generate invites for solo spaces', () => {
+    expect(isCreateSpaceInviteEligible({ kind: 'solo' })).toBe(false);
   });
 });
