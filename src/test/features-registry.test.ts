@@ -87,4 +87,43 @@ describe('feature registry', () => {
       ),
     ).toEqual(['tasks', 'calendar', 'vision']);
   });
+
+  it('keeps registry reads stable when returned entries are mutated', () => {
+    const [tasks] = getAllFeatures();
+    const calendar = getFeature('calendar');
+    const pairFeatures = getSupportedFeatures('pair');
+
+    try {
+      (tasks as any).label = 'Corrupted tasks';
+    } catch {
+      // Frozen entries may throw in strict mode.
+    }
+    try {
+      (calendar as any).supportedModes.push('crew');
+      (calendar as any).supportedModes.splice(0);
+    } catch {
+      // Frozen nested arrays may throw in strict mode.
+    }
+    try {
+      (pairFeatures[0] as any).id = 'corrupted';
+    } catch {
+      // Defensive copies may still be frozen.
+    }
+
+    expect(getAllFeatures().map((feature) => feature.id)).toEqual(expectedOrder);
+    expect(getFeature('tasks')?.label).toBe('Tasks');
+    expect(getFeature('calendar')?.supportedModes).toEqual(['solo', 'pair', 'crew']);
+    expect(getSupportedFeatures('pair').map((feature) => feature.id)).toEqual([
+      'tasks',
+      'calendar',
+      'wishlist',
+      'memories',
+      'journal',
+      'checkins',
+      'recurring',
+      'timetable',
+      'vision',
+      'goals',
+    ]);
+  });
 });

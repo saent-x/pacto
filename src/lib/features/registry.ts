@@ -14,17 +14,17 @@ export type FeatureId =
   | 'goals';
 
 export type FeatureEntry = {
-  id: FeatureId;
-  label: string;
-  description: string;
-  icon: IconName;
-  supportedModes: readonly SpaceMode[];
-  defaultForSolo: boolean;
-  defaultForPair: boolean;
-  defaultForCrew: boolean;
+  readonly id: FeatureId;
+  readonly label: string;
+  readonly description: string;
+  readonly icon: IconName;
+  readonly supportedModes: readonly SpaceMode[];
+  readonly defaultForSolo: boolean;
+  readonly defaultForPair: boolean;
+  readonly defaultForCrew: boolean;
 };
 
-const FEATURE_REGISTRY: readonly FeatureEntry[] = [
+const RAW_FEATURE_REGISTRY = [
   {
     id: 'tasks',
     label: 'Tasks',
@@ -125,9 +125,13 @@ const FEATURE_REGISTRY: readonly FeatureEntry[] = [
     defaultForPair: false,
     defaultForCrew: true,
   },
-];
+] as const satisfies readonly FeatureEntry[];
 
-const FEATURES_BY_ID = new Map<FeatureId, FeatureEntry>(
+const FEATURE_REGISTRY: readonly FeatureEntry[] = Object.freeze(
+  RAW_FEATURE_REGISTRY.map(freezeFeature),
+);
+
+const FEATURES_BY_ID = new Map<string, FeatureEntry>(
   FEATURE_REGISTRY.map((feature) => [feature.id, feature]),
 );
 
@@ -141,11 +145,12 @@ const DEFAULT_FLAG_BY_MODE = {
 >>;
 
 export function getAllFeatures(): readonly FeatureEntry[] {
-  return FEATURE_REGISTRY;
+  return FEATURE_REGISTRY.map(copyFeature);
 }
 
 export function getFeature(id: string): FeatureEntry | undefined {
-  return FEATURES_BY_ID.get(id as FeatureId);
+  const feature = FEATURES_BY_ID.get(id);
+  return feature ? copyFeature(feature) : undefined;
 }
 
 export function getDefaultFeatureIds(mode: SpaceMode): FeatureId[] {
@@ -157,11 +162,13 @@ export function getDefaultFeatureIds(mode: SpaceMode): FeatureId[] {
 }
 
 export function getSupportedFeatures(mode: SpaceMode): FeatureEntry[] {
-  return FEATURE_REGISTRY.filter((feature) => feature.supportedModes.includes(mode));
+  return FEATURE_REGISTRY
+    .filter((feature) => feature.supportedModes.includes(mode))
+    .map(copyFeature);
 }
 
 export function isFeatureSupportedForMode(featureId: string, mode: SpaceMode): boolean {
-  return getFeature(featureId)?.supportedModes.includes(mode) ?? false;
+  return FEATURES_BY_ID.get(featureId)?.supportedModes.includes(mode) ?? false;
 }
 
 export function sanitizeFeatureIds(ids: readonly string[], mode: SpaceMode): FeatureId[] {
@@ -170,4 +177,15 @@ export function sanitizeFeatureIds(ids: readonly string[], mode: SpaceMode): Fea
   return FEATURE_REGISTRY
     .filter((feature) => requested.has(feature.id) && feature.supportedModes.includes(mode))
     .map((feature) => feature.id);
+}
+
+function freezeFeature(feature: FeatureEntry): FeatureEntry {
+  return Object.freeze({
+    ...feature,
+    supportedModes: Object.freeze([...feature.supportedModes]),
+  });
+}
+
+function copyFeature(feature: FeatureEntry): FeatureEntry {
+  return freezeFeature(feature);
 }
