@@ -541,22 +541,21 @@ export default function HomeScreen() {
               {format(today, 'MMM d').toUpperCase()}
             </Text>
           </View>
-          <Card padded={false} elevated style={styles.weatherCard} onPress={weather.request}>
-            <View style={[styles.weatherIcon, { backgroundColor: C.accentSoft }]}>
-              <Icon name={weather.icon} size={17} color={C.accent} />
-            </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>WEATHER STATUS</Text>
-              <Text style={[Typography.bodyMedium, { color: C.inkColor, marginTop: 3 }]} numberOfLines={1}>
-                {weather.title}
-              </Text>
-              <Text style={[Typography.caption, { color: C.ink3, marginTop: 2 }]} numberOfLines={1}>
-                {weather.detail}
-              </Text>
-            </View>
-            <Icon name="chevronRight" size={15} color={C.ink3} />
-          </Card>
           <Card padded={false} elevated style={styles.todayCard}>
+            <PressScale onPress={weather.request} style={styles.todayWeatherBand}>
+              <View style={styles.todayWeatherIcon}>
+                <Icon name={weather.icon} size={20} color="#223241" />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.todayWeatherTitle} numberOfLines={1}>
+                  {weather.title}
+                </Text>
+                <Text style={styles.todayWeatherDetail} numberOfLines={1}>
+                  {weather.detail}
+                </Text>
+              </View>
+              <Icon name="chevronRight" size={18} color="#6B7782" />
+            </PressScale>
             {routedTodayRows.length === 0 ? (
               goalsEnabled ? (
                 <PressScale
@@ -1007,36 +1006,51 @@ const styles = StyleSheet.create({
   },
   todayCard: {
     overflow: 'hidden',
-    borderRadius: 18,
+    borderRadius: 24,
   },
-  weatherCard: {
+  todayWeatherBand: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    marginBottom: 10,
+    gap: 16,
+    minHeight: 108,
+    paddingHorizontal: 22,
+    paddingVertical: 18,
+    backgroundColor: '#DDEAF3',
   },
-  weatherIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+  todayWeatherIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.38)',
+  },
+  todayWeatherTitle: {
+    fontFamily: Typography.geistSemiBoldFont,
+    fontSize: 21,
+    lineHeight: 26,
+    color: '#223241',
+  },
+  todayWeatherDetail: {
+    fontFamily: Typography.geistMonoFont,
+    fontSize: 15,
+    lineHeight: 20,
+    color: '#5F6D78',
+    marginTop: 4,
   },
   emptyBlock: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: 22,
+    paddingVertical: 20,
   },
   todayDivider: {
     height: 1,
-    marginHorizontal: 16,
+    marginHorizontal: 22,
   },
   todayRow2: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 22,
+    paddingVertical: 18,
     gap: 12,
   },
   todayTime: {

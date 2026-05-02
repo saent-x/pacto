@@ -250,6 +250,8 @@ describe('HomeRoute', () => {
     expect(text).not.toContain('Picnic at Buttermilk');
     expect(text).not.toContain('Cloudy, mild');
     expect(text).not.toContain('Yoga class');
+    expect(text).toContain('Weather needs location');
+    expect(text).not.toContain('WEATHER STATUS');
 
     act(() => renderer.unmount());
   });
