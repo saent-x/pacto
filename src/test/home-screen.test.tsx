@@ -288,7 +288,7 @@ describe('HomeRoute', () => {
 
     expect(text).toContain('MEMORY DATES');
     expect(text).toContain('MEMORY DATE');
-    expect(text).toContain('Enabled timeline items and memory dates due in the next 30 days.');
+    expect(text).toContain('Tasks, plans, reminders, and memory dates coming up in the next month.');
     expect(text).not.toContain('MILESTONES');
     expect(texts.indexOf('RECENT ACTIVITY')).toBeGreaterThanOrEqual(0);
     expect(texts.indexOf('NEXT ITEM')).toBeGreaterThan(texts.indexOf('RECENT ACTIVITY'));

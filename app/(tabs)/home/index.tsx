@@ -481,7 +481,7 @@ export default function HomeScreen() {
               {' ITEMS AHEAD'}
             </Text>
             <Text style={[Typography.caption, { color: C.ink3, marginTop: 6 }]}>
-              Enabled timeline items and memory dates due in the next 30 days.
+              Tasks, plans, reminders, and memory dates coming up in the next month.
             </Text>
             <View style={[styles.activityPanel, { borderTopColor: C.lineColor }]}>
               <View style={styles.activityHeader}>
