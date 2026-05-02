@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { addDays, format, startOfWeek } from 'date-fns';
+import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import {
   ActionEmptyState,
   type Bucket,
@@ -80,6 +81,14 @@ function WhoBadge({
 }
 
 export default function TimetableDetail() {
+  return (
+    <FeatureRouteGuard featureId="timetable">
+      <TimetableDetailInner />
+    </FeatureRouteGuard>
+  );
+}
+
+function TimetableDetailInner() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const idString = Array.isArray(id) ? id[0] : id;
   const { C } = useTheme();

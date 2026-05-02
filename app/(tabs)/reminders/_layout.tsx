@@ -1,4 +1,5 @@
 import { router, Stack } from 'expo-router';
+import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import { HeaderBrand } from '@/src/components/ui/pacto';
 import { Icon } from '@/src/components/ui/Icon';
 import { NavAddBtn } from '@/src/components/ui/NavAddBtn';
@@ -6,6 +7,14 @@ import { PressScale } from '@/src/components/ui/PressScale';
 import { useTheme } from '@/src/lib/theme';
 
 export default function RemindersLayout() {
+  return (
+    <FeatureRouteGuard featureId="recurring">
+      <RemindersStack />
+    </FeatureRouteGuard>
+  );
+}
+
+function RemindersStack() {
   const { C } = useTheme();
   return (
     <Stack

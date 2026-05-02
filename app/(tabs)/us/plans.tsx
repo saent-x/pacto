@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { differenceInCalendarDays, format, parseISO } from 'date-fns';
+import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import {
   ActionEmptyState,
   Bucket,
@@ -68,6 +69,14 @@ function statusOf(raw: string | null | undefined): PlanStatus {
 }
 
 export default function PlansScreen() {
+  return (
+    <FeatureRouteGuard featureId="goals">
+      <PlansScreenInner />
+    </FeatureRouteGuard>
+  );
+}
+
+function PlansScreenInner() {
   const { C } = useTheme();
   const insets = useSafeAreaInsets();
   const { mode } = useSession();

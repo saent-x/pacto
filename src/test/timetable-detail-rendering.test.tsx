@@ -44,6 +44,13 @@ vi.mock('expo-haptics', () => ({
   NotificationFeedbackType: { Success: 'success', Warning: 'warning' },
 }));
 
+vi.mock('@/src/hooks/useSession', () => ({
+  useSession: () => ({
+    mode: 'pair',
+    isFeatureEnabled: () => true,
+  }),
+}));
+
 vi.mock('@/src/components/ui/Icon', () => {
   const Reactx = require('react');
   return {

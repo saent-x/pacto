@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
+import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import {
   ActionEmptyState,
   Bucket,
@@ -40,6 +41,14 @@ const TEMPLATE_LABEL: Record<string, string> = {
 };
 
 export default function TimetablesIndex() {
+  return (
+    <FeatureRouteGuard featureId="timetable">
+      <TimetablesIndexInner />
+    </FeatureRouteGuard>
+  );
+}
+
+function TimetablesIndexInner() {
   const { C } = useTheme();
   const insets = useSafeAreaInsets();
   const { mode } = useSession();

@@ -13,6 +13,7 @@ import Animated, {
 import { useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
 import { addDays, format, startOfWeek } from 'date-fns';
+import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import { Icon, IconName } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
 import { Screen } from '@/src/components/ui/Screen';
@@ -62,6 +63,14 @@ function buildWeek(
 
 // solo-mode: partner column + sync metric hidden (legend, cells, label)
 export default function Checkins() {
+  return (
+    <FeatureRouteGuard featureId="checkins">
+      <CheckinsInner />
+    </FeatureRouteGuard>
+  );
+}
+
+function CheckinsInner() {
   const { C, F } = useTheme();
   const { isSolo, partner, user } = useSession();
   const { checkIns, myTodayCheckIn, isLoading } = useCheckIns();

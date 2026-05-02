@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import { ActionEmptyState } from '@/src/components/ui/pacto/ActionEmptyState';
 import { type Bucket, BucketedList } from '@/src/components/ui/pacto/BucketedList';
 import { Card } from '@/src/components/ui/pacto/Card';
@@ -31,10 +32,18 @@ import { pastels } from '@/src/lib/tokens';
 import type { Task } from '@/src/types/database';
 
 export default function TaskListDetail() {
+  return (
+    <FeatureRouteGuard featureId="tasks">
+      <TaskListDetailInner />
+    </FeatureRouteGuard>
+  );
+}
+
+function TaskListDetailInner() {
   const { listId } = useLocalSearchParams<{ listId: string }>();
   const { C } = useTheme();
   const insets = useSafeAreaInsets();
-  const { partner, mode } = useSession();
+  const { user, partner, mode } = useSession();
   const { lists } = useTaskLists();
   const list = useMemo(
     () => lists.find((l) => l.id === listId) ?? null,
@@ -46,7 +55,7 @@ export default function TaskListDetail() {
   const quickAddSavingRef = useRef(false);
 
   const partnerName = partner?.displayName ?? null;
-  const youId = useSession().user?.id ?? null;
+  const youId = user?.id ?? null;
   const partnerId = partner?.id ?? null;
 
   const tilePastel = list ? ((pastels as any)[list.colorKey] ?? pastels.peach) : pastels.peach;

@@ -10,6 +10,7 @@ import {
   parseISO,
   startOfDay,
 } from 'date-fns';
+import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import {
   ActionEmptyState,
   Bucket,
@@ -69,6 +70,14 @@ function resolveMilestoneIcon(value: string | null | undefined): IconName {
 }
 
 export default function MilestonesScreen() {
+  return (
+    <FeatureRouteGuard featureId="memories">
+      <MilestonesScreenInner />
+    </FeatureRouteGuard>
+  );
+}
+
+function MilestonesScreenInner() {
   const { C } = useTheme();
   const insets = useSafeAreaInsets();
   const { mode } = useSession();

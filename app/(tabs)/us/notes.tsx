@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { format, isToday, isYesterday, startOfDay } from 'date-fns';
+import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import {
   Avatar,
   AvatarPair,
@@ -44,6 +45,14 @@ type StreamItem =
   | { kind: 'divider'; id: string; label: string };
 
 export default function NotesScreen() {
+  return (
+    <FeatureRouteGuard featureId="memories">
+      <NotesScreenInner />
+    </FeatureRouteGuard>
+  );
+}
+
+function NotesScreenInner() {
   const { C } = useTheme();
   const insets = useSafeAreaInsets();
   const { user, partner, mode, members } = useSession();

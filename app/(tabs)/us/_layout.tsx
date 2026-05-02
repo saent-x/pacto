@@ -4,12 +4,16 @@ import { Icon } from '@/src/components/ui/Icon';
 import { HeaderLeft } from '@/src/components/ui/HeaderLeft';
 import { NavAddBtn } from '@/src/components/ui/NavAddBtn';
 import { PressScale } from '@/src/components/ui/PressScale';
+import {
+  type FeatureId,
+  isFeatureSupportedForMode,
+} from '@/src/lib/features/registry';
 import { useTheme } from '@/src/lib/theme';
 import { useSession } from '@/src/lib/session';
 
 export default function UsLayout() {
   const { C } = useTheme();
-  const { user, partner, mode } = useSession();
+  const { user, partner, mode, isFeatureEnabled } = useSession();
   const isSolo = mode === 'solo';
   const spaceLabel = isSolo ? 'ME' : mode === 'crew' ? 'CREW' : 'US';
   const myFirstName = (user?.displayName ?? user?.email?.split('@')[0] ?? 'You')
@@ -17,6 +21,8 @@ export default function UsLayout() {
     .toUpperCase();
   const partnerFirstName = (partner?.displayName ?? '').split(' ')[0]?.charAt(0).toUpperCase();
   const eyebrow = spaceLabel;
+  const moduleEnabled = (featureId: FeatureId) =>
+    isFeatureSupportedForMode(featureId, mode) && isFeatureEnabled(featureId);
 
   // Shared header style for module sub-screens (legacy primitives, retained per
   // Phase 7 plan — module rebuilds happen later).
@@ -102,7 +108,7 @@ export default function UsLayout() {
           headerTitle: () => (
             <HeaderBrand eyebrow={spaceLabel} title="notes" />
           ),
-          headerRight: () => <NavAddBtn href="/sheets/new-note" />,
+          headerRight: () => (moduleEnabled('memories') ? <NavAddBtn href="/sheets/new-note" /> : null),
         }}
       />
       <Stack.Screen
@@ -112,7 +118,7 @@ export default function UsLayout() {
           headerTitle: () => (
             <HeaderBrand eyebrow={spaceLabel} title="check-ins" />
           ),
-          headerRight: () => <NavAddBtn href="/sheets/new-checkin" />,
+          headerRight: () => (moduleEnabled('checkins') ? <NavAddBtn href="/sheets/new-checkin" /> : null),
         }}
       />
       <Stack.Screen
@@ -132,7 +138,7 @@ export default function UsLayout() {
           headerTitle: () => (
             <HeaderBrand eyebrow={spaceLabel} title="wishes" />
           ),
-          headerRight: () => <NavAddBtn href="/sheets/new-wish" />,
+          headerRight: () => (moduleEnabled('wishlist') ? <NavAddBtn href="/sheets/new-wish" /> : null),
         }}
       />
       <Stack.Screen
@@ -142,7 +148,7 @@ export default function UsLayout() {
           headerTitle: () => (
             <HeaderBrand eyebrow={spaceLabel} title="milestones" />
           ),
-          headerRight: () => <NavAddBtn href="/sheets/new-milestone" />,
+          headerRight: () => (moduleEnabled('memories') ? <NavAddBtn href="/sheets/new-milestone" /> : null),
         }}
       />
       <Stack.Screen
@@ -152,7 +158,7 @@ export default function UsLayout() {
           headerTitle: () => (
             <HeaderBrand eyebrow={spaceLabel} title="plans" />
           ),
-          headerRight: () => <NavAddBtn href="/sheets/new-plan" />,
+          headerRight: () => (moduleEnabled('goals') ? <NavAddBtn href="/sheets/new-plan" /> : null),
         }}
       />
       <Stack.Screen
@@ -162,7 +168,7 @@ export default function UsLayout() {
           headerTitle: () => (
             <HeaderBrand eyebrow={spaceLabel} title="journal" />
           ),
-          headerRight: () => <NavAddBtn href="/sheets/new-entry" icon="edit" />,
+          headerRight: () => (moduleEnabled('journal') ? <NavAddBtn href="/sheets/new-entry" icon="edit" /> : null),
         }}
       />
       <Stack.Screen
@@ -172,7 +178,7 @@ export default function UsLayout() {
           headerTitle: () => (
             <HeaderBrand eyebrow={spaceLabel} title="timetables" />
           ),
-          headerRight: () => <NavAddBtn href="/sheets/new-timetable" />,
+          headerRight: () => (moduleEnabled('timetable') ? <NavAddBtn href="/sheets/new-timetable" /> : null),
         }}
       />
       <Stack.Screen

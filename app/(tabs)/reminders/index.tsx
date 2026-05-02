@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import {
   ActionEmptyState,
   BucketedList,
@@ -29,6 +30,14 @@ import type { Reminder } from '@/src/types/database';
 type FilterKey = 'All' | 'Mine' | 'Theirs' | 'Shared' | 'Overdue';
 
 export default function RemindersScreen() {
+  return (
+    <FeatureRouteGuard featureId="recurring">
+      <RemindersScreenInner />
+    </FeatureRouteGuard>
+  );
+}
+
+function RemindersScreenInner() {
   const insets = useSafeAreaInsets();
   const { C } = useTheme();
   const { user, partner, mode } = useSession();

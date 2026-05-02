@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import {
   ActionEmptyState,
   Card,
@@ -16,6 +17,14 @@ import { useTheme } from '@/src/lib/theme';
 import { pastels } from '@/src/lib/tokens';
 
 export default function TasksScreen() {
+  return (
+    <FeatureRouteGuard featureId="tasks">
+      <TasksScreenInner />
+    </FeatureRouteGuard>
+  );
+}
+
+function TasksScreenInner() {
   const { C } = useTheme();
   const { user } = useSession();
   const { lists } = useTaskLists();

@@ -1,4 +1,5 @@
 import { router, Stack } from 'expo-router';
+import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import { HeaderBrand } from '@/src/components/ui/pacto';
 import { Icon } from '@/src/components/ui/Icon';
 import { NavAddBtn } from '@/src/components/ui/NavAddBtn';
@@ -49,8 +50,10 @@ function CalendarStack() {
 
 export default function CalendarLayout() {
   return (
-    <CalendarProvider>
-      <CalendarStack />
-    </CalendarProvider>
+    <FeatureRouteGuard featureId="calendar">
+      <CalendarProvider>
+        <CalendarStack />
+      </CalendarProvider>
+    </FeatureRouteGuard>
   );
 }

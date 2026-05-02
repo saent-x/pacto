@@ -27,6 +27,10 @@ vi.mock('expo-audio', () => ({
   }),
 }));
 
+vi.mock('react-native-gesture-handler/ReanimatedSwipeable', () => ({
+  default: (props: any) => props.children,
+}));
+
 vi.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: any) => <>{children}</>,
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
@@ -55,13 +59,24 @@ const listsState = vi.hoisted(() => ({
     },
   ],
 }));
+const taskItemsSpy = vi.hoisted(() =>
+  vi.fn(() => ({
+    create: vi.fn(),
+    update: vi.fn(),
+    toggleComplete: vi.fn(),
+    remove: vi.fn(),
+    tasks: [],
+  })),
+);
+const calendarProviderSpy = vi.hoisted(() => vi.fn((props) => props.children));
+const wishlistItemsSpy = vi.hoisted(() => vi.fn(() => ({ items: [], isLoading: false })));
 
 vi.mock('@/src/hooks/useSession', () => ({ useSession: () => sessionState }));
 vi.mock('@/src/hooks/useTaskLists', () => ({
   useTaskLists: () => ({ lists: listsState.lists, isLoading: false, error: null }),
 }));
 vi.mock('@/src/hooks/useTasks', () => ({
-  useTaskItems: () => ({ create: vi.fn(), update: vi.fn(), tasks: [] }),
+  useTaskItems: taskItemsSpy,
 }));
 vi.mock('@/src/hooks/useJournal', () => ({
   useJournal: () => ({ create: vi.fn() }),
@@ -69,10 +84,26 @@ vi.mock('@/src/hooks/useJournal', () => ({
 vi.mock('@/src/hooks/useTimetables', () => ({
   useTimetables: () => ({ create: vi.fn(), update: vi.fn(), timetables: [] }),
 }));
+vi.mock('@/src/hooks/useWishlists', () => ({
+  useAllWishlistItems: wishlistItemsSpy,
+  useQuickAddWishItem: () => ({ remove: vi.fn(), quickAdd: vi.fn(), update: vi.fn() }),
+  sanitizeWishScope: (value) => value ?? 'shared',
+}));
+vi.mock('@/src/lib/calendar/context', () => ({
+  CalendarProvider: calendarProviderSpy,
+  useCalendar: vi.fn(),
+}));
+vi.mock('@/src/lib/preferences', () => ({
+  findCurrency: () => ({ symbol: '$', code: 'USD' }),
+  usePreferences: () => ({ currencyCode: 'USD' }),
+}));
 
 import NewTask from '@/app/sheets/new-task';
 import NewEntry from '@/app/sheets/new-entry';
 import NewTimetable from '@/app/sheets/new-timetable';
+import CalendarLayout from '@/app/(tabs)/calendar/_layout';
+import TaskListDetail from '@/app/(tabs)/tasks/[listId]';
+import WishlistsScreen from '@/app/(tabs)/us/wishlists';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -99,6 +130,9 @@ describe('direct sheet feature guards', () => {
   beforeEach(() => {
     sessionState.disabledFeature = null;
     sessionState.isFeatureEnabled.mockClear();
+    taskItemsSpy.mockClear();
+    calendarProviderSpy.mockClear();
+    wishlistItemsSpy.mockClear();
   });
 
   it('disabled new-task renders unavailable state and hides the title input', async () => {
@@ -130,6 +164,39 @@ describe('direct sheet feature guards', () => {
     expect(hasText(renderer.root, 'Timetable is unavailable')).toBe(true);
     expect(findByTestID(renderer.root, 'new-timetable-title-input')).toBeUndefined();
     expect(sessionState.isFeatureEnabled).toHaveBeenCalledWith('timetable');
+
+    act(() => renderer.unmount());
+  });
+
+  it('disabled task detail renders unavailable before task item hooks run', async () => {
+    sessionState.disabledFeature = 'tasks';
+    const renderer = await render(<TaskListDetail />);
+
+    expect(hasText(renderer.root, 'Tasks is unavailable')).toBe(true);
+    expect(taskItemsSpy).not.toHaveBeenCalled();
+    expect(sessionState.isFeatureEnabled).toHaveBeenCalledWith('tasks');
+
+    act(() => renderer.unmount());
+  });
+
+  it('disabled calendar layout renders unavailable before mounting the calendar provider', async () => {
+    sessionState.disabledFeature = 'calendar';
+    const renderer = await render(<CalendarLayout />);
+
+    expect(hasText(renderer.root, 'Calendar is unavailable')).toBe(true);
+    expect(calendarProviderSpy).not.toHaveBeenCalled();
+    expect(sessionState.isFeatureEnabled).toHaveBeenCalledWith('calendar');
+
+    act(() => renderer.unmount());
+  });
+
+  it('disabled wishlist route renders unavailable before wishlist hooks run', async () => {
+    sessionState.disabledFeature = 'wishlist';
+    const renderer = await render(<WishlistsScreen />);
+
+    expect(hasText(renderer.root, 'Wishlist is unavailable')).toBe(true);
+    expect(wishlistItemsSpy).not.toHaveBeenCalled();
+    expect(sessionState.isFeatureEnabled).toHaveBeenCalledWith('wishlist');
 
     act(() => renderer.unmount());
   });

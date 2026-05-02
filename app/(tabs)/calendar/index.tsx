@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import {
   ActionEmptyState,
   Bucket,
@@ -27,6 +28,14 @@ const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 type Slot = 'allday' | 'morning' | 'afternoon' | 'evening';
 
 export default function CalendarScreen() {
+  return (
+    <FeatureRouteGuard featureId="calendar">
+      <CalendarScreenInner />
+    </FeatureRouteGuard>
+  );
+}
+
+function CalendarScreenInner() {
   const insets = useSafeAreaInsets();
   const { C } = useTheme();
   const { mode, partner } = useSession();

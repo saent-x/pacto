@@ -11,6 +11,7 @@ import {
   startOfMonth,
   subDays,
 } from 'date-fns';
+import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import {
   ActionEmptyState,
   Avatar,
@@ -46,6 +47,14 @@ type EntryRow = {
 type FilterKey = 'all' | 'mine' | 'theirs' | 'shared' | 'private';
 
 export default function JournalScreen() {
+  return (
+    <FeatureRouteGuard featureId="journal">
+      <JournalScreenInner />
+    </FeatureRouteGuard>
+  );
+}
+
+function JournalScreenInner() {
   const { C } = useTheme();
   const insets = useSafeAreaInsets();
   const { user, partner, mode, members } = useSession();

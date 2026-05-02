@@ -2,6 +2,7 @@ import { router, Stack } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import {
   ActionEmptyState,
   Bucket,
@@ -71,6 +72,14 @@ function scopeToWho(scope: unknown): WhoKind {
 }
 
 export default function WishlistsScreen() {
+  return (
+    <FeatureRouteGuard featureId="wishlist">
+      <WishlistsScreenInner />
+    </FeatureRouteGuard>
+  );
+}
+
+function WishlistsScreenInner() {
   const { C } = useTheme();
   const insets = useSafeAreaInsets();
   const { user, partner, mode, members } = useSession();
