@@ -197,6 +197,18 @@ async function renderHome() {
 const findByTestID = (renderer: any, id: string) =>
   renderer.root.findAll((node: any) => node.props?.testID === id);
 
+const allText = (renderer: any) =>
+  renderer.root
+    .findAll((node: any) => typeof node.children?.[0] === 'string')
+    .map((node: any) => node.children.join(''));
+
+const localDayAt = (offsetDays: number, hour = 12) => {
+  const date = new Date();
+  date.setDate(date.getDate() + offsetDays);
+  date.setHours(hour, 0, 0, 0);
+  return date.getTime();
+};
+
 describe('HomeRoute', () => {
   beforeEach(() => {
     routerSpy.push.mockReset();
@@ -224,9 +236,7 @@ describe('HomeRoute', () => {
 
   it('does not render demo personalized home content with empty live data', async () => {
     const renderer = await renderHome();
-    const texts = renderer.root
-      .findAll((node: any) => typeof node.children?.[0] === 'string')
-      .map((node: any) => node.children.join(''));
+    const texts = allText(renderer);
     const text = texts.join('\n');
 
     expect(text).not.toContain('Brooklyn');
@@ -235,6 +245,45 @@ describe('HomeRoute', () => {
     expect(text).not.toContain('Picnic at Buttermilk');
     expect(text).not.toContain('Cloudy, mild');
     expect(text).not.toContain('Yoga class');
+
+    act(() => renderer.unmount());
+  });
+
+  it('renders only current local date items under Today', async () => {
+    homeState.timeline = [
+      {
+        id: 'task:today',
+        type: 'task',
+        sourceId: 'today',
+        sourceTable: 'tasks',
+        title: 'Today task',
+        subtitle: null,
+        occursAt: localDayAt(0, 10),
+        priority: 0,
+        isPrivate: false,
+        isOverdue: false,
+      },
+      {
+        id: 'task:tomorrow',
+        type: 'task',
+        sourceId: 'tomorrow',
+        sourceTable: 'tasks',
+        title: 'Tomorrow task',
+        subtitle: null,
+        occursAt: localDayAt(1, 10),
+        priority: 0,
+        isPrivate: false,
+        isOverdue: false,
+      },
+    ];
+
+    const renderer = await renderHome();
+    const texts = allText(renderer);
+
+    expect(texts).toContain('Today task');
+    expect(texts).not.toContain('Tomorrow task');
+    expect(findByTestID(renderer, 'home-timeline-task-today')[0]).toBeDefined();
+    expect(findByTestID(renderer, 'home-timeline-task-tomorrow')).toHaveLength(0);
 
     act(() => renderer.unmount());
   });
@@ -332,14 +381,34 @@ describe('HomeRoute', () => {
   it('filters shortcuts through enabled features', async () => {
     sessionState.isFeatureEnabled = vi.fn((featureId: string) => featureId === 'tasks');
     const renderer = await renderHome();
-    const texts = renderer.root
-      .findAll((node: any) => typeof node.children?.[0] === 'string')
-      .map((node: any) => node.children.join(''));
+    const texts = allText(renderer);
 
     expect(texts).toContain('Task');
     expect(texts).not.toContain('Note');
     expect(texts).not.toContain('Check in');
     expect(texts).not.toContain('Calendar');
+
+    act(() => renderer.unmount());
+  });
+
+  it('omits check-in controls and cannot navigate to new check-in when checkins are disabled', async () => {
+    sessionState.isFeatureEnabled = vi.fn((featureId: string) => featureId !== 'checkins');
+    const renderer = await renderHome();
+    const texts = allText(renderer);
+
+    expect(texts).not.toContain("Right now you're");
+    expect(texts).not.toContain('tap to update');
+    expect(texts).not.toContain("TODAY'S ARC");
+    expect(texts).not.toContain('Check in');
+
+    const pressables = renderer.root.findAll((node: any) => typeof node.props?.onPress === 'function');
+    for (const pressable of pressables) {
+      await act(async () => {
+        await pressable.props.onPress();
+      });
+    }
+
+    expect(routerSpy.push).not.toHaveBeenCalledWith('/sheets/new-checkin');
 
     act(() => renderer.unmount());
   });

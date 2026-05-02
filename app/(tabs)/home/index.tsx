@@ -87,6 +87,25 @@ function dateLabelForTimeline(occursAt: number | null): string {
   return format(new Date(occursAt), 'EEE · MMM d').toUpperCase();
 }
 
+function localDateParts(date: Date) {
+  return {
+    year: date.getFullYear(),
+    month: date.getMonth(),
+    day: date.getDate(),
+  };
+}
+
+function isOnLocalDate(occursAt: number | null, date: Date): boolean {
+  if (occursAt === null) return false;
+  const itemDate = localDateParts(new Date(occursAt));
+  const targetDate = localDateParts(date);
+  return (
+    itemDate.year === targetDate.year &&
+    itemDate.month === targetDate.month &&
+    itemDate.day === targetDate.day
+  );
+}
+
 function dateLabelForMilestone(item: MilestoneStripItem): string {
   return format(new Date(`${item.date}T12:00:00`), 'EEE · MMM d').toUpperCase();
 }
@@ -158,10 +177,14 @@ export default function HomeScreen() {
   const { todayCheckIn, partnerTodayCheckIn, checkIns } = useCheckInSnapshot();
   const today = useMemo(() => new Date(), []);
   const dateLabel = format(today, 'EEE · MMM d').toUpperCase();
-  const todayRows = home.timeline.slice(0, 5);
+  const todayRows = useMemo(
+    () => home.timeline.filter((row) => isOnLocalDate(row.occursAt, today)).slice(0, 5),
+    [home.timeline, today],
+  );
   const comingTimeline = home.timeline[0] ?? null;
   const comingMilestone = home.milestones[0] ?? null;
   const hasComingUp = !!comingTimeline || !!comingMilestone;
+  const checkinsEnabled = isFeatureEnabled('checkins');
   const enabledShortcuts = useMemo(
     () => SHORTCUTS.filter((s) => isFeatureEnabled(s.feature)),
     [isFeatureEnabled],
@@ -175,7 +198,9 @@ export default function HomeScreen() {
   const todayKey = getLocalDateKey();
   const arcSlots = useMemo(() => buildArc(checkIns, todayKey), [checkIns, todayKey]);
 
-  const onCheckIn = () => router.push('/sheets/new-checkin');
+  const onCheckIn = () => {
+    if (checkinsEnabled) router.push('/sheets/new-checkin');
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -184,117 +209,118 @@ export default function HomeScreen() {
         contentContainerStyle={{ paddingTop: insets.top + 56, paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Mood / check-in section */}
-        <View style={styles.section}>
-          {mode === 'solo' ? (
-            <View style={[styles.moodWrap, styles.softShadow]}>
-              <PressScale onPress={onCheckIn}>
-                <View
-                  style={[
-                    styles.soloMood,
-                    { backgroundColor: myMood.color },
-                  ]}
-                >
-                  <HeroPactoBadge style={styles.heroBadge} />
-                  <View style={styles.moodMetaRow}>
-                    <View style={styles.moodDatePill}>
-                      <Text style={[Typography.eyebrowSm, styles.tabularText, { color: '#5C4F3D' }]}>
-                        {dateLabel}
-                      </Text>
+        {checkinsEnabled ? (
+          <View style={styles.section}>
+            {mode === 'solo' ? (
+              <View style={[styles.moodWrap, styles.softShadow]}>
+                <PressScale onPress={onCheckIn}>
+                  <View
+                    style={[
+                      styles.soloMood,
+                      { backgroundColor: myMood.color },
+                    ]}
+                  >
+                    <HeroPactoBadge style={styles.heroBadge} />
+                    <View style={styles.moodMetaRow}>
+                      <View style={styles.moodDatePill}>
+                        <Text style={[Typography.eyebrowSm, styles.tabularText, { color: '#5C4F3D' }]}>
+                          {dateLabel}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.soloMoodMain}>
+                      <View style={styles.soloMoodImageFrame}>
+                        <Image source={myMood.image} style={styles.soloMoodIcon} resizeMode="contain" />
+                      </View>
+                      <View style={{ marginLeft: 14, flex: 1 }}>
+                        <Text style={[Typography.eyebrow, { color: '#5C4F3D' }]}>
+                          Right now you're
+                        </Text>
+                        <Text
+                          style={[
+                            Typography.pixelHero,
+                            { color: '#2A241B', marginTop: 4 },
+                          ]}
+                        >
+                          {myMood.label}
+                        </Text>
+                      </View>
+                      <Icon name="chevronRight" size={18} color="#5C4F3D" />
                     </View>
                   </View>
-                  <View style={styles.soloMoodMain}>
-                    <View style={styles.soloMoodImageFrame}>
-                      <Image source={myMood.image} style={styles.soloMoodIcon} resizeMode="contain" />
-                    </View>
-                    <View style={{ marginLeft: 14, flex: 1 }}>
-                      <Text style={[Typography.eyebrow, { color: '#5C4F3D' }]}>
-                        Right now you're
-                      </Text>
+                </PressScale>
+                <ArcStrip slots={arcSlots} />
+              </View>
+            ) : (
+              <Card padded={false} elevated style={styles.moodCard}>
+                <HeroPactoBadge style={styles.heroBadge} />
+                <View style={styles.moodCardHeader}>
+                  <View style={styles.moodDatePill}>
+                    <Text style={[Typography.eyebrowSm, styles.tabularText, { color: '#5C4F3D' }]}>
+                      {dateLabel}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.moodPair}>
+                  <PressScale
+                    onPress={onCheckIn}
+                    style={[
+                      styles.moodHalf,
+                      { backgroundColor: myMood.color },
+                    ]}
+                  >
+                    <Text style={[Typography.eyebrowSm, { color: '#5C4F3D' }]}>
+                      You
+                    </Text>
+                    <View style={styles.moodInline}>
+                      <View style={styles.inlineMoodImageFrame}>
+                        <Image source={myMood.image} style={styles.inlineMoodIcon} resizeMode="contain" />
+                      </View>
                       <Text
                         style={[
-                          Typography.pixelHero,
-                          { color: '#2A241B', marginTop: 4 },
+                          Typography.pixelHeroSm,
+                          { color: '#2A241B', marginLeft: 8 },
                         ]}
                       >
                         {myMood.label}
                       </Text>
                     </View>
-                    <Icon name="chevronRight" size={18} color="#5C4F3D" />
-                  </View>
-                </View>
-              </PressScale>
-              <ArcStrip slots={arcSlots} />
-            </View>
-          ) : (
-            <Card padded={false} elevated style={styles.moodCard}>
-              <HeroPactoBadge style={styles.heroBadge} />
-              <View style={styles.moodCardHeader}>
-                <View style={styles.moodDatePill}>
-                  <Text style={[Typography.eyebrowSm, styles.tabularText, { color: '#5C4F3D' }]}>
-                    {dateLabel}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.moodPair}>
-                <PressScale
-                  onPress={onCheckIn}
-                  style={[
-                    styles.moodHalf,
-                    { backgroundColor: myMood.color },
-                  ]}
-                >
-                  <Text style={[Typography.eyebrowSm, { color: '#5C4F3D' }]}>
-                    You
-                  </Text>
-                  <View style={styles.moodInline}>
-                    <View style={styles.inlineMoodImageFrame}>
-                      <Image source={myMood.image} style={styles.inlineMoodIcon} resizeMode="contain" />
+                    <Text style={[Typography.small, { color: '#5C4F3D', marginTop: 4 }]}>
+                      tap to update
+                    </Text>
+                  </PressScale>
+                  <View
+                    style={[
+                      styles.moodHalf,
+                      { backgroundColor: partnerMood.color },
+                    ]}
+                  >
+                    <Text style={[Typography.eyebrowSm, { color: '#5C4F3D' }]}>
+                      {partnerFirstName ?? 'They'}
+                    </Text>
+                    <View style={styles.moodInline}>
+                      <View style={styles.inlineMoodImageFrame}>
+                        <Image source={partnerMood.image} style={styles.inlineMoodIcon} resizeMode="contain" />
+                      </View>
+                      <Text
+                        style={[
+                          Typography.pixelHeroSm,
+                          { color: '#2A241B', marginLeft: 8 },
+                        ]}
+                      >
+                        {partnerMood.label}
+                      </Text>
                     </View>
-                    <Text
-                      style={[
-                        Typography.pixelHeroSm,
-                        { color: '#2A241B', marginLeft: 8 },
-                      ]}
-                    >
-                      {myMood.label}
+                    <Text style={[Typography.small, { color: '#5C4F3D', marginTop: 4 }]}>
+                      {partnerTodayCheckIn ? 'today' : 'no check-in today'}
                     </Text>
                   </View>
-                  <Text style={[Typography.small, { color: '#5C4F3D', marginTop: 4 }]}>
-                    tap to update
-                  </Text>
-                </PressScale>
-                <View
-                  style={[
-                    styles.moodHalf,
-                    { backgroundColor: partnerMood.color },
-                  ]}
-                >
-                  <Text style={[Typography.eyebrowSm, { color: '#5C4F3D' }]}>
-                    {partnerFirstName ?? 'They'}
-                  </Text>
-                  <View style={styles.moodInline}>
-                    <View style={styles.inlineMoodImageFrame}>
-                      <Image source={partnerMood.image} style={styles.inlineMoodIcon} resizeMode="contain" />
-                    </View>
-                    <Text
-                      style={[
-                        Typography.pixelHeroSm,
-                        { color: '#2A241B', marginLeft: 8 },
-                      ]}
-                    >
-                      {partnerMood.label}
-                    </Text>
-                  </View>
-                  <Text style={[Typography.small, { color: '#5C4F3D', marginTop: 4 }]}>
-                    {partnerTodayCheckIn ? 'today' : 'no check-in today'}
-                  </Text>
                 </View>
-              </View>
-              <ArcStrip slots={arcSlots} />
-            </Card>
-          )}
-        </View>
+                <ArcStrip slots={arcSlots} />
+              </Card>
+            )}
+          </View>
+        ) : null}
 
         {/* When you're together — live-derived summary */}
         <View style={styles.section}>

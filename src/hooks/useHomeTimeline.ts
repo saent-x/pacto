@@ -79,15 +79,17 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
 
   const homeView = useMemo(() => {
     const now = Date.now();
+    const checkinsEnabled = isFeatureEnabled('checkins');
+    const memoriesEnabled = isFeatureEnabled('memories');
     const events = isFeatureEnabled('calendar') ? data?.events ?? [] : [];
     const plans = isFeatureEnabled('goals') ? data?.plans ?? [] : [];
     const reminders = isFeatureEnabled('recurring') ? data?.reminders ?? [] : [];
     const rituals = isFeatureEnabled('recurring') ? data?.rituals ?? [] : [];
     const tasks = isFeatureEnabled('tasks') ? data?.tasks ?? [] : [];
     const journalEntries = isFeatureEnabled('journal') ? data?.journalEntries ?? [] : [];
-    const loveNotes = isFeatureEnabled('memories') ? data?.loveNotes ?? [] : [];
-    const checkIns = isFeatureEnabled('checkins') ? data?.checkIns ?? [] : [];
-    const milestones = isFeatureEnabled('memories') ? data?.milestones ?? [] : [];
+    const loveNotes = memoriesEnabled ? data?.loveNotes ?? [] : [];
+    const checkIns = checkinsEnabled ? data?.checkIns ?? [] : [];
+    const milestones = memoriesEnabled ? data?.milestones ?? [] : [];
 
     const memories = buildMemoryPreviews({
       journalEntries,
@@ -99,7 +101,7 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
       now,
       couple: {
         id: coupleId ?? '',
-        anniversary: activeCouple?.couple?.anniversary ?? null,
+        anniversary: memoriesEnabled ? activeCouple?.couple?.anniversary ?? null : null,
       },
       milestones,
     });
@@ -115,13 +117,15 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
       memories: memoryPreview ? [memoryPreview] : [],
     });
 
-    const hero = selectFeaturedSignal({
-      now,
-      presence,
-      milestones: milestoneStrip,
-      memoryPreview,
-      checkIns,
-    });
+    const hero = checkinsEnabled
+      ? selectFeaturedSignal({
+          now,
+          presence,
+          milestones: milestoneStrip,
+          memoryPreview,
+          checkIns,
+        })
+      : null;
 
     const verseRecord = (data?.dailyVerseCache ?? [])[0];
     const dailyVerse = verseRecord
