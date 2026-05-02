@@ -20,6 +20,8 @@ import { useMilestones } from '@/src/hooks/useMilestones';
 import { usePlans } from '@/src/hooks/usePlans';
 import { useJournal } from '@/src/hooks/useJournal';
 import { Typography } from '@/src/constants/typography';
+import { featureForUsModule } from '@/src/hooks/useFeatureGate';
+import { isFeatureSupportedForMode } from '@/src/lib/features/registry';
 import { useTheme } from '@/src/lib/theme';
 
 type Module = {
@@ -34,7 +36,7 @@ type Module = {
 export default function UsScreen() {
   const insets = useSafeAreaInsets();
   const { C } = useTheme();
-  const { user, partner, mode, activeCouple } = useSession();
+  const { user, partner, mode, activeCouple, isFeatureEnabled } = useSession();
 
   const myFirstName = (user?.displayName ?? user?.email?.split('@')[0] ?? 'You').split(' ')[0];
   const partnerFirstName = partner?.displayName?.split(' ')[0] ?? null;
@@ -272,15 +274,25 @@ export default function UsScreen() {
       journal.entries?.length,
     ]
   );
+  const visibleModules = useMemo(
+    () =>
+      modules.filter((module) => {
+        const featureId = featureForUsModule(module.id);
+        if (!featureId) return true;
+        return isFeatureSupportedForMode(featureId, mode) && isFeatureEnabled(featureId);
+      }),
+    [modules, mode, isFeatureEnabled],
+  );
+
   const moduleBuckets = useMemo<Bucket<Module>[]>(
     () => [
       {
         label: 'Modules',
         dotColor: C.accent2,
-        rows: modules,
+        rows: visibleModules,
       },
     ],
-    [modules, C.accent2],
+    [visibleModules, C.accent2],
   );
 
   const accentFor = (k: Module['accentKey']) =>
