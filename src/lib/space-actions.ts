@@ -1,12 +1,12 @@
 import { id, lookup, tx } from '@instantdb/react-native';
 import { db } from './db';
 import type { SpaceKindWire, SpaceMode } from './session';
-import {
-  type FeatureId,
-  getDefaultFeatureIds,
-  sanitizeFeatureIds,
-} from '@/src/lib/features/registry';
+import { type FeatureId, sanitizeFeatureIds } from '@/src/lib/features/registry';
 import { generateInviteCode } from './invite-code';
+import {
+  resolveCreateSpaceFeatureIds,
+  resolveUpgradeSoloToCoupleFeatureIds,
+} from './space-features';
 
 export type SpaceKind = SpaceKindWire;
 
@@ -18,6 +18,7 @@ function now() {
 export async function createSpace(params: {
   userId: string;
   kind: SpaceKind;
+  mode?: SpaceMode;
   name?: string;
   anniversary?: string;
   enabledFeatures?: FeatureId[];
@@ -27,13 +28,10 @@ export async function createSpace(params: {
   const inviteCode =
     params.kind === 'couple' || params.kind === 'pair' ? generateInviteCode() : null;
   const ts = now();
-  const mode = modeForSpaceKind(params.kind);
 
   const spaceFields: Record<string, unknown> = {
     kind: params.kind,
-    enabledFeatures: params.enabledFeatures
-      ? sanitizeFeatureIds(params.enabledFeatures, mode)
-      : getDefaultFeatureIds(mode),
+    enabledFeatures: resolveCreateSpaceFeatureIds(params),
     createdAt: ts,
     updatedAt: ts,
   };
@@ -100,6 +98,7 @@ export async function upgradeSoloToCouple(params: { spaceId: string }): Promise<
     tx.spaces[params.spaceId].update({
       kind: 'couple',
       inviteCode,
+      enabledFeatures: resolveUpgradeSoloToCoupleFeatureIds(),
       updatedAt: now(),
     }),
   ]);
@@ -151,10 +150,4 @@ export async function updateUserAvatar(params: {
       avatarUrl: params.avatarUrl,
     }),
   ]);
-}
-
-function modeForSpaceKind(kind: SpaceKind): SpaceMode {
-  if (kind === 'solo') return 'solo';
-  if (kind === 'crew') return 'crew';
-  return 'pair';
 }
