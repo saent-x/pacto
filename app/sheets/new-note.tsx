@@ -2,6 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, TextInput, View } from 'react-native';
+import { FeatureUnavailable } from '@/src/components/features/FeatureUnavailable';
 import { PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon } from '@/src/components/ui/Icon';
 import {
@@ -11,11 +12,18 @@ import {
   type IconLabelOption,
 } from '@/src/components/ui/SheetShell';
 import { useLoveNotes, type LoveNoteVibe } from '@/src/hooks/useLoveNotes';
+import { useFeatureGate } from '@/src/hooks/useFeatureGate';
 import { useSession } from '@/src/hooks/useSession';
 import { useTheme } from '@/src/lib/theme';
 
 // solo-mode: route blocked — love notes require a partner
 export default function NewNote() {
+  const gate = useFeatureGate('memories');
+  if (!gate.enabled) return gate.feature ? <FeatureUnavailable feature={gate.feature} /> : null;
+  return <NewNoteInner />;
+}
+
+function NewNoteInner() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEdit = Boolean(id);
   const { C, F } = useTheme();

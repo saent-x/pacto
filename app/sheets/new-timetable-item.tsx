@@ -2,6 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, Text, View } from 'react-native';
+import { FeatureUnavailable } from '@/src/components/features/FeatureUnavailable';
 import { Pill, PrimaryButton } from '@/src/components/ui/atoms';
 import { IconName } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
@@ -18,6 +19,7 @@ import {
   type IconLabelOption,
   type SegmentOption,
 } from '@/src/components/ui/SheetShell';
+import { useFeatureGate } from '@/src/hooks/useFeatureGate';
 import { useSession } from '@/src/hooks/useSession';
 import { useTimetable } from '@/src/hooks/useTimetables';
 import { useTheme } from '@/src/lib/theme';
@@ -64,6 +66,12 @@ function repeatFor(raw: string | undefined): Repeat {
 
 // solo-mode: who-for hidden — defaults to me
 export default function NewTimetableItem() {
+  const gate = useFeatureGate('timetable');
+  if (!gate.enabled) return gate.feature ? <FeatureUnavailable feature={gate.feature} /> : null;
+  return <NewTimetableItemInner />;
+}
+
+function NewTimetableItemInner() {
   const { C, F } = useTheme();
   const params = useLocalSearchParams<{ timetableId?: string; id?: string }>();
   const timetableId =

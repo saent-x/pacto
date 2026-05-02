@@ -2,6 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, Text, View } from 'react-native';
+import { FeatureUnavailable } from '@/src/components/features/FeatureUnavailable';
 import { PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
 import {
@@ -13,6 +14,7 @@ import {
   SheetTitleField,
   type IconOption,
 } from '@/src/components/ui/SheetShell';
+import { useFeatureGate } from '@/src/hooks/useFeatureGate';
 import { usePlans } from '@/src/hooks/usePlans';
 import { useTheme } from '@/src/lib/theme';
 
@@ -59,6 +61,12 @@ function bucketFromCanon(canonical: string | null | undefined): Bucket {
 }
 
 export default function NewPlan() {
+  const gate = useFeatureGate('goals');
+  if (!gate.enabled) return gate.feature ? <FeatureUnavailable feature={gate.feature} /> : null;
+  return <NewPlanInner />;
+}
+
+function NewPlanInner() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEdit = Boolean(id);
   const { C, F } = useTheme();

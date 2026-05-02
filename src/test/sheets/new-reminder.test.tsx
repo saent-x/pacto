@@ -26,12 +26,14 @@ vi.mock('@react-native-community/datetimepicker', () => ({
 }));
 
 const sessionState = vi.hoisted(() => ({
+  mode: 'pair',
   user: { id: 'u-me', displayName: 'Me' },
   activeCouple: {
     couple: { id: 'c1', name: null, anniversary: null },
     partner: { id: 'u-sofia', displayName: 'Sofia', avatarUrl: null },
   },
   isSolo: false,
+  isFeatureEnabled: () => true,
 }));
 
 const reminderState = vi.hoisted(() => ({

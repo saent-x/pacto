@@ -2,6 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert } from 'react-native';
+import { FeatureUnavailable } from '@/src/components/features/FeatureUnavailable';
 import { PrimaryButton } from '@/src/components/ui/atoms';
 import { IconName } from '@/src/components/ui/Icon';
 import {
@@ -12,6 +13,7 @@ import {
   SheetTitleField,
 } from '@/src/components/ui/SheetShell';
 import { useTheme } from '@/src/lib/theme';
+import { useFeatureGate } from '@/src/hooks/useFeatureGate';
 import { useTaskLists, type PastelKey } from '@/src/hooks/useTaskLists';
 
 const ICONS: { key: IconName; icon: IconName }[] = [
@@ -30,6 +32,12 @@ const ICONS: { key: IconName; icon: IconName }[] = [
 const COLOR_KEYS: PastelKey[] = ['peach', 'lavender', 'butter', 'mint', 'rose', 'sky', 'gold', 'journal'];
 
 export default function NewList() {
+  const gate = useFeatureGate('tasks');
+  if (!gate.enabled) return gate.feature ? <FeatureUnavailable feature={gate.feature} /> : null;
+  return <NewListInner />;
+}
+
+function NewListInner() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEdit = Boolean(id);
   const { C } = useTheme();

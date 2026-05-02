@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { StyleProp, ViewStyle } from 'react-native';
-import { ActionEmptyState } from '@/src/components/ui/pacto';
+import { ActionEmptyState } from '@/src/components/ui/pacto/ActionEmptyState';
 import type { FeatureEntry } from '@/src/lib/features/registry';
 
 type Props = {

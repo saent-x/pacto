@@ -2,6 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, Text, View } from 'react-native';
+import { FeatureUnavailable } from '@/src/components/features/FeatureUnavailable';
 import { PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon, IconName } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
@@ -13,6 +14,7 @@ import {
   SheetTitleField,
   type IconLabelOption,
 } from '@/src/components/ui/SheetShell';
+import { useFeatureGate } from '@/src/hooks/useFeatureGate';
 import { useSession } from '@/src/hooks/useSession';
 import { useTimetables } from '@/src/hooks/useTimetables';
 import { useTheme } from '@/src/lib/theme';
@@ -22,6 +24,12 @@ type Share = 'solo' | 'partner' | 'shared';
 
 // solo-mode: share-with hidden — defaults to solo
 export default function NewTimetable() {
+  const gate = useFeatureGate('timetable');
+  if (!gate.enabled) return gate.feature ? <FeatureUnavailable feature={gate.feature} /> : null;
+  return <NewTimetableInner />;
+}
+
+function NewTimetableInner() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEdit = Boolean(id);
   const { C, F } = useTheme();

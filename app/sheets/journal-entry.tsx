@@ -3,15 +3,23 @@ import { useMemo } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { format, parseISO } from 'date-fns';
 import { Avatar, Card } from '@/src/components/ui/pacto';
+import { FeatureUnavailable } from '@/src/components/features/FeatureUnavailable';
 import { Icon } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
 import { SheetShell } from '@/src/components/ui/SheetShell';
 import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
+import { useFeatureGate } from '@/src/hooks/useFeatureGate';
 import { useJournal } from '@/src/hooks/useJournal';
 import { useSession } from '@/src/hooks/useSession';
 
 export default function JournalEntrySheet() {
+  const gate = useFeatureGate('journal');
+  if (!gate.enabled) return gate.feature ? <FeatureUnavailable feature={gate.feature} /> : null;
+  return <JournalEntrySheetInner />;
+}
+
+function JournalEntrySheetInner() {
   const { C } = useTheme();
   const { user, partner, members } = useSession();
   const { allEntries, remove } = useJournal();

@@ -2,6 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, Text, View } from 'react-native';
+import { FeatureUnavailable } from '@/src/components/features/FeatureUnavailable';
 import { Pill, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon } from '@/src/components/ui/Icon';
 import {
@@ -12,6 +13,7 @@ import {
   type SegmentOption,
 } from '@/src/components/ui/SheetShell';
 import { useTheme } from '@/src/lib/theme';
+import { useFeatureGate } from '@/src/hooks/useFeatureGate';
 import { useTaskLists } from '@/src/hooks/useTaskLists';
 import { useTaskItems } from '@/src/hooks/useTasks';
 
@@ -67,6 +69,12 @@ function bucketLabelFor(buckets: Bucket[], dueDate: string | null): string {
 }
 
 export default function NewTask() {
+  const gate = useFeatureGate('tasks');
+  if (!gate.enabled) return gate.feature ? <FeatureUnavailable feature={gate.feature} /> : null;
+  return <NewTaskInner />;
+}
+
+function NewTaskInner() {
   const { listId, id } = useLocalSearchParams<{ listId?: string; id?: string }>();
   const isEdit = Boolean(id);
   const { C, F } = useTheme();

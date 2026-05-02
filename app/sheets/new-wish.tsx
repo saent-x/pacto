@@ -2,6 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, Text, TextInput, View } from 'react-native';
+import { FeatureUnavailable } from '@/src/components/features/FeatureUnavailable';
 import { PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon } from '@/src/components/ui/Icon';
 import {
@@ -13,6 +14,7 @@ import {
   type IconOption,
 } from '@/src/components/ui/SheetShell';
 import { useAllWishlistItems, useQuickAddWishItem } from '@/src/hooks/useWishlists';
+import { useFeatureGate } from '@/src/hooks/useFeatureGate';
 import { useTheme } from '@/src/lib/theme';
 
 type Tag = 'HOME' | 'TRAVEL' | 'TREATS' | 'BIG' | 'KITCHEN' | 'CLOTHES';
@@ -27,6 +29,12 @@ const TAGS: IconOption<Tag>[] = [
 ];
 
 export default function NewWish() {
+  const gate = useFeatureGate('wishlist');
+  if (!gate.enabled) return gate.feature ? <FeatureUnavailable feature={gate.feature} /> : null;
+  return <NewWishInner />;
+}
+
+function NewWishInner() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEdit = Boolean(id);
   const { C, F } = useTheme();

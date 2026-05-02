@@ -24,6 +24,13 @@ const listsState = vi.hoisted(() => ({
   create: vi.fn(async () => 'new-list-id'),
 }));
 
+vi.mock('@/src/hooks/useSession', () => ({
+  useSession: () => ({
+    mode: 'pair',
+    isFeatureEnabled: () => true,
+  }),
+}));
+
 vi.mock('@/src/hooks/useTaskLists', () => ({
   useTaskLists: () => ({ create: listsState.create, lists: [], isLoading: false, error: null }),
 }));

@@ -31,9 +31,11 @@ const ttState = vi.hoisted(() => ({
 }));
 
 const sessionState = vi.hoisted(() => ({
+  mode: 'pair',
   user: { id: 'u-me', displayName: 'Me' },
   partner: { id: 'u-sofia', displayName: 'Sofia', avatarUrl: null },
   isSolo: false,
+  isFeatureEnabled: () => true,
 }));
 
 vi.mock('@/src/hooks/useTimetables', () => ({

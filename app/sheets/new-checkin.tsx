@@ -2,6 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert } from 'react-native';
+import { FeatureUnavailable } from '@/src/components/features/FeatureUnavailable';
 import { PrimaryButton } from '@/src/components/ui/atoms';
 import {
   SheetIconLabelPicker,
@@ -16,10 +17,17 @@ import {
   type CheckInStateId,
 } from '@/src/constants/checkInStates';
 import { useCheckIns } from '@/src/hooks/useCheckIns';
+import { useFeatureGate } from '@/src/hooks/useFeatureGate';
 import { useSession } from '@/src/hooks/useSession';
 
 // solo-mode: partner-aware info card hidden
 export default function NewCheckin() {
+  const gate = useFeatureGate('checkins');
+  if (!gate.enabled) return gate.feature ? <FeatureUnavailable feature={gate.feature} /> : null;
+  return <NewCheckinInner />;
+}
+
+function NewCheckinInner() {
   const { createOrUpdate, isSubmitting } = useCheckIns();
   const { isSolo, partner } = useSession();
   const [mood, setMood] = useState<CheckInStateId>('soft');

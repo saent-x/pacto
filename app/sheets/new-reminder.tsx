@@ -2,6 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, View } from 'react-native';
+import { FeatureUnavailable } from '@/src/components/features/FeatureUnavailable';
 import { PrimaryButton } from '@/src/components/ui/atoms';
 import { IconName } from '@/src/components/ui/Icon';
 import {
@@ -18,6 +19,7 @@ import {
   type SegmentOption,
 } from '@/src/components/ui/SheetShell';
 import { useReminders } from '@/src/hooks/useReminders';
+import { useFeatureGate } from '@/src/hooks/useFeatureGate';
 import { useSession } from '@/src/hooks/useSession';
 import { useTheme } from '@/src/lib/theme';
 
@@ -44,6 +46,12 @@ const REPEAT_OPTS: SegmentOption<Repeat>[] = [
 
 // solo-mode: assignee restricted to ['me'] — initial 'me'
 export default function NewReminder() {
+  const gate = useFeatureGate('recurring');
+  if (!gate.enabled) return gate.feature ? <FeatureUnavailable feature={gate.feature} /> : null;
+  return <NewReminderInner />;
+}
+
+function NewReminderInner() {
   const { C } = useTheme();
   const { user, activeCouple, isSolo } = useSession();
   const { create } = useReminders();

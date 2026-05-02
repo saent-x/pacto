@@ -13,6 +13,23 @@ vi.mock('@/src/hooks/useSession', () => ({
 }));
 
 describe('feature gate mapping helpers', () => {
+  it.each<[string, FeatureId]>([
+    ['/sheets/new-task', 'tasks'],
+    ['/sheets/new-list', 'tasks'],
+    ['/sheets/new-reminder', 'recurring'],
+    ['/sheets/new-wish', 'wishlist'],
+    ['/sheets/new-note', 'memories'],
+    ['/sheets/new-milestone', 'memories'],
+    ['/sheets/new-entry', 'journal'],
+    ['/sheets/journal-entry', 'journal'],
+    ['/sheets/new-checkin', 'checkins'],
+    ['/sheets/new-plan', 'goals'],
+    ['/sheets/new-timetable', 'timetable'],
+    ['/sheets/new-timetable-item', 'timetable'],
+  ])('maps guarded sheet route %s to %s', (path, featureId) => {
+    expect(routeFeatureForPath(path)).toBe(featureId);
+  });
+
   it.each<[string, FeatureId | null]>([
     ['/(tabs)/tasks', 'tasks'],
     ['/tasks', 'tasks'],

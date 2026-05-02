@@ -30,6 +30,13 @@ const wishState = vi.hoisted(() => ({
   add: vi.fn(async () => undefined),
 }));
 
+vi.mock('@/src/hooks/useSession', () => ({
+  useSession: () => ({
+    mode: 'pair',
+    isFeatureEnabled: () => true,
+  }),
+}));
+
 vi.mock('@/src/hooks/useWishlists', () => ({
   useQuickAddWishItem: () => ({ add: wishState.add }),
   useAllWishlistItems: () => ({ items: [] }),

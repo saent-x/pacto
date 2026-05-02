@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, View } from 'react-native';
+import { FeatureUnavailable } from '@/src/components/features/FeatureUnavailable';
 import { PrimaryButton } from '@/src/components/ui/atoms';
 import { IconName } from '@/src/components/ui/Icon';
 import {
@@ -16,6 +17,7 @@ import {
   type IconOption,
 } from '@/src/components/ui/SheetShell';
 import { useMilestones } from '@/src/hooks/useMilestones';
+import { useFeatureGate } from '@/src/hooks/useFeatureGate';
 import { useSession } from '@/src/hooks/useSession';
 import { useTheme } from '@/src/lib/theme';
 
@@ -33,6 +35,12 @@ const ICONS: IconOption<IconName>[] = [
 
 // solo-mode: repeat copy adjusted (no partner)
 export default function NewMilestone() {
+  const gate = useFeatureGate('memories');
+  if (!gate.enabled) return gate.feature ? <FeatureUnavailable feature={gate.feature} /> : null;
+  return <NewMilestoneInner />;
+}
+
+function NewMilestoneInner() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEdit = Boolean(id);
   const { C } = useTheme();

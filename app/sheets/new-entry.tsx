@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, TextInput, View } from 'react-native';
+import { FeatureUnavailable } from '@/src/components/features/FeatureUnavailable';
 import { PrimaryButton } from '@/src/components/ui/atoms';
 import { IconName } from '@/src/components/ui/Icon';
 import {
@@ -14,6 +15,7 @@ import {
   type IconLabelOption,
 } from '@/src/components/ui/SheetShell';
 import { useJournal } from '@/src/hooks/useJournal';
+import { useFeatureGate } from '@/src/hooks/useFeatureGate';
 import { useSession } from '@/src/hooks/useSession';
 import { useTheme } from '@/src/lib/theme';
 
@@ -21,6 +23,12 @@ type Mood = 'great' | 'good' | 'okay' | 'low' | 'rough';
 
 // solo-mode: private toggle hidden — entries are always personal
 export default function NewEntry() {
+  const gate = useFeatureGate('journal');
+  if (!gate.enabled) return gate.feature ? <FeatureUnavailable feature={gate.feature} /> : null;
+  return <NewEntryInner />;
+}
+
+function NewEntryInner() {
   const { C, F } = useTheme();
   const { create } = useJournal();
   const { isSolo, partner } = useSession();

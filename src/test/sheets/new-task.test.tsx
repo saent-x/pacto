@@ -39,6 +39,13 @@ const taskItemsState = vi.hoisted(() => ({
   create: vi.fn(async () => undefined),
 }));
 
+vi.mock('@/src/hooks/useSession', () => ({
+  useSession: () => ({
+    mode: 'pair',
+    isFeatureEnabled: () => true,
+  }),
+}));
+
 vi.mock('@/src/hooks/useTaskLists', () => ({
   useTaskLists: () => ({ lists: listsState.lists, isLoading: false, error: null }),
 }));

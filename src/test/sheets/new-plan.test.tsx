@@ -30,6 +30,13 @@ const planState = vi.hoisted(() => ({
   create: vi.fn(async () => undefined),
 }));
 
+vi.mock('@/src/hooks/useSession', () => ({
+  useSession: () => ({
+    mode: 'pair',
+    isFeatureEnabled: () => true,
+  }),
+}));
+
 vi.mock('@/src/hooks/usePlans', () => ({
   usePlans: () => ({ create: planState.create, update: vi.fn(), plans: [] }),
 }));
