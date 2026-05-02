@@ -13,9 +13,9 @@ export function FeatureUnavailable({ feature, style }: Props) {
     <ActionEmptyState
       icon={feature.icon}
       title={`${feature.label} is unavailable`}
-      body="Turn this feature on from Profile to use it in this space."
-      actionLabel="Open Profile"
-      onAction={() => router.push('/sheets/profile')}
+      body="Turn this feature on from feature settings to use it in this space."
+      actionLabel="Open Features"
+      onAction={() => router.push('/sheets/profile-features')}
       style={style}
     />
   );

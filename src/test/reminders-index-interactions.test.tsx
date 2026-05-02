@@ -166,10 +166,13 @@ describe('Reminders screen interactions', () => {
   });
 
   it('groups upcoming by due_at bucket', async () => {
-    const now = Date.now();
+    const todayDue = new Date();
+    todayDue.setHours(23, 59, 59, 999);
+    const tomorrowDue = new Date(todayDue);
+    tomorrowDue.setDate(todayDue.getDate() + 1);
     reminderState.reminders = [
-      makeReminder({ id: 'today', title: 'Today item', due_at: new Date(now + 3600_000).toISOString() }),
-      makeReminder({ id: 'tomorrow', title: 'Tomorrow item', due_at: new Date(now + 26 * 3600_000).toISOString() }),
+      makeReminder({ id: 'today', title: 'Today item', due_at: todayDue.toISOString() }),
+      makeReminder({ id: 'tomorrow', title: 'Tomorrow item', due_at: tomorrowDue.toISOString() }),
     ];
     reminderState.upcoming = reminderState.reminders;
     const renderer = await renderScreen();

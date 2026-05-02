@@ -66,6 +66,7 @@ describe('feature gate mapping helpers', () => {
     ['/us/plans', 'goals'],
     ['/sheets/new-plan', 'goals'],
     ['/sheets/profile', null],
+    ['/sheets/profile-features', null],
     ['/unknown', null],
   ])('maps route %s to %s', (path, featureId) => {
     expect(routeFeatureForPath(path)).toBe(featureId);

@@ -135,7 +135,7 @@ const spaceActions = vi.hoisted(() => ({
 
 vi.mock('@/src/lib/space-actions', () => spaceActions);
 
-import ProfileSheet from '@/app/sheets/profile';
+import ProfileFeaturesSheet from '@/app/sheets/profile-features';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -160,7 +160,7 @@ function deferred<T = void>() {
 async function renderProfile() {
   let renderer: any;
   await act(async () => {
-    renderer = TestRenderer.create(<ProfileSheet />);
+    renderer = TestRenderer.create(<ProfileFeaturesSheet />);
     await flush();
   });
   return renderer;

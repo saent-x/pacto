@@ -149,7 +149,7 @@ describe('profile sheet', () => {
     sessionState.enabledFeatures = ['tasks', 'calendar', 'wishlist'];
   });
 
-  it('renders identity, settings, and feature rows', async () => {
+  it('renders identity, settings, and a dedicated features row', async () => {
     let renderer: any;
     await act(async () => {
       renderer = TestRenderer.create(<ProfileSheet />);
@@ -161,12 +161,11 @@ describe('profile sheet', () => {
     expect(labels).toContain('mattia@coupl.app');
     expect(findByTestID(renderer.root, 'profile-row-name')).toBeDefined();
     expect(findByTestID(renderer.root, 'profile-row-code')).toBeDefined();
-    expect(findByTestID(renderer.root, 'profile-feature-tasks')).toBeDefined();
-    expect(findByTestID(renderer.root, 'profile-feature-state-tasks').props.children).toBe('On');
+    expect(findByTestID(renderer.root, 'profile-row-features')).toBeDefined();
     act(() => renderer.unmount());
   });
 
-  it('toggles features through updateSpaceFeatures', async () => {
+  it('opens the dedicated features sheet from profile', async () => {
     let renderer: any;
     await act(async () => {
       renderer = TestRenderer.create(<ProfileSheet />);
@@ -174,15 +173,12 @@ describe('profile sheet', () => {
     });
 
     await act(async () => {
-      findByTestID(renderer.root, 'profile-feature-tasks').props.onPress();
+      findByTestID(renderer.root, 'profile-row-features').props.onPress();
       await flush();
     });
 
-    expect(spaceActions.updateSpaceFeatures).toHaveBeenCalledWith({
-      spaceId: 's1',
-      enabledFeatures: ['calendar', 'wishlist'],
-      mode: 'pair',
-    });
+    expect(routerSpy.push).toHaveBeenCalledWith('/sheets/profile-features');
+    expect(spaceActions.updateSpaceFeatures).not.toHaveBeenCalled();
     act(() => renderer.unmount());
   });
 
