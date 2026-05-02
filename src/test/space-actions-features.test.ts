@@ -28,7 +28,6 @@ describe('space action feature resolution', () => {
       'memories',
       'recurring',
       'timetable',
-      'vision',
       'goals',
     ]);
   });
@@ -40,7 +39,7 @@ describe('space action feature resolution', () => {
         mode: 'crew',
         enabledFeatures: ['journal', 'checkins', 'vision', 'tasks', 'tasks'],
       }),
-    ).toEqual(['tasks', 'vision']);
+    ).toEqual(['tasks']);
   });
 
   it('uses pair defaults when upgrading solo to couple', () => {

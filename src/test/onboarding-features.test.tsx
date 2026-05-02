@@ -155,7 +155,6 @@ describe('onboarding feature selection', () => {
         'memories',
         'recurring',
         'timetable',
-        'vision',
         'goals',
       ],
     });

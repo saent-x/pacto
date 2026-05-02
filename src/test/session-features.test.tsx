@@ -33,7 +33,6 @@ describe('session feature state', () => {
       'memories',
       'recurring',
       'timetable',
-      'vision',
       'goals',
     ]);
   });
@@ -44,7 +43,7 @@ describe('session feature state', () => {
       'crew',
     );
 
-    expect(state.enabledFeatures).toEqual(['tasks', 'calendar', 'wishlist', 'vision']);
+    expect(state.enabledFeatures).toEqual(['tasks', 'calendar', 'wishlist']);
   });
 
   it('excludes stored ids unsupported by the current mode', () => {

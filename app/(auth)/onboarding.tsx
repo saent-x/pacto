@@ -302,12 +302,15 @@ function FeatureTile({
           </View>
         </View>
         <View style={styles.featureTileCopy}>
-          <Text style={[Typography.bodyMedium, { color: C.inkColor }]}>
+          <Text
+            numberOfLines={1}
+            style={[Typography.captionMedium, { color: C.inkColor, lineHeight: 17 }]}
+          >
             {feature.label}
           </Text>
           <Text
             numberOfLines={2}
-            style={[Typography.small, { color: C.ink2, marginTop: 4, lineHeight: 17 }]}
+            style={[Typography.small, { color: C.ink2, marginTop: 4, fontSize: 11, lineHeight: 15 }]}
           >
             {feature.description}
           </Text>
@@ -339,13 +342,13 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   featureTilePressable: {
-    width: '48%',
-    minWidth: 150,
-    flexGrow: 1,
+    width: '31.8%',
+    minWidth: 84,
+    flexGrow: 0,
   },
   featureTile: {
-    minHeight: 118,
-    padding: 14,
+    height: 122,
+    padding: 11,
     justifyContent: 'space-between',
   },
   featureTileTop: {
@@ -355,19 +358,19 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   featureIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: 30,
+    height: 30,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   featureTileCopy: {
-    marginTop: 12,
+    marginTop: 10,
   },
   featureCheck: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',

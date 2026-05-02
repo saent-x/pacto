@@ -10,7 +10,6 @@ export type FeatureId =
   | 'checkins'
   | 'recurring'
   | 'timetable'
-  | 'vision'
   | 'goals';
 
 export type FeatureEntry = {
@@ -101,16 +100,6 @@ const RAW_FEATURE_REGISTRY = [
     description: 'Organize weekly routines and schedules.',
     icon: 'grid',
     supportedModes: ['solo', 'pair', 'crew'],
-    defaultForSolo: false,
-    defaultForPair: false,
-    defaultForCrew: true,
-  },
-  {
-    id: 'vision',
-    label: 'Vision',
-    description: 'Shape shared plans and long-term direction.',
-    icon: 'eye',
-    supportedModes: ['pair', 'crew'],
     defaultForSolo: false,
     defaultForPair: false,
     defaultForCrew: true,

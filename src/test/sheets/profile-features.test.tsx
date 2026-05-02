@@ -248,7 +248,7 @@ describe('profile feature toggles', () => {
   it('does not render unsupported journal or check-ins features for crew mode', async () => {
     resetSession({
       mode: 'crew',
-      enabledFeatures: ['tasks', 'calendar', 'wishlist', 'memories', 'recurring', 'timetable', 'vision', 'goals'],
+      enabledFeatures: ['tasks', 'calendar', 'wishlist', 'memories', 'recurring', 'timetable', 'goals'],
     });
     const renderer = await renderProfile();
 

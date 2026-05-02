@@ -19,7 +19,6 @@ describe('feature registry', () => {
     'checkins',
     'recurring',
     'timetable',
-    'vision',
     'goals',
   ];
 
@@ -53,7 +52,6 @@ describe('feature registry', () => {
       'memories',
       'recurring',
       'timetable',
-      'vision',
       'goals',
     ]);
   });
@@ -66,7 +64,6 @@ describe('feature registry', () => {
       'memories',
       'recurring',
       'timetable',
-      'vision',
       'goals',
     ]);
   });
@@ -85,7 +82,7 @@ describe('feature registry', () => {
         ['vision', 'journal', 'tasks', 'tasks', 'unknown', 'calendar', 'checkins', 'vision'],
         'crew',
       ),
-    ).toEqual(['tasks', 'calendar', 'vision']);
+    ).toEqual(['tasks', 'calendar']);
   });
 
   it('keeps registry reads stable when returned entries are mutated', () => {
@@ -122,7 +119,6 @@ describe('feature registry', () => {
       'checkins',
       'recurring',
       'timetable',
-      'vision',
       'goals',
     ]);
   });
