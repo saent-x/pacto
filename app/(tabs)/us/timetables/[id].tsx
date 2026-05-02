@@ -180,7 +180,6 @@ export default function TimetableDetail() {
           totalHours={totalHours}
           hasStar={hasStar}
           onOpenItem={openItem}
-          onAdd={goAdd}
         />
       );
     }
@@ -369,14 +368,12 @@ function GridBody({
   totalHours,
   hasStar,
   onOpenItem,
-  onAdd,
 }: {
   dayItems: TimetableItem[];
   selectedDay: number;
   totalHours: number;
   hasStar: boolean;
   onOpenItem: (item: TimetableItem) => void;
-  onAdd: () => void;
 }) {
   const { C } = useTheme();
   return (
@@ -468,20 +465,6 @@ function GridBody({
             </PressScale>
           ))}
 
-          <PressScale
-            onPress={onAdd}
-            style={[styles.addSlot, { borderColor: C.lineColor }]}
-          >
-            <Icon name="plus" size={14} color={C.ink3} strokeWidth={2} />
-            <Text
-              style={[
-                Typography.captionMedium,
-                { color: C.ink3, marginLeft: 6 },
-              ]}
-            >
-              Add to {DAYS_FULL[selectedDay]}
-            </Text>
-          </PressScale>
         </View>
       )}
     </View>
@@ -861,15 +844,6 @@ const styles = StyleSheet.create({
     top: 10,
     right: 12,
     fontSize: 12,
-  },
-  addSlot: {
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
   },
   // List (reminders-style row)
   reminderRow: {

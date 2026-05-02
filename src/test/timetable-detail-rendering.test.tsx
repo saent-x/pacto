@@ -2,11 +2,31 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TimetableItem } from '@/src/lib/timetables-data';
 
-(globalThis as any).__DEV__ = true;
+vi.hoisted(() => {
+  (globalThis as any).__DEV__ = true;
+  process.env.EXPO_OS = 'ios';
+  (globalThis as any).expo = {
+    EventEmitter: class {
+      addListener() {
+        return { remove: () => undefined };
+      }
+    },
+  };
+});
+
+const routerPush = vi.hoisted(() => vi.fn());
 
 vi.mock('expo-router', () => ({
-  router: { back: vi.fn(), push: vi.fn() },
-  Stack: { Screen: () => null },
+  router: { back: vi.fn(), push: routerPush },
+  Stack: {
+    Screen: ({ options }: any) => (
+      <>
+        {options?.headerLeft?.()}
+        {options?.headerTitle?.()}
+        {options?.headerRight?.()}
+      </>
+    ),
+  },
   useLocalSearchParams: () => ({ id: 'tt-1' }),
 }));
 
@@ -15,6 +35,65 @@ vi.mock('react-native-safe-area-context', () => ({
 }));
 
 vi.mock('expo-constants', () => ({ default: { statusBarHeight: 44 } }));
+
+vi.mock('expo-haptics', () => ({
+  impactAsync: vi.fn(async () => undefined),
+  notificationAsync: vi.fn(async () => undefined),
+  selectionAsync: vi.fn(async () => undefined),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium' },
+  NotificationFeedbackType: { Success: 'success', Warning: 'warning' },
+}));
+
+vi.mock('@/src/components/ui/Icon', () => {
+  const Reactx = require('react');
+  return {
+    Icon: (props: any) => Reactx.createElement('Icon', props),
+  };
+});
+
+vi.mock('@/src/components/ui/PressScale', () => {
+  const Reactx = require('react');
+  return {
+    PressScale: ({ children, onPress, ...props }: any) =>
+      Reactx.createElement('PressScale', { ...props, onPress }, children),
+  };
+});
+
+vi.mock('@/src/components/ui/pacto', () => {
+  const Reactx = require('react');
+  return {
+    ActionEmptyState: ({ icon, title, body, actionLabel, onAction }: any) =>
+      Reactx.createElement(
+        'ActionEmptyState',
+        { icon },
+        Reactx.createElement('Text', null, title),
+        body ? Reactx.createElement('Text', null, body) : null,
+        actionLabel
+          ? Reactx.createElement('PressScale', { onPress: onAction }, actionLabel)
+          : null,
+      ),
+    BucketedList: ({ buckets, rowKey, renderRow }: any) =>
+      Reactx.createElement(
+        'BucketedList',
+        null,
+        buckets.flatMap((bucket: any) =>
+          bucket.rows.map((row: any) =>
+            Reactx.createElement(Reactx.Fragment, { key: rowKey(row) }, renderRow(row)),
+          ),
+        ),
+      ),
+    HeaderBrand: ({ eyebrow, title }: any) =>
+      Reactx.createElement('HeaderBrand', null, `${eyebrow} ${title}`),
+    SegmentedTabs: ({ options, onChange }: any) =>
+      Reactx.createElement(
+        'SegmentedTabs',
+        null,
+        options.map((option: any) =>
+          Reactx.createElement('PressScale', { key: option.key, onPress: () => onChange(option.key) }, option.key),
+        ),
+      ),
+  };
+});
 
 vi.mock('react-native-gesture-handler/ReanimatedSwipeable', () => ({
   __esModule: true,
@@ -45,9 +124,6 @@ const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
 const flush = () => Promise.resolve();
 
-const findByTestID = (renderer: any, id: string) =>
-  renderer.root.findAll((node: any) => node.props?.testID === id)[0];
-
 async function renderTimetable() {
   const { default: TimetableDetail } = await import('@/app/(tabs)/us/timetables/[id]');
   let renderer: any = null;
@@ -73,10 +149,30 @@ function item(id: string, day: number, start: number, dur: number, title: string
   };
 }
 
+function pressablesWithText(renderer: any, text: string | RegExp) {
+  return renderer.root.findAll((node: any) => {
+    if (node.type !== 'PressScale') return false;
+    if (typeof node.props?.onPress !== 'function') return false;
+    const rendered = nodeText(node);
+    return typeof text === 'string' ? rendered.includes(text) : text.test(rendered);
+  });
+}
+
+function nodeText(node: any): string {
+  return node.children
+    .map((child: any) => {
+      if (typeof child === 'string') return child;
+      if (child && typeof child === 'object') return nodeText(child);
+      return '';
+    })
+    .join('');
+}
+
 describe('Timetable detail rendering', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-04-28T12:00:00Z'));
+    routerPush.mockClear();
     timetableState.remove.mockClear();
     timetableState.items = [
       item('mon-breakfast', 1, 7, 1, 'Oat porridge'),
@@ -90,60 +186,43 @@ describe('Timetable detail rendering', () => {
     vi.useRealTimers();
   });
 
-  it('defaults to the day-first mobile timetable workspace', async () => {
+  it('renders only the header add route trigger for a populated grid timetable', async () => {
     const renderer = await renderTimetable();
 
-    expect(findByTestID(renderer, 'timetable-detail-body')).toBeDefined();
-    expect(findByTestID(renderer, 'timetable-mode-row')).toBeDefined();
-    expect(findByTestID(renderer, 'timetable-day-workspace')).toBeDefined();
-    expect(findByTestID(renderer, 'timetable-day-time-7')).toBeDefined();
-    expect(findByTestID(renderer, 'timetable-day-time-19')).toBeDefined();
-    expect(findByTestID(renderer, 'timetable-day-block-tue-lunch')).toBeDefined();
-    expect(findByTestID(renderer, 'timetable-day-block-tue-dinner')).toBeDefined();
-    act(() => renderer.unmount());
-  });
+    expect(pressablesWithText(renderer, /^Add to /)).toHaveLength(0);
 
-  it('renders week mode as a phone-width horizontal timetable, not a compressed seven-column board', async () => {
-    const renderer = await renderTimetable();
-
-    await act(async () => {
-      findByTestID(renderer, 'timetable-mode-week').props.onPress();
-      await flush();
-    });
-
-    const weekScroll = findByTestID(renderer, 'timetable-week-scroll');
-    expect(weekScroll.props.horizontal).toBe(true);
-    expect(weekScroll.props.showsHorizontalScrollIndicator).toBe(false);
-
-    const columns = renderer.root.findAll(
+    const addRouteTriggers = renderer.root.findAll(
       (node: any) =>
-        typeof node.props?.testID === 'string' &&
-        node.props.testID.startsWith('timetable-week-day-'),
+        node.type === 'PressScale' &&
+        typeof node.props?.onPress === 'function' &&
+        node.findAll((child: any) => child.props?.name === 'plus').length > 0,
     );
-    expect(columns).toHaveLength(7);
-    for (const column of columns) {
-      expect(column.props.style).toEqual(
-        expect.arrayContaining([expect.objectContaining({ width: expect.any(Number) })]),
-      );
-    }
-
-    expect(findByTestID(renderer, 'timetable-week-block-tue-lunch')).toBeDefined();
-    act(() => renderer.unmount());
-  });
-
-  it('renders matrix mode as meal periods crossed with weekdays', async () => {
-    const renderer = await renderTimetable();
+    expect(addRouteTriggers).toHaveLength(1);
 
     await act(async () => {
-      findByTestID(renderer, 'timetable-mode-matrix').props.onPress();
+      addRouteTriggers[0].props.onPress();
       await flush();
     });
 
-    expect(findByTestID(renderer, 'timetable-matrix-workspace')).toBeDefined();
-    expect(findByTestID(renderer, 'timetable-matrix-row-breakfast')).toBeDefined();
-    expect(findByTestID(renderer, 'timetable-matrix-row-lunch')).toBeDefined();
-    expect(findByTestID(renderer, 'timetable-matrix-cell-lunch-1')).toBeDefined();
-    expect(findByTestID(renderer, 'timetable-matrix-item-tue-lunch')).toBeDefined();
+    expect(routerPush).toHaveBeenCalledTimes(1);
+    expect(routerPush).toHaveBeenCalledWith('/sheets/new-timetable-item?timetableId=tt-1');
+    act(() => renderer.unmount());
+  });
+
+  it('keeps the empty timetable Add block action', async () => {
+    timetableState.items = [];
+    const renderer = await renderTimetable();
+
+    const emptyAddActions = pressablesWithText(renderer, 'Add block');
+    expect(emptyAddActions).toHaveLength(1);
+
+    await act(async () => {
+      emptyAddActions[0].props.onPress();
+      await flush();
+    });
+
+    expect(routerPush).toHaveBeenCalledTimes(1);
+    expect(routerPush).toHaveBeenCalledWith('/sheets/new-timetable-item?timetableId=tt-1');
     act(() => renderer.unmount());
   });
 });
