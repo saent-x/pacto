@@ -10,7 +10,8 @@ const _schema = i.schema({
       createdAt: i.number().optional(),
     }),
     spaces: i.entity({
-      kind: i.string(),                                     // 'solo' | 'couple'
+      kind: i.string(),                                     // 'solo' | 'couple' | 'pair' | 'crew'
+      enabledFeatures: i.json().optional(),
       name: i.string().optional(),
       anniversary: i.string().optional(),
       inviteCode: i.string().optional().unique().indexed(),

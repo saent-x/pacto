@@ -1,8 +1,14 @@
 import { id, lookup, tx } from '@instantdb/react-native';
 import { db } from './db';
+import type { SpaceKindWire, SpaceMode } from './session';
+import {
+  type FeatureId,
+  getDefaultFeatureIds,
+  sanitizeFeatureIds,
+} from '@/src/lib/features/registry';
 import { generateInviteCode } from './invite-code';
 
-export type SpaceKind = 'solo' | 'couple';
+export type SpaceKind = SpaceKindWire;
 
 function now() {
   return Date.now();
@@ -14,14 +20,20 @@ export async function createSpace(params: {
   kind: SpaceKind;
   name?: string;
   anniversary?: string;
+  enabledFeatures?: FeatureId[];
 }): Promise<{ spaceId: string; inviteCode: string | null }> {
   const spaceId = id();
   const membershipId = id();
-  const inviteCode = params.kind === 'couple' ? generateInviteCode() : null;
+  const inviteCode =
+    params.kind === 'couple' || params.kind === 'pair' ? generateInviteCode() : null;
   const ts = now();
+  const mode = modeForSpaceKind(params.kind);
 
   const spaceFields: Record<string, unknown> = {
     kind: params.kind,
+    enabledFeatures: params.enabledFeatures
+      ? sanitizeFeatureIds(params.enabledFeatures, mode)
+      : getDefaultFeatureIds(mode),
     createdAt: ts,
     updatedAt: ts,
   };
@@ -42,6 +54,19 @@ export async function createSpace(params: {
   }
 
   return { spaceId, inviteCode };
+}
+
+export async function updateSpaceFeatures(params: {
+  spaceId: string;
+  enabledFeatures: FeatureId[];
+  mode: SpaceMode;
+}): Promise<void> {
+  await db.transact([
+    tx.spaces[params.spaceId].update({
+      enabledFeatures: sanitizeFeatureIds(params.enabledFeatures, params.mode),
+      updatedAt: now(),
+    }),
+  ]);
 }
 
 // Join a space by invite code. Atomic: looks up by code, creates membership,
@@ -126,4 +151,10 @@ export async function updateUserAvatar(params: {
       avatarUrl: params.avatarUrl,
     }),
   ]);
+}
+
+function modeForSpaceKind(kind: SpaceKind): SpaceMode {
+  if (kind === 'solo') return 'solo';
+  if (kind === 'crew') return 'crew';
+  return 'pair';
 }

@@ -1,5 +1,10 @@
 import { createContext, useContext, useMemo, type PropsWithChildren } from 'react';
 import { db } from './db';
+import {
+  type FeatureId,
+  getDefaultFeatureIds,
+  sanitizeFeatureIds,
+} from '@/src/lib/features/registry';
 
 export type SessionStatus = 'loading' | 'unauthed' | 'onboarding' | 'ready';
 
@@ -27,6 +32,7 @@ export type SessionSpace = {
   name?: string | null;
   anniversary?: string | null;
   inviteCode?: string | null;
+  enabledFeatures: FeatureId[];
 };
 
 export type SessionMembership = {
@@ -46,6 +52,8 @@ export type Session = {
   members: SessionUser[];
   /** UI mode — single source of truth for screen branching. */
   mode: SpaceMode;
+  enabledFeatures: FeatureId[];
+  isFeatureEnabled: (id: FeatureId) => boolean;
   isSolo: boolean;
   isPair: boolean;
   isCrew: boolean;
@@ -54,6 +62,8 @@ export type Session = {
 };
 
 const Ctx = createContext<Session | null>(null);
+
+const isNoFeatureEnabled = () => false;
 
 export function SessionProvider({ children }: PropsWithChildren) {
   const { isLoading: authLoading, user } = db.useAuth();
@@ -118,6 +128,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
 
     const kindRaw = space.kind as SpaceKindWire;
     const mode = normalizeMode(kindRaw, members.length);
+    const featureState = buildSessionFeatureState(space.enabledFeatures, mode);
 
     return {
       status: 'ready',
@@ -129,6 +140,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
         name: space.name ?? null,
         anniversary: space.anniversary ?? null,
         inviteCode: space.inviteCode ?? null,
+        enabledFeatures: featureState.enabledFeatures,
       },
       membership: {
         id: myMembership.id,
@@ -139,6 +151,8 @@ export function SessionProvider({ children }: PropsWithChildren) {
       partner,
       members,
       mode,
+      enabledFeatures: featureState.enabledFeatures,
+      isFeatureEnabled: featureState.isFeatureEnabled,
       isSolo: mode === 'solo',
       isPair: mode === 'pair',
       isCrew: mode === 'crew',
@@ -147,6 +161,27 @@ export function SessionProvider({ children }: PropsWithChildren) {
   }, [authLoading, user, queryLoading, data]);
 
   return <Ctx.Provider value={session}>{children}</Ctx.Provider>;
+}
+
+export function buildSessionFeatureState(raw: unknown, mode: SpaceMode): {
+  enabledFeatures: FeatureId[];
+  isFeatureEnabled: (id: FeatureId) => boolean;
+} {
+  const enabledFeatures =
+    raw === undefined || raw === null
+      ? getDefaultFeatureIds(mode)
+      : Array.isArray(raw)
+        ? sanitizeFeatureIds(
+            raw.filter((id): id is string => typeof id === 'string'),
+            mode,
+          )
+        : getDefaultFeatureIds(mode);
+  const enabled = new Set<FeatureId>(enabledFeatures);
+
+  return {
+    enabledFeatures,
+    isFeatureEnabled: (id: FeatureId) => enabled.has(id),
+  };
 }
 
 export function useSession(): Session {
@@ -164,6 +199,8 @@ function emptySession(status: SessionStatus): Session {
     partner: null,
     members: [],
     mode: 'solo',
+    enabledFeatures: [],
+    isFeatureEnabled: isNoFeatureEnabled,
     isSolo: false,
     isPair: false,
     isCrew: false,

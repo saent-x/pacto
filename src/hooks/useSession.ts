@@ -1,10 +1,12 @@
 import { useSession as useBaseSession } from '@/src/lib/session';
+import type { FeatureId } from '@/src/lib/features/registry';
 
 export type ActiveCouple = {
   couple: {
     id: string;
     name: string | null;
     anniversary: string | null;
+    enabledFeatures: FeatureId[];
   };
   memberCount: number;
   partner: {
@@ -34,6 +36,8 @@ export type HookSession = {
   partner: ReturnType<typeof useBaseSession>['partner'];
   members: ReturnType<typeof useBaseSession>['members'];
   mode: ReturnType<typeof useBaseSession>['mode'];
+  enabledFeatures: ReturnType<typeof useBaseSession>['enabledFeatures'];
+  isFeatureEnabled: ReturnType<typeof useBaseSession>['isFeatureEnabled'];
   isSolo: boolean;
   isPair: boolean;
   isCrew: boolean;
@@ -59,6 +63,7 @@ export function useSession(): HookSession {
           id: s.space.id,
           name: s.space.name ?? null,
           anniversary: s.space.anniversary ?? null,
+          enabledFeatures: s.space.enabledFeatures,
         },
         memberCount: s.partner ? 2 : 1,
         partner: s.partner
@@ -83,6 +88,8 @@ export function useSession(): HookSession {
     partner: s.partner,
     members: s.members,
     mode: s.mode,
+    enabledFeatures: s.enabledFeatures,
+    isFeatureEnabled: s.isFeatureEnabled,
     isSolo: s.isSolo,
     isPair: s.isPair,
     isCrew: s.isCrew,
