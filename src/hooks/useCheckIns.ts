@@ -17,7 +17,8 @@ export type CheckInRecord = {
 };
 
 function toEnergy(value: unknown): number | null {
-  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+  if (typeof value !== 'number' || !Number.isInteger(value)) return null;
+  return value >= 1 && value <= 5 ? value : null;
 }
 
 export function getLocalDateKey(date: Date = new Date()) {
@@ -100,11 +101,12 @@ export function useCheckIns(options?: { enabled?: boolean }) {
         );
         const now = Date.now();
         const hasEnergy = Object.prototype.hasOwnProperty.call(input, 'energy');
+        const energy = toEnergy(input.energy);
         if (existing) {
           const updatePayload = {
             mood: input.mood ?? null,
             note: input.note ? await encrypt(input.note) : null,
-            ...(hasEnergy ? { energy: toEnergy(input.energy) } : {}),
+            ...(hasEnergy ? { energy } : {}),
             isPrivate: input.isPrivate,
             updatedAt: now,
           };
@@ -116,7 +118,7 @@ export function useCheckIns(options?: { enabled?: boolean }) {
           const createPayload = {
             mood: input.mood ?? undefined,
             note: input.note ? await encrypt(input.note) : undefined,
-            ...(hasEnergy ? { energy: toEnergy(input.energy) ?? undefined } : {}),
+            ...(hasEnergy && energy !== null ? { energy } : {}),
             checkInDate: dateKey,
             isPrivate: input.isPrivate,
             createdAt: now,

@@ -130,13 +130,50 @@ describe('useCheckIns', () => {
           checkInDate: '2026-05-02',
           createdAt: 3,
         },
+        {
+          id: 'check-in-4',
+          author: { id: 'partner-3' },
+          mood: 'rough',
+          note: null,
+          isPrivate: false,
+          energy: 0,
+          checkInDate: '2026-05-02',
+          createdAt: 4,
+        },
+        {
+          id: 'check-in-5',
+          author: { id: 'partner-4' },
+          mood: 'rough',
+          note: null,
+          isPrivate: false,
+          energy: 6,
+          checkInDate: '2026-05-02',
+          createdAt: 5,
+        },
+        {
+          id: 'check-in-6',
+          author: { id: 'partner-5' },
+          mood: 'rough',
+          note: null,
+          isPrivate: false,
+          energy: 2.5,
+          checkInDate: '2026-05-02',
+          createdAt: 6,
+        },
       ],
     };
 
     const { useCheckIns } = await import('@/src/hooks/useCheckIns');
     const { latest, renderer } = await renderHookValue(() => useCheckIns());
 
-    expect(latest.checkIns.map((item: any) => item.energy)).toEqual([4, null, null]);
+    expect(latest.checkIns.map((item: any) => item.energy)).toEqual([
+      4,
+      null,
+      null,
+      null,
+      null,
+      null,
+    ]);
     act(() => renderer.unmount());
   });
 
@@ -158,6 +195,57 @@ describe('useCheckIns', () => {
     expect(txCalls.updates[0].payload).toMatchObject({ energy: 5 });
     expect(txCalls.links[0].payload).toEqual({ couple: 'couple-1', author: 'user-1' });
     act(() => renderer.unmount());
+  });
+
+  it('persists invalid input energy as null on update and omits it on create', async () => {
+    const { useCheckIns } = await import('@/src/hooks/useCheckIns');
+    const create = await renderHookValue(() => useCheckIns());
+
+    await act(async () => {
+      await create.latest.createOrUpdate({
+        mood: 'soft',
+        note: null,
+        isPrivate: false,
+        energy: 999,
+        checkInDate: '2026-05-02',
+      });
+      await flush();
+    });
+
+    expect(create.latest.checkIns).toEqual([]);
+    expect(txCalls.updates[0].payload).not.toHaveProperty('energy');
+    act(() => create.renderer.unmount());
+
+    queryState.data = {
+      checkIns: [
+        {
+          id: 'check-in-1',
+          author: { id: 'user-1' },
+          mood: 'soft',
+          note: null,
+          isPrivate: false,
+          energy: 3,
+          checkInDate: '2026-05-02',
+          createdAt: 1,
+        },
+      ],
+    };
+    txCalls.updates = [];
+    const update = await renderHookValue(() => useCheckIns());
+
+    await act(async () => {
+      await update.latest.createOrUpdate({
+        mood: 'soft',
+        note: null,
+        isPrivate: false,
+        energy: 2.5,
+        checkInDate: '2026-05-02',
+      });
+      await flush();
+    });
+
+    expect(txCalls.updates[0].payload).toMatchObject({ energy: null });
+    act(() => update.renderer.unmount());
   });
 
   it('persists energy when updating an existing check-in', async () => {
