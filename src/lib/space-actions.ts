@@ -108,6 +108,22 @@ export async function leaveSpace(params: {
 export async function ensureUserRow(_params: {
   userId: string;
   email: string;
+  avatarUrl?: string | null;
 }): Promise<void> {
-  return;
+  if (!_params.avatarUrl) return;
+  await updateUserAvatar({
+    userId: _params.userId,
+    avatarUrl: _params.avatarUrl,
+  });
+}
+
+export async function updateUserAvatar(params: {
+  userId: string;
+  avatarUrl: string;
+}): Promise<void> {
+  await db.transact([
+    (tx as any).$users[params.userId].update({
+      avatarUrl: params.avatarUrl,
+    }),
+  ]);
 }

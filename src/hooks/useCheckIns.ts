@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { db, id } from '@/src/lib/instant';
+import { notifySpaceMutation } from '@/src/lib/push';
 import { useEncryption } from './useEncryption';
 import { useSession } from './useSession';
 
@@ -19,7 +20,7 @@ export function getLocalDateKey(date: Date = new Date()) {
 }
 
 export function useCheckIns() {
-  const { activeCouple, user } = useSession();
+  const { activeCouple, user, space } = useSession();
   const coupleId = activeCouple?.couple?.id ?? null;
   const userId = user?.id ?? null;
   const { encrypt, decrypt, hasKey } = useEncryption();
@@ -113,6 +114,16 @@ export function useCheckIns() {
               })
               .link({ couple: coupleId, author: userId }),
           );
+          if (!input.isPrivate) {
+            await notifySpaceMutation({
+              spaceId: coupleId,
+              spaceKind: space?.kind ?? null,
+              excludeUserId: userId,
+              title: user?.displayName ?? 'Someone',
+              body: input.mood ? `checked in: ${input.mood}` : 'checked in today',
+              route: '/(tabs)/us/checkins',
+            });
+          }
         }
       } finally {
         submittingRef.current = false;

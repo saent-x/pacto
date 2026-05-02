@@ -1,413 +1,490 @@
-import { router } from 'expo-router';
-import { useCallback, useMemo } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import { format, parseISO } from 'date-fns';
-import { Icon } from '@/src/components/ui/Icon';
-import { Screen } from '@/src/components/ui/Screen';
+import { router, Stack } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { format, isAfter, parseISO, startOfMonth, subDays } from 'date-fns';
 import {
-  RowActionMenu,
-  type ActionMenuPayload,
-} from '@/src/components/ui/RowActionMenu';
-import { confirmDestructive } from '@/src/lib/confirm';
+  ActionEmptyState,
+  Bucket,
+  BucketedList,
+  HeaderBrand,
+  SegmentedTabs,
+  StatBar,
+  SwipeableRow,
+} from '@/src/components/ui/pacto';
+import { Icon } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
 import { useExpenses } from '@/src/hooks/useExpenses';
 import { useSession } from '@/src/hooks/useSession';
+import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
+import { findCurrency, usePreferences } from '@/src/lib/preferences';
 
 type ExpenseRow = {
   id: string;
   title: string;
   amount: number;
   currency: string;
+  category: string;
   date: string;
-  splitType: string;
-  splitAmount: number | null;
   paidBy: string;
+  paidByName: string;
+  paidByColor: string;
+  isMine: boolean;
+  isSettled: boolean;
+  createdAt: number;
 };
 
-function toRow(e: any): ExpenseRow {
-  return {
-    id: String(e.id),
-    title: String(e.title ?? ''),
-    amount: Number(e.amount ?? 0),
-    currency: String(e.currency ?? 'USD'),
-    date: String(e.date ?? ''),
-    splitType: String(e.splitType ?? 'even'),
-    splitAmount: e.splitAmount != null ? Number(e.splitAmount) : null,
-    paidBy: String(e.paidBy ?? ''),
-  };
+type FilterKey = 'all' | 'mine' | 'theirs' | 'unsettled' | 'settled';
+
+function fmtMoney(amount: number, currencyCode: string) {
+  const c = findCurrency(currencyCode);
+  const body = Math.round(amount).toLocaleString('en-US');
+  return `${c.symbol}${body}`;
 }
 
-function fmtMoney(amount: number, currency: string) {
-  const abs = Math.abs(amount);
-  const symbol = currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : currency === 'USD' ? '$' : '';
-  return symbol ? `${symbol}${abs.toFixed(2)}` : `${abs.toFixed(2)} ${currency}`;
-}
+export default function ExpensesScreen() {
+  const { C } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { user, partner, mode, members } = useSession();
+  const { expenses, remove, settle } = useExpenses();
+  const { currencyCode } = usePreferences();
 
-function formatRelativeDay(iso: string) {
-  if (!iso) return '';
-  const today = format(new Date(), 'yyyy-MM-dd');
-  if (iso === today) return 'TODAY';
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (iso === format(yesterday, 'yyyy-MM-dd')) return 'YESTERDAY';
-  try {
-    return format(parseISO(iso), 'EEE').toUpperCase();
-  } catch {
-    return iso.slice(5).toUpperCase();
-  }
-}
-
-// solo-mode: balance + partner split hidden — hero shows monthly total instead
-export default function Expenses() {
-  const { C, F } = useTheme();
-  const { user, activeCouple, isSolo } = useSession();
-  const { expenses, unsettled, isLoading, settle, remove } = useExpenses();
-
-  const buildExpenseMenu = useCallback(
-    (row: ExpenseRow): ActionMenuPayload => ({
-      title: row.title,
-      subtitle: `${fmtMoney(row.amount, row.currency)}`,
-      actions: [
-        {
-          key: 'edit',
-          label: 'Edit',
-          icon: 'edit',
-          onPress: () => router.push(`/sheets/new-expense?id=${row.id}` as any),
-        },
-        {
-          key: 'delete',
-          label: 'Delete',
-          icon: 'trash',
-          destructive: true,
-          onPress: () => {
-            confirmDestructive(
-              'Delete expense?',
-              `"${row.title}" will be removed.`,
-              () => remove(row.id),
-            );
-          },
-        },
-      ],
-    }),
-    [remove],
-  );
+  const [filter, setFilter] = useState<FilterKey>('all');
 
   const userId = user?.id ?? '';
-  const partnerName = activeCouple?.partner?.displayName ?? 'Partner';
-  const partnerUpper = partnerName.toUpperCase();
+  const partnerId = partner?.id ?? '';
+  const partnerName = partner?.displayName ?? null;
 
-  const rows = useMemo(() => expenses.map(toRow), [expenses]);
-  const sortedRows = useMemo(
-    () => [...rows].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30),
-    [rows],
-  );
+  const eyebrowLabel =
+    mode === 'solo' ? 'ME' : mode === 'crew' ? 'CREW' : 'US';
 
-  const balance = useMemo(() => {
-    let net = 0;
-    for (const r of unsettled.map(toRow)) {
-      const share = r.splitType === 'even' ? r.amount / 2 : (r.splitAmount ?? r.amount / 2);
-      if (r.paidBy === userId) net += share;
-      else net -= share;
-    }
-    return net;
-  }, [unsettled, userId]);
-
-  const currency = rows[0]?.currency ?? 'USD';
-
-  const monthStats = useMemo(() => {
-    const monthKey = format(new Date(), 'yyyy-MM');
-    const monthRows = rows.filter((r) => r.date.startsWith(monthKey));
-    let youPaid = 0;
-    let partnerPaid = 0;
-    for (const r of monthRows) {
-      if (r.paidBy === userId) youPaid += r.amount;
-      else partnerPaid += r.amount;
-    }
-    const total = youPaid + partnerPaid;
-    return { youPaid, partnerPaid, total };
-  }, [rows, userId]);
-
-  if (isLoading && rows.length === 0) return <IndexSkeleton />;
-  if (rows.length === 0) return <EmptyExpenses />;
-
-  const direction = isSolo
-    ? 'THIS MONTH'
-    : balance > 0.005
-      ? `${partnerUpper} OWES YOU`
-      : balance < -0.005
-        ? `YOU OWE ${partnerUpper}`
-        : 'ALL SETTLED';
-
-  const heroAmount = isSolo ? monthStats.total : Math.abs(balance);
-  const youPct = monthStats.total > 0 ? (monthStats.youPaid / monthStats.total) * 100 : 50;
-  const partnerPct = monthStats.total > 0 ? 100 - youPct : 50;
-
-  const settleAll = async () => {
-    if (!unsettled.length) return;
-    await Promise.all(unsettled.map((e: any) => settle(String(e.id))));
+  const authorMeta = (id: string): { name: string; color: string } => {
+    if (id === userId)
+      return {
+        name: (user?.displayName ?? 'You').split(' ')[0],
+        color: C.accent,
+      };
+    if (id === partnerId)
+      return {
+        name: (partnerName ?? 'Partner').split(' ')[0],
+        color: C.accent2,
+      };
+    const m = members.find((mm) => mm.id === id);
+    return {
+      name: m?.displayName?.split(' ')[0] ?? 'Member',
+      color: C.accent3,
+    };
   };
 
-  const whole = Math.floor(heroAmount);
-  const cents = Math.round((heroAmount - whole) * 100).toString().padStart(2, '0');
-  const symbol = currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : currency === 'USD' ? '$' : '';
+  const rows = useMemo<ExpenseRow[]>(() => {
+    return expenses.map((raw: any): ExpenseRow => {
+      const paidBy = String(raw.paidBy ?? '');
+      const meta = authorMeta(paidBy);
+      return {
+        id: String(raw.id),
+        title: String(raw.title ?? ''),
+        amount: Number(raw.amount ?? 0),
+        currency: String(raw.currency ?? 'USD'),
+        category: String(raw.category ?? 'general'),
+        date: String(raw.date ?? ''),
+        paidBy,
+        paidByName: meta.name,
+        paidByColor: meta.color,
+        isMine: paidBy === userId,
+        isSettled: !!raw.isSettled,
+        createdAt: Number(raw.createdAt ?? 0),
+      };
+    });
+  }, [expenses, userId, partnerId, partnerName, user?.displayName]);
+
+  const stats = useMemo(() => {
+    const total = rows.length;
+    const settledCount = rows.filter((r) => r.isSettled).length;
+    const unsettled = total - settledCount;
+    const youPaid = rows
+      .filter((r) => r.isMine && !r.isSettled)
+      .reduce((s, r) => s + r.amount, 0);
+    const theyPaid = rows
+      .filter((r) => !r.isMine && !r.isSettled)
+      .reduce((s, r) => s + r.amount, 0);
+    // Even-split balance: positive = they owe you, negative = you owe them.
+    const balance = (youPaid - theyPaid) / 2;
+    return { total, settled: settledCount, unsettled, youPaid, theyPaid, balance };
+  }, [rows]);
+
+  const visible = useMemo(() => {
+    return rows.filter((r) => {
+      if (filter === 'mine') return r.isMine;
+      if (filter === 'theirs') return !r.isMine;
+      if (filter === 'unsettled') return !r.isSettled;
+      if (filter === 'settled') return r.isSettled;
+      return true;
+    });
+  }, [rows, filter]);
+
+  const buckets = useMemo<Bucket<ExpenseRow>[]>(() => {
+    const now = new Date();
+    const weekAgo = subDays(now, 7);
+    const monthStart = startOfMonth(now);
+
+    const groups: Record<string, ExpenseRow[]> = {
+      'This week': [],
+      'This month': [],
+      Earlier: [],
+    };
+    for (const r of visible) {
+      const d = r.date ? parseISO(r.date) : new Date(r.createdAt);
+      if (isAfter(d, weekAgo)) groups['This week'].push(r);
+      else if (isAfter(d, monthStart)) groups['This month'].push(r);
+      else groups.Earlier.push(r);
+    }
+
+    const order = ['This week', 'This month', 'Earlier'];
+    const dotMap: Record<string, string> = {
+      'This week': C.accent,
+      'This month': C.accent2,
+      Earlier: C.ink3,
+    };
+    return order
+      .filter((k) => groups[k]?.length)
+      .map((k) => ({
+        label: k,
+        dotColor: dotMap[k],
+        rows: groups[k].slice().sort((a, b) => b.createdAt - a.createdAt),
+      }));
+  }, [visible, C.accent, C.accent2, C.ink3]);
+
+  const filterOptions: { key: FilterKey; label: string }[] =
+    mode === 'solo'
+      ? [
+          { key: 'all', label: 'All' },
+          { key: 'unsettled', label: 'Open' },
+          { key: 'settled', label: 'Settled' },
+        ]
+      : [
+          { key: 'all', label: 'All' },
+          { key: 'mine', label: 'Mine' },
+          { key: 'theirs', label: 'Theirs' },
+          { key: 'unsettled', label: 'Open' },
+          { key: 'settled', label: 'Settled' },
+        ];
+
+  const settleUpLabel = (() => {
+    if (mode === 'solo' || stats.unsettled === 0) return 'No open expenses';
+    if (Math.abs(stats.balance) < 0.5) return "You're even";
+    if (stats.balance > 0)
+      return `${partnerName?.split(' ')[0] ?? 'They'} owes you`;
+    return `You owe ${partnerName?.split(' ')[0] ?? 'them'}`;
+  })();
 
   return (
-    <Screen>
-      <Animated.View
-        entering={FadeInDown.duration(420)}
-        style={{ backgroundColor: C.mint, borderRadius: 26, padding: 22, marginBottom: 18 }}
-      >
-        <Text
-          style={{
-            fontSize: 10,
-            color: C.mintInk,
-            fontFamily: F.bodyBold,
-            letterSpacing: 1.4,
-            opacity: 0.55,
-            marginBottom: 6,
-          }}
-        >
-          {direction}
-        </Text>
-        <Text
-          style={{
-            fontFamily: F.displayBold,
-            fontSize: 56,
-            color: C.mintInk,
-            lineHeight: 50,
-            letterSpacing: -2.5,
-          }}
-        >
-          {symbol}
-          {whole}
-          <Text style={{ fontSize: 28, opacity: 0.6 }}>.{cents}</Text>
-        </Text>
-        <View style={{ marginTop: 14, flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Text style={{ fontSize: 11, color: C.mintInk, opacity: 0.7, fontFamily: F.bodyBold }}>
-            {isSolo
-              ? `${rows.filter((r) => r.date.startsWith(format(new Date(), 'yyyy-MM'))).length} expenses`
-              : `This month · ${fmtMoney(monthStats.total, currency)} total`}
-          </Text>
-          {!isSolo && unsettled.length > 0 ? (
-            <Pressable onPress={settleAll} hitSlop={8}>
-              <Text
-                style={{
-                  fontSize: 11,
-                  color: C.mintInk,
-                  opacity: 0.7,
-                  fontFamily: F.bodyBold,
-                  letterSpacing: 0.8,
-                }}
-              >
-                SETTLE →
-              </Text>
-            </Pressable>
-          ) : null}
-        </View>
-        {!isSolo && (
-          <>
-            <View
-              style={{
-                marginTop: 12,
-                height: 6,
-                backgroundColor: 'rgba(0,0,0,0.12)',
-                borderRadius: 3,
-                overflow: 'hidden',
-                flexDirection: 'row',
-              }}
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerTransparent: true,
+          headerShadowVisible: false,
+          headerBackground: () => null,
+          headerTintColor: C.inkColor,
+          title: '',
+          headerTitleAlign: 'center',
+          headerTitle: () => (
+            <HeaderBrand eyebrow={eyebrowLabel} title="expenses" />
+          ),
+          headerLeft: () => (
+            <PressScale
+              onPress={() => router.back()}
+              hitSlop={12}
+              style={{ padding: 4 }}
             >
-              <View style={{ width: `${youPct}%`, backgroundColor: C.mintInk }} />
-              <View style={{ width: `${partnerPct}%`, backgroundColor: 'rgba(15,44,26,0.45)' }} />
-            </View>
-            <View style={{ marginTop: 8, flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text
-                style={{
-                  fontSize: 10,
-                  color: C.mintInk,
-                  opacity: 0.6,
-                  fontFamily: F.bodyBold,
-                  letterSpacing: 0.8,
-                }}
-              >
-                YOU · {fmtMoney(monthStats.youPaid, currency)}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 10,
-                  color: C.mintInk,
-                  opacity: 0.6,
-                  fontFamily: F.bodyBold,
-                  letterSpacing: 0.8,
-                }}
-              >
-                {partnerUpper} · {fmtMoney(monthStats.partnerPaid, currency)}
-              </Text>
-            </View>
-          </>
-        )}
-      </Animated.View>
-
-      <Text
-        style={{
-          fontSize: 11,
-          color: C.fog,
-          fontFamily: F.bodyBold,
-          letterSpacing: 1.4,
-          paddingLeft: 4,
-          marginBottom: 10,
-        }}
-      >
-        RECENT
-      </Text>
-
-      {sortedRows.map((x, i) => {
-        const by = x.paidBy === userId ? 'YOU' : partnerName.toLowerCase();
-        const splitLabel =
-          x.splitType === 'even' ? '50/50' : x.splitAmount != null ? `${x.splitAmount}` : 'custom';
-        const day = formatRelativeDay(x.date);
-        const meta = isSolo ? day : `${day} · ${by} paid · ${splitLabel}`;
-        return (
-          <Animated.View
-            key={x.id}
-            entering={FadeInDown.delay(Math.min(i, 10) * 60 + 80).duration(400)}
-            style={{ marginBottom: 8 }}
-          >
-          <RowActionMenu {...buildExpenseMenu(x)}>
-          <Pressable
-            testID={`expense-row-${x.id}`}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 14,
-              padding: 14,
-              backgroundColor: C.card,
-              borderRadius: 18,
-              borderWidth: 1,
-              borderColor: C.line,
-            }}
-          >
-            <View
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 12,
-                backgroundColor: C.mintInk,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
+              <Icon name="chevronLeft" size={22} color={C.inkColor} strokeWidth={2.2} />
+            </PressScale>
+          ),
+          headerRight: () => (
+            <PressScale
+              onPress={() => router.push('/sheets/new-expense' as any)}
+              hitSlop={12}
+              style={{ padding: 4 }}
             >
-              <Icon name="dollarSign" size={16} color={C.mint} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  fontFamily: F.displayBold,
-                  fontSize: 14,
-                  color: C.bone,
-                  letterSpacing: -0.2,
-                }}
-                numberOfLines={1}
-              >
-                {x.title}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 10,
-                  color: C.fog,
-                  fontFamily: F.bodyBold,
-                  marginTop: 2,
-                  letterSpacing: 0.5,
-                  textTransform: 'uppercase',
-                }}
-              >
-                {meta}
-              </Text>
-            </View>
-            <Text
-              style={{
-                fontFamily: F.displayBold,
-                fontSize: 16,
-                color: C.bone,
-                letterSpacing: -0.3,
-              }}
-            >
-              {fmtMoney(x.amount, x.currency)}
-            </Text>
-          </Pressable>
-          </RowActionMenu>
-          </Animated.View>
-        );
-      })}
-    </Screen>
-  );
-}
-
-function EmptyExpenses() {
-  const { C, F } = useTheme();
-  return (
-    <Screen>
-      <Pressable
-        onPress={() => router.push('/sheets/new-expense' as any)}
-        style={{
-          marginTop: 8,
-          padding: 24,
-          borderRadius: 22,
-          borderWidth: 1,
-          borderStyle: 'dashed',
-          borderColor: C.line,
-          alignItems: 'center',
-          gap: 8,
-        }}
-      >
-        <Icon name="dollarSign" size={22} color={C.fog} />
-        <Text style={{ fontFamily: F.displayBold, fontSize: 16, color: C.mist }}>
-          No shared expenses yet
-        </Text>
-        <Text
-          style={{
-            fontSize: 12,
-            color: C.fog,
-            fontFamily: F.body,
-            textAlign: 'center',
-          }}
-        >
-          Track groceries, trips, bills — split any way you like.
-        </Text>
-      </Pressable>
-    </Screen>
-  );
-}
-
-function IndexSkeleton() {
-  const { C } = useTheme();
-  return (
-    <Screen>
-      <Animated.View
-        entering={FadeIn.duration(300)}
-        style={{
-          height: 168,
-          borderRadius: 26,
-          backgroundColor: C.mint,
-          opacity: 0.35,
-          marginBottom: 22,
+              <Icon name="plus" size={22} color={C.inkColor} strokeWidth={2.2} />
+            </PressScale>
+          ),
         }}
       />
-      {[0, 1, 2, 3].map((i) => (
-        <Animated.View
-          key={i}
-          entering={FadeIn.delay(60 + i * 60).duration(300)}
-          style={{
-            height: 62,
-            borderRadius: 18,
-            backgroundColor: C.card,
-            borderWidth: 1,
-            borderColor: C.line,
-            opacity: 0.55,
-            marginBottom: 8,
-          }}
-        />
-      ))}
-    </Screen>
+
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingTop: insets.top + 60, paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Hero — slim settle-up row */}
+        <View style={styles.heroWrap}>
+          <StatBar
+            eyebrow={settleUpLabel.toUpperCase()}
+            meta={`${stats.unsettled} OPEN · ${stats.settled} SETTLED`}
+            primary={
+              <>
+                <Text
+                  style={[Typography.pixelHeroSm, { color: C.inkColor }]}
+                  numberOfLines={1}
+                >
+                  {fmtMoney(Math.abs(stats.balance), currencyCode)}
+                </Text>
+                <PressScale
+                  onPress={() => router.push('/sheets/currency' as any)}
+                  hitSlop={6}
+                  style={styles.currencyChip}
+                >
+                  <Text style={[Typography.eyebrowSm, { color: C.ink2, fontSize: 9.5 }]}>
+                    {currencyCode}
+                  </Text>
+                  <Icon name="chevronDown" size={11} color={C.ink2} strokeWidth={2.2} />
+                </PressScale>
+                {mode !== 'solo' &&
+                stats.unsettled > 0 &&
+                Math.abs(stats.balance) >= 0.5 ? (
+                  <View style={styles.directionInline}>
+                    <Text
+                      style={[
+                        Typography.eyebrowSm,
+                        { color: stats.balance < 0 ? C.accent : C.ink3 },
+                      ]}
+                    >
+                      {(user?.displayName ?? 'YOU').charAt(0).toUpperCase()}
+                    </Text>
+                    <Icon
+                      name="arrowRight"
+                      size={12}
+                      color={C.ink3}
+                      strokeWidth={2.4}
+                      style={
+                        stats.balance > 0
+                          ? { transform: [{ scaleX: -1 }] }
+                          : undefined
+                      }
+                    />
+                    <Text
+                      style={[
+                        Typography.eyebrowSm,
+                        { color: stats.balance > 0 ? C.accent2 : C.ink3 },
+                      ]}
+                    >
+                      {(partnerName ?? 'P').charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                ) : null}
+              </>
+            }
+          />
+        </View>
+
+        {/* Filter pills */}
+        <View style={styles.filterRow}>
+          <SegmentedTabs<FilterKey>
+            value={filter}
+            onChange={setFilter}
+            options={filterOptions.map((f) => ({
+              key: f.key,
+              label:
+                f.key === 'theirs' && partnerName
+                  ? `${partnerName.split(' ')[0]}'s`
+                  : f.label,
+            }))}
+          />
+        </View>
+
+        {/* Bucketed list */}
+        <View style={styles.listWrap}>
+          {buckets.length === 0 ? (
+            <ActionEmptyState
+              icon="creditCard"
+              title="No expenses yet"
+              body="Log a shared cost — split it evenly or call out who paid."
+              actionLabel="New expense"
+              onAction={() => router.push('/sheets/new-expense' as any)}
+            />
+          ) : (
+            <BucketedList
+              buckets={buckets}
+              rowKey={(e) => e.id}
+              renderRow={(e) => (
+                <SwipeableRow
+                  deleteTitle="Delete expense?"
+                  deleteMessage={`"${e.title}" will be removed.`}
+                  onEdit={() =>
+                    router.push(`/sheets/new-expense?id=${e.id}` as any)
+                  }
+                  onDelete={() => remove(e.id)}
+                >
+                  <View style={[styles.row, { backgroundColor: C.bgCard }]}>
+                    <View
+                      style={[
+                        styles.amountTile,
+                        {
+                          backgroundColor: e.isSettled
+                            ? C.bgSoft
+                            : e.isMine
+                            ? C.accentSoft
+                            : C.accent2Soft,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={{
+                          fontFamily: Typography.pixelFont,
+                          fontSize: 14,
+                          color: e.isSettled
+                            ? C.ink3
+                            : e.isMine
+                            ? C.accent
+                            : C.accent2,
+                        }}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.5}
+                      >
+                        {fmtMoney(e.amount, e.currency)}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.rowHead}>
+                        <Text
+                          style={[
+                            Typography.bodyMedium,
+                            {
+                              color: e.isSettled ? C.ink3 : C.inkColor,
+                              flex: 1,
+                              textDecorationLine: e.isSettled
+                                ? 'line-through'
+                                : 'none',
+                            },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {e.title}
+                        </Text>
+                        <Text
+                          style={[
+                            Typography.eyebrowSm,
+                            { color: e.paidByColor, fontSize: 9.5 },
+                          ]}
+                        >
+                          {e.paidByName.toUpperCase()}
+                        </Text>
+                      </View>
+                      <View style={styles.metaRow}>
+                        <Text style={[Typography.mono, { color: C.ink3, fontSize: 11 }]}>
+                          {e.date
+                            ? format(parseISO(e.date), 'MMM d')
+                            : format(new Date(e.createdAt), 'MMM d')}
+                        </Text>
+                        <Text style={[Typography.eyebrowSm, { color: C.ink3, fontSize: 9.5 }]}>
+                          · {e.category.toUpperCase()}
+                        </Text>
+                        {!e.isSettled && e.isMine ? (
+                          <PressScale
+                            hitSlop={6}
+                            onPress={() => settle(e.id)}
+                            style={[
+                              styles.settleChip,
+                              { backgroundColor: C.bgSoft, borderColor: C.lineColor },
+                            ]}
+                          >
+                            <Icon
+                              name="check"
+                              size={10}
+                              color={C.accent}
+                              strokeWidth={2.6}
+                            />
+                            <Text
+                              style={[
+                                Typography.eyebrowSm,
+                                { color: C.accent, fontSize: 9 },
+                              ]}
+                            >
+                              SETTLE
+                            </Text>
+                          </PressScale>
+                        ) : null}
+                      </View>
+                    </View>
+                  </View>
+                </SwipeableRow>
+              )}
+            />
+          )}
+        </View>
+      </ScrollView>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  heroWrap: {
+    paddingHorizontal: 18,
+    paddingTop: 8,
+    paddingBottom: 6,
+  },
+  currencyChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0,0,0,0.08)',
+  },
+  directionInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginLeft: 'auto',
+  },
+  filterRow: {
+    paddingHorizontal: 18,
+    paddingTop: 4,
+    paddingBottom: 14,
+    gap: 6,
+  },
+  listWrap: {
+    paddingHorizontal: 18,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  amountTile: {
+    minWidth: 64,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+    flexWrap: 'wrap',
+  },
+  settleChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
+    borderWidth: 1,
+    marginLeft: 'auto',
+  },
+});

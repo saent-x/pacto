@@ -3,11 +3,12 @@ import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, Text, TextInput, View } from 'react-native';
-import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
+import { PrimaryButton } from '@/src/components/ui/atoms';
 import { IconName } from '@/src/components/ui/Icon';
 import {
   SheetDateField,
   SheetIconLabelPicker,
+  SheetLabel,
   SheetRow,
   SheetSection,
   SheetSegment,
@@ -197,7 +198,7 @@ export default function NewExpense() {
       {!isSolo && (
         <SheetRow style={{ marginTop: 22 }}>
           <View style={{ flex: 1 }}>
-            <Overline style={{ marginBottom: 10 }}>Paid by</Overline>
+            <SheetLabel style={{ marginBottom: 10 }}>Paid by</SheetLabel>
             <SheetSegment
               options={payerOptions}
               selected={by}
@@ -207,7 +208,7 @@ export default function NewExpense() {
             />
           </View>
           <View style={{ flex: 1 }}>
-            <Overline style={{ marginBottom: 10 }}>Split</Overline>
+            <SheetLabel style={{ marginBottom: 10 }}>Split</SheetLabel>
             <SheetSegment
               options={splitOptions}
               selected={split}

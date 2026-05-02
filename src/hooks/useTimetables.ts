@@ -15,6 +15,8 @@ export type TimetableRow = {
   template: TemplateKey;
   share: ShareKind;
   itemsCount: number;
+  /** Items per day-of-week, Monday first (length 7). */
+  dayCounts: number[];
   updatedAt: number;
 };
 
@@ -57,14 +59,28 @@ export function useTimetables() {
   const timetables = useMemo<TimetableRow[]>(() => {
     const raw = (data?.timetables ?? []) as any[];
     return raw
-      .map((t): TimetableRow => ({
-        id: String(t.id),
-        title: String(t.title ?? ''),
-        template: (t.template ?? 'custom') as TemplateKey,
-        share: (t.share ?? 'solo') as ShareKind,
-        itemsCount: Array.isArray(t.items) ? t.items.length : 0,
-        updatedAt: Number(t.updatedAt ?? t.createdAt ?? 0),
-      }))
+      .map((t): TimetableRow => {
+        // Items store `day` 0-6 with Sunday=0. Re-index to Monday-first
+        // so the week-strip preview lines up with the rest of the app.
+        const dayCounts = [0, 0, 0, 0, 0, 0, 0];
+        const items = Array.isArray(t.items) ? t.items : [];
+        for (const it of items) {
+          const sundayFirst = Number((it as any).day ?? 0);
+          if (Number.isFinite(sundayFirst) && sundayFirst >= 0 && sundayFirst <= 6) {
+            const mondayFirst = (sundayFirst + 6) % 7;
+            dayCounts[mondayFirst] += 1;
+          }
+        }
+        return {
+          id: String(t.id),
+          title: String(t.title ?? ''),
+          template: (t.template ?? 'custom') as TemplateKey,
+          share: (t.share ?? 'solo') as ShareKind,
+          itemsCount: items.length,
+          dayCounts,
+          updatedAt: Number(t.updatedAt ?? t.createdAt ?? 0),
+        };
+      })
       .sort((a, b) => b.updatedAt - a.updatedAt);
   }, [data?.timetables]);
 
@@ -114,11 +130,21 @@ export function useTimetables() {
 }
 
 export function normalizeTimetableItem(raw: any): TimetableItem {
+  // The new-timetable-item sheet stores `duration` in MINUTES (e.g. 90).
+  // The views (and fmtHour math) expect `dur` in HOURS (e.g. 1.5). Convert
+  // here so consumers don't have to know the storage unit.
+  // Legacy values that were already <= 24 are treated as hours to remain
+  // compatible with any seeded demo data.
+  const rawDuration =
+    typeof raw.duration === 'number' && Number.isFinite(raw.duration)
+      ? raw.duration
+      : 60;
+  const dur = rawDuration > 24 ? rawDuration / 60 : rawDuration;
   return {
     id: String(raw.id),
     day: typeof raw.day === 'number' ? raw.day : 0,
     start: typeof raw.startHour === 'number' ? raw.startHour : 0,
-    dur: typeof raw.duration === 'number' ? raw.duration : 1,
+    dur,
     title: String(raw.title ?? ''),
     icon: ((raw.icon as IconName) ?? 'coffee') as IconName,
     color: (raw.color as string) ?? '#F4A68C',

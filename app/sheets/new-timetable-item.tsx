@@ -2,12 +2,13 @@ import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, Text, View } from 'react-native';
-import { Overline, Pill, PrimaryButton } from '@/src/components/ui/atoms';
+import { Pill, PrimaryButton } from '@/src/components/ui/atoms';
 import { IconName } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
 import {
   SheetDurationField,
   SheetIconLabelPicker,
+  SheetLabel,
   SheetRow,
   SheetSection,
   SheetSegment,
@@ -184,7 +185,7 @@ export default function NewTimetableItem() {
 
       <SheetRow style={{ marginTop: 22 }}>
         <View style={{ flex: 1 }}>
-          <Overline style={{ marginBottom: 10 }}>Time</Overline>
+          <SheetLabel style={{ marginBottom: 10 }}>Time</SheetLabel>
           <SheetTimeField
             pressTestID="new-timetable-item-time"
             value={time}
@@ -195,7 +196,7 @@ export default function NewTimetableItem() {
           />
         </View>
         <View style={{ flex: 1 }}>
-          <Overline style={{ marginBottom: 10 }}>Duration</Overline>
+          <SheetLabel style={{ marginBottom: 10 }}>Duration</SheetLabel>
           <SheetDurationField
             pressTestID="new-timetable-item-dur-input"
             minutes={dur}
@@ -255,7 +256,7 @@ export default function NewTimetableItem() {
 
       {isSolo ? (
         <View style={{ marginTop: 22 }}>
-          <Overline style={{ marginBottom: 10 }}>Repeats</Overline>
+          <SheetLabel style={{ marginBottom: 10 }}>Repeats</SheetLabel>
           <SheetSegment
             options={repeatOptions}
             selected={repeat}
@@ -266,7 +267,7 @@ export default function NewTimetableItem() {
       ) : (
         <SheetRow style={{ marginTop: 22 }}>
           <View style={{ flex: 1 }}>
-            <Overline style={{ marginBottom: 10 }}>For</Overline>
+            <SheetLabel style={{ marginBottom: 10 }}>For</SheetLabel>
             <SheetSegment
               options={whoOptions}
               selected={who}
@@ -275,7 +276,7 @@ export default function NewTimetableItem() {
             />
           </View>
           <View style={{ flex: 1 }}>
-            <Overline style={{ marginBottom: 10 }}>Repeats</Overline>
+            <SheetLabel style={{ marginBottom: 10 }}>Repeats</SheetLabel>
             <SheetSegment
               options={repeatOptions}
               selected={repeat}

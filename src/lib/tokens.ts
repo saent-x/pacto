@@ -1,35 +1,102 @@
-// Coupl design tokens — Warm Block aesthetic
+// Pacto design tokens — WARM CALM palette
+// Synced with src/constants/colors.ts. This file is read by useTheme() / theme.tsx.
+
+// ─── New WARM CALM tokens (light) ────────────────────────────────
+const L_BG = '#FAF8F2';
+const L_BG_SOFT = '#F4F0E5';
+const L_BG_CARD = '#FFFFFF';
+const L_INK = '#2A241B';
+const L_INK_2 = '#5C5345';
+const L_INK_3 = '#918875';
+const L_LINE = '#E8E2D4';
+const L_LINE_2 = '#DBD3C0';
+const L_ACCENT = '#C7755A';
+const L_ACCENT_2 = '#6FB3A2';
+const L_ACCENT_3 = '#C8AE73';
+const L_ACCENT_SOFT = '#F5DDD3';
+const L_ACCENT_2_SOFT = '#DCEDE7';
+const L_ACCENT_3_SOFT = '#EEE4C8';
+
+// ─── New WARM CALM tokens (dark) ─────────────────────────────────
+const D_BG = '#2A2620';
+const D_BG_SOFT = '#322D26';
+const D_BG_CARD = '#39322B';
+const D_INK = '#F2EEE5';
+const D_INK_2 = '#C2BAA9';
+const D_INK_3 = '#847A6A';
+const D_LINE = '#4D4537';
+const D_LINE_2 = '#5B5141';
+const D_ACCENT = '#D08B6F';
+const D_ACCENT_2 = '#7FBFAF';
+const D_ACCENT_3 = '#D2BC85';
+const D_ACCENT_SOFT = '#4D352B';
+const D_ACCENT_2_SOFT = '#2C443D';
+const D_ACCENT_3_SOFT = '#4A4128';
 
 const darkTokens = {
-  ink: '#0E0B0A',
-  coal: '#161210',
-  card: '#1D1815',
-  cardHi: '#262019',
-  line: '#2B241E',
-  lineHi: '#3A322A',
-  bone: '#F5EEE3',
-  mist: '#B3A89A',
-  fog: '#80746A',
-  ash: '#5A5048',
-  gold: '#E4B24A',
-  goldDim: '#C99836',
-  goldSoft: 'rgba(228,178,74,0.14)',
+  // ─── Pacto WARM CALM tokens ─────────────────────────────────
+  bg: D_BG,
+  bgSoft: D_BG_SOFT,
+  bgCard: D_BG_CARD,
+  inkColor: D_INK,
+  ink2: D_INK_2,
+  ink3: D_INK_3,
+  lineColor: D_LINE,
+  line2: D_LINE_2,
+  accent: D_ACCENT,
+  accent2: D_ACCENT_2,
+  accent3: D_ACCENT_3,
+  accentSoft: D_ACCENT_SOFT,
+  accent2Soft: D_ACCENT_2_SOFT,
+  accent3Soft: D_ACCENT_3_SOFT,
+
+  // ─── Legacy aliases (re-pointed at new palette) ─────────────
+  ink: D_BG,
+  coal: D_BG_SOFT,
+  card: D_BG_CARD,
+  cardHi: '#3F3830',
+  line: D_LINE,
+  lineHi: D_LINE_2,
+  bone: D_INK,
+  mist: D_INK_2,
+  fog: D_INK_3,
+  ash: '#6E6555',
+  gold: D_ACCENT,
+  goldDim: '#A3654C',
+  goldSoft: 'rgba(208,139,111,0.16)',
 };
 
 const lightTokens = {
-  ink: '#F5EEE3',
-  coal: '#EDE5D8',
-  card: '#F9F3E8',
-  cardHi: '#FFF9EE',
-  line: '#D9CFBE',
-  lineHi: '#C5B8A2',
-  bone: '#1F1611',
-  mist: '#5A4B3E',
-  fog: '#86766A',
-  ash: '#A59684',
-  gold: '#B8872E',
-  goldDim: '#956912',
-  goldSoft: 'rgba(184,135,46,0.12)',
+  // ─── Pacto WARM CALM tokens ─────────────────────────────────
+  bg: L_BG,
+  bgSoft: L_BG_SOFT,
+  bgCard: L_BG_CARD,
+  inkColor: L_INK,
+  ink2: L_INK_2,
+  ink3: L_INK_3,
+  lineColor: L_LINE,
+  line2: L_LINE_2,
+  accent: L_ACCENT,
+  accent2: L_ACCENT_2,
+  accent3: L_ACCENT_3,
+  accentSoft: L_ACCENT_SOFT,
+  accent2Soft: L_ACCENT_2_SOFT,
+  accent3Soft: L_ACCENT_3_SOFT,
+
+  // ─── Legacy aliases ─────────────────────────────────────────
+  ink: L_BG,
+  coal: L_BG_SOFT,
+  card: L_BG_CARD,
+  cardHi: '#FFFDF7',
+  line: L_LINE,
+  lineHi: L_LINE_2,
+  bone: L_INK,
+  mist: L_INK_2,
+  fog: L_INK_3,
+  ash: '#A89E89',
+  gold: L_ACCENT,
+  goldDim: '#9F5A40',
+  goldSoft: 'rgba(199,117,90,0.14)',
 };
 
 export const pastels = {
@@ -61,11 +128,25 @@ export function getTokens(mode: ThemeMode): Tokens {
   return { ...(mode === 'light' ? lightTokens : darkTokens), ...pastels };
 }
 
+// Pacto type system — Bitcount Prop Single (display, pixel), Geist (body), Geist Mono (data)
 export const fonts = {
-  display: 'BricolageGrotesque_700Bold',
-  displayBold: 'BricolageGrotesque_800ExtraBold',
-  body: 'SpaceGrotesk_500Medium',
-  bodyBold: 'SpaceGrotesk_700Bold',
-  serif: 'Georgia',
-  mono: 'Menlo',
+  // ─── New pacto names ────────────────────────────────────────
+  pixel: 'BitcountPropSingle_700Bold',
+  pixelMedium: 'BitcountPropSingle_500Medium',
+  pixelRegular: 'BitcountPropSingle_400Regular',
+  geist: 'Geist_400Regular',
+  geistMedium: 'Geist_500Medium',
+  geistSemiBold: 'Geist_600SemiBold',
+  geistBold: 'Geist_700Bold',
+  geistLight: 'Geist_300Light',
+  geistMono: 'GeistMono_400Regular',
+  geistMonoMedium: 'GeistMono_500Medium',
+
+  // ─── Legacy aliases ─────────────────────────────────────────
+  display: 'BitcountPropSingle_700Bold',
+  displayBold: 'BitcountPropSingle_700Bold',
+  body: 'Geist_400Regular',
+  bodyBold: 'Geist_700Bold',
+  serif: 'Geist_400Regular',
+  mono: 'GeistMono_400Regular',
 } as const;

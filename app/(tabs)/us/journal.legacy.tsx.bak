@@ -1,0 +1,491 @@
+import { router } from 'expo-router';
+import { useMemo } from 'react';
+import { LayoutChangeEvent, Text, View } from 'react-native';
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
+import { format, parseISO, subDays } from 'date-fns';
+import {
+  ActionEmptyState,
+  Avatar,
+  Bucket,
+  BucketedList,
+  Card,
+  HeroPactoBadge,
+  ScreenScaffold as Screen,
+  SwipeableRow,
+} from '@/src/components/ui/pacto';
+import { Icon, IconName } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
+import { Typography } from '@/src/constants/typography';
+import { useJournal, type JournalFilter } from '@/src/hooks/useJournal';
+import { useSession } from '@/src/hooks/useSession';
+import { useTheme } from '@/src/lib/theme';
+import type { JournalEntry } from '@/src/types/database';
+
+type MoodKey = 'great' | 'good' | 'okay' | 'low' | 'rough';
+type MoodColorKey = 'mint' | 'sky' | 'butter' | 'rose' | 'peach';
+
+const JOURNAL_MOOD: Record<MoodKey, { icon: IconName; colorKey: MoodColorKey }> = {
+  great: { icon: 'sun', colorKey: 'mint' },
+  good: { icon: 'cloud', colorKey: 'sky' },
+  okay: { icon: 'minus', colorKey: 'butter' },
+  low: { icon: 'cloudRain', colorKey: 'rose' },
+  rough: { icon: 'zap', colorKey: 'peach' },
+};
+const MOOD_FALLBACK = { icon: 'minus' as IconName, colorKey: 'butter' as MoodColorKey };
+
+function moodFor(mood: string | null) {
+  if (!mood) return MOOD_FALLBACK;
+  return JOURNAL_MOOD[mood as MoodKey] ?? MOOD_FALLBACK;
+}
+
+function formatEntryDate(entryDate: string) {
+  try {
+    return format(parseISO(entryDate), 'EEE, MMM d').toUpperCase();
+  } catch {
+    return entryDate.toUpperCase();
+  }
+}
+
+function formatEntryBucket(entryDate: string) {
+  try {
+    const date = parseISO(entryDate);
+    const today = format(new Date(), 'yyyy-MM-dd');
+    if (entryDate === today) return 'Today';
+    const weekAgo = format(subDays(new Date(), 7), 'yyyy-MM-dd');
+    if (entryDate >= weekAgo) return 'This week';
+    return format(date, 'MMMM yyyy');
+  } catch {
+    return 'Earlier';
+  }
+}
+
+// solo-mode: shared filter, partner-featured fallback, partner badges all gated via isSolo + author check
+export default function Journal() {
+  const { C, F } = useTheme();
+  const { user, partner, isSolo } = useSession();
+  const { entries, allEntries, filter, setFilter, isLoading, remove } = useJournal();
+
+  const userId = user?.id ?? null;
+  const partnerName = partner?.displayName ?? 'Partner';
+
+  const tabs = useMemo<{ k: JournalFilter; label: string }[]>(
+    () =>
+      isSolo
+        ? [
+            { k: 'all', label: 'All' },
+            { k: 'private', label: 'Private' },
+          ]
+        : [
+            { k: 'all', label: 'All' },
+            { k: 'shared', label: 'Shared' },
+            { k: 'private', label: 'Private' },
+          ],
+    [isSolo],
+  );
+
+  const featured = useMemo(() => {
+    const shared = allEntries.filter((e) => !e.is_private);
+    return (
+      shared.find((e) => e.author_id !== userId) ??
+      shared[0] ??
+      allEntries[0] ??
+      null
+    );
+  }, [allEntries, userId]);
+
+  const thisWeekCount = useMemo(() => {
+    const cutoff = format(subDays(new Date(), 7), 'yyyy-MM-dd');
+    return allEntries.filter((e) => e.entry_date >= cutoff).length;
+  }, [allEntries]);
+  const visibleEntries = useMemo(
+    () => [...entries].sort((a, b) => b.entry_date.localeCompare(a.entry_date)),
+    [entries],
+  );
+  const buckets = useMemo<Bucket<JournalEntry>[]>(() => {
+    const groups = new Map<string, JournalEntry[]>();
+    for (const entry of visibleEntries) {
+      const label = formatEntryBucket(entry.entry_date);
+      groups.set(label, [...(groups.get(label) ?? []), entry]);
+    }
+    return Array.from(groups, ([label, rows]) => ({
+      label,
+      dotColor: C.journal,
+      rows,
+    }));
+  }, [visibleEntries, C.journal]);
+
+  const hasAny = allEntries.length > 0;
+  if (isLoading && !hasAny) return <IndexSkeleton />;
+
+  return (
+    <Screen topOffset={48}>
+      {featured ? (
+        <Animated.View entering={FadeInDown.duration(400)}>
+          <Card
+            style={{
+              marginBottom: 16,
+              padding: 18,
+              paddingRight: 54,
+              backgroundColor: C.bgCard,
+              overflow: 'visible',
+            }}
+          >
+            <HeroPactoBadge
+              style={{ position: 'absolute', top: -10, right: -6, zIndex: 3 }}
+            />
+            <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
+              {`This week · ${thisWeekCount} ${thisWeekCount === 1 ? 'entry' : 'entries'}`}
+            </Text>
+            <Text
+              style={{
+                marginTop: 12,
+                fontFamily: F.body,
+                fontSize: 16,
+                lineHeight: 23,
+                color: C.inkColor,
+              }}
+              numberOfLines={4}
+            >
+              {`"${snippet(featured.body, 140)}"`}
+            </Text>
+            <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View
+                style={{
+                  width: 18,
+                  height: 2,
+                  backgroundColor: C.butterInk,
+                  borderRadius: 1,
+                  opacity: 0.6,
+                }}
+              />
+              <Text
+                style={{
+                  fontSize: 10,
+                  fontFamily: F.bodyBold,
+                  letterSpacing: 1,
+                  color: C.ink3,
+                }}
+              >
+                {`${authorName(featured, userId, user?.displayName, partnerName).toUpperCase()} · ${formatEntryDate(
+                  featured.entry_date,
+                )}`}
+              </Text>
+            </View>
+          </Card>
+        </Animated.View>
+      ) : null}
+
+      <Animated.View entering={FadeInDown.delay(80).duration(400)}>
+        <TabBar tabs={tabs} value={filter} onChange={setFilter} />
+      </Animated.View>
+
+      {hasAny ? (
+        entries.length === 0 ? (
+          <EmptyFiltered />
+        ) : (
+          <View style={{ gap: 12 }}>
+            <BucketedList
+              buckets={buckets}
+              rowKey={(entry) => entry.id}
+              renderRow={(entry, i) => (
+                <Animated.View
+                  entering={FadeInDown.delay(Math.min(i, 10) * 45 + 90).duration(340)}
+                >
+                  <SwipeableRow
+                    deleteTitle="Delete entry?"
+                    deleteMessage="This journal entry will be removed."
+                    onDelete={() => remove(entry.id)}
+                  >
+                    <EntryCard entry={entry} userId={userId} partnerName={partnerName} />
+                  </SwipeableRow>
+                </Animated.View>
+              )}
+            />
+          </View>
+        )
+      ) : (
+        <EmptyJournal />
+      )}
+    </Screen>
+  );
+}
+
+function snippet(text: string, max: number) {
+  if (!text) return '';
+  if (text.length <= max) return text;
+  return `${text.slice(0, max).trimEnd()}…`;
+}
+
+function authorName(
+  entry: JournalEntry,
+  userId: string | null,
+  myName: string | null | undefined,
+  partnerName: string,
+) {
+  if (entry.author_id === userId) return myName ?? 'You';
+  return partnerName;
+}
+
+function EntryCard({
+  entry,
+  userId,
+  partnerName,
+}: {
+  entry: JournalEntry;
+  userId: string | null;
+  partnerName: string;
+}) {
+  const { C } = useTheme();
+  const mood = moodFor(entry.mood ?? null);
+  const moodColor = (C as Record<string, string>)[mood.colorKey] ?? C.butter;
+  const fromPartner = entry.author_id !== userId;
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        gap: 12,
+        backgroundColor: C.bgCard,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        borderLeftWidth: fromPartner ? 3 : 0,
+        borderLeftColor: fromPartner ? C.gold : 'transparent',
+      }}
+    >
+      <View
+        style={{
+          width: 34,
+          height: 34,
+          borderRadius: 11,
+          backgroundColor: `${moodColor}22`,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Icon name={mood.icon} size={15} color={moodColor} strokeWidth={2.4} />
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 10,
+            marginBottom: 4,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+            {entry.is_private && <Icon name="lock" size={10} color={C.ink3} />}
+            {fromPartner ? (
+              <Avatar
+                person={{
+                  initial: partnerName.charAt(0).toUpperCase(),
+                  color: C.accent2,
+                }}
+                size={18}
+              />
+            ) : null}
+            <Text
+              style={[Typography.eyebrowSm, { color: fromPartner ? C.gold : C.ink3, fontSize: 9.5 }]}
+              numberOfLines={1}
+            >
+              {fromPartner ? partnerName.toUpperCase() : formatEntryDate(entry.entry_date)}
+            </Text>
+          </View>
+          <Text
+            style={[Typography.eyebrowSm, { color: C.ink3, fontSize: 9.5 }]}
+          >
+            {fromPartner ? formatEntryDate(entry.entry_date) : entry.is_private ? 'PRIVATE' : 'SHARED'}
+          </Text>
+        </View>
+        {entry.title ? (
+          <Text
+            style={[Typography.bodyMedium, { color: C.inkColor, marginBottom: 2 }]}
+            numberOfLines={1}
+          >
+            {entry.title}
+          </Text>
+        ) : null}
+        <Text
+          numberOfLines={2}
+          style={[Typography.small, { color: C.ink2, lineHeight: 19 }]}
+        >
+          {entry.body}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function TabBar({
+  tabs,
+  value,
+  onChange,
+}: {
+  tabs: { k: JournalFilter; label: string }[];
+  value: JournalFilter;
+  onChange: (k: JournalFilter) => void;
+}) {
+  const { C, F } = useTheme();
+  const indicator = useSharedValue({ left: 0, width: 0 });
+  const layouts = useMemo(
+    () => new Map<JournalFilter, { x: number; w: number }>(),
+    [],
+  );
+
+  const updateIndicator = (k: JournalFilter) => {
+    const l = layouts.get(k);
+    if (!l) return;
+    indicator.value = {
+      left: withTiming(l.x, { duration: 220, easing: Easing.out(Easing.cubic) }),
+      width: withTiming(l.w, { duration: 220, easing: Easing.out(Easing.cubic) }),
+    };
+  };
+
+  const onTabLayout = (k: JournalFilter, e: LayoutChangeEvent) => {
+    const { x, width } = e.nativeEvent.layout;
+    layouts.set(k, { x, w: width });
+    if (k === value) {
+      indicator.value = { left: x, width };
+    }
+  };
+
+  const indicatorStyle = useAnimatedStyle(() => ({
+    left: indicator.value.left as number,
+    width: indicator.value.width as number,
+  }));
+
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        borderBottomWidth: 1,
+        borderBottomColor: C.line,
+        marginBottom: 16,
+        position: 'relative',
+      }}
+    >
+      {tabs.map((t) => (
+        <PressScale
+          key={t.k}
+          onLayout={(e) => onTabLayout(t.k, e)}
+          onPress={() => {
+            onChange(t.k);
+            updateIndicator(t.k);
+          }}
+          style={{
+            flex: 1,
+            paddingVertical: 10,
+            alignItems: 'center',
+            marginBottom: -1,
+          }}
+        >
+          <Text
+            style={{
+              color: value === t.k ? C.journal : C.fog,
+              fontFamily: F.bodyBold,
+              fontSize: 12,
+              letterSpacing: 1,
+              textTransform: 'uppercase',
+            }}
+          >
+            {t.label}
+          </Text>
+        </PressScale>
+      ))}
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            bottom: -1,
+            height: 2,
+            backgroundColor: C.journal,
+            borderRadius: 1,
+          },
+          indicatorStyle,
+        ]}
+      />
+    </View>
+  );
+}
+
+function EmptyJournal() {
+  return (
+    <ActionEmptyState
+      icon="feather"
+      title="No entries yet"
+      body="Write something small. Even a sentence counts."
+      actionLabel="New entry"
+      onAction={() => router.push('/sheets/new-entry')}
+    />
+  );
+}
+
+function EmptyFiltered() {
+  const { C, F } = useTheme();
+  return (
+    <View
+      style={{
+        marginTop: 6,
+        padding: 18,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderStyle: 'dashed',
+        borderColor: C.line,
+        alignItems: 'center',
+      }}
+    >
+      <Text style={{ fontSize: 12, color: C.fog, fontFamily: F.body }}>
+        Nothing here yet.
+      </Text>
+    </View>
+  );
+}
+
+function IndexSkeleton() {
+  const { C } = useTheme();
+  return (
+    <Screen topOffset={48}>
+      <Animated.View
+        entering={FadeIn.duration(300)}
+        style={{
+          height: 148,
+          borderRadius: 22,
+          backgroundColor: C.butter,
+          opacity: 0.35,
+          marginBottom: 16,
+        }}
+      />
+      <Animated.View
+        entering={FadeIn.delay(60).duration(300)}
+        style={{
+          height: 42,
+          borderBottomWidth: 1,
+          borderBottomColor: C.line,
+          marginBottom: 16,
+        }}
+      />
+      {[0, 1, 2].map((i) => (
+        <Animated.View
+          key={i}
+          entering={FadeIn.delay(100 + i * 60).duration(300)}
+          style={{
+            height: 82,
+            borderRadius: 18,
+            backgroundColor: C.card,
+            borderWidth: 1,
+            borderColor: C.line,
+            marginBottom: 12,
+            opacity: 0.55,
+          }}
+        />
+      ))}
+    </Screen>
+  );
+}

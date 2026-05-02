@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { db, id } from '@/src/lib/instant';
+import { notifySpaceMutation } from '@/src/lib/push';
 import { useSession } from './useSession';
 
 export type PlanInput = {
@@ -17,7 +18,7 @@ export type PlanInput = {
 };
 
 export function usePlans(statuses?: string[]) {
-  const { activeCouple, user } = useSession();
+  const { activeCouple, user, space } = useSession();
   const coupleId = activeCouple?.couple?.id ?? null;
 
   const { data, isLoading: queryLoading } = db.useQuery(
@@ -56,8 +57,16 @@ export function usePlans(statuses?: string[]) {
           })
           .link({ couple: coupleId, createdBy: user.id }),
       );
+      await notifySpaceMutation({
+        spaceId: coupleId,
+        spaceKind: space?.kind ?? null,
+        excludeUserId: user.id,
+        title: user.displayName ?? 'Someone',
+        body: `added a plan: ${input.title}`,
+        route: '/(tabs)/us/plans',
+      });
     },
-    [coupleId, user],
+    [coupleId, user, space?.kind],
   );
 
   const update = useCallback(

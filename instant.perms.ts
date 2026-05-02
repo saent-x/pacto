@@ -59,6 +59,17 @@ const rules = {
   timetables: { allow: coupleMemberOnly },
   timetableItems: { allow: coupleMemberOnly },
   ringsHistory: { allow: coupleMemberOnly },
+  devices: {
+    // Owner can do anything to their own row. Space-mates can read so the
+    // sender can fetch partner tokens for client-to-client push.
+    allow: {
+      view:
+        "auth.id == data.ref('user.id')[0] || auth.id in data.ref('user.memberships.space.memberships.user.id')",
+      create: "auth.id == data.ref('user.id')[0]",
+      update: "auth.id == data.ref('user.id')[0]",
+      delete: "auth.id == data.ref('user.id')[0]",
+    },
+  },
   dailyVerseCache: {
     // Global per-day cache populated by the server; clients read-only.
     allow: {

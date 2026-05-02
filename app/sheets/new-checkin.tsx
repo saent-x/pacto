@@ -3,7 +3,6 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 import { PrimaryButton } from '@/src/components/ui/atoms';
-import { IconName } from '@/src/components/ui/Icon';
 import {
   SheetIconLabelPicker,
   SheetInfoCard,
@@ -12,47 +11,30 @@ import {
   SheetTitleField,
   type IconLabelOption,
 } from '@/src/components/ui/SheetShell';
+import {
+  CHECK_IN_STATES,
+  type CheckInStateId,
+} from '@/src/constants/checkInStates';
 import { useCheckIns } from '@/src/hooks/useCheckIns';
 import { useSession } from '@/src/hooks/useSession';
-import { useTheme } from '@/src/lib/theme';
-
-type MoodKey = '1' | '2' | '3' | '4' | '5';
-
-type Mood = {
-  key: MoodKey;
-  icon: IconName;
-  color: string;
-  label: string;
-  vibe: string;
-};
 
 // solo-mode: partner-aware info card hidden
 export default function NewCheckin() {
-  const { C } = useTheme();
   const { createOrUpdate, isSubmitting } = useCheckIns();
   const { isSolo, partner } = useSession();
-  const [mood, setMood] = useState<MoodKey>('4');
+  const [mood, setMood] = useState<CheckInStateId>('soft');
   const [one, setOne] = useState('');
   const [saving, setSaving] = useState(false);
   const partnerName = partner?.displayName ?? 'Partner';
 
-  const moods: Mood[] = useMemo(
-    () => [
-      { key: '1', icon: 'cloudRain', color: C.sky, label: 'Rough', vibe: 'rough' },
-      { key: '2', icon: 'drizzle', color: C.lavender, label: 'Low', vibe: 'low' },
-      { key: '3', icon: 'minus', color: C.butter, label: 'Okay', vibe: 'okay' },
-      { key: '4', icon: 'cloud', color: C.mint, label: 'Good', vibe: 'good' },
-      { key: '5', icon: 'sun', color: C.peach, label: 'Great', vibe: 'great' },
-    ],
-    [C],
-  );
-  const active = moods.find((m) => m.key === mood)!;
-  const moodOptions: IconLabelOption<MoodKey>[] = moods.map((m) => ({
-    key: m.key,
+  const active = CHECK_IN_STATES.find((state) => state.id === mood)!;
+  const moodOptions: IconLabelOption<CheckInStateId>[] = useMemo(() => CHECK_IN_STATES.map((m) => ({
+    key: m.id,
     icon: m.icon,
+    image: m.image,
     label: m.label,
     color: m.color,
-  }));
+  })), []);
   const busy = saving || isSubmitting;
 
   const onSave = async () => {
@@ -60,7 +42,7 @@ export default function NewCheckin() {
     setSaving(true);
     try {
       await createOrUpdate({
-        mood: active.vibe,
+        mood: active.id,
         note: one.trim() || null,
         isPrivate: false,
       });
@@ -91,6 +73,7 @@ export default function NewCheckin() {
           selected={mood}
           onChange={setMood}
           testIDPrefix="new-checkin-mood"
+          iconOnly
         />
       </SheetSection>
 

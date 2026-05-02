@@ -210,6 +210,13 @@ const _schema = i.schema({
       note: i.string().optional(),
       createdAt: i.number().indexed(),
     }),
+    devices: i.entity({
+      expoPushToken: i.string().unique().indexed(),
+      platform: i.string(),                                 // 'ios' | 'android'
+      appVersion: i.string().optional(),
+      lastSeenAt: i.number().indexed(),
+      createdAt: i.number(),
+    }),
   },
   links: {
     // --- existing core ---
@@ -416,6 +423,12 @@ const _schema = i.schema({
     ringsMembership: {
       forward: { on: 'ringsHistory', has: 'one', label: 'membership' },
       reverse: { on: 'memberships', has: 'many', label: 'ringsHistory' },
+    },
+
+    // --- devices ---
+    deviceUser: {
+      forward: { on: 'devices', has: 'one', label: 'user', onDelete: 'cascade' },
+      reverse: { on: '$users', has: 'many', label: 'devices' },
     },
   },
 });

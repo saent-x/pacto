@@ -1,407 +1,475 @@
-import { router } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import { Icon } from '@/src/components/ui/Icon';
-import { Screen } from '@/src/components/ui/Screen';
+import { router, Stack } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  RowActionMenu,
-  type ActionMenuPayload,
-} from '@/src/components/ui/RowActionMenu';
-import { confirmDestructive } from '@/src/lib/confirm';
+  ActionEmptyState,
+  Bucket,
+  BucketedList,
+  Checkbox,
+  HeaderBrand,
+  SegmentedTabs,
+  PriorityDot,
+  StatBar,
+  SwipeableRow,
+} from '@/src/components/ui/pacto';
+import { Icon } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
 import { useAllWishlistItems, useQuickAddWishItem } from '@/src/hooks/useWishlists';
 import { useSession } from '@/src/hooks/useSession';
+import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
+import { findCurrency, usePreferences } from '@/src/lib/preferences';
 
-type WhoKind = 'me' | 'partner' | 'both';
-type FilterKind = 'ALL' | 'PARTNER' | 'MINE' | 'SHARED' | 'CLAIMED';
-
+type WhoKind = 'me' | 'partner' | 'shared';
 type WishRow = {
   id: string;
   title: string;
   price: number | null;
   currency: string;
-  tag: string | null;
+  url: string | null;
   who: WhoKind;
-  claimed: boolean;
+  authorName: string;
+  authorColor: string;
+  isPurchased: boolean;
+  priority: number;
 };
 
-function fmtMoney(amount: number, currency: string) {
-  const symbol = currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : currency === 'USD' ? '$' : '';
-  return symbol ? `${symbol}${amount.toFixed(0)}` : `${amount.toFixed(0)} ${currency}`;
+type FilterKey = 'all' | 'mine' | 'theirs' | 'open' | 'bought';
+
+function fmtMoney(amount: number, currencyCode: string) {
+  const c = findCurrency(currencyCode);
+  const body = Math.round(amount).toLocaleString('en-US');
+  return `${c.symbol}${body}`;
 }
 
-function fmtWorth(total: number) {
-  if (total >= 1000) return `€${(total / 1000).toFixed(1)}k`;
-  return `€${total.toFixed(0)}`;
+/** Compact money formatter — abbreviates large numbers so the hero stays readable. */
+function fmtMoneyCompact(amount: number, currency: string) {
+  const sym =
+    currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : currency === 'USD' ? '$' : '';
+  const abs = Math.abs(amount);
+  let body: string;
+  if (abs >= 1_000_000) {
+    body = `${(amount / 1_000_000).toFixed(amount % 1_000_000 === 0 ? 0 : 1)}M`;
+  } else if (abs >= 10_000) {
+    body = `${(amount / 1_000).toFixed(amount % 1_000 === 0 ? 0 : 1)}k`;
+  } else {
+    body = amount.toFixed(0);
+  }
+  return sym ? `${sym}${body}` : `${body} ${currency}`;
 }
 
-// solo-mode: PARTNER'S + SHARED filters hidden — neither applies without a partner
-export default function Wishlists() {
-  const { C, F } = useTheme();
-  const { user, activeCouple, isSolo } = useSession();
+export default function WishlistsScreen() {
+  const { C } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { user, partner, mode, members } = useSession();
   const { items, isLoading } = useAllWishlistItems();
   const { remove } = useQuickAddWishItem();
+  const { currencyCode } = usePreferences();
 
-  const buildWishMenu = useCallback(
-    (row: WishRow): ActionMenuPayload => ({
-      title: row.title,
-      subtitle: row.tag ?? undefined,
-      actions: [
-        {
-          key: 'edit',
-          label: 'Edit',
-          icon: 'edit',
-          onPress: () => router.push(`/sheets/new-wish?id=${row.id}` as any),
-        },
-        {
-          key: 'delete',
-          label: 'Delete',
-          icon: 'trash',
-          destructive: true,
-          onPress: () => {
-            confirmDestructive(
-              'Delete wish?',
-              `"${row.title}" will be removed.`,
-              () => remove(row.id),
-            );
-          },
-        },
-      ],
-    }),
-    [remove],
-  );
+  const [filter, setFilter] = useState<FilterKey>('all');
 
   const userId = user?.id ?? '';
-  const partnerId = activeCouple?.partner?.id ?? '';
-  const partnerName = activeCouple?.partner?.displayName ?? 'Partner';
+  const partnerId = partner?.id ?? '';
+  const partnerName = partner?.displayName ?? null;
+
+  const eyebrowLabel =
+    mode === 'solo'
+      ? 'ME'
+      : mode === 'crew'
+      ? 'CREW'
+      : 'US';
+
+  const authorMeta = (id: string): { name: string; color: string } => {
+    if (id === userId)
+      return {
+        name: (user?.displayName ?? 'You').split(' ')[0],
+        color: C.accent,
+      };
+    if (id === partnerId)
+      return {
+        name: (partnerName ?? 'Partner').split(' ')[0],
+        color: C.accent2,
+      };
+    const m = members.find((mm) => mm.id === id);
+    return {
+      name: m?.displayName?.split(' ')[0] ?? 'Member',
+      color: C.accent3,
+    };
+  };
 
   const rows = useMemo<WishRow[]>(() => {
     return items.map((raw: any): WishRow => {
       const addedBy = String(raw.addedBy ?? '');
       const who: WhoKind =
-        addedBy && addedBy === userId
-          ? 'me'
-          : addedBy && addedBy === partnerId
-            ? 'partner'
-            : 'both';
+        addedBy === userId ? 'me' : addedBy === partnerId ? 'partner' : 'shared';
+      const meta = authorMeta(addedBy);
       return {
         id: String(raw.id),
         title: String(raw.title ?? ''),
-        price: raw.price != null ? Number(raw.price) : null,
+        price: raw.price ?? null,
         currency: String(raw.currency ?? 'USD'),
-        tag: raw.tag ? String(raw.tag).toUpperCase() : null,
+        url: raw.url ?? null,
         who,
-        claimed: Boolean(raw.isPurchased),
+        authorName: meta.name,
+        authorColor: meta.color,
+        isPurchased: !!raw.isPurchased,
+        priority: Number(raw.priority ?? 0),
       };
     });
-  }, [items, userId, partnerId]);
-
-  const [filter, setFilter] = useState<FilterKind>('ALL');
-
-  const filtered = useMemo(() => {
-    switch (filter) {
-      case 'PARTNER':
-        return rows.filter((r) => r.who === 'partner');
-      case 'MINE':
-        return rows.filter((r) => r.who === 'me');
-      case 'SHARED':
-        return rows.filter((r) => r.who === 'both');
-      case 'CLAIMED':
-        return rows.filter((r) => r.claimed);
-      default:
-        return rows;
-    }
-  }, [rows, filter]);
+  }, [items, userId, partnerId, partnerName, user?.displayName]);
 
   const stats = useMemo(() => {
-    const itemsCount = rows.length;
-    const claimedCount = rows.filter((r) => r.claimed).length;
-    const worth = rows.reduce((s, r) => s + (r.price ?? 0), 0);
-    return { itemsCount, claimedCount, worth };
+    const total = rows.length;
+    const bought = rows.filter((r) => r.isPurchased).length;
+    const open = total - bought;
+    const totalValue = rows
+      .filter((r) => !r.isPurchased && r.price)
+      .reduce((sum, r) => sum + (r.price ?? 0), 0);
+    return { total, bought, open, totalValue };
   }, [rows]);
 
-  if (isLoading && rows.length === 0) return <IndexSkeleton />;
-  if (rows.length === 0) return <EmptyWishlists />;
+  const visible = useMemo(() => {
+    return rows.filter((r) => {
+      if (filter === 'mine') return r.who === 'me';
+      if (filter === 'theirs') return r.who === 'partner';
+      if (filter === 'open') return !r.isPurchased;
+      if (filter === 'bought') return r.isPurchased;
+      return true;
+    });
+  }, [rows, filter]);
 
-  const filters: { key: FilterKind; label: string }[] = isSolo
-    ? [
-        { key: 'ALL', label: 'ALL' },
-        { key: 'CLAIMED', label: 'CLAIMED' },
-      ]
-    : [
-        { key: 'ALL', label: 'ALL' },
-        { key: 'PARTNER', label: `${partnerName.toUpperCase()}'S` },
-        { key: 'MINE', label: 'MINE' },
-        { key: 'SHARED', label: 'SHARED' },
-        { key: 'CLAIMED', label: 'CLAIMED' },
+  const buckets = useMemo<Bucket<WishRow>[]>(() => {
+    if (mode === 'solo') {
+      const open = visible.filter((r) => !r.isPurchased);
+      const bought = visible.filter((r) => r.isPurchased);
+      return [
+        ...(open.length
+          ? [{ label: 'Wished', dotColor: C.accent, rows: open }]
+          : []),
+        ...(bought.length
+          ? [{ label: 'Bought', dotColor: C.ink3, rows: bought }]
+          : []),
       ];
+    }
+
+    // pair / crew — group by who, then split bought into its own bucket
+    const groups: Record<string, WishRow[]> = {};
+    const open = visible.filter((r) => !r.isPurchased);
+    const bought = visible.filter((r) => r.isPurchased);
+
+    for (const r of open) {
+      const label =
+        r.who === 'me'
+          ? 'From you'
+          : r.who === 'partner'
+          ? `From ${partnerName?.split(' ')[0] ?? 'them'}`
+          : 'Shared';
+      if (!groups[label]) groups[label] = [];
+      groups[label].push(r);
+    }
+    if (bought.length) groups.Bought = bought;
+
+    const order = [
+      'From you',
+      `From ${partnerName?.split(' ')[0] ?? 'them'}`,
+      'Shared',
+      'Bought',
+    ];
+    const dotMap: Record<string, string> = {
+      'From you': C.accent,
+      [`From ${partnerName?.split(' ')[0] ?? 'them'}`]: C.accent2,
+      Shared: C.accent3,
+      Bought: C.ink3,
+    };
+    return order
+      .filter((k) => groups[k]?.length)
+      .map((k) => ({
+        label: k,
+        dotColor: dotMap[k],
+        rows: groups[k],
+      }));
+  }, [visible, mode, partnerName, C.accent, C.accent2, C.accent3, C.ink3]);
+
+  const filterOptions: { key: FilterKey; label: string }[] =
+    mode === 'solo'
+      ? [
+          { key: 'all', label: 'All' },
+          { key: 'open', label: 'Wished' },
+          { key: 'bought', label: 'Bought' },
+        ]
+      : [
+          { key: 'all', label: 'All' },
+          { key: 'mine', label: 'Mine' },
+          { key: 'theirs', label: 'Theirs' },
+          { key: 'open', label: 'Open' },
+          { key: 'bought', label: 'Bought' },
+        ];
+
+  const priorityLevel = (p: number): 'none' | 'low' | 'med' | 'high' =>
+    p >= 3 ? 'high' : p === 2 ? 'med' : p === 1 ? 'low' : 'none';
 
   return (
-    <Screen>
-      <Animated.View
-        entering={FadeInDown.duration(420)}
-        style={{ backgroundColor: C.lavender, borderRadius: 24, padding: 22, marginBottom: 18 }}
-      >
-        <Text
-          style={{
-            fontSize: 10,
-            color: C.lavenderInk,
-            fontFamily: F.bodyBold,
-            letterSpacing: 1.2,
-            opacity: 0.55,
-            marginBottom: 6,
-          }}
-        >
-          ON YOUR LISTS
-        </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 20 }}>
-          {[
-            { n: String(stats.itemsCount), l: 'ITEMS' },
-            { n: String(stats.claimedCount), l: 'CLAIMED' },
-            { n: fmtWorth(stats.worth), l: 'WORTH' },
-          ].map((s) => (
-            <View key={s.l}>
-              <Text
-                style={{
-                  fontFamily: F.displayBold,
-                  fontSize: 44,
-                  color: C.lavenderInk,
-                  lineHeight: 44,
-                  letterSpacing: -1.5,
-                }}
-              >
-                {s.n}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 9,
-                  color: C.lavenderInk,
-                  opacity: 0.55,
-                  fontFamily: F.bodyBold,
-                  letterSpacing: 1,
-                  marginTop: 4,
-                }}
-              >
-                {s.l}
-              </Text>
-            </View>
-          ))}
-        </View>
-      </Animated.View>
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerTransparent: true,
+          headerShadowVisible: false,
+          headerBackground: () => null,
+          headerTintColor: C.inkColor,
+          title: '',
+          headerTitleAlign: 'center',
+          headerTitle: () => (
+            <HeaderBrand eyebrow={eyebrowLabel} title="wishes" />
+          ),
+          headerLeft: () => (
+            <PressScale
+              onPress={() => router.back()}
+              hitSlop={12}
+              style={{ padding: 4 }}
+            >
+              <Icon name="chevronLeft" size={22} color={C.inkColor} strokeWidth={2.2} />
+            </PressScale>
+          ),
+          headerRight: () => (
+            <PressScale
+              onPress={() => router.push('/sheets/new-wish' as any)}
+              hitSlop={12}
+              style={{ padding: 4 }}
+            >
+              <Icon name="plus" size={22} color={C.inkColor} strokeWidth={2.2} />
+            </PressScale>
+          ),
+        }}
+      />
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-        <View style={{ flexDirection: 'row', gap: 6, paddingHorizontal: 4 }}>
-          {filters.map((f) => {
-            const active = filter === f.key;
-            return (
-              <Pressable
-                key={f.key}
-                onPress={() => setFilter(f.key)}
-                style={{
-                  paddingVertical: 7,
-                  paddingHorizontal: 14,
-                  borderRadius: 999,
-                  backgroundColor: active ? C.goldSoft : C.card,
-                }}
-              >
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingTop: insets.top + 60, paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Hero */}
+        {rows.length > 0 ? (
+        <View style={styles.heroWrap}>
+          <StatBar
+            eyebrow="ON THE LIST"
+            meta={`${stats.open} OPEN · ${stats.bought} BOUGHT`}
+            primary={
+              <>
                 <Text
-                  style={{
-                    color: active ? C.gold : C.mist,
-                    fontSize: 10,
-                    fontFamily: F.bodyBold,
-                    letterSpacing: 1,
-                  }}
+                  style={[Typography.pixelHeroSm, { color: C.inkColor }]}
+                  numberOfLines={1}
                 >
-                  {f.label}
+                  {fmtMoney(stats.totalValue, currencyCode)}
                 </Text>
-              </Pressable>
-            );
-          })}
+                <PressScale
+                  onPress={() => router.push('/sheets/currency' as any)}
+                  hitSlop={6}
+                  style={styles.currencyChip}
+                >
+                  <Text style={[Typography.eyebrowSm, { color: C.ink2, fontSize: 9.5 }]}>
+                    {currencyCode}
+                  </Text>
+                  <Icon
+                    name="chevronDown"
+                    size={11}
+                    color={C.ink2}
+                    strokeWidth={2.2}
+                  />
+                </PressScale>
+                <Text
+                  style={[Typography.caption, { color: C.ink3, marginLeft: 'auto' }]}
+                  numberOfLines={1}
+                >
+                  {stats.total} total
+                </Text>
+              </>
+            }
+          />
+        </View>
+        ) : null}
+
+        {/* Filter pills */}
+        <View style={styles.filterRow}>
+          <SegmentedTabs<FilterKey>
+            value={filter}
+            onChange={setFilter}
+            options={filterOptions.map((f) => ({
+              key: f.key,
+              label:
+                f.key === 'theirs' && partnerName
+                  ? `${partnerName.split(' ')[0]}'s`
+                  : f.label,
+            }))}
+          />
+        </View>
+
+        {/* Bucketed list */}
+        <View style={styles.listWrap}>
+          {buckets.length === 0 ? (
+            <ActionEmptyState
+              icon="gift"
+              title="No wishes yet"
+              body="Drop a hint with a link, price, or just an idea."
+              actionLabel="Add a wish"
+              onAction={() => router.push('/sheets/new-wish' as any)}
+              accent={C.accent3}
+            />
+          ) : (
+            <BucketedList
+              buckets={buckets}
+              rowKey={(w) => w.id}
+              renderRow={(w) => (
+                <SwipeableRow
+                  deleteTitle="Delete wish?"
+                  deleteMessage={`"${w.title}" will be removed.`}
+                  onEdit={() =>
+                    router.push(`/sheets/new-wish?id=${w.id}` as any)
+                  }
+                  onDelete={() => remove(w.id)}
+                >
+                  <View style={[styles.row, { backgroundColor: C.bgCard }]}>
+                    <Checkbox
+                      checked={w.isPurchased}
+                      onChange={() => {
+                        // togglePurchased lives on per-list hook;
+                        // for the all-items view we just route to detail
+                        // — keep checkbox visual only for now.
+                      }}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={[
+                          Typography.bodyMedium,
+                          {
+                            color: w.isPurchased ? C.ink3 : C.inkColor,
+                            textDecorationLine: w.isPurchased
+                              ? 'line-through'
+                              : 'none',
+                          },
+                        ]}
+                        numberOfLines={2}
+                      >
+                        {w.title}
+                      </Text>
+                      <View style={styles.metaRow}>
+                        {w.price ? (
+                          <Text
+                            style={[
+                              Typography.mono,
+                              { color: C.ink3, fontSize: 11 },
+                            ]}
+                          >
+                            {fmtMoney(w.price, w.currency)}
+                          </Text>
+                        ) : null}
+                        <PriorityDot level={priorityLevel(w.priority)} />
+                        <Text
+                          style={[
+                            Typography.eyebrowSm,
+                            { color: w.authorColor, fontSize: 9.5 },
+                          ]}
+                        >
+                          {w.authorName.toUpperCase()}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </SwipeableRow>
+              )}
+            />
+          )}
         </View>
       </ScrollView>
-
-      {filtered.length === 0 ? (
-        <View
-          style={{
-            padding: 20,
-            borderRadius: 18,
-            borderWidth: 1,
-            borderStyle: 'dashed',
-            borderColor: C.line,
-            alignItems: 'center',
-          }}
-        >
-          <Text style={{ fontSize: 12, color: C.fog, fontFamily: F.body }}>No matches</Text>
-        </View>
-      ) : (
-        filtered.map((it, i) => {
-          const whoLabel =
-            it.who === 'both' ? 'SHARED' : it.who === 'me' ? 'MINE' : partnerName.toUpperCase();
-          return (
-            <Animated.View
-              key={it.id}
-              entering={FadeInDown.delay(Math.min(i, 10) * 60 + 80).duration(400)}
-              style={{ marginBottom: 8 }}
-            >
-            <RowActionMenu {...buildWishMenu(it)}>
-            <Pressable
-              testID={`wish-row-${it.id}`}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 14,
-                padding: 14,
-                backgroundColor: C.card,
-                borderRadius: 18,
-                borderWidth: 1,
-                borderColor: C.line,
-                opacity: it.claimed ? 0.5 : 1,
-              }}
-            >
-              <View
-                style={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: 12,
-                  backgroundColor: C.lavenderInk,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Icon name="gift" size={16} color={C.lavender} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{
-                    fontFamily: F.displayBold,
-                    fontSize: 14,
-                    color: C.bone,
-                    letterSpacing: -0.2,
-                    textDecorationLine: it.claimed ? 'line-through' : 'none',
-                  }}
-                >
-                  {it.title}
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 10,
-                    color: C.fog,
-                    fontFamily: F.bodyBold,
-                    marginTop: 3,
-                    letterSpacing: 0.8,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {whoLabel}
-                  {it.tag ? ` · ${it.tag}` : ''}
-                </Text>
-              </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                {it.price != null ? (
-                  <Text style={{ fontFamily: F.displayBold, fontSize: 14, color: C.bone }}>
-                    {fmtMoney(it.price, it.currency)}
-                  </Text>
-                ) : null}
-                {it.claimed && (
-                  <Text
-                    style={{
-                      fontSize: 9,
-                      color: C.mint,
-                      fontFamily: F.bodyBold,
-                      letterSpacing: 1,
-                      marginTop: 2,
-                    }}
-                  >
-                    CLAIMED
-                  </Text>
-                )}
-              </View>
-            </Pressable>
-            </RowActionMenu>
-            </Animated.View>
-          );
-        })
-      )}
-    </Screen>
+    </View>
   );
 }
 
-function EmptyWishlists() {
-  const { C, F } = useTheme();
+function SegmentedBar({ open, bought }: { open: number; bought: number }) {
+  const total = Math.max(1, open + bought);
+  const w = (n: number) => Math.max(4, Math.round((n / total) * 100));
   return (
-    <Screen>
-      <Pressable
-        onPress={() => router.push('/sheets/new-wish' as any)}
+    <View style={styles.bar}>
+      <View
         style={{
-          marginTop: 8,
-          padding: 24,
-          borderRadius: 22,
-          borderWidth: 1,
-          borderStyle: 'dashed',
-          borderColor: C.line,
-          alignItems: 'center',
-          gap: 8,
-        }}
-      >
-        <Icon name="gift" size={22} color={C.fog} />
-        <Text style={{ fontFamily: F.displayBold, fontSize: 16, color: C.mist }}>
-          Start dropping hints
-        </Text>
-        <Text
-          style={{
-            fontSize: 12,
-            color: C.fog,
-            fontFamily: F.body,
-            textAlign: 'center',
-          }}
-        >
-          Add something you've been eyeing — cozy or extravagant.
-        </Text>
-      </Pressable>
-    </Screen>
-  );
-}
-
-function IndexSkeleton() {
-  const { C } = useTheme();
-  return (
-    <Screen>
-      <Animated.View
-        entering={FadeIn.duration(300)}
-        style={{
-          height: 148,
-          borderRadius: 24,
-          backgroundColor: C.lavender,
-          opacity: 0.35,
-          marginBottom: 22,
+          flex: w(open),
+          backgroundColor: '#2A241B',
+          borderRadius: 3,
+          height: 6,
         }}
       />
-      <Animated.View
-        entering={FadeIn.delay(60).duration(300)}
+      <View
         style={{
-          height: 30,
-          borderRadius: 999,
-          backgroundColor: C.card,
-          opacity: 0.55,
-          marginBottom: 12,
+          flex: w(bought),
+          backgroundColor: 'rgba(0,0,0,0.18)',
+          borderRadius: 3,
+          height: 6,
         }}
       />
-      {[0, 1, 2, 3].map((i) => (
-        <Animated.View
-          key={i}
-          entering={FadeIn.delay(120 + i * 60).duration(300)}
-          style={{
-            height: 64,
-            borderRadius: 18,
-            backgroundColor: C.card,
-            borderWidth: 1,
-            borderColor: C.line,
-            opacity: 0.55,
-            marginBottom: 8,
-          }}
-        />
-      ))}
-    </Screen>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  heroWrap: {
+    paddingHorizontal: 18,
+    paddingTop: 8,
+    paddingBottom: 6,
+  },
+  currencyChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0,0,0,0.08)',
+  },
+  bar: {
+    flexDirection: 'row',
+    gap: 4,
+    marginTop: 16,
+  },
+  barLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  filterRow: {
+    paddingHorizontal: 18,
+    paddingTop: 4,
+    paddingBottom: 14,
+    gap: 6,
+  },
+  listWrap: {
+    paddingHorizontal: 18,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 4,
+    flexWrap: 'wrap',
+  },
+  empty: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyAdd: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 999,
+    marginTop: 14,
+  },
+});

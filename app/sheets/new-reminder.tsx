@@ -2,11 +2,12 @@ import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, View } from 'react-native';
-import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
+import { PrimaryButton } from '@/src/components/ui/atoms';
 import { IconName } from '@/src/components/ui/Icon';
 import {
   SheetDateField,
   SheetIconGrid,
+  SheetLabel,
   SheetRow,
   SheetSection,
   SheetSegment,
@@ -174,7 +175,7 @@ export default function NewReminder() {
       </SheetSection>
 
       <View style={{ marginTop: 22 }}>
-        <Overline style={{ marginBottom: 10 }}>Assign to</Overline>
+        <SheetLabel style={{ marginBottom: 10 }}>Assign to</SheetLabel>
         <SheetSegment
           options={assigneeOptions}
           selected={assignee}

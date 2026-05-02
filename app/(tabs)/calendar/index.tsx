@@ -1,524 +1,360 @@
-import * as Haptics from 'expo-haptics';
-import React, { memo } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
-import { Icon } from '@/src/components/ui/Icon';
-import { Screen } from '@/src/components/ui/Screen';
-import { useCalendar } from '@/src/lib/calendar/context';
-import type { HeroStats, TomorrowCard, WeekDay } from '@/src/lib/calendar/builders';
+import { router } from 'expo-router';
+import { useMemo } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
+  ActionEmptyState,
+  Bucket,
+  BucketedList,
+  ScopeChip,
+} from '@/src/components/ui/pacto';
+import { Icon, IconName } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
+import { useCalendar } from '@/src/lib/calendar/context';
+import {
+  addDaysIso,
   formatAgendaDayHeader,
   formatAgendaTime,
+  type WeekDay,
 } from '@/src/lib/calendar/builders';
 import type { TimelineItem } from '@/src/lib/home/types';
+import { useSession } from '@/src/hooks/useSession';
+import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-const DAY_LABELS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+type Slot = 'allday' | 'morning' | 'afternoon' | 'evening';
 
-export default function Calendar() {
-  const { C, F } = useTheme();
+export default function CalendarScreen() {
+  const insets = useSafeAreaInsets();
+  const { C } = useTheme();
+  const { mode, partner } = useSession();
   const cal = useCalendar();
-  const { week, agenda, heroStats, tomorrow, selectedDate, isLoading, selectDate } = cal;
+  const { week, agenda, monthLabel, selectedDate, selectDate } = cal;
 
-  if (isLoading && agenda.length === 0 && week.every((d) => !d.hasEvent)) {
-    return <CalendarSkeleton />;
-  }
+  const partnerName = partner?.displayName ?? null;
 
-  return (
-    <Screen>
-      <HeroCard stats={heroStats} />
+  const heroCaption = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    if (selectedDate === today) return 'Today';
+    return formatAgendaDayHeader(selectedDate);
+  }, [selectedDate]);
 
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          paddingHorizontal: 4,
-          marginBottom: 8,
-        }}
-      >
-        {DAY_LABELS.map((d) => (
-          <Text
-            key={d}
-            style={{
-              fontSize: 10,
-              color: C.fog,
-              fontFamily: F.bodyBold,
-              letterSpacing: 1.2,
-              width: 40,
-              textAlign: 'center',
-            }}
-          >
-            {d}
-          </Text>
-        ))}
-      </View>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 22 }}>
-        {week.map((day) => (
-          <DayPill
-            key={day.date}
-            day={day}
-            onPress={() => {
-              Haptics.selectionAsync().catch(() => undefined);
-              selectDate(day.date);
-            }}
-          />
-        ))}
-      </View>
-
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 12,
-          paddingHorizontal: 4,
-        }}
-      >
-        <Text
-          testID="calendar-day-header"
-          style={{ fontSize: 11, color: C.fog, fontFamily: F.bodyBold, letterSpacing: 1.4 }}
-        >
-          {formatAgendaDayHeader(selectedDate)}
-        </Text>
-        <Text style={{ fontSize: 11, color: C.gold, fontFamily: F.bodyBold }}>
-          {agenda.length} {agenda.length === 1 ? 'event' : 'events'}
-        </Text>
-      </View>
-
-      {agenda.length === 0 ? (
-        <EmptyAgenda />
-      ) : (
-        agenda.map((item) => <AgendaRow key={item.id} item={item} />)
-      )}
-
-      {tomorrow && (
-        <>
-          <Text
-            style={{
-              fontSize: 11,
-              color: C.fog,
-              fontFamily: F.bodyBold,
-              letterSpacing: 1.4,
-              paddingHorizontal: 4,
-              marginTop: 18,
-              marginBottom: 10,
-            }}
-          >
-            TOMORROW
-          </Text>
-          <TomorrowRow card={tomorrow} />
-        </>
-      )}
-    </Screen>
-  );
-}
-
-function HeroCard({ stats }: { stats: HeroStats }) {
-  const { C, F } = useTheme();
-  const { total, shared, upcoming, nextInHours } = stats;
-
-  const subtitle =
-    total === 0
-      ? 'nothing booked · add via +'
-      : `${shared} shared · ${upcoming} upcoming${
-          nextInHours !== null ? ` · next in ${nextInHours}h` : ''
-        }`;
+  const buckets = useMemo<Bucket<TimelineItem>[]>(() => {
+    const groups: Record<Slot, TimelineItem[]> = {
+      allday: [],
+      morning: [],
+      afternoon: [],
+      evening: [],
+    };
+    for (const item of agenda) {
+      const slot = bucketOfTimelineItem(item);
+      groups[slot].push(item);
+    }
+    const dotMap: Record<Slot, string> = {
+      allday: C.accent2,
+      morning: C.accent3,
+      afternoon: C.ink2,
+      evening: C.accent,
+    };
+    const labelMap: Record<Slot, string> = {
+      allday: 'All day',
+      morning: 'Morning',
+      afternoon: 'Afternoon',
+      evening: 'Evening',
+    };
+    return (Object.keys(groups) as Slot[])
+      .filter((k) => groups[k].length > 0)
+      .map((k) => ({
+        label: labelMap[k],
+        dotColor: dotMap[k],
+        rows: groups[k].slice().sort(byOccursAt),
+      }));
+  }, [agenda, C.accent, C.accent2, C.accent3, C.ink2]);
 
   return (
-    <View
-      testID="calendar-hero"
-      style={{ backgroundColor: C.butter, borderRadius: 26, padding: 22, marginBottom: 22 }}
-    >
-      <Text
-        style={{
-          fontSize: 10,
-          color: C.butterInk,
-          fontFamily: F.bodyBold,
-          letterSpacing: 1.4,
-          opacity: 0.6,
-          marginBottom: 8,
-        }}
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingTop: insets.top + 60, paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
       >
-        THIS MONTH
-      </Text>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 10, marginBottom: 10 }}>
-        <Text
-          testID="calendar-hero-count"
-          style={{
-            fontFamily: F.displayBold,
-            fontSize: 60,
-            color: C.butterInk,
-            lineHeight: 56,
-            letterSpacing: -2,
-          }}
-        >
-          {total}
-        </Text>
-        <Text
-          style={{
-            fontFamily: F.displayBold,
-            fontSize: 22,
-            color: C.butterInk,
-            lineHeight: 22,
-            marginBottom: 6,
-          }}
-        >
-          {total === 1 ? 'event' : 'events'}
-        </Text>
-      </View>
-      <Text
-        style={{
-          fontSize: 11,
-          color: C.butterInk,
-          fontFamily: F.bodyBold,
-          opacity: 0.75,
-        }}
-      >
-        {subtitle}
-      </Text>
+        {/* Lean week strip */}
+        <View style={styles.weekWrap}>
+          <View style={styles.weekHeader}>
+            <View style={styles.weekNav}>
+              <PressScale
+                hitSlop={10}
+                onPress={() => selectDate(addDaysIso(selectedDate, -7))}
+                style={styles.weekNavBtn}
+              >
+                <Icon name="chevronLeft" size={16} color={C.ink2} strokeWidth={2.2} />
+              </PressScale>
+              <Text style={[Typography.captionMedium, { color: C.ink2 }]}>
+                {monthLabel}
+              </Text>
+              <PressScale
+                hitSlop={10}
+                onPress={() => selectDate(addDaysIso(selectedDate, 7))}
+                style={styles.weekNavBtn}
+              >
+                <Icon name="chevronRight" size={16} color={C.ink2} strokeWidth={2.2} />
+              </PressScale>
+            </View>
+            <PressScale
+              hitSlop={10}
+              onPress={() => selectDate(new Date().toISOString().slice(0, 10))}
+              style={[styles.todayBtn, { backgroundColor: C.bgSoft, borderColor: C.lineColor }]}
+            >
+              <Text style={[Typography.captionMedium, { color: C.ink2 }]}>Today</Text>
+            </PressScale>
+          </View>
+          <View style={styles.weekStrip}>
+            {week.map((d, i) => (
+              <DayCell
+                key={d.date}
+                day={d}
+                label={DAY_LABELS[i]}
+                onPress={() => selectDate(d.date)}
+              />
+            ))}
+          </View>
+        </View>
+
+        {/* Day agenda — bucketed */}
+        <View style={styles.agendaWrap}>
+          {buckets.length === 0 ? (
+            <ActionEmptyState
+              icon="calendar"
+              title={heroCaption}
+              body="Nothing on the books for this day."
+              actionLabel="Add reminder"
+              onAction={() => router.push('/sheets/new-reminder' as any)}
+              accent={C.accent2}
+            />
+          ) : (
+            <BucketedList
+              buckets={buckets}
+              rowKey={(item) => item.id}
+              renderRow={(item) => (
+                <View style={[styles.row, styles.rowPadding, { backgroundColor: C.bgCard }]}>
+                  <View
+                    style={[
+                      styles.iconTile,
+                      { backgroundColor: C.bgSoft, borderColor: C.lineColor },
+                    ]}
+                  >
+                    <Icon
+                      name={iconForType(item.type)}
+                      size={16}
+                      color={C.ink2}
+                      strokeWidth={2}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[Typography.bodyMedium, { color: C.inkColor }]}
+                      numberOfLines={2}
+                    >
+                      {item.title}
+                    </Text>
+                    <View style={styles.metaRow}>
+                      <Text style={[Typography.mono, { color: C.ink3, fontSize: 11 }]}>
+                        {item.occursAt
+                          ? formatAgendaTime(item.occursAt)
+                          : 'all day'}
+                      </Text>
+                      <ScopeChip
+                        scope={
+                          item.isPrivate
+                            ? 'mine'
+                            : (item as any).assignedToPartner
+                            ? 'partner'
+                            : 'shared'
+                        }
+                        mode={mode}
+                        partnerName={partnerName}
+                      />
+                    </View>
+                  </View>
+                </View>
+              )}
+            />
+          )}
+        </View>
+      </ScrollView>
     </View>
   );
 }
 
-const DayPill = memo(function DayPill({
+function DayCell({
   day,
+  label,
   onPress,
 }: {
   day: WeekDay;
+  label: string;
   onPress: () => void;
 }) {
-  const { C, F } = useTheme();
-  const scale = useSharedValue(1);
-  const fill = useSharedValue(day.isSelected ? 1 : 0);
+  const { C } = useTheme();
+  const selected = day.isSelected;
+  const today = day.isToday;
 
-  React.useEffect(() => {
-    fill.value = withTiming(day.isSelected ? 1 : 0, {
-      duration: 180,
-      easing: Easing.out(Easing.cubic),
-    });
-  }, [day.isSelected, fill]);
+  const numColor = selected
+    ? C.bg
+    : today
+    ? C.accent
+    : C.inkColor;
 
-  const fillStyle = useAnimatedStyle(() => ({ opacity: fill.value }));
-  const dotStyle = useAnimatedStyle(() => ({ opacity: 1 - fill.value }));
-  const scaleStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const labelColor = selected ? C.bg : C.ink3;
+  const dotColor = selected ? C.bg : C.accent;
 
   return (
-    <AnimatedPressable
-      testID={`calendar-day-${day.date}`}
-      accessibilityRole="button"
-      accessibilityState={{ selected: day.isSelected }}
+    <PressScale
       onPress={onPress}
-      onPressIn={() => {
-        scale.value = withSpring(1.04, { damping: 18, stiffness: 260 });
-      }}
-      onPressOut={() => {
-        scale.value = withSpring(1, { damping: 18, stiffness: 260 });
-      }}
       style={[
-        scaleStyle,
-        {
-          width: 40,
-          height: 54,
-          borderRadius: 14,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
+        styles.dayCell,
+        selected ? { backgroundColor: C.inkColor } : null,
       ]}
     >
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          fillStyle,
-          {
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            bottom: 0,
-            left: 0,
-            borderRadius: 14,
-            backgroundColor: C.gold,
-          },
-        ]}
-      />
+      <Text style={[Typography.eyebrowSm, { color: labelColor, fontSize: 9.5 }]}>
+        {label}
+      </Text>
       <Text
         style={{
-          fontFamily: F.displayBold,
-          fontSize: 18,
-          color: day.isSelected ? C.peachInk : C.bone,
+          fontFamily: Typography.geistSemiBoldFont,
+          fontSize: 16,
+          color: numColor,
+          marginTop: 4,
+          fontWeight: today || selected ? '600' : '400',
         }}
       >
         {day.dayNum}
       </Text>
-      {day.hasEvent && (
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            dotStyle,
-            {
-              position: 'absolute',
-              bottom: 8,
+      <View style={styles.dayDotRow}>
+        {day.hasEvent ? (
+          <View
+            style={{
               width: 4,
               height: 4,
-              borderRadius: 2,
-              backgroundColor: C.gold,
-            },
-          ]}
-        />
-      )}
-    </AnimatedPressable>
-  );
-});
-
-type PastelKey = 'peach' | 'sky' | 'lavender' | 'mint' | 'rose' | 'butter';
-
-const AGENDA_COLORS: Record<TimelineItem['type'], { bg: PastelKey; ink: string }> = {
-  event: { bg: 'peach', ink: '#1A0F0A' },
-  plan: { bg: 'sky', ink: '#0E2230' },
-  reminder: { bg: 'lavender', ink: '#1F1635' },
-  task: { bg: 'mint', ink: '#0F2C1A' },
-  ritual: { bg: 'rose', ink: '#3A1520' },
-  memory: { bg: 'butter', ink: '#3A2E08' },
-};
-
-const AgendaRow = memo(function AgendaRow({ item }: { item: TimelineItem }) {
-  const { C, F } = useTheme();
-  const palette = AGENDA_COLORS[item.type];
-  const bgColor = C[palette.bg];
-  const time = item.occursAt !== null ? formatAgendaTime(item.occursAt) : 'All day';
-  const who = item.isPrivate ? 'MINE' : 'BOTH';
-  const cat = item.type;
-
-  return (
-    <View
-      testID={`calendar-agenda-${item.id}`}
-      style={{ flexDirection: 'row', gap: 14, marginBottom: 14 }}
-    >
-      <View style={{ width: 56, paddingTop: 14 }}>
-        <Text
-          style={{
-            fontFamily: F.displayBold,
-            fontSize: time === 'All day' ? 12 : 18,
-            color: C.bone,
-            letterSpacing: -0.3,
-          }}
-        >
-          {time}
-        </Text>
-        <Text
-          style={{
-            fontSize: 9,
-            color: C.fog,
-            fontFamily: F.bodyBold,
-            letterSpacing: 1,
-            marginTop: 2,
-          }}
-        >
-          {who}
-        </Text>
-      </View>
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: bgColor,
-          borderRadius: 20,
-          padding: 16,
-          overflow: 'hidden',
-        }}
-      >
-        <Text
-          style={{
-            position: 'absolute',
-            top: 12,
-            right: 14,
-            fontSize: 9,
-            fontFamily: F.bodyBold,
-            letterSpacing: 1,
-            color: '#000',
-            opacity: 0.45,
-            textTransform: 'uppercase',
-          }}
-        >
-          {cat}
-        </Text>
-        <Text
-          style={{
-            fontFamily: F.displayBold,
-            fontSize: 18,
-            color: palette.ink,
-            letterSpacing: -0.3,
-            marginBottom: item.subtitle ? 3 : 0,
-            lineHeight: 21,
-            paddingRight: 40,
-          }}
-        >
-          {item.title}
-        </Text>
-        {!!item.subtitle && (
-          <Text style={{ fontSize: 11, color: palette.ink, opacity: 0.6, fontFamily: F.body }}>
-            {item.subtitle}
-          </Text>
-        )}
-      </View>
-    </View>
-  );
-});
-
-function TomorrowRow({ card }: { card: NonNullable<TomorrowCard> }) {
-  const { C, F } = useTheme();
-  const accentColor = C[card.accent];
-  const accentInk = C[`${card.accent}Ink` as 'mintInk' | 'peachInk' | 'butterInk'];
-  return (
-    <View
-      testID={`calendar-tomorrow-${card.id}`}
-      style={{
-        backgroundColor: C.card,
-        borderRadius: 20,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: C.line,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-      }}
-    >
-      <View
-        style={{
-          width: 36,
-          height: 36,
-          borderRadius: 10,
-          backgroundColor: accentInk,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Icon name={card.kind === 'milestone' ? 'heart' : 'calendar'} size={16} color={accentColor} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text
-          style={{
-            fontFamily: F.displayBold,
-            fontSize: 15,
-            color: C.bone,
-            letterSpacing: -0.2,
-          }}
-        >
-          {card.title}
-        </Text>
-        <Text style={{ fontSize: 11, color: C.fog, fontFamily: F.body }}>{card.subtitle}</Text>
-      </View>
-      <Text
-        style={{
-          fontSize: 10,
-          color: accentColor,
-          fontFamily: F.bodyBold,
-          letterSpacing: 1,
-        }}
-      >
-        {card.kind === 'milestone' ? 'MILESTONE' : 'EVENT'}
-      </Text>
-    </View>
-  );
-}
-
-function EmptyAgenda() {
-  const { C, F } = useTheme();
-  return (
-    <View
-      testID="calendar-agenda-empty"
-      style={{
-        backgroundColor: C.card,
-        borderRadius: 20,
-        padding: 22,
-        borderWidth: 1,
-        borderColor: C.line,
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 4,
-      }}
-    >
-      <Icon name="calendar" size={22} color={C.fog} />
-      <Text
-        style={{
-          fontFamily: F.displayBold,
-          fontSize: 15,
-          color: C.mist,
-          letterSpacing: -0.2,
-        }}
-      >
-        No events this day
-      </Text>
-      <Text
-        style={{
-          fontSize: 11,
-          color: C.fog,
-          fontFamily: F.body,
-          letterSpacing: 0.2,
-          opacity: 0.85,
-        }}
-      >
-        Tap + to add a reminder
-      </Text>
-    </View>
-  );
-}
-
-function CalendarSkeleton() {
-  const { C } = useTheme();
-  const pulse = useSharedValue(0.6);
-  React.useEffect(() => {
-    pulse.value = withTiming(1, { duration: 900, easing: Easing.inOut(Easing.ease) });
-  }, [pulse]);
-  const pulseStyle = useAnimatedStyle(() => ({ opacity: pulse.value }));
-
-  return (
-    <Screen>
-      <Animated.View
-        testID="calendar-hero-skeleton"
-        style={[
-          pulseStyle,
-          {
-            backgroundColor: C.butter,
-            borderRadius: 26,
-            height: 152,
-            marginBottom: 22,
-            opacity: 0.6,
-          },
-        ]}
-      />
-      <Animated.View style={[pulseStyle, { flexDirection: 'row', gap: 6, marginBottom: 22 }]}>
-        {Array.from({ length: 7 }).map((_, i) => (
-          <View
-            key={i}
-            testID="calendar-day-skeleton"
-            style={{ flex: 1, height: 54, borderRadius: 14, backgroundColor: C.cardHi }}
+              borderRadius: 999,
+              backgroundColor: dotColor,
+              opacity: selected ? 0.85 : 1,
+            }}
           />
-        ))}
-      </Animated.View>
-      {Array.from({ length: 3 }).map((_, i) => (
-        <Animated.View
-          key={i}
-          testID="calendar-agenda-skeleton"
-          style={[
-            pulseStyle,
-            {
-              flexDirection: 'row',
-              gap: 14,
-              marginBottom: 14,
-            },
-          ]}
-        >
-          <View style={{ width: 56, height: 48 }} />
-          <View style={{ flex: 1, height: 76, borderRadius: 20, backgroundColor: C.cardHi }} />
-        </Animated.View>
-      ))}
-    </Screen>
+        ) : null}
+      </View>
+    </PressScale>
   );
 }
+
+function bucketOfTimelineItem(item: TimelineItem): Slot {
+  if (!item.occursAt) return 'allday';
+  const h = new Date(item.occursAt).getHours();
+  if (h < 12) return 'morning';
+  if (h < 17) return 'afternoon';
+  return 'evening';
+}
+
+function byOccursAt(a: TimelineItem, b: TimelineItem) {
+  return (a.occursAt ?? 0) - (b.occursAt ?? 0);
+}
+
+function iconForType(type: TimelineItem['type']): IconName {
+  switch (type) {
+    case 'task':
+      return 'checkSquare';
+    case 'reminder':
+      return 'bell';
+    case 'plan':
+    case 'event':
+      return 'calendar';
+    case 'ritual':
+      return 'repeat';
+    case 'memory':
+      return 'bookmark';
+    default:
+      return 'clock';
+  }
+}
+
+const styles = StyleSheet.create({
+  weekWrap: {
+    paddingHorizontal: 18,
+    paddingBottom: 14,
+  },
+  weekHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    paddingBottom: 10,
+  },
+  weekNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  weekNavBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  todayBtn: {
+    minHeight: 32,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  weekStrip: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  dayCell: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  dayDotRow: {
+    height: 6,
+    marginTop: 4,
+    flexDirection: 'row',
+    gap: 2,
+  },
+  agendaWrap: {
+    paddingHorizontal: 18,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  rowPadding: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  iconTile: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  empty: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+});

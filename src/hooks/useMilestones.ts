@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { format } from 'date-fns';
 import { db, id } from '@/src/lib/instant';
+import { notifySpaceMutation } from '@/src/lib/push';
 import { useSession } from './useSession';
 
 type MilestoneInput = {
@@ -14,7 +15,7 @@ type MilestoneInput = {
 };
 
 export function useMilestones() {
-  const { activeCouple, user } = useSession();
+  const { activeCouple, user, space } = useSession();
   const coupleId = activeCouple?.couple?.id ?? null;
 
   const { data, isLoading: queryLoading } = db.useQuery(
@@ -59,8 +60,16 @@ export function useMilestones() {
           })
           .link({ couple: coupleId, createdBy: user.id }),
       );
+      await notifySpaceMutation({
+        spaceId: coupleId,
+        spaceKind: space?.kind ?? null,
+        excludeUserId: user.id,
+        title: user.displayName ?? 'Someone',
+        body: `added a milestone: ${input.title}`,
+        route: '/(tabs)/us/milestones',
+      });
     },
-    [coupleId, user],
+    [coupleId, user, space?.kind],
   );
 
   const update = useCallback(

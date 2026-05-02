@@ -6,6 +6,31 @@ import {
   SpaceGrotesk_500Medium,
   SpaceGrotesk_700Bold,
 } from '@expo-google-fonts/space-grotesk';
+import {
+  Geist_300Light,
+  Geist_400Regular,
+  Geist_500Medium,
+  Geist_600SemiBold,
+  Geist_700Bold,
+} from '@expo-google-fonts/geist';
+import {
+  GeistMono_400Regular,
+  GeistMono_500Medium,
+} from '@expo-google-fonts/geist-mono';
+import {
+  PixelifySans_400Regular,
+  PixelifySans_500Medium,
+  PixelifySans_700Bold,
+} from '@expo-google-fonts/pixelify-sans';
+import {
+  Silkscreen_400Regular,
+  Silkscreen_700Bold,
+} from '@expo-google-fonts/silkscreen';
+import {
+  BitcountPropSingle_400Regular,
+  BitcountPropSingle_500Medium,
+  BitcountPropSingle_700Bold,
+} from '@expo-google-fonts/bitcount-prop-single';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -18,7 +43,10 @@ import * as WebBrowser from 'expo-web-browser';
 import { ThemeProvider, useTheme } from '@/src/lib/theme';
 import { SessionProvider } from '@/src/lib/session';
 import { SessionGate } from '@/src/lib/session-gate';
+import { PushBootstrap } from '@/src/lib/push-bootstrap';
 import { ErrorBoundary } from '@/src/lib/error-boundary';
+import { AssistantOverlayProvider } from '@/src/lib/assistant-overlay';
+import { SessionAiAssistantProvider } from '@/src/lib/ai/sessionProvider';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -30,15 +58,33 @@ export default function RootLayout() {
     BricolageGrotesque_800ExtraBold,
     SpaceGrotesk_500Medium,
     SpaceGrotesk_700Bold,
+    Geist_300Light,
+    Geist_400Regular,
+    Geist_500Medium,
+    Geist_600SemiBold,
+    Geist_700Bold,
+    GeistMono_400Regular,
+    GeistMono_500Medium,
+    PixelifySans_400Regular,
+    PixelifySans_500Medium,
+    PixelifySans_700Bold,
+    Silkscreen_400Regular,
+    Silkscreen_700Bold,
+    BitcountPropSingle_400Regular,
+    BitcountPropSingle_500Medium,
+    BitcountPropSingle_700Bold,
   });
 
-  // Hide splash on mount regardless of font state. Fonts will pop in when ready.
+  // Hold the native splash until fonts have loaded — otherwise the splash
+  // hides almost immediately and the brand mark flashes by. With a minimum
+  // visible window the user actually sees pacto branding on cold start.
   useEffect(() => {
+    if (!loaded) return;
     const t = setTimeout(() => {
       SplashScreen.hideAsync().catch(() => undefined);
-    }, 100);
+    }, 350);
     return () => clearTimeout(t);
-  }, []);
+  }, [loaded]);
 
   return (
     <ErrorBoundary>
@@ -47,9 +93,14 @@ export default function RootLayout() {
           <ThemeProvider>
             <BottomSheetModalProvider>
               <SessionProvider>
-                <SessionGate>
-                  <ThemedRoot />
-                </SessionGate>
+                <SessionAiAssistantProvider>
+                  <AssistantOverlayProvider>
+                    <PushBootstrap />
+                    <SessionGate>
+                      <ThemedRoot />
+                    </SessionGate>
+                  </AssistantOverlayProvider>
+                </SessionAiAssistantProvider>
               </SessionProvider>
             </BottomSheetModalProvider>
           </ThemeProvider>
@@ -79,11 +130,11 @@ function ThemedRoot() {
             headerTransparent: true,
             headerShadowVisible: false,
             headerBackground: () => null,
-            headerTintColor: C.bone,
+            headerTintColor: C.inkColor,
             headerBackTitle: '',
-            title: 'Notifications',
+            title: '',
             headerTitleAlign: 'center',
-            contentStyle: { backgroundColor: C.ink },
+            contentStyle: { backgroundColor: C.bg },
           }}
         />
         <Stack.Screen
@@ -131,6 +182,8 @@ function ThemedRoot() {
           'sheets/rings-history',
           'sheets/new-timetable',
           'sheets/new-timetable-item',
+          'sheets/currency',
+          'sheets/journal-entry',
         ].map((name) => (
           <Stack.Screen
             key={name}

@@ -1,74 +1,106 @@
 import { router, Stack } from 'expo-router';
-import { Pressable } from 'react-native';
-import { Avatar } from '@/src/components/ui/atoms';
-import { HeaderBrand } from '@/src/components/ui/HeaderBrand';
+import { Avatar, AvatarPair, CrewStack, HeaderBrand } from '@/src/components/ui/pacto';
+import { Icon } from '@/src/components/ui/Icon';
 import { HeaderLeft } from '@/src/components/ui/HeaderLeft';
 import { NavAddBtn } from '@/src/components/ui/NavAddBtn';
+import { PressScale } from '@/src/components/ui/PressScale';
 import { useTheme } from '@/src/lib/theme';
-import { pastels } from '@/src/lib/tokens';
 import { useSession } from '@/src/lib/session';
 
 export default function UsLayout() {
   const { C } = useTheme();
-  const { isSolo } = useSession();
-  const spaceLabel = isSolo ? 'ME' : 'US';
-  const base = {
+  const { user, partner, mode } = useSession();
+  const isSolo = mode === 'solo';
+  const spaceLabel = isSolo ? 'ME' : mode === 'crew' ? 'CREW' : 'US';
+  const myFirstName = (user?.displayName ?? user?.email?.split('@')[0] ?? 'You')
+    .split(' ')[0]
+    .toUpperCase();
+  const partnerFirstName = (partner?.displayName ?? '').split(' ')[0]?.charAt(0).toUpperCase();
+  const eyebrow = spaceLabel;
+
+  // Shared header style for module sub-screens (legacy primitives, retained per
+  // Phase 7 plan — module rebuilds happen later).
+  const baseModule = {
     headerShown: true,
     headerShadowVisible: false,
     headerTransparent: true,
     headerBackground: () => null,
     headerStyle: { backgroundColor: 'transparent' },
-    headerTintColor: C.bone,
+    headerTintColor: C.inkColor,
     headerBackTitle: '',
     headerTitleAlign: 'center' as const,
     headerLeft: () => <HeaderLeft mode="back" />,
     title: '',
   };
+
   return (
     <Stack
       screenOptions={{
         headerShown: false,
-        headerStyle: { backgroundColor: C.ink },
-        headerTintColor: C.bone,
-        contentStyle: { backgroundColor: C.ink },
+        contentStyle: { backgroundColor: C.bg },
       }}
     >
       <Stack.Screen
         name="index"
         options={{
-          ...base,
-          headerTitle: () => (
-            <HeaderBrand
-              eyebrow={isSolo ? 'Day 1' : 'Day 847 together'}
-              title={spaceLabel}
-            />
+          headerShown: true,
+          headerTransparent: true,
+          headerShadowVisible: false,
+          headerBackground: () => null,
+          headerTintColor: C.inkColor,
+          title: '',
+          headerTitleAlign: 'center',
+          headerTitle: () => <HeaderBrand eyebrow={eyebrow} title={spaceLabel.toLowerCase()} />,
+          headerLeft: () => (
+            <PressScale
+              onPress={() => router.push('/notifications' as any)}
+              hitSlop={12}
+              style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Icon name="bell" size={22} color={C.inkColor} strokeWidth={2.2} />
+            </PressScale>
           ),
           headerRight: () => (
-            <Pressable
+            <PressScale
               onPress={() => router.push('/sheets/profile' as any)}
-              style={{ flexDirection: 'row' }}
+              style={{ minWidth: 40, height: 40, borderRadius: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
             >
-              <Avatar letter="M" size={30} bg={C.peach} color={C.peachInk} />
-              {!isSolo && (
+              {isSolo ? (
                 <Avatar
-                  letter="S"
+                  person={{
+                    initial: myFirstName.charAt(0),
+                    color: C.accent,
+                    avatarUrl: user?.avatarUrl,
+                  }}
                   size={30}
-                  bg={C.lavender}
-                  color={C.lavenderInk}
-                  border={C.ink}
-                  style={{ marginLeft: -10 }}
+                />
+              ) : mode === 'crew' ? (
+                <CrewStack size={26} />
+              ) : (
+                <AvatarPair
+                  a={{
+                    initial: myFirstName.charAt(0),
+                    color: C.accent,
+                    avatarUrl: user?.avatarUrl,
+                  }}
+                  b={{
+                    initial: partnerFirstName ?? 'P',
+                    color: C.accent2,
+                    avatarUrl: partner?.avatarUrl,
+                  }}
+                  size={28}
                 />
               )}
-            </Pressable>
+            </PressScale>
           ),
         }}
       />
       <Stack.Screen
         name="notes"
         options={{
-          ...base,
+          ...baseModule,
           headerTitle: () => (
-            <HeaderBrand eyebrow={`${spaceLabel} · NOTES`} title="Love notes" accent={pastels.rose} size={22} />
+            <HeaderBrand eyebrow={spaceLabel} title="notes" />
           ),
           headerRight: () => <NavAddBtn href="/sheets/new-note" />,
         }}
@@ -76,9 +108,9 @@ export default function UsLayout() {
       <Stack.Screen
         name="checkins"
         options={{
-          ...base,
+          ...baseModule,
           headerTitle: () => (
-            <HeaderBrand eyebrow={`${spaceLabel} · CHECK-INS`} title="How we are" accent={pastels.butter} size={22} />
+            <HeaderBrand eyebrow={spaceLabel} title="check-ins" />
           ),
           headerRight: () => <NavAddBtn href="/sheets/new-checkin" />,
         }}
@@ -86,9 +118,9 @@ export default function UsLayout() {
       <Stack.Screen
         name="expenses"
         options={{
-          ...base,
+          ...baseModule,
           headerTitle: () => (
-            <HeaderBrand eyebrow={`${spaceLabel} · EXPENSES`} title="Shared" accent={pastels.mint} size={22} />
+            <HeaderBrand eyebrow={spaceLabel} title="expenses" />
           ),
           headerRight: () => <NavAddBtn href="/sheets/new-expense" />,
         }}
@@ -96,14 +128,9 @@ export default function UsLayout() {
       <Stack.Screen
         name="wishlists"
         options={{
-          ...base,
+          ...baseModule,
           headerTitle: () => (
-            <HeaderBrand
-              eyebrow={`${spaceLabel} · WISHLISTS`}
-              title="Drop hints"
-              accent={pastels.lavender}
-              size={22}
-            />
+            <HeaderBrand eyebrow={spaceLabel} title="wishes" />
           ),
           headerRight: () => <NavAddBtn href="/sheets/new-wish" />,
         }}
@@ -111,9 +138,9 @@ export default function UsLayout() {
       <Stack.Screen
         name="milestones"
         options={{
-          ...base,
+          ...baseModule,
           headerTitle: () => (
-            <HeaderBrand eyebrow={`${spaceLabel} · MILESTONES`} title="Moments" accent={pastels.peach} size={22} />
+            <HeaderBrand eyebrow={spaceLabel} title="milestones" />
           ),
           headerRight: () => <NavAddBtn href="/sheets/new-milestone" />,
         }}
@@ -121,9 +148,9 @@ export default function UsLayout() {
       <Stack.Screen
         name="plans"
         options={{
-          ...base,
+          ...baseModule,
           headerTitle: () => (
-            <HeaderBrand eyebrow={`${spaceLabel} · PLANS`} title="Dream & do" accent={pastels.sky} size={22} />
+            <HeaderBrand eyebrow={spaceLabel} title="plans" />
           ),
           headerRight: () => <NavAddBtn href="/sheets/new-plan" />,
         }}
@@ -131,9 +158,9 @@ export default function UsLayout() {
       <Stack.Screen
         name="journal"
         options={{
-          ...base,
+          ...baseModule,
           headerTitle: () => (
-            <HeaderBrand eyebrow={`${spaceLabel} · JOURNAL`} title="Journal" accent={pastels.journal} size={22} />
+            <HeaderBrand eyebrow={spaceLabel} title="journal" />
           ),
           headerRight: () => <NavAddBtn href="/sheets/new-entry" icon="edit" />,
         }}
@@ -141,9 +168,9 @@ export default function UsLayout() {
       <Stack.Screen
         name="timetables/index"
         options={{
-          ...base,
+          ...baseModule,
           headerTitle: () => (
-            <HeaderBrand eyebrow={`${spaceLabel} · TIMETABLES`} title="Rhythms" accent={pastels.peach} size={22} />
+            <HeaderBrand eyebrow={spaceLabel} title="timetables" />
           ),
           headerRight: () => <NavAddBtn href="/sheets/new-timetable" />,
         }}
@@ -151,9 +178,9 @@ export default function UsLayout() {
       <Stack.Screen
         name="timetables/[id]"
         options={{
-          ...base,
+          ...baseModule,
           headerTitle: () => (
-            <HeaderBrand eyebrow={`${spaceLabel} · TIMETABLE`} title="Week" accent={pastels.peach} size={22} />
+            <HeaderBrand eyebrow={spaceLabel} title="week" />
           ),
         }}
       />

@@ -40,11 +40,11 @@ export function AppSplash() {
       style={styles.container}
     >
       <View style={styles.content}>
-        <Text style={styles.wordmark}>Coupl</Text>
+        <Text style={styles.wordmark}>Pacto</Text>
         <Animated.View style={[styles.rule, ruleStyle]} />
       </View>
 
-      <Text style={styles.tagline}>Your quiet place, together.</Text>
+      <Text style={styles.tagline}>The few people who run your day.</Text>
     </Animated.View>
   );
 }

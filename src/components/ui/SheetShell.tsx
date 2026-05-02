@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import React, { useEffect } from 'react';
 import {
+  Image,
   Platform,
   Pressable,
   ScrollView,
@@ -11,6 +12,8 @@ import {
   TextInput,
   View,
   ViewStyle,
+  TextStyle,
+  type ImageSourcePropType,
 } from 'react-native';
 import Animated, {
   Easing,
@@ -21,7 +24,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useTheme } from '@/src/lib/theme';
-import { Display, Overline, RoundBtn } from './atoms';
+import { Typography } from '@/src/constants/typography';
 import { Icon, IconName } from './Icon';
 import { PressScale } from './PressScale';
 
@@ -41,7 +44,7 @@ export function SheetShell({
   const { C } = useTheme();
   return (
     <ScrollView
-      style={{ backgroundColor: C.coal }}
+      style={{ backgroundColor: C.bg }}
       contentContainerStyle={{ padding: 20, paddingBottom: 24 }}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
@@ -56,14 +59,46 @@ export function SheetShell({
         }}
       >
         <View style={{ flex: 1 }}>
-          {!!eyebrow && <Overline color={eyebrowColor ?? C.gold}>{eyebrow}</Overline>}
+          {!!eyebrow && (
+            <Text style={[Typography.eyebrowSm, { color: eyebrowColor ?? C.accent }]}>
+              {eyebrow}
+            </Text>
+          )}
           {!!title && (
-            <Display size={28} style={{ marginTop: eyebrow ? 4 : 0 }}>
+            <Text
+              style={[
+                {
+                  fontFamily: Typography.pixelFont,
+                  fontSize: 28,
+                  lineHeight: 32,
+                  color: C.inkColor,
+                  letterSpacing: 0,
+                  textTransform: 'uppercase',
+                  marginTop: eyebrow ? 4 : 0,
+                },
+              ]}
+            >
               {title}
-            </Display>
+              <Text style={{ color: eyebrowColor ?? C.accent }}>.</Text>
+            </Text>
           )}
         </View>
-        <RoundBtn icon="x" size={36} onPress={() => router.back()} />
+        <PressScale
+          onPress={() => router.back()}
+          hitSlop={8}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: C.bgCard,
+            borderWidth: 1,
+            borderColor: C.lineColor,
+          }}
+        >
+          <Icon name="x" size={18} color={C.inkColor} />
+        </PressScale>
       </View>
       {children}
       {footer && <View style={{ marginTop: 28 }}>{footer}</View>}
@@ -84,6 +119,7 @@ export function SheetSection({
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }) {
+  const { C } = useTheme();
   return (
     <View style={[{ marginTop: first ? 0 : 22 }, style]}>
       <View
@@ -94,7 +130,7 @@ export function SheetSection({
           marginBottom: 10,
         }}
       >
-        <Overline>{title}</Overline>
+        <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>{title}</Text>
         {right}
       </View>
       {children}
@@ -112,6 +148,21 @@ export function SheetRow({
   style?: StyleProp<ViewStyle>;
 }) {
   return <View style={[{ flexDirection: 'row', gap }, style]}>{children}</View>;
+}
+
+export function SheetLabel({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: StyleProp<TextStyle>;
+}) {
+  const { C } = useTheme();
+  return (
+    <Text style={[Typography.eyebrowSm, { color: C.ink3 }, style]}>
+      {children}
+    </Text>
+  );
 }
 
 export function SheetTitleField({
@@ -276,6 +327,7 @@ export function SheetColorGrid<K extends string>({
 export type IconLabelOption<K extends string = string> = {
   key: K;
   icon: IconName;
+  image?: ImageSourcePropType;
   label: string;
   color: string;
 };
@@ -285,16 +337,18 @@ export function SheetIconLabelPicker<K extends string>({
   selected,
   onChange,
   testIDPrefix,
+  iconOnly = false,
 }: {
   options: readonly IconLabelOption<K>[];
   selected: K;
   onChange: (key: K) => void;
   testIDPrefix: string;
+  iconOnly?: boolean;
 }) {
   const { C, F } = useTheme();
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-      <View style={{ flexDirection: 'row', gap: 8, paddingRight: 12 }}>
+      <View style={{ flexDirection: 'row', gap: iconOnly ? 10 : 8, paddingRight: 12 }}>
         {options.map((o) => {
           const sel = selected === o.key;
           return (
@@ -308,25 +362,42 @@ export function SheetIconLabelPicker<K extends string>({
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                gap: 8,
-                paddingVertical: 10,
-                paddingHorizontal: 14,
-                borderRadius: 999,
+                justifyContent: 'center',
+                gap: iconOnly ? 0 : 8,
+                width: iconOnly ? 54 : undefined,
+                height: iconOnly ? 54 : undefined,
+                paddingVertical: iconOnly ? 0 : 10,
+                paddingHorizontal: iconOnly ? 0 : 14,
+                borderRadius: iconOnly ? 14 : 999,
                 backgroundColor: sel ? `${o.color}26` : 'transparent',
                 borderWidth: 1,
                 borderColor: sel ? o.color : C.line,
               }}
             >
-              <Icon name={o.icon} size={14} color={sel ? o.color : C.fog} />
-              <Text
-                style={{
-                  color: sel ? o.color : C.mist,
-                  fontFamily: F.bodyBold,
-                  fontSize: 12,
-                }}
-              >
-                {o.label}
-              </Text>
+              {o.image ? (
+                <Image
+                  source={o.image}
+                  style={{
+                    width: iconOnly ? 42 : 24,
+                    height: iconOnly ? 42 : 24,
+                    opacity: sel ? 1 : 0.62,
+                  }}
+                  resizeMode="contain"
+                />
+              ) : (
+                <Icon name={o.icon} size={iconOnly ? 24 : 14} color={sel ? o.color : C.fog} />
+              )}
+              {!iconOnly ? (
+                <Text
+                  style={{
+                    color: sel ? o.color : C.mist,
+                    fontFamily: F.bodyBold,
+                    fontSize: 12,
+                  }}
+                >
+                  {o.label}
+                </Text>
+              ) : null}
             </PressScale>
           );
         })}
@@ -738,4 +809,3 @@ export function SheetInfoCard({
     </View>
   );
 }
-

@@ -1,410 +1,340 @@
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  BlockCard,
-  DateSectioned,
-  Display,
-  IconTile,
-  Overline,
+  ActionEmptyState,
+  BucketedList,
+  Bucket,
+  Checkbox,
   Pill,
-} from '@/src/components/ui/atoms';
+  PriorityDot,
+  ScopeChip,
+  StatBar,
+  SwipeableRow,
+} from '@/src/components/ui/pacto';
 import { Icon } from '@/src/components/ui/Icon';
-import { Screen } from '@/src/components/ui/Screen';
-import { ReminderRow } from '@/src/components/reminders/ReminderRow';
 import {
   bucketOfDue,
+  formatWhenChip,
   isOverdue,
   orderReminderBuckets,
 } from '@/src/components/reminders/buckets';
 import { useReminders } from '@/src/hooks/useReminders';
 import { useSession } from '@/src/hooks/useSession';
+import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
 import type { Reminder } from '@/src/types/database';
 
 type FilterKey = 'All' | 'Mine' | 'Theirs' | 'Shared' | 'Overdue';
 
-// solo-mode: filter set restricted to All/Overdue, partner stat segment hidden
 export default function RemindersScreen() {
-  const { C, F } = useTheme();
-  const { user, activeCouple, isSolo } = useSession();
-  const {
-    reminders,
-    upcoming,
-    completed,
-    isLoading,
-    error,
-    toggleComplete,
-    snooze,
-    remove,
-  } = useReminders();
+  const insets = useSafeAreaInsets();
+  const { C } = useTheme();
+  const { user, partner, mode } = useSession();
+  const { reminders, upcoming, toggleComplete, remove } = useReminders();
 
   const [filter, setFilter] = useState<FilterKey>('All');
-  const [errorDismissed, setErrorDismissed] = useState(false);
 
+  const isSolo = mode === 'solo';
   const youId = user?.id ?? null;
-  const partnerId = activeCouple?.partner?.id ?? null;
-  const partnerName = activeCouple?.partner?.displayName ?? null;
+  const partnerId = partner?.id ?? null;
+  const partnerName = partner?.displayName ?? null;
 
   const filters: FilterKey[] = useMemo(
     () => (isSolo ? ['All', 'Overdue'] : ['All', 'Mine', 'Theirs', 'Shared', 'Overdue']),
-    [isSolo],
+    [isSolo]
   );
 
-  const filterLabel = (f: FilterKey) =>
-    f === 'Theirs' && partnerName ? `${partnerName}'s` : f;
+  const overdueCount = useMemo(
+    () => upcoming.filter((r) => isOverdue(r.due_at, r.is_completed)).length,
+    [upcoming]
+  );
 
-  const matchFilter = (r: Reminder) => {
-    if (filter === 'All') return true;
-    if (filter === 'Mine') return youId != null && r.assigned_to === youId;
-    if (filter === 'Theirs') return partnerId != null && r.assigned_to === partnerId;
-    if (filter === 'Shared') return r.assigned_to == null;
-    if (filter === 'Overdue') return isOverdue(r.due_at, r.is_completed);
-    return true;
-  };
+  const nextReminder = useMemo(() => {
+    const sorted = upcoming
+      .filter((r) => !isOverdue(r.due_at, r.is_completed))
+      .slice()
+      .sort((a, b) => a.due_at.localeCompare(b.due_at));
+    return sorted[0] ?? null;
+  }, [upcoming]);
 
-  const active = upcoming.filter(matchFilter);
-  const done = completed.filter(matchFilter);
+  const todayCount = useMemo(
+    () => upcoming.filter((r) => bucketOfDue(r.due_at) === 'Today').length,
+    [upcoming]
+  );
 
-  const bucketColor: Record<string, string> = {
-    Overdue: C.error,
-    Today: C.gold,
-    Tomorrow: C.peach,
-    'This week': C.lavender,
-    JAN: C.sky, FEB: C.sky, MAR: C.sky, APR: C.mint,
-    MAY: C.sky, JUN: C.butter, JUL: C.butter, AUG: C.butter,
-    SEP: C.rose, OCT: C.rose, NOV: C.rose, DEC: C.rose,
-  };
+  const doneCount = reminders.filter((r) => r.is_completed).length;
+  const activeCount = upcoming.length;
 
-  const sections = useMemo(() => {
-    const grouped = new Map<string, Reminder[]>();
-    active.forEach((r) => {
-      const b = bucketOfDue(r.due_at);
-      if (!grouped.has(b)) grouped.set(b, []);
-      grouped.get(b)!.push(r);
+  const visible: Reminder[] = useMemo(() => {
+    return reminders.filter((r) => {
+      if (filter === 'Overdue') return isOverdue(r.due_at, r.is_completed);
+      if (filter === 'Mine') return r.assigned_to === youId;
+      if (filter === 'Theirs') return r.assigned_to && r.assigned_to === partnerId;
+      if (filter === 'Shared') return !r.assigned_to;
+      return true;
     });
-    return orderReminderBuckets(Array.from(grouped.keys())).map((label) => ({
-      label: label.toUpperCase(),
-      color: bucketColor[label] ?? C.fog,
-      items: grouped.get(label)!,
-    }));
-  }, [active, bucketColor, C.fog]);
+  }, [reminders, filter, youId, partnerId]);
 
-  const todayCount = upcoming.filter((r) => bucketOfDue(r.due_at) === 'Today').length;
-  const overdueCount = upcoming.filter((r) => isOverdue(r.due_at, r.is_completed)).length;
-  const partnerCount = partnerId
-    ? upcoming.filter((r) => r.assigned_to === partnerId).length
-    : 0;
+  const buckets = useMemo<Bucket<Reminder>[]>(() => {
+    const groups = new Map<string, Reminder[]>();
+    for (const r of visible) {
+      const label = isOverdue(r.due_at, r.is_completed)
+        ? 'Overdue'
+        : bucketOfDue(r.due_at);
+      const list = groups.get(label) ?? [];
+      list.push(r);
+      groups.set(label, list);
+    }
+    const order = orderReminderBuckets(Array.from(groups.keys()));
+    return order
+      .filter((label) => (groups.get(label)?.length ?? 0) > 0)
+      .map((label) => ({
+        label,
+        dotColor:
+          label === 'Overdue'
+            ? C.accent
+            : label === 'Today'
+            ? C.inkColor
+            : C.ink2,
+        rows: (groups.get(label) ?? []).slice().sort((a, b) =>
+          a.due_at.localeCompare(b.due_at)
+        ),
+      }));
+  }, [visible, C.accent, C.inkColor, C.ink2]);
 
-  if (error && !errorDismissed) {
-    return <ErrorState onRetry={() => setErrorDismissed(true)} />;
-  }
-  if (isLoading && reminders.length === 0) {
-    return <IndexSkeleton />;
-  }
-
-  const hasAny = reminders.length > 0;
+  const scopeFor = (r: Reminder): 'mine' | 'partner' | 'shared' => {
+    if (!r.assigned_to) return 'shared';
+    if (r.assigned_to === youId) return 'mine';
+    if (r.assigned_to === partnerId) return 'partner';
+    return 'shared';
+  };
 
   return (
-    <Screen>
-      <SummaryCard
-        activeCount={active.length}
-        doneCount={done.length}
-        todayCount={todayCount}
-        overdueCount={overdueCount}
-        partnerCount={partnerCount}
-        showPartner={!isSolo}
-      />
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingTop: insets.top + 60, paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.heroWrap}>
+          <StatBar
+            eyebrow={overdueCount > 0 ? 'NEEDS ATTENTION' : nextReminder ? 'NEXT REMINDER' : 'THIS WEEK'}
+            meta={`${todayCount} TODAY · ${doneCount} DONE`}
+            primary={
+              <>
+                <Text style={[Typography.pixelHeroSm, { color: C.inkColor }]}>
+                  {overdueCount > 0 ? overdueCount : activeCount}
+                </Text>
+                <Text style={[Typography.bodyMedium, { color: C.ink2 }]}>
+                  {overdueCount > 0 ? 'overdue' : 'active'}
+                </Text>
+                {nextReminder ? (
+                  <Text
+                    style={[Typography.caption, { color: C.ink3, marginLeft: 'auto' }]}
+                    numberOfLines={1}
+                  >
+                    {formatWhenChip(nextReminder.due_at)} · {nextReminder.title}
+                  </Text>
+                ) : null}
+              </>
+            }
+          />
+        </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 18 }}>
-        <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 4 }}>
+        {activeCount === 0 && reminders.length === 0 ? (
+          <View style={styles.listWrap}>
+            <ActionEmptyState
+              icon="bell"
+              title="No reminders yet"
+              body="Add one thing worth remembering and assign it to yourself or the pact."
+              actionLabel="New reminder"
+              onAction={() => router.push('/sheets/new-reminder' as any)}
+            />
+          </View>
+        ) : (
+          <>
+
+        {/* Filter pills */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterRow}
+        >
           {filters.map((f) => (
             <Pill
               key={f}
-              testID={`reminder-filter-${f}`}
+              size="md"
               active={filter === f}
-              activeBg={C.reminders}
-              activeColor="#fff"
               onPress={() => setFilter(f)}
+              color={C.inkColor}
             >
-              {filterLabel(f)}
+              {f === 'Theirs' && partnerName ? `${partnerName.split(' ')[0]}'s` : f}
             </Pill>
           ))}
-        </View>
-      </ScrollView>
+        </ScrollView>
 
-      {!hasAny ? (
-        <EmptyReminders />
-      ) : sections.length === 0 && done.length === 0 ? (
-        <EmptyFiltered />
-      ) : (
-        <DateSectioned
-          sections={sections}
-          maxOpen={3}
-          renderItem={(r) => (
-            <ReminderRow
-              key={r.id}
-              reminder={r}
-              youId={youId}
-              partnerId={partnerId}
-              testID={`reminder-row-${r.id}`}
-              onToggle={() => void toggleComplete(r)}
-              onSnooze={() => void snooze(r, 60)}
-              onDelete={() => void remove(r.id)}
+        <View style={styles.listWrap}>
+          {buckets.length === 0 ? (
+            <ActionEmptyState
+              icon="filter"
+              title="Nothing in this view"
+              body="Try another filter or add a reminder."
+              actionLabel="New reminder"
+              onAction={() => router.push('/sheets/new-reminder' as any)}
+            />
+          ) : (
+            <BucketedList
+              buckets={buckets}
+              rowKey={(r) => r.id}
+              renderRow={(r) => (
+                <SwipeableRow
+                  deleteTitle="Delete reminder?"
+                  deleteMessage={`"${r.title}" will be removed.`}
+                  onEdit={() =>
+                    router.push({
+                      pathname: '/sheets/new-reminder',
+                      params: { id: r.id },
+                    } as any)
+                  }
+                  onDelete={() => remove(r.id)}
+                >
+                  <View
+                    style={[
+                      styles.row,
+                      styles.rowPadding,
+                      { backgroundColor: C.bgCard },
+                    ]}
+                  >
+                    <Checkbox
+                      checked={r.is_completed}
+                      onChange={() => toggleComplete(r)}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={[
+                          Typography.bodyMedium,
+                          {
+                            color: r.is_completed ? C.ink3 : C.inkColor,
+                            textDecorationLine: r.is_completed ? 'line-through' : 'none',
+                          },
+                        ]}
+                        numberOfLines={2}
+                      >
+                        {r.title}
+                      </Text>
+                      <View style={styles.metaRow}>
+                        <Text style={[Typography.mono, { color: C.ink3, fontSize: 11 }]}>
+                          {formatWhenChip(r.due_at)}
+                        </Text>
+                        {r.recurrence && r.recurrence !== 'none' ? (
+                          <View style={styles.metaItem}>
+                            <Icon name="repeat" size={11} color={C.ink3} strokeWidth={2} />
+                            <Text style={[Typography.mono, { color: C.ink3, fontSize: 10 }]}>
+                              {r.recurrence}
+                            </Text>
+                          </View>
+                        ) : null}
+                        <PriorityDot level={priorityLevel(r.priority)} />
+                        <ScopeChip scope={scopeFor(r)} mode={mode} partnerName={partnerName} />
+                      </View>
+                    </View>
+                  </View>
+                </SwipeableRow>
+              )}
             />
           )}
-        />
-      )}
-
-      {done.length > 0 ? (
-        <View style={{ marginTop: 4 }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 8,
-              paddingHorizontal: 4,
-              marginBottom: 12,
-            }}
-          >
-            <Icon name="chevronDown" size={12} color={C.fog} />
-            <Text
-              style={{
-                color: C.fog,
-                fontSize: 11,
-                fontFamily: F.bodyBold,
-                letterSpacing: 1,
-                textTransform: 'uppercase',
-              }}
-            >
-              Completed · {done.length}
-            </Text>
-          </View>
-          <View style={{ gap: 10 }}>
-            {done.map((r) => (
-              <ReminderRow
-                key={r.id}
-                reminder={r}
-                youId={youId}
-                partnerId={partnerId}
-                testID={`reminder-row-${r.id}`}
-                onToggle={() => void toggleComplete(r)}
-                onSnooze={() => void snooze(r, 60)}
-                onDelete={() => void remove(r.id)}
-              />
-            ))}
-          </View>
         </View>
-      ) : null}
-    </Screen>
-  );
-}
-
-function SummaryCard({
-  activeCount,
-  doneCount,
-  todayCount,
-  overdueCount,
-  partnerCount,
-  showPartner,
-}: {
-  activeCount: number;
-  doneCount: number;
-  todayCount: number;
-  overdueCount: number;
-  partnerCount: number;
-  showPartner: boolean;
-}) {
-  const { C, F } = useTheme();
-  const total = Math.max(
-    1,
-    doneCount + activeCount + overdueCount + (showPartner ? partnerCount : 0),
-  );
-  const w = (n: number) => Math.max(4, Math.round((n / total) * 100));
-  const baseSegs = [
-    { w: w(doneCount), c: C.lavenderInk },
-    { w: w(activeCount), c: 'rgba(31,22,53,0.45)' },
-    { w: w(overdueCount), c: 'rgba(31,22,53,0.3)' },
-  ];
-  const segs = showPartner
-    ? [...baseSegs, { w: w(partnerCount), c: 'rgba(31,22,53,0.18)' }]
-    : baseSegs;
-  const labels = showPartner
-    ? [`DONE ${doneCount}`, `OPEN ${activeCount}`, `SNOOZED ${overdueCount}`, `PARTNER ${partnerCount}`]
-    : [`DONE ${doneCount}`, `OPEN ${activeCount}`, `SNOOZED ${overdueCount}`];
-  return (
-    <BlockCard bg={C.lavender} ink={C.lavenderInk} style={{ marginBottom: 16, padding: 22 }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <View style={{ flex: 1 }}>
-          <Overline color="rgba(31,22,53,0.7)">This week</Overline>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginTop: 8 }}>
-            <Display size={54} color={C.lavenderInk}>{`${activeCount}`}</Display>
-            <Text
-              style={{
-                fontSize: 14,
-                color: 'rgba(31,22,53,0.6)',
-                fontFamily: F.bodyBold,
-                marginBottom: 8,
-              }}
-            >
-              active
-            </Text>
-          </View>
-          <Text
-            style={{
-              fontSize: 12,
-              color: 'rgba(31,22,53,0.7)',
-              marginTop: 6,
-              fontFamily: F.body,
-            }}
-          >
-            {todayCount} due today · {overdueCount} overdue
-          </Text>
-        </View>
-        <IconTile
-          icon="bell"
-          bg="rgba(31,22,53,0.15)"
-          color={C.lavenderInk}
-          size={44}
-          radius={14}
-          iconSize={20}
-        />
-      </View>
-      <View style={{ marginTop: 16, flexDirection: 'row', gap: 4, height: 6 }}>
-        {segs.map((s, i) => (
-          <View key={i} style={{ flex: s.w, backgroundColor: s.c, borderRadius: 3 }} />
-        ))}
-      </View>
-      <View style={{ marginTop: 8, flexDirection: 'row', justifyContent: 'space-between' }}>
-        {labels.map((t) => (
-          <Text
-            key={t}
-            style={{
-              fontSize: 10,
-              fontFamily: F.bodyBold,
-              letterSpacing: 0.5,
-              color: 'rgba(31,22,53,0.75)',
-            }}
-          >
-            {t}
-          </Text>
-        ))}
-      </View>
-    </BlockCard>
-  );
-}
-
-function EmptyReminders() {
-  const { C, F } = useTheme();
-  return (
-    <View
-      testID="reminders-empty"
-      style={{
-        marginTop: 18,
-        padding: 22,
-        borderRadius: 22,
-        borderWidth: 1,
-        borderStyle: 'dashed',
-        borderColor: C.line,
-        alignItems: 'center',
-        gap: 6,
-      }}
-    >
-      <Icon name="bell" size={22} color={C.fog} />
-      <Text style={{ fontFamily: F.displayBold, fontSize: 16, color: C.mist }}>
-        Nothing on deck
-      </Text>
-      <Text style={{ fontSize: 12, color: C.fog, fontFamily: F.body, textAlign: 'center' }}>
-        Tap + in the header to add the first reminder.
-      </Text>
+          </>
+        )}
+      </ScrollView>
     </View>
   );
 }
 
-function EmptyFiltered() {
-  const { C, F } = useTheme();
-  return (
-    <View
-      testID="reminders-empty-filtered"
-      style={{
-        marginTop: 6,
-        padding: 18,
-        borderRadius: 22,
-        borderWidth: 1,
-        borderStyle: 'dashed',
-        borderColor: C.line,
-        alignItems: 'center',
-      }}
-    >
-      <Text style={{ fontSize: 12, color: C.fog, fontFamily: F.body }}>
-        Nothing here yet.
-      </Text>
-    </View>
-  );
+function priorityLevel(p: number): 'none' | 'low' | 'med' | 'high' {
+  if (p >= 3) return 'high';
+  if (p === 2) return 'med';
+  if (p === 1) return 'low';
+  return 'none';
 }
 
-function IndexSkeleton() {
-  const { C } = useTheme();
-  return (
-    <Screen>
-      <Animated.View
-        entering={FadeInDown.duration(360)}
-        testID="reminders-hero-skeleton"
-        style={{
-          marginBottom: 16,
-          backgroundColor: C.lavender,
-          borderRadius: 22,
-          height: 160,
-          opacity: 0.6,
-        }}
-      />
-      {[0, 1, 2, 3].map((i) => (
-        <View
-          key={i}
-          style={{
-            height: 62,
-            borderRadius: 18,
-            backgroundColor: C.card,
-            borderWidth: 1,
-            borderColor: C.line,
-            marginBottom: 10,
-            opacity: 0.6,
-          }}
-        />
-      ))}
-    </Screen>
-  );
-}
-
-function ErrorState({ onRetry }: { onRetry: () => void }) {
-  const { C, F } = useTheme();
-  return (
-    <Screen>
-      <Pressable testID="reminders-error-retry" onPress={onRetry}>
-        <View
-          style={{
-            backgroundColor: C.rose,
-            borderRadius: 22,
-            padding: 18,
-            marginBottom: 14,
-          }}
-        >
-          <Text
-            style={{
-              fontFamily: F.bodyBold,
-              fontSize: 10,
-              letterSpacing: 1.4,
-              color: 'rgba(0,0,0,0.6)',
-              textTransform: 'uppercase',
-            }}
-          >
-            Couldn't load reminders
-          </Text>
-          <Text style={{ color: C.ink, fontFamily: F.body, marginTop: 4 }}>
-            Tap to retry
-          </Text>
-        </View>
-      </Pressable>
-    </Screen>
-  );
-}
+const styles = StyleSheet.create({
+  heroWrap: {
+    paddingHorizontal: 18,
+    paddingTop: 4,
+  },
+  heroCard: {
+    padding: 20,
+    borderWidth: 0,
+  },
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  heroNumberRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginTop: 6,
+  },
+  heroNumber: {
+    fontFamily: Typography.pixelFont,
+    fontSize: 54,
+    lineHeight: 54,
+    letterSpacing: -1,
+  },
+  bellTile: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bar: {
+    flexDirection: 'row',
+    gap: 4,
+    marginTop: 16,
+  },
+  barLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  filterRow: {
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 14,
+    gap: 6,
+  },
+  listWrap: {
+    paddingHorizontal: 18,
+  },
+  empty: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  rowPadding: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 5,
+    flexWrap: 'wrap',
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+});

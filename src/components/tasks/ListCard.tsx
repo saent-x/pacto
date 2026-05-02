@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import Animated, {
   Easing,
   FadeInDown,
@@ -9,6 +9,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Icon } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
 import { useTheme } from '@/src/lib/theme';
 import type { ListRow } from '@/src/hooks/useTaskLists';
 import { taskTokens } from './tokens';
@@ -34,7 +35,7 @@ export function ListCard({
       entering={FadeInDown.delay(index * 40).duration(360).springify().damping(18)}
       style={{ width: '100%' }}
     >
-      <Pressable
+      <PressScale
         testID={testID ?? `task-list-card-${list.id}`}
         onPress={onPress}
         style={{
@@ -86,7 +87,7 @@ export function ListCard({
             <Text style={labelStyle(F, ink)}>{Math.round(pct * 100)}%</Text>
           </View>
         </View>
-      </Pressable>
+      </PressScale>
     </Animated.View>
   );
 }

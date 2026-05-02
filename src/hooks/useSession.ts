@@ -32,7 +32,12 @@ export type HookSession = {
   space: ReturnType<typeof useBaseSession>['space'];
   membership: ReturnType<typeof useBaseSession>['membership'];
   partner: ReturnType<typeof useBaseSession>['partner'];
+  members: ReturnType<typeof useBaseSession>['members'];
+  mode: ReturnType<typeof useBaseSession>['mode'];
   isSolo: boolean;
+  isPair: boolean;
+  isCrew: boolean;
+  /** @deprecated Use isPair. */
   isCouple: boolean;
 };
 
@@ -76,7 +81,11 @@ export function useSession(): HookSession {
     space: s.space,
     membership: s.membership,
     partner: s.partner,
+    members: s.members,
+    mode: s.mode,
     isSolo: s.isSolo,
+    isPair: s.isPair,
+    isCrew: s.isCrew,
     isCouple: s.isCouple,
   };
 }

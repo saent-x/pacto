@@ -3,7 +3,7 @@ import { db } from './db';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const REDIRECT_URL = 'coupl://auth-callback';
+const REDIRECT_URL = 'pacto://auth-callback';
 
 export async function signInWithOAuth(provider: 'apple' | 'google'): Promise<void> {
   const url = db.auth.createAuthorizationURL({

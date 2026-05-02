@@ -2,14 +2,15 @@ import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { CouplRings, Overline } from '@/src/components/ui/atoms';
+import { PactoMark } from '@/src/components/ui/pacto';
+import { Typography } from '@/src/constants/typography';
 import { useSession } from '@/src/lib/session';
 import { useTheme } from '@/src/lib/theme';
 
 export default function Index() {
   const router = useRouter();
   const { status } = useSession();
-  const { C, F } = useTheme();
+  const { C } = useTheme();
 
   useEffect(() => {
     if (status === 'unauthed') router.replace('/(auth)/sign-in' as any);
@@ -23,36 +24,28 @@ export default function Index() {
       testID="boot-screen"
       style={{
         flex: 1,
-        backgroundColor: C.ink,
+        backgroundColor: C.bg,
         alignItems: 'center',
         justifyContent: 'center',
         padding: 24,
       }}
     >
-      <CouplRings size={48} a={C.peach} b={C.lavender} />
+      <PactoMark size={64} />
       <Text
         style={{
-          marginTop: 20,
-          fontFamily: F.serif,
-          fontStyle: 'italic',
-          fontSize: 40,
-          color: C.bone,
-          letterSpacing: -1,
+          marginTop: 18,
+          fontFamily: Typography.pixelFont,
+          fontSize: 36,
+          color: C.inkColor,
+          letterSpacing: 0,
         }}
       >
-        coupl
+        pacto<Text style={{ color: C.accent }}>.</Text>
       </Text>
-      <View
-        style={{
-          width: 28,
-          height: 2,
-          backgroundColor: C.gold,
-          borderRadius: 1,
-          marginTop: 14,
-        }}
-      />
       <View style={{ marginTop: 22 }} testID="boot-status">
-        <Overline style={{ color: C.fog }}>BOOTING · {status}</Overline>
+        <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
+          BOOTING · {status}
+        </Text>
       </View>
     </Animated.View>
   );

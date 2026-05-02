@@ -4,6 +4,7 @@ import {
   cancelReminderNotification,
   scheduleReminderNotification,
 } from '@/src/lib/notifications';
+import { notifySpaceMutation } from '@/src/lib/push';
 import { useSession } from './useSession';
 import type { Reminder } from '@/src/types/database';
 
@@ -38,9 +39,10 @@ function toReminderRow(reminder: any): Reminder {
 }
 
 export function useReminders() {
-  const { activeCouple, user } = useSession();
+  const { activeCouple, user, space } = useSession();
   const coupleId = activeCouple?.couple?.id ?? null;
   const userId = user?.id ?? null;
+  const actorName = user?.displayName ?? 'Someone';
 
   const { data, isLoading: queryLoading, error } = db.useQuery(
     coupleId
@@ -85,8 +87,16 @@ export function useReminders() {
       }
       await db.transact(txns);
       await scheduleReminderNotification(reminderId, input.title, input.due_at);
+      await notifySpaceMutation({
+        spaceId: coupleId,
+        spaceKind: space?.kind ?? null,
+        excludeUserId: userId,
+        title: actorName,
+        body: `added a reminder: ${input.title}`,
+        route: '/(tabs)/reminders',
+      });
     },
-    [coupleId, userId],
+    [coupleId, userId, space?.kind, actorName],
   );
 
   const update = useCallback(

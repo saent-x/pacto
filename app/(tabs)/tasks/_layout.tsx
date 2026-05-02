@@ -1,9 +1,9 @@
-import { Stack } from 'expo-router';
-import { HeaderBrand } from '@/src/components/ui/HeaderBrand';
-import { HeaderLeft } from '@/src/components/ui/HeaderLeft';
+import { router, Stack } from 'expo-router';
+import { HeaderBrand } from '@/src/components/ui/pacto';
+import { Icon } from '@/src/components/ui/Icon';
 import { NavAddBtn } from '@/src/components/ui/NavAddBtn';
+import { PressScale } from '@/src/components/ui/PressScale';
 import { useTheme } from '@/src/lib/theme';
-import { pastels } from '@/src/lib/tokens';
 
 export default function TasksLayout() {
   const { C } = useTheme();
@@ -11,9 +11,7 @@ export default function TasksLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        headerStyle: { backgroundColor: C.ink },
-        headerTintColor: C.bone,
-        contentStyle: { backgroundColor: C.ink },
+        contentStyle: { backgroundColor: C.bg },
       }}
     >
       <Stack.Screen
@@ -23,13 +21,19 @@ export default function TasksLayout() {
           headerTransparent: true,
           headerShadowVisible: false,
           headerBackground: () => null,
+          headerTintColor: C.inkColor,
           title: '',
-          headerStyle: { backgroundColor: 'transparent' },
-          headerTitle: () => (
-            <HeaderBrand eyebrow="04 · Tasks" title="TASKS" accent={pastels.tasks} />
-          ),
           headerTitleAlign: 'center',
-          headerLeft: () => <HeaderLeft mode="back" />,
+          headerTitle: () => <HeaderBrand eyebrow="TASKS" title="tasks" />,
+          headerLeft: () => (
+            <PressScale
+              onPress={() => router.push('/notifications' as any)}
+              hitSlop={12}
+              style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Icon name="bell" size={22} color={C.inkColor} strokeWidth={2.2} />
+            </PressScale>
+          ),
           headerRight: () => <NavAddBtn href="/sheets/new-list" />,
         }}
       />

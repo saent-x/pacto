@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { db, id } from '@/src/lib/instant';
+import { notifySpaceMutation } from '@/src/lib/push';
 import { useSession } from './useSession';
 import type { Database, Task } from '@/src/types/database';
 
@@ -112,7 +113,7 @@ export function buildTaskFeedViewState(
 }
 
 export function useTasks() {
-  const { activeCouple, user } = useSession();
+  const { activeCouple, user, space } = useSession();
   const coupleId = activeCouple?.couple?.id ?? null;
   const userId = user?.id ?? null;
 
@@ -164,8 +165,16 @@ export function useTasks() {
         txns.push(db.tx.tasks[taskId].link({ assignedTo: input.assigned_to }));
       }
       await db.transact(txns);
+      await notifySpaceMutation({
+        spaceId: coupleId,
+        spaceKind: space?.kind ?? null,
+        excludeUserId: userId,
+        title: user?.displayName ?? 'Someone',
+        body: `added a task: ${input.title}`,
+        route: '/(tabs)/tasks',
+      });
     },
-    [coupleId, userId, allTasks.length],
+    [coupleId, userId, allTasks.length, space?.kind, user?.displayName],
   );
 
   const updateTask = useCallback(

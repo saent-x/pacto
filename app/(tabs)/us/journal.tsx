@@ -1,478 +1,501 @@
-import { router } from 'expo-router';
-import { useMemo } from 'react';
-import { LayoutChangeEvent, Pressable, Text, View } from 'react-native';
-import Animated, {
-  Easing,
-  FadeIn,
-  FadeInDown,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
-import { format, parseISO, subDays } from 'date-fns';
-import { Avatar, BlockCard, Overline } from '@/src/components/ui/atoms';
-import { Icon, IconName } from '@/src/components/ui/Icon';
-import { Screen } from '@/src/components/ui/Screen';
-import { useJournal, type JournalFilter } from '@/src/hooks/useJournal';
+import { router, Stack } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  format,
+  isToday,
+  isYesterday,
+  parseISO,
+  startOfDay,
+  startOfMonth,
+  subDays,
+} from 'date-fns';
+import {
+  ActionEmptyState,
+  Avatar,
+  Bucket,
+  BucketedList,
+  HeaderBrand,
+  PulsingDot,
+  SegmentedTabs,
+  SwipeableRow,
+} from '@/src/components/ui/pacto';
+import { Icon } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
+import { useJournal } from '@/src/hooks/useJournal';
 import { useSession } from '@/src/hooks/useSession';
+import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
-import type { JournalEntry } from '@/src/types/database';
 
-type MoodKey = 'great' | 'good' | 'okay' | 'low' | 'rough';
-type MoodColorKey = 'mint' | 'sky' | 'butter' | 'rose' | 'peach';
-
-const JOURNAL_MOOD: Record<MoodKey, { icon: IconName; colorKey: MoodColorKey }> = {
-  great: { icon: 'sun', colorKey: 'mint' },
-  good: { icon: 'cloud', colorKey: 'sky' },
-  okay: { icon: 'minus', colorKey: 'butter' },
-  low: { icon: 'cloudRain', colorKey: 'rose' },
-  rough: { icon: 'zap', colorKey: 'peach' },
+type EntryRow = {
+  id: string;
+  title: string | null;
+  body: string;
+  mood: string | null;
+  isPrivate: boolean;
+  authorId: string;
+  authorName: string;
+  authorColor: string;
+  authorInitial: string;
+  entryDate: string;
+  createdAt: number;
+  isMine: boolean;
 };
-const MOOD_FALLBACK = { icon: 'minus' as IconName, colorKey: 'butter' as MoodColorKey };
 
-function moodFor(mood: string | null) {
-  if (!mood) return MOOD_FALLBACK;
-  return JOURNAL_MOOD[mood as MoodKey] ?? MOOD_FALLBACK;
-}
+type FilterKey = 'all' | 'mine' | 'theirs' | 'shared' | 'private';
 
-function formatEntryDate(entryDate: string) {
-  try {
-    return format(parseISO(entryDate), 'EEE, MMM d').toUpperCase();
-  } catch {
-    return entryDate.toUpperCase();
-  }
-}
+export default function JournalScreen() {
+  const { C } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { user, partner, mode, members } = useSession();
+  const { allEntries, remove } = useJournal();
 
-// solo-mode: shared filter, partner-featured fallback, partner badges all gated via isSolo + author check
-export default function Journal() {
-  const { C, F } = useTheme();
-  const { user, partner, isSolo } = useSession();
-  const { entries, allEntries, filter, setFilter, isLoading } = useJournal();
+  const [filter, setFilter] = useState<FilterKey>('all');
 
-  const userId = user?.id ?? null;
-  const partnerName = partner?.displayName ?? 'Partner';
+  const userId = user?.id ?? '';
+  const partnerId = partner?.id ?? '';
+  const myName = (user?.displayName ?? user?.email?.split('@')[0] ?? 'You').split(' ')[0];
+  const partnerName = partner?.displayName ?? null;
 
-  const tabs = useMemo<{ k: JournalFilter; label: string }[]>(
-    () =>
-      isSolo
-        ? [
-            { k: 'all', label: 'All' },
-            { k: 'private', label: 'Private' },
-          ]
-        : [
-            { k: 'all', label: 'All' },
-            { k: 'shared', label: 'Shared' },
-            { k: 'private', label: 'Private' },
-          ],
-    [isSolo],
-  );
+  const eyebrowLabel =
+    mode === 'solo' ? 'ME' : mode === 'crew' ? 'CREW' : 'US';
 
-  const featured = useMemo(() => {
-    const shared = allEntries.filter((e) => !e.is_private);
-    return (
-      shared.find((e) => e.author_id !== userId) ??
-      shared[0] ??
-      allEntries[0] ??
-      null
-    );
-  }, [allEntries, userId]);
-
-  const thisWeekCount = useMemo(() => {
-    const cutoff = format(subDays(new Date(), 7), 'yyyy-MM-dd');
-    return allEntries.filter((e) => e.entry_date >= cutoff).length;
-  }, [allEntries]);
-
-  const hasAny = allEntries.length > 0;
-  if (isLoading && !hasAny) return <IndexSkeleton />;
-
-  return (
-    <Screen>
-      {featured ? (
-        <Animated.View entering={FadeInDown.duration(400)}>
-          <BlockCard bg={C.butter} ink={C.butterInk} style={{ marginBottom: 16, padding: 22 }}>
-            <Overline color="rgba(58,46,8,0.7)">
-              {`This week · ${thisWeekCount} ${thisWeekCount === 1 ? 'entry' : 'entries'}`}
-            </Overline>
-            <Text
-              style={{
-                marginTop: 12,
-                fontFamily: F.serif,
-                fontStyle: 'italic',
-                fontSize: 20,
-                lineHeight: 27,
-                color: C.butterInk,
-                maxWidth: 260,
-              }}
-              numberOfLines={4}
-            >
-              {`"${snippet(featured.body, 140)}"`}
-            </Text>
-            <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View
-                style={{
-                  width: 18,
-                  height: 2,
-                  backgroundColor: C.butterInk,
-                  borderRadius: 1,
-                  opacity: 0.6,
-                }}
-              />
-              <Text
-                style={{
-                  fontSize: 10,
-                  fontFamily: F.bodyBold,
-                  letterSpacing: 1,
-                  color: 'rgba(58,46,8,0.8)',
-                }}
-              >
-                {`${authorName(featured, userId, user?.displayName, partnerName).toUpperCase()} · ${formatEntryDate(
-                  featured.entry_date,
-                )}`}
-              </Text>
-            </View>
-          </BlockCard>
-        </Animated.View>
-      ) : null}
-
-      <Animated.View entering={FadeInDown.delay(80).duration(400)}>
-        <TabBar tabs={tabs} value={filter} onChange={setFilter} />
-      </Animated.View>
-
-      {hasAny ? (
-        entries.length === 0 ? (
-          <EmptyFiltered />
-        ) : (
-          <View style={{ gap: 12 }}>
-            {entries.map((entry, i) => (
-              <Animated.View
-                key={entry.id}
-                entering={FadeInDown.delay(Math.min(i, 10) * 60 + 120).duration(380)}
-              >
-                <EntryCard entry={entry} userId={userId} partnerName={partnerName} />
-              </Animated.View>
-            ))}
-          </View>
-        )
-      ) : (
-        <EmptyJournal />
-      )}
-    </Screen>
-  );
-}
-
-function snippet(text: string, max: number) {
-  if (!text) return '';
-  if (text.length <= max) return text;
-  return `${text.slice(0, max).trimEnd()}…`;
-}
-
-function authorName(
-  entry: JournalEntry,
-  userId: string | null,
-  myName: string | null | undefined,
-  partnerName: string,
-) {
-  if (entry.author_id === userId) return myName ?? 'You';
-  return partnerName;
-}
-
-function EntryCard({
-  entry,
-  userId,
-  partnerName,
-}: {
-  entry: JournalEntry;
-  userId: string | null;
-  partnerName: string;
-}) {
-  const { C, F } = useTheme();
-  const mood = moodFor(entry.mood ?? null);
-  const moodColor = (C as Record<string, string>)[mood.colorKey] ?? C.butter;
-  const fromPartner = entry.author_id !== userId;
-  return (
-    <View
-      style={{
-        backgroundColor: C.card,
-        borderWidth: 1,
-        borderColor: C.line,
-        borderRadius: 18,
-        padding: 18,
-        paddingLeft: fromPartner ? 20 : 18,
-        borderLeftWidth: fromPartner ? 3 : 1,
-        borderLeftColor: fromPartner ? C.gold : C.line,
-      }}
-    >
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 8,
-        }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Text
-            style={{
-              fontSize: 10,
-              color: C.fog,
-              fontFamily: F.bodyBold,
-              letterSpacing: 1,
-            }}
-          >
-            {formatEntryDate(entry.entry_date)}
-          </Text>
-          {entry.is_private && <Icon name="lock" size={10} color={C.fog} />}
-        </View>
-        <View
-          style={{
-            width: 24,
-            height: 24,
-            borderRadius: 12,
-            backgroundColor: `${moodColor}22`,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Icon name={mood.icon} size={12} color={moodColor} strokeWidth={2.5} />
-        </View>
-      </View>
-      {entry.title ? (
-        <Text
-          style={{
-            fontFamily: F.displayBold,
-            fontSize: 18,
-            color: C.bone,
-            marginBottom: 4,
-          }}
-        >
-          {entry.title}
-        </Text>
-      ) : null}
-      <Text
-        numberOfLines={2}
-        style={{ fontSize: 13, color: C.mist, lineHeight: 20, fontFamily: F.body }}
-      >
-        {entry.body}
-      </Text>
-      {fromPartner ? (
-        <View
-          style={{
-            marginTop: 10,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
-          <Avatar
-            letter={partnerName.charAt(0).toUpperCase()}
-            size={18}
-            bg={C.lavender}
-            color={C.lavenderInk}
-          />
-          <Text
-            style={{
-              fontSize: 10,
-              color: C.gold,
-              fontFamily: F.bodyBold,
-              letterSpacing: 0.6,
-              textTransform: 'uppercase',
-            }}
-          >
-            {partnerName}
-          </Text>
-        </View>
-      ) : null}
-    </View>
-  );
-}
-
-function TabBar({
-  tabs,
-  value,
-  onChange,
-}: {
-  tabs: { k: JournalFilter; label: string }[];
-  value: JournalFilter;
-  onChange: (k: JournalFilter) => void;
-}) {
-  const { C, F } = useTheme();
-  const indicator = useSharedValue({ left: 0, width: 0 });
-  const layouts = useMemo(
-    () => new Map<JournalFilter, { x: number; w: number }>(),
-    [],
-  );
-
-  const updateIndicator = (k: JournalFilter) => {
-    const l = layouts.get(k);
-    if (!l) return;
-    indicator.value = {
-      left: withTiming(l.x, { duration: 220, easing: Easing.out(Easing.cubic) }),
-      width: withTiming(l.w, { duration: 220, easing: Easing.out(Easing.cubic) }),
+  const authorMeta = (id: string): { name: string; color: string } => {
+    if (id === userId) return { name: myName, color: C.accent };
+    if (id === partnerId)
+      return {
+        name: (partnerName ?? 'Partner').split(' ')[0],
+        color: C.accent2,
+      };
+    const m = members.find((mm) => mm.id === id);
+    return {
+      name: m?.displayName?.split(' ')[0] ?? 'Member',
+      color: C.accent3,
     };
   };
 
-  const onTabLayout = (k: JournalFilter, e: LayoutChangeEvent) => {
-    const { x, width } = e.nativeEvent.layout;
-    layouts.set(k, { x, w: width });
-    if (k === value) {
-      indicator.value = { left: x, width };
+  const rows = useMemo<EntryRow[]>(() => {
+    return allEntries.map((e: any): EntryRow => {
+      const meta = authorMeta(e.author_id);
+      return {
+        id: String(e.id),
+        title: e.title ?? null,
+        body: String(e.body ?? ''),
+        mood: e.mood ?? null,
+        isPrivate: !!e.is_private,
+        authorId: String(e.author_id ?? ''),
+        authorName: meta.name,
+        authorColor: meta.color,
+        authorInitial: meta.name.charAt(0).toUpperCase(),
+        entryDate: String(e.entry_date ?? ''),
+        createdAt: e.created_at ? new Date(e.created_at).getTime() : 0,
+        isMine: e.author_id === userId,
+      };
+    });
+  }, [allEntries, userId, partnerId, partnerName, myName]);
+
+  const stats = useMemo(() => {
+    const total = rows.length;
+    const monthMs = startOfMonth(new Date()).getTime();
+    const thisMonth = rows.filter((r) => r.createdAt >= monthMs).length;
+    const fromMe = rows.filter((r) => r.isMine).length;
+
+    // Streak: consecutive days the user has written own entries.
+    const myEntryDays = new Set(
+      rows.filter((r) => r.isMine).map((r) => r.entryDate)
+    );
+    let streak = 0;
+    let cursor = new Date();
+    const fmt = (d: Date) => format(d, 'yyyy-MM-dd');
+    while (myEntryDays.has(fmt(cursor))) {
+      streak += 1;
+      cursor = subDays(cursor, 1);
     }
-  };
+    return { total, thisMonth, fromMe, streak };
+  }, [rows]);
 
-  const indicatorStyle = useAnimatedStyle(() => ({
-    left: indicator.value.left as number,
-    width: indicator.value.width as number,
-  }));
+  const featured = useMemo(() => {
+    return rows.slice().sort((a, b) => b.createdAt - a.createdAt)[0] ?? null;
+  }, [rows]);
+
+  const visible = useMemo(() => {
+    return rows.filter((r) => {
+      if (filter === 'mine') return r.isMine;
+      if (filter === 'theirs') return !r.isMine;
+      if (filter === 'shared') return !r.isPrivate;
+      if (filter === 'private') return r.isPrivate && r.isMine;
+      return true;
+    });
+  }, [rows, filter]);
+
+  const buckets = useMemo<Bucket<EntryRow>[]>(() => {
+    const today = startOfDay(new Date()).getTime();
+    const yesterday = startOfDay(subDays(new Date(), 1)).getTime();
+    const week = startOfDay(subDays(new Date(), 7)).getTime();
+
+    const groups: Record<string, EntryRow[]> = {
+      Today: [],
+      Yesterday: [],
+      'This week': [],
+      Earlier: [],
+    };
+    for (const r of visible) {
+      const ts = r.createdAt;
+      if (ts >= today) groups.Today.push(r);
+      else if (ts >= yesterday) groups.Yesterday.push(r);
+      else if (ts >= week) groups['This week'].push(r);
+      else groups.Earlier.push(r);
+    }
+
+    const order = ['Today', 'Yesterday', 'This week', 'Earlier'];
+    const dotMap: Record<string, string> = {
+      Today: C.accent,
+      Yesterday: C.accent2,
+      'This week': C.ink2,
+      Earlier: C.ink3,
+    };
+    return order
+      .filter((k) => groups[k].length > 0)
+      .map((k) => ({
+        label: k,
+        dotColor: dotMap[k],
+        rows: groups[k].slice().sort((a, b) => b.createdAt - a.createdAt),
+      }));
+  }, [visible, C.accent, C.accent2, C.ink2, C.ink3]);
+
+  const filterOptions: { key: FilterKey; label: string }[] =
+    mode === 'solo'
+      ? [
+          { key: 'all', label: 'All' },
+          { key: 'private', label: 'Private' },
+        ]
+      : [
+          { key: 'all', label: 'All' },
+          { key: 'mine', label: 'Mine' },
+          { key: 'theirs', label: 'Theirs' },
+          { key: 'shared', label: 'Shared' },
+          { key: 'private', label: 'Private' },
+        ];
+
+  const heroEyebrow =
+    stats.total === 0
+      ? 'A QUIET PAGE'
+      : stats.streak > 0
+      ? `STREAK · ${stats.streak} ${stats.streak === 1 ? 'DAY' : 'DAYS'}`
+      : `${stats.thisMonth} THIS MONTH`;
+
+  const featuredPreview = featured
+    ? (featured.title?.trim() || featured.body.split('\n')[0] || '').trim()
+    : '';
 
   return (
-    <View
-      style={{
-        flexDirection: 'row',
-        borderBottomWidth: 1,
-        borderBottomColor: C.line,
-        marginBottom: 16,
-        position: 'relative',
-      }}
-    >
-      {tabs.map((t) => (
-        <Pressable
-          key={t.k}
-          onLayout={(e) => onTabLayout(t.k, e)}
-          onPress={() => {
-            Haptics.selectionAsync();
-            onChange(t.k);
-            updateIndicator(t.k);
-          }}
-          style={{
-            flex: 1,
-            paddingVertical: 10,
-            alignItems: 'center',
-            marginBottom: -1,
-          }}
-        >
-          <Text
-            style={{
-              color: value === t.k ? C.journal : C.fog,
-              fontFamily: F.bodyBold,
-              fontSize: 12,
-              letterSpacing: 1,
-              textTransform: 'uppercase',
-            }}
-          >
-            {t.label}
-          </Text>
-        </Pressable>
-      ))}
-      <Animated.View
-        style={[
-          {
-            position: 'absolute',
-            bottom: -1,
-            height: 2,
-            backgroundColor: C.journal,
-            borderRadius: 1,
-          },
-          indicatorStyle,
-        ]}
-      />
-    </View>
-  );
-}
-
-function EmptyJournal() {
-  const { C, F } = useTheme();
-  return (
-    <Pressable
-      onPress={() => router.push('/sheets/new-entry')}
-      style={{
-        marginTop: 4,
-        padding: 22,
-        borderRadius: 22,
-        borderWidth: 1,
-        borderStyle: 'dashed',
-        borderColor: C.line,
-        alignItems: 'center',
-        gap: 6,
-      }}
-    >
-      <Icon name="feather" size={22} color={C.fog} />
-      <Text style={{ fontFamily: F.displayBold, fontSize: 16, color: C.mist }}>
-        No entries yet
-      </Text>
-      <Text
-        style={{
-          fontSize: 12,
-          color: C.fog,
-          fontFamily: F.body,
-          textAlign: 'center',
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerTransparent: true,
+          headerShadowVisible: false,
+          headerBackground: () => null,
+          headerTintColor: C.inkColor,
+          title: '',
+          headerTitleAlign: 'center',
+          headerTitle: () => (
+            <HeaderBrand eyebrow={eyebrowLabel} title="journal" />
+          ),
+          headerLeft: () => (
+            <PressScale
+              onPress={() => router.back()}
+              hitSlop={12}
+              style={{ padding: 4 }}
+            >
+              <Icon name="chevronLeft" size={22} color={C.inkColor} strokeWidth={2.2} />
+            </PressScale>
+          ),
+          headerRight: () => (
+            <PressScale
+              onPress={() => router.push('/sheets/new-entry' as any)}
+              hitSlop={12}
+              style={{ padding: 4 }}
+            >
+              <Icon name="edit" size={22} color={C.inkColor} strokeWidth={2.2} />
+            </PressScale>
+          ),
         }}
+      />
+
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingTop: insets.top + 60, paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
       >
-        Write something small. Even a sentence counts.
-      </Text>
-    </Pressable>
-  );
-}
+        {/* Hero — featured-entry pull-quote, no colored card */}
+        <View style={styles.heroWrap}>
+          <View style={styles.heroHead}>
+            <Text style={[Typography.eyebrow, { color: C.ink3 }]}>{heroEyebrow}</Text>
+            <Text style={[Typography.mono, { color: C.ink3, fontSize: 11 }]}>
+              {stats.total} ENTRIES · {stats.thisMonth} THIS MONTH
+              {mode !== 'solo' ? ` · ${stats.fromMe} FROM YOU` : ''}
+            </Text>
+          </View>
 
-function EmptyFiltered() {
-  const { C, F } = useTheme();
-  return (
-    <View
-      style={{
-        marginTop: 6,
-        padding: 18,
-        borderRadius: 22,
-        borderWidth: 1,
-        borderStyle: 'dashed',
-        borderColor: C.line,
-        alignItems: 'center',
-      }}
-    >
-      <Text style={{ fontSize: 12, color: C.fog, fontFamily: F.body }}>
-        Nothing here yet.
-      </Text>
+          {featured && featuredPreview ? (
+            <View style={styles.featuredBlock}>
+              <Text
+                style={{
+                  fontFamily: Typography.geistFont,
+                  fontStyle: 'italic',
+                  fontSize: 18,
+                  lineHeight: 26,
+                  color: C.inkColor,
+                  marginTop: 10,
+                }}
+                numberOfLines={3}
+              >
+                &ldquo;{featuredPreview}&rdquo;
+              </Text>
+              <View style={styles.featuredFoot}>
+                <Avatar
+                  person={{
+                    initial: featured.authorInitial,
+                    color: featured.authorColor,
+                  }}
+                  size={20}
+                />
+                <Text
+                  style={[
+                    Typography.eyebrowSm,
+                    { color: featured.authorColor, fontSize: 9.5 },
+                  ]}
+                >
+                  {featured.authorName.toUpperCase()}
+                </Text>
+                <Text style={[Typography.mono, { color: C.ink3, fontSize: 10 }]}>
+                  {featured.entryDate
+                    ? format(parseISO(featured.entryDate), 'MMM d')
+                    : format(new Date(featured.createdAt), 'MMM d')}
+                </Text>
+                {featured.isPrivate ? (
+                  <View
+                    style={[
+                      styles.privateChip,
+                      { backgroundColor: C.bgSoft, borderColor: C.lineColor },
+                    ]}
+                  >
+                    <Icon name="lock" size={9} color={C.ink2} strokeWidth={2.2} />
+                    <Text
+                      style={[
+                        Typography.eyebrowSm,
+                        { color: C.ink2, fontSize: 9 },
+                      ]}
+                    >
+                      PRIVATE
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            </View>
+          ) : (
+            <Text
+              style={[
+                Typography.pixelHeroSm,
+                { color: C.inkColor, marginTop: 8 },
+              ]}
+            >
+              Write something
+              <PulsingDot color={C.accent3} />
+            </Text>
+          )}
+        </View>
+
+        {/* Filter pills */}
+        <View style={styles.filterRow}>
+          <SegmentedTabs<FilterKey>
+            value={filter}
+            onChange={setFilter}
+            options={filterOptions.map((f) => ({
+              key: f.key,
+              label:
+                f.key === 'theirs' && partnerName
+                  ? `${partnerName.split(' ')[0]}'s`
+                  : f.label,
+            }))}
+          />
+        </View>
+
+        {/* Bucketed list */}
+        <View style={styles.listWrap}>
+          {buckets.length === 0 ? (
+            <ActionEmptyState
+              icon="book"
+              title="A quiet page"
+              body="Write a sentence about today. A line is enough."
+              actionLabel="New entry"
+              onAction={() => router.push('/sheets/new-entry' as any)}
+            />
+          ) : (
+            <BucketedList
+              buckets={buckets}
+              rowKey={(e) => e.id}
+              renderRow={(e) => {
+                const previewText = e.title?.trim() || e.body.split('\n')[0] || '(empty)';
+                const dateLabel = e.createdAt
+                  ? isToday(new Date(e.createdAt))
+                    ? format(new Date(e.createdAt), 'h:mm a')
+                    : isYesterday(new Date(e.createdAt))
+                    ? 'Yesterday'
+                    : format(new Date(e.createdAt), 'MMM d · h:mm a')
+                  : '';
+                return (
+                  <SwipeableRow
+                    deleteTitle="Delete entry?"
+                    deleteMessage="This entry will be removed."
+                    onEdit={
+                      e.isMine
+                        ? () =>
+                            router.push(
+                              `/sheets/new-entry?id=${e.id}` as any
+                            )
+                        : undefined
+                    }
+                    onDelete={() => remove(e.id)}
+                  >
+                    <PressScale
+                      onPress={() =>
+                        router.push(`/sheets/journal-entry?id=${e.id}` as any)
+                      }
+                      style={[styles.row, { backgroundColor: C.bgCard }]}
+                    >
+                      <View
+                        style={[
+                          styles.dateMargin,
+                          { borderLeftColor: e.authorColor },
+                        ]}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <View style={styles.headRow}>
+                          <Text
+                            style={[
+                              Typography.bodyMedium,
+                              { color: C.inkColor, flex: 1 },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {previewText}
+                          </Text>
+                          {e.isPrivate ? (
+                            <Icon
+                              name="lock"
+                              size={11}
+                              color={C.ink3}
+                              strokeWidth={2.2}
+                            />
+                          ) : null}
+                        </View>
+                        {e.title && e.body ? (
+                          <Text
+                            style={[
+                              Typography.caption,
+                              { color: C.ink2, marginTop: 2 },
+                            ]}
+                            numberOfLines={2}
+                          >
+                            {e.body}
+                          </Text>
+                        ) : null}
+                        <View style={styles.metaRow}>
+                          <Text
+                            style={[
+                              Typography.eyebrowSm,
+                              { color: e.authorColor, fontSize: 9.5 },
+                            ]}
+                          >
+                            {e.authorName.toUpperCase()}
+                          </Text>
+                          <Text
+                            style={[
+                              Typography.mono,
+                              { color: C.ink3, fontSize: 11 },
+                            ]}
+                          >
+                            {dateLabel}
+                          </Text>
+                        </View>
+                      </View>
+                    </PressScale>
+                  </SwipeableRow>
+                );
+              }}
+            />
+          )}
+        </View>
+      </ScrollView>
     </View>
   );
 }
 
-function IndexSkeleton() {
-  const { C } = useTheme();
-  return (
-    <Screen>
-      <Animated.View
-        entering={FadeIn.duration(300)}
-        style={{
-          height: 148,
-          borderRadius: 22,
-          backgroundColor: C.butter,
-          opacity: 0.35,
-          marginBottom: 16,
-        }}
-      />
-      <Animated.View
-        entering={FadeIn.delay(60).duration(300)}
-        style={{
-          height: 42,
-          borderBottomWidth: 1,
-          borderBottomColor: C.line,
-          marginBottom: 16,
-        }}
-      />
-      {[0, 1, 2].map((i) => (
-        <Animated.View
-          key={i}
-          entering={FadeIn.delay(100 + i * 60).duration(300)}
-          style={{
-            height: 82,
-            borderRadius: 18,
-            backgroundColor: C.card,
-            borderWidth: 1,
-            borderColor: C.line,
-            marginBottom: 12,
-            opacity: 0.55,
-          }}
-        />
-      ))}
-    </Screen>
-  );
-}
+const styles = StyleSheet.create({
+  heroWrap: {
+    paddingHorizontal: 18,
+    paddingTop: 8,
+    paddingBottom: 12,
+  },
+  heroHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  featuredBlock: {
+    marginBottom: 4,
+  },
+  featuredFoot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 10,
+    flexWrap: 'wrap',
+  },
+  privateChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  filterRow: {
+    paddingHorizontal: 18,
+    paddingTop: 4,
+    paddingBottom: 14,
+    gap: 6,
+  },
+  listWrap: {
+    paddingHorizontal: 18,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  dateMargin: {
+    width: 3,
+    borderLeftWidth: 3,
+    alignSelf: 'stretch',
+    borderRadius: 2,
+  },
+  headRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+});

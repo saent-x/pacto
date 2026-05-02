@@ -1,401 +1,437 @@
-import { router } from 'expo-router';
-import { useCallback, useMemo } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import { differenceInCalendarDays, format, parseISO } from 'date-fns';
-import { Icon } from '@/src/components/ui/Icon';
-import { Screen } from '@/src/components/ui/Screen';
+import { router, Stack } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  RowActionMenu,
-  type ActionMenuPayload,
-} from '@/src/components/ui/RowActionMenu';
-import { confirmDestructive } from '@/src/lib/confirm';
+  differenceInCalendarDays,
+  format,
+  isAfter,
+  isBefore,
+  parseISO,
+  startOfDay,
+} from 'date-fns';
+import {
+  ActionEmptyState,
+  Bucket,
+  BucketedList,
+  Card,
+  HeaderBrand,
+  PulsingDot,
+  SegmentedTabs,
+  StatBar,
+  SwipeableRow,
+} from '@/src/components/ui/pacto';
+import { Icon, type IconName } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
 import { useMilestones } from '@/src/hooks/useMilestones';
+import { useSession } from '@/src/hooks/useSession';
+import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
-
-type ColorKey = 'peach' | 'rose' | 'mint' | 'sky' | 'butter' | 'lavender';
-const COLOR_KEYS: ColorKey[] = ['peach', 'rose', 'mint', 'sky', 'butter', 'lavender'];
-const DEFAULT_ROTATION: ColorKey[] = ['peach', 'rose', 'mint', 'sky', 'butter'];
 
 type MilestoneRow = {
   id: string;
   title: string;
-  description: string | null;
   date: string;
-  color: ColorKey | null;
-  quote: string | null;
+  description: string | null;
+  icon: string;
   repeatYearly: boolean;
+  isUpcoming: boolean;
+  daysUntil: number | null;
+  yearsAgo: number | null;
 };
 
-function toRow(m: unknown): MilestoneRow {
-  const raw = m as Record<string, unknown>;
-  const color = typeof raw.color === 'string' && COLOR_KEYS.includes(raw.color as ColorKey)
-    ? (raw.color as ColorKey)
-    : null;
-  return {
-    id: String(raw.id),
-    title: String(raw.title ?? ''),
-    description: (raw.description as string | null) ?? null,
-    date: String(raw.date ?? ''),
-    color,
-    quote: (raw.quote as string | null) ?? null,
-    repeatYearly: Boolean(raw.repeatYearly),
-  };
+type FilterKey = 'all' | 'upcoming' | 'past' | 'recurring';
+
+// Whitelist of icon names that the new-milestone sheet offers + a few extras.
+// Anything else (legacy emoji values, free-text) falls through to the default flag.
+const VALID_ICON_NAMES: ReadonlySet<IconName> = new Set<IconName>([
+  'heart',
+  'star',
+  'home',
+  'mapPin',
+  'gift',
+  'coffee',
+  'briefcase',
+  'camera',
+  'music',
+  'flag',
+  'sun',
+  'moon',
+  'sparkle',
+  'compass',
+  'feather',
+  'book',
+]);
+
+function resolveMilestoneIcon(value: string | null | undefined): IconName {
+  if (value && VALID_ICON_NAMES.has(value as IconName)) return value as IconName;
+  return 'flag';
 }
 
-export default function Milestones() {
-  const { C, F } = useTheme();
-  const { milestones, upcoming, isLoading, remove } = useMilestones();
-
-  const buildMilestoneMenu = useCallback(
-    (stone: { id: string; title: string; date: string }): ActionMenuPayload => ({
-      title: stone.title,
-      subtitle: stone.date,
-      actions: [
-        {
-          key: 'edit',
-          label: 'Edit',
-          icon: 'edit',
-          onPress: () => router.push(`/sheets/new-milestone?id=${stone.id}` as any),
-        },
-        {
-          key: 'delete',
-          label: 'Delete',
-          icon: 'trash',
-          destructive: true,
-          onPress: () => {
-            confirmDestructive(
-              'Delete milestone?',
-              `"${stone.title}" will be removed.`,
-              () => remove(stone.id),
-            );
-          },
-        },
-      ],
-    }),
-    [remove],
-  );
-
-  const rows = useMemo(() => milestones.map(toRow), [milestones]);
-
-  const nextStone = useMemo(() => {
-    const list = upcoming.map(toRow).sort((a, b) => a.date.localeCompare(b.date));
-    return list[0] ?? null;
-  }, [upcoming]);
-
-  const timeline = useMemo(
-    () =>
-      rows
-        .filter((r) => !nextStone || r.id !== nextStone.id)
-        .sort((a, b) => b.date.localeCompare(a.date)),
-    [rows, nextStone],
-  );
-
-  if (isLoading && rows.length === 0) return <IndexSkeleton />;
-  if (rows.length === 0) return <EmptyMilestones />;
-
-  const todayKey = format(new Date(), 'yyyy-MM-dd');
-
-  return (
-    <Screen>
-      {nextStone ? <Hero stone={nextStone} /> : null}
-      {!nextStone && timeline.length > 0 ? (
-        <Animated.View entering={FadeInDown.duration(400)}>
-          <Text
-            style={{
-              fontSize: 11,
-              color: C.fog,
-              fontFamily: F.bodyBold,
-              letterSpacing: 1.4,
-              paddingLeft: 4,
-              marginBottom: 12,
-            }}
-          >
-            PAST CHAPTERS
-          </Text>
-        </Animated.View>
-      ) : null}
-
-      {timeline.map((stone, i) => {
-        const fallback = DEFAULT_ROTATION[i % DEFAULT_ROTATION.length];
-        const colorKey = stone.color ?? fallback;
-        const color = (C as Record<string, string>)[colorKey];
-        const ink = (C as Record<string, string>)[`${colorKey}Ink`] ?? C.bone;
-        const fut = stone.date > todayKey;
-        let year = '';
-        let month = '';
-        try {
-          const d = parseISO(stone.date);
-          year = format(d, 'yyyy');
-          month = format(d, 'MMM dd').toUpperCase();
-        } catch {
-          year = stone.date.slice(0, 4);
-          month = stone.date.slice(5).toUpperCase();
-        }
-        return (
-          <Animated.View
-            key={stone.id}
-            entering={FadeInDown.delay(Math.min(i, 10) * 60 + 80).duration(400)}
-            style={{ flexDirection: 'row', gap: 14, marginBottom: 12 }}
-          >
-            <View style={{ width: 50, alignItems: 'flex-end', paddingTop: 16 }}>
-              <Text
-                style={{
-                  fontFamily: F.displayBold,
-                  fontSize: 18,
-                  color: C.bone,
-                  letterSpacing: -0.4,
-                  lineHeight: 18,
-                }}
-              >
-                {year}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 9,
-                  color: C.fog,
-                  fontFamily: F.bodyBold,
-                  letterSpacing: 1,
-                  marginTop: 3,
-                }}
-              >
-                {month}
-              </Text>
-            </View>
-            <RowActionMenu {...buildMilestoneMenu(stone)} style={{ flex: 1 }}>
-            <Pressable
-              testID={`milestone-row-${stone.id}`}
-              style={{
-                flex: 1,
-                backgroundColor: color,
-                borderRadius: 18,
-                padding: 16,
-                opacity: fut ? 0.55 : 1,
-                borderWidth: fut ? 1.5 : 0,
-                borderStyle: 'dashed',
-                borderColor: 'rgba(0,0,0,0.3)',
-              }}
-            >
-              <Text
-                style={{
-                  fontFamily: F.displayBold,
-                  fontSize: 17,
-                  color: ink,
-                  letterSpacing: -0.3,
-                  lineHeight: 19,
-                }}
-              >
-                {stone.title}
-              </Text>
-              {stone.description ? (
-                <Text
-                  style={{
-                    fontSize: 11,
-                    color: ink,
-                    opacity: 0.65,
-                    fontFamily: F.body,
-                    marginTop: 3,
-                  }}
-                >
-                  {stone.description}
-                </Text>
-              ) : null}
-              {stone.repeatYearly ? (
-                <Text
-                  style={{
-                    marginTop: 8,
-                    fontSize: 9,
-                    color: ink,
-                    opacity: 0.6,
-                    fontFamily: F.bodyBold,
-                    letterSpacing: 1,
-                  }}
-                >
-                  REPEATS YEARLY
-                </Text>
-              ) : null}
-            </Pressable>
-            </RowActionMenu>
-          </Animated.View>
-        );
-      })}
-    </Screen>
-  );
-}
-
-function Hero({ stone }: { stone: MilestoneRow }) {
-  const { C, F } = useTheme();
-  const colorKey = stone.color ?? 'peach';
-  const bg = (C as Record<string, string>)[colorKey] ?? C.peach;
-  const ink = (C as Record<string, string>)[`${colorKey}Ink`] ?? C.peachInk;
-
-  const days = useMemo(() => {
-    try {
-      return differenceInCalendarDays(parseISO(stone.date), new Date());
-    } catch {
-      return null;
-    }
-  }, [stone.date]);
-
-  const numeralMatch = stone.title.match(/\d+/);
-  const numeral = numeralMatch?.[0] ?? (days != null ? String(Math.max(0, days)) : '');
-
-  const [word1, ...rest] = stone.title.split(/\s+/);
-  const word2 = rest.join(' ');
-
-  const inDays =
-    days == null
-      ? 'SOON'
-      : days === 0
-      ? 'TODAY'
-      : days === 1
-      ? 'IN 1 DAY'
-      : `IN ${days} DAYS`;
-
-  const quote = stone.quote ?? stone.description ?? null;
-
-  return (
-    <Animated.View
-      entering={FadeInDown.duration(420)}
-      style={{
-        backgroundColor: bg,
-        borderRadius: 26,
-        padding: 22,
-        marginBottom: 22,
-        overflow: 'hidden',
-      }}
-    >
-      {numeral ? (
-        <Text
-          style={{
-            position: 'absolute',
-            top: -10,
-            right: -10,
-            fontFamily: F.displayBold,
-            fontSize: 140,
-            color: 'rgba(0,0,0,0.06)',
-            letterSpacing: -4,
-          }}
-        >
-          {numeral}
-        </Text>
-      ) : null}
-      <Text
-        style={{
-          fontSize: 10,
-          color: ink,
-          fontFamily: F.bodyBold,
-          letterSpacing: 1.4,
-          opacity: 0.55,
-          marginBottom: 8,
-        }}
-      >
-        {`NEXT · ${inDays}`}
-      </Text>
-      <Text
-        style={{
-          fontFamily: F.displayBold,
-          fontSize: 32,
-          color: ink,
-          letterSpacing: -1,
-          lineHeight: 34,
-        }}
-      >
-        {word2 ? `${word1}\n${word2}.` : `${word1}.`}
-      </Text>
-      {quote ? (
-        <Text
-          style={{
-            fontFamily: F.serif,
-            fontStyle: 'italic',
-            fontSize: 13,
-            color: ink,
-            opacity: 0.7,
-            marginTop: 10,
-            maxWidth: 240,
-          }}
-        >
-          {`"${quote}"`}
-        </Text>
-      ) : null}
-    </Animated.View>
-  );
-}
-
-function EmptyMilestones() {
-  const { C, F } = useTheme();
-  return (
-    <Screen>
-      <Pressable
-        onPress={() => router.push('/sheets/new-milestone')}
-        style={{
-          marginTop: 8,
-          padding: 24,
-          borderRadius: 22,
-          borderWidth: 1,
-          borderStyle: 'dashed',
-          borderColor: C.line,
-          alignItems: 'center',
-          gap: 8,
-        }}
-      >
-        <Icon name="flag" size={22} color={C.fog} />
-        <Text style={{ fontFamily: F.displayBold, fontSize: 16, color: C.mist }}>
-          Mark your first milestone
-        </Text>
-        <Text
-          style={{
-            fontSize: 12,
-            color: C.fog,
-            fontFamily: F.body,
-            textAlign: 'center',
-          }}
-        >
-          Anniversaries, first trips, quiet Sundays — anything worth remembering.
-        </Text>
-      </Pressable>
-    </Screen>
-  );
-}
-
-function IndexSkeleton() {
+export default function MilestonesScreen() {
   const { C } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { mode } = useSession();
+  const { milestones, remove } = useMilestones();
+
+  const [filter, setFilter] = useState<FilterKey>('all');
+
+  const eyebrowLabel =
+    mode === 'solo' ? 'ME' : mode === 'crew' ? 'CREW' : 'US';
+
+  const rows = useMemo<MilestoneRow[]>(() => {
+    const today = startOfDay(new Date());
+    return milestones.map((m: any): MilestoneRow => {
+      const dateStr = String(m.date ?? '');
+      let daysUntil: number | null = null;
+      let yearsAgo: number | null = null;
+      let isUpcoming = false;
+      try {
+        const date = parseISO(dateStr);
+        if (m.repeatYearly) {
+          // For yearly recurrence, compute next occurrence.
+          const next = new Date(today.getFullYear(), date.getMonth(), date.getDate());
+          if (isBefore(next, today)) next.setFullYear(today.getFullYear() + 1);
+          daysUntil = differenceInCalendarDays(next, today);
+          isUpcoming = true;
+        } else if (isAfter(date, today)) {
+          daysUntil = differenceInCalendarDays(date, today);
+          isUpcoming = true;
+        } else {
+          yearsAgo = today.getFullYear() - date.getFullYear();
+          isUpcoming = false;
+        }
+      } catch {
+        // ignore parse errors
+      }
+      return {
+        id: String(m.id),
+        title: String(m.title ?? ''),
+        date: dateStr,
+        description: m.description ?? null,
+        icon: String(m.icon ?? '🎉'),
+        repeatYearly: !!m.repeatYearly,
+        isUpcoming,
+        daysUntil,
+        yearsAgo,
+      };
+    });
+  }, [milestones]);
+
+  const stats = useMemo(() => {
+    const total = rows.length;
+    const upcoming = rows.filter((r) => r.isUpcoming).length;
+    const recurring = rows.filter((r) => r.repeatYearly).length;
+    const next = rows
+      .filter((r) => r.isUpcoming && r.daysUntil != null)
+      .slice()
+      .sort((a, b) => (a.daysUntil ?? 0) - (b.daysUntil ?? 0))[0];
+    return { total, upcoming, recurring, next };
+  }, [rows]);
+
+  const visible = useMemo(() => {
+    return rows.filter((r) => {
+      if (filter === 'upcoming') return r.isUpcoming;
+      if (filter === 'past') return !r.isUpcoming;
+      if (filter === 'recurring') return r.repeatYearly;
+      return true;
+    });
+  }, [rows, filter]);
+
+  const buckets = useMemo<Bucket<MilestoneRow>[]>(() => {
+    const groups: Record<string, MilestoneRow[]> = {
+      'Coming up': [],
+      'This year': [],
+      'In time': [],
+    };
+    const thisYear = new Date().getFullYear();
+    for (const r of visible) {
+      if (r.isUpcoming) {
+        groups['Coming up'].push(r);
+      } else {
+        try {
+          const date = parseISO(r.date);
+          if (date.getFullYear() === thisYear) groups['This year'].push(r);
+          else groups['In time'].push(r);
+        } catch {
+          groups['In time'].push(r);
+        }
+      }
+    }
+    const order = ['Coming up', 'This year', 'In time'];
+    const dotMap: Record<string, string> = {
+      'Coming up': C.accent,
+      'This year': C.accent2,
+      'In time': C.ink3,
+    };
+    return order
+      .filter((k) => groups[k].length > 0)
+      .map((k) => ({
+        label: k,
+        dotColor: dotMap[k],
+        rows: groups[k]
+          .slice()
+          .sort((a, b) => {
+            if (k === 'Coming up') {
+              return (a.daysUntil ?? Infinity) - (b.daysUntil ?? Infinity);
+            }
+            return b.date.localeCompare(a.date);
+          }),
+      }));
+  }, [visible, C.accent, C.accent2, C.ink3]);
+
+  const filterOptions: { key: FilterKey; label: string }[] = [
+    { key: 'all', label: 'All' },
+    { key: 'upcoming', label: 'Upcoming' },
+    { key: 'past', label: 'Past' },
+    { key: 'recurring', label: 'Yearly' },
+  ];
+
+  const heroEyebrow = stats.next
+    ? `NEXT · ${
+        stats.next.daysUntil === 0
+          ? 'TODAY'
+          : stats.next.daysUntil === 1
+          ? 'TOMORROW'
+          : `IN ${stats.next.daysUntil} DAYS`
+      }`
+    : 'NO MILESTONES YET';
+  const heroTitle = stats.next?.title ?? 'Mark a moment';
+
   return (
-    <Screen>
-      <Animated.View
-        entering={FadeIn.duration(300)}
-        style={{
-          height: 168,
-          borderRadius: 26,
-          backgroundColor: C.peach,
-          opacity: 0.35,
-          marginBottom: 22,
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerTransparent: true,
+          headerShadowVisible: false,
+          headerBackground: () => null,
+          headerTintColor: C.inkColor,
+          title: '',
+          headerTitleAlign: 'center',
+          headerTitle: () => (
+            <HeaderBrand eyebrow={eyebrowLabel} title="milestones" />
+          ),
+          headerLeft: () => (
+            <PressScale
+              onPress={() => router.back()}
+              hitSlop={12}
+              style={{ padding: 4 }}
+            >
+              <Icon name="chevronLeft" size={22} color={C.inkColor} strokeWidth={2.2} />
+            </PressScale>
+          ),
+          headerRight: () => (
+            <PressScale
+              onPress={() => router.push('/sheets/new-milestone' as any)}
+              hitSlop={12}
+              style={{ padding: 4 }}
+            >
+              <Icon name="plus" size={22} color={C.inkColor} strokeWidth={2.2} />
+            </PressScale>
+          ),
         }}
       />
-      {[0, 1, 2, 3].map((i) => (
-        <Animated.View
-          key={i}
-          entering={FadeIn.delay(60 + i * 60).duration(300)}
-          style={{
-            flexDirection: 'row',
-            gap: 14,
-            marginBottom: 12,
-          }}
-        >
-          <View style={{ width: 50 }} />
-          <View
-            style={{
-              flex: 1,
-              height: 62,
-              borderRadius: 18,
-              backgroundColor: C.card,
-              borderWidth: 1,
-              borderColor: C.line,
-              opacity: 0.55,
-            }}
+
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingTop: insets.top + 60, paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Hero — slim status row */}
+        <View style={styles.heroWrap}>
+          <StatBar
+            eyebrow={heroEyebrow}
+            meta={
+              stats.next
+                ? `${format(parseISO(stats.next.date), 'EEE · MMM d')}${stats.next.repeatYearly ? ' · YEARLY' : ''}`
+                : undefined
+            }
+            primary={
+              <>
+                <Text
+                  style={[Typography.pixelHeroSm, { color: C.inkColor }]}
+                  numberOfLines={1}
+                >
+                  {heroTitle}
+                </Text>
+                {stats.next ? <PulsingDot color={C.accent} /> : null}
+                <Text
+                  style={[Typography.mono, { color: C.ink3, marginLeft: 'auto', fontSize: 11 }]}
+                  numberOfLines={1}
+                >
+                  {stats.total} total · {stats.upcoming} ahead · {stats.recurring} yearly
+                </Text>
+              </>
+            }
           />
-        </Animated.View>
-      ))}
-    </Screen>
+        </View>
+
+        {/* Filter pills */}
+        <View style={styles.filterRow}>
+          <SegmentedTabs<FilterKey>
+            value={filter}
+            onChange={setFilter}
+            options={filterOptions.map((f) => ({ key: f.key, label: f.label }))}
+          />
+        </View>
+
+        {/* Bucketed list */}
+        <View style={styles.listWrap}>
+          {buckets.length === 0 ? (
+            <ActionEmptyState
+              icon="flag"
+              title="No milestones yet"
+              body="Pin moments worth remembering — anniversaries, first steps, traditions."
+              actionLabel="New milestone"
+              onAction={() => router.push('/sheets/new-milestone' as any)}
+            />
+          ) : (
+            <BucketedList
+              buckets={buckets}
+              rowKey={(m) => m.id}
+              renderRow={(m) => (
+                <SwipeableRow
+                  deleteTitle="Delete milestone?"
+                  deleteMessage={`"${m.title}" will be removed.`}
+                  onEdit={() =>
+                    router.push(`/sheets/new-milestone?id=${m.id}` as any)
+                  }
+                  onDelete={() => remove(m.id)}
+                >
+                  <View style={[styles.row, { backgroundColor: C.bgCard }]}>
+                    <View style={[styles.iconTile, { backgroundColor: C.accentSoft }]}>
+                      <Icon
+                        name={resolveMilestoneIcon(m.icon)}
+                        size={16}
+                        color={C.accent}
+                        strokeWidth={2.2}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.headRow}>
+                        <Text
+                          style={[
+                            Typography.bodyMedium,
+                            { color: C.inkColor, flex: 1 },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {m.title}
+                        </Text>
+                        {m.repeatYearly ? (
+                          <View
+                            style={[
+                              styles.recurChip,
+                              { backgroundColor: C.accent2Soft },
+                            ]}
+                          >
+                            <Icon
+                              name="repeat"
+                              size={9}
+                              color={C.accent2}
+                              strokeWidth={2.4}
+                            />
+                            <Text
+                              style={[
+                                Typography.eyebrowSm,
+                                { color: C.accent2, fontSize: 9 },
+                              ]}
+                            >
+                              YEARLY
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      {m.description ? (
+                        <Text
+                          style={[Typography.caption, { color: C.ink2, marginTop: 2 }]}
+                          numberOfLines={2}
+                        >
+                          {m.description}
+                        </Text>
+                      ) : null}
+                      <View style={styles.metaRow}>
+                        <Text style={[Typography.mono, { color: C.ink3, fontSize: 11 }]}>
+                          {m.date ? format(parseISO(m.date), 'MMM d, yyyy') : '—'}
+                        </Text>
+                        {m.isUpcoming && m.daysUntil != null ? (
+                          <Text
+                            style={[Typography.eyebrowSm, { color: C.accent, fontSize: 9.5 }]}
+                          >
+                            {m.daysUntil === 0
+                              ? 'TODAY'
+                              : m.daysUntil === 1
+                              ? 'TOMORROW'
+                              : `IN ${m.daysUntil}D`}
+                          </Text>
+                        ) : m.yearsAgo != null && m.yearsAgo > 0 ? (
+                          <Text
+                            style={[Typography.eyebrowSm, { color: C.ink3, fontSize: 9.5 }]}
+                          >
+                            {m.yearsAgo} {m.yearsAgo === 1 ? 'YR' : 'YRS'} AGO
+                          </Text>
+                        ) : null}
+                      </View>
+                    </View>
+                  </View>
+                </SwipeableRow>
+              )}
+            />
+          )}
+        </View>
+      </ScrollView>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  heroWrap: {
+    paddingHorizontal: 18,
+    paddingTop: 8,
+    paddingBottom: 6,
+  },
+  filterRow: {
+    paddingHorizontal: 18,
+    paddingTop: 4,
+    paddingBottom: 14,
+    gap: 6,
+  },
+  listWrap: {
+    paddingHorizontal: 18,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  iconTile: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  recurChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+    flexWrap: 'wrap',
+  },
+});

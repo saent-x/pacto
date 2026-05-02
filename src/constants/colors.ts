@@ -1,115 +1,183 @@
+// Pacto WARM CALM palette
+// Source: /tmp/pacto-design/coupl-design-ii/project/index.html (:root + [data-theme="dark"])
+// OKLCH values converted to hex for React Native (which doesn't accept oklch() in styles).
+//
+// Three accent hues sharing chroma 0.13 / lightness 0.68:
+//   - accent   = terracotta-rose (mine / Maya / primary)
+//   - accent2  = sage             (partner / Jordan / secondary)
+//   - accent3  = honey            (shared / tertiary)
+//
+// Legacy keys (gold, bone, coal, etc.) are kept and re-pointed at the new tokens so existing
+// screens render immediately under the new palette while Phase 6+7+8+10 rebuild them.
+
+// ─── Tokens (light) ──────────────────────────────────────────────
+const L_BG = '#FAF8F2';
+const L_BG_SOFT = '#F4F0E5';
+const L_BG_CARD = '#FFFFFF';
+const L_INK = '#2A241B';
+const L_INK_2 = '#5C5345';
+const L_INK_3 = '#918875';
+const L_LINE = '#E8E2D4';
+const L_LINE_2 = '#DBD3C0';
+const L_ACCENT = '#C7755A';
+const L_ACCENT_2 = '#6FB3A2';
+const L_ACCENT_3 = '#C8AE73';
+const L_ACCENT_SOFT = '#F5DDD3';
+const L_ACCENT_2_SOFT = '#DCEDE7';
+const L_ACCENT_3_SOFT = '#EEE4C8';
+
+// ─── Tokens (dark) ───────────────────────────────────────────────
+const D_BG = '#2A2620';
+const D_BG_SOFT = '#322D26';
+const D_BG_CARD = '#39322B';
+const D_INK = '#F2EEE5';
+const D_INK_2 = '#C2BAA9';
+const D_INK_3 = '#847A6A';
+const D_LINE = '#4D4537';
+const D_LINE_2 = '#5B5141';
+const D_ACCENT = '#D08B6F';
+const D_ACCENT_2 = '#7FBFAF';
+const D_ACCENT_3 = '#D2BC85';
+const D_ACCENT_SOFT = '#4D352B';
+const D_ACCENT_2_SOFT = '#2C443D';
+const D_ACCENT_3_SOFT = '#4A4128';
+
 const dark = {
-  // Accent — Warm Block gold (brand anchor)
-  primary: '#E4B24A',
-  primaryLight: '#2E2620',
-  primaryDark: '#C99836',
-  primaryMuted: 'rgba(228, 178, 74, 0.14)',
-  primaryVivid: '#E8B86D',
+  // ─── New WARM CALM tokens ────────────────────────────────────
+  bg: D_BG,
+  bgSoft: D_BG_SOFT,
+  bgCard: D_BG_CARD,
+  inkColor: D_INK,
+  ink2: D_INK_2,
+  ink3: D_INK_3,
+  lineColor: D_LINE,
+  line2: D_LINE_2,
+  accent: D_ACCENT,
+  accent2: D_ACCENT_2,
+  accent3: D_ACCENT_3,
+  accentSoft: D_ACCENT_SOFT,
+  accent2Soft: D_ACCENT_2_SOFT,
+  accent3Soft: D_ACCENT_3_SOFT,
 
-  // Warm Block scale (prototype tokens)
-  ink: '#0E0B0A',
-  coal: '#161210',
-  card: '#1D1815',
-  cardHi: '#262019',
-  line: '#2B241E',
-  lineHi: '#3A322A',
-  bone: '#F5EEE3',
-  mist: '#B3A89A',
-  fog: '#80746A',
-  ash: '#5A5048',
-  gold: '#E4B24A',
-  goldDim: '#C99836',
-  goldSoft: 'rgba(228, 178, 74, 0.14)',
+  // ─── Legacy aliases (re-pointed) ─────────────────────────────
+  primary: D_ACCENT,
+  primaryLight: D_ACCENT_SOFT,
+  primaryDark: '#A3654C',
+  primaryMuted: 'rgba(208, 139, 111, 0.16)',
+  primaryVivid: '#DCA78F',
 
-  // Legacy warm scale aliases (kept for back-compat)
-  night: '#1B1715',
-  dark: '#221E1A',
-  dim: '#2E2923',
-  muted: '#3D362E',
-  dusk: '#514840',
-  haze: '#B3A89A',
-  cream: '#E8DDD0',
-  parchment: '#FAF6F1',
+  ink: D_BG,
+  coal: D_BG_SOFT,
+  card: D_BG_CARD,
+  cardHi: '#3F3830',
+  line: D_LINE,
+  lineHi: D_LINE_2,
+  bone: D_INK,
+  mist: D_INK_2,
+  fog: D_INK_3,
+  ash: '#6E6555',
+  gold: D_ACCENT,
+  goldDim: '#A3654C',
+  goldSoft: 'rgba(208, 139, 111, 0.16)',
 
-  // Semantic
+  night: D_BG_SOFT,
+  dark: D_BG_CARD,
+  dim: '#3F3830',
+  muted: D_LINE,
+  dusk: D_LINE_2,
+  haze: D_INK_2,
+  cream: D_INK,
+  parchment: D_INK,
+
   success: '#8AAF7B',
-  successLight: 'rgba(138, 175, 123, 0.12)',
+  successLight: 'rgba(138, 175, 123, 0.14)',
   warning: '#D4A054',
-  warningLight: 'rgba(212, 160, 84, 0.12)',
+  warningLight: 'rgba(212, 160, 84, 0.14)',
   error: '#C96B5A',
-  errorLight: 'rgba(201, 107, 90, 0.12)',
+  errorLight: 'rgba(201, 107, 90, 0.14)',
   info: '#7BA0AF',
-  infoLight: 'rgba(123, 160, 175, 0.12)',
+  infoLight: 'rgba(123, 160, 175, 0.14)',
 
-  // Feature accents
   reminders: '#9B8EC4',
-  remindersLight: 'rgba(155, 142, 196, 0.12)',
+  remindersLight: 'rgba(155, 142, 196, 0.14)',
   tasks: '#7BA08A',
-  tasksLight: 'rgba(123, 160, 138, 0.12)',
+  tasksLight: 'rgba(123, 160, 138, 0.14)',
   journal: '#C4977A',
-  journalLight: 'rgba(196, 151, 122, 0.12)',
+  journalLight: 'rgba(196, 151, 122, 0.14)',
   wishlists: '#D4A054',
-  wishlistsLight: 'rgba(212, 160, 84, 0.12)',
+  wishlistsLight: 'rgba(212, 160, 84, 0.14)',
   plans: '#8AAF7B',
-  plansLight: 'rgba(138, 175, 123, 0.12)',
+  plansLight: 'rgba(138, 175, 123, 0.14)',
   checklists: '#7BA0AF',
-  checklistsLight: 'rgba(123, 160, 175, 0.12)',
+  checklistsLight: 'rgba(123, 160, 175, 0.14)',
   expenses: '#B08090',
-  expensesLight: 'rgba(176, 128, 144, 0.12)',
+  expensesLight: 'rgba(176, 128, 144, 0.14)',
   milestones: '#C4977A',
-  milestonesLight: 'rgba(196, 151, 122, 0.12)',
+  milestonesLight: 'rgba(196, 151, 122, 0.14)',
   mood: '#9B8EC4',
-  moodLight: 'rgba(155, 142, 196, 0.12)',
+  moodLight: 'rgba(155, 142, 196, 0.14)',
 
-  // Base (aliases of Warm Block scale above)
-  background: '#0E0B0A',
-  screenBackground: '#0E0B0A',
-  surface: '#161210',
-  text: '#F5EEE3',
-  textSecondary: '#B3A89A',
-  textTertiary: '#80746A',
-  border: '#2B241E',
-  divider: '#3A322A',
-  white: '#F5EEE3',
-  black: '#0E0B0A',
+  background: D_BG,
+  screenBackground: D_BG,
+  surface: D_BG_SOFT,
+  text: D_INK,
+  textSecondary: D_INK_2,
+  textTertiary: D_INK_3,
+  border: D_LINE,
+  divider: D_LINE_2,
+  white: D_INK,
+  black: D_BG,
 
-  // Gradients (as arrays for LinearGradient or as overlay colors)
-  gradientWarm: ['#2E2117', '#161210'],
-  gradientGold: ['rgba(228, 178, 74, 0.10)', 'rgba(228, 178, 74, 0)'],
+  gradientWarm: [D_BG_SOFT, D_BG] as readonly string[],
+  gradientGold: ['rgba(208, 139, 111, 0.10)', 'rgba(208, 139, 111, 0)'] as readonly string[],
 };
 
 const light = {
-  // Warm Block light — deeper gold for cream contrast
-  primary: '#B8872E',
-  primaryLight: '#F0E0D8',
-  primaryDark: '#956912',
-  primaryMuted: 'rgba(184, 135, 46, 0.12)',
-  primaryVivid: '#C99836',
+  // ─── New WARM CALM tokens ────────────────────────────────────
+  bg: L_BG,
+  bgSoft: L_BG_SOFT,
+  bgCard: L_BG_CARD,
+  inkColor: L_INK,
+  ink2: L_INK_2,
+  ink3: L_INK_3,
+  lineColor: L_LINE,
+  line2: L_LINE_2,
+  accent: L_ACCENT,
+  accent2: L_ACCENT_2,
+  accent3: L_ACCENT_3,
+  accentSoft: L_ACCENT_SOFT,
+  accent2Soft: L_ACCENT_2_SOFT,
+  accent3Soft: L_ACCENT_3_SOFT,
 
-  // Warm Block cream scale (prototype lightTokens)
-  ink: '#F5EEE3',
-  coal: '#EDE5D8',
-  card: '#F9F3E8',
-  cardHi: '#FFF9EE',
-  line: '#D9CFBE',
-  lineHi: '#C5B8A2',
-  bone: '#1F1611',
-  mist: '#5A4B3E',
-  fog: '#86766A',
-  ash: '#A59684',
-  gold: '#B8872E',
-  goldDim: '#956912',
-  goldSoft: 'rgba(184, 135, 46, 0.12)',
+  // ─── Legacy aliases (re-pointed) ─────────────────────────────
+  primary: L_ACCENT,
+  primaryLight: L_ACCENT_SOFT,
+  primaryDark: '#9F5A40',
+  primaryMuted: 'rgba(199, 117, 90, 0.14)',
+  primaryVivid: '#B86846',
 
-  // Legacy scale aliases
-  night: '#EFEFEC',
-  dark: '#E8E5E0',
-  dim: '#DDD9D3',
-  muted: '#CCC4B8',
-  dusk: '#A89A8C',
-  haze: '#5A4B3E',
-  cream: '#2C2420',
-  parchment: '#0F0D0B',
+  ink: L_BG,
+  coal: L_BG_SOFT,
+  card: L_BG_CARD,
+  cardHi: '#FFFDF7',
+  line: L_LINE,
+  lineHi: L_LINE_2,
+  bone: L_INK,
+  mist: L_INK_2,
+  fog: L_INK_3,
+  ash: '#A89E89',
+  gold: L_ACCENT,
+  goldDim: '#9F5A40',
+  goldSoft: 'rgba(199, 117, 90, 0.14)',
+
+  night: L_BG_SOFT,
+  dark: L_BG_CARD,
+  dim: '#FFFDF7',
+  muted: L_LINE,
+  dusk: L_LINE_2,
+  haze: L_INK_2,
+  cream: L_INK,
+  parchment: L_INK,
 
   success: '#5A7A50',
   successLight: 'rgba(90, 122, 80, 0.10)',
@@ -139,42 +207,33 @@ const light = {
   mood: '#6A5E9A',
   moodLight: 'rgba(106, 94, 154, 0.10)',
 
-  // Warm cream base (aliases of Warm Block scale above)
-  background: '#F5EEE3',
-  screenBackground: '#F5EEE3',
-  surface: '#EDE5D8',
-  text: '#1F1611',
-  textSecondary: '#5A4B3E',
-  textTertiary: '#86766A',
-  border: '#D9CFBE',
-  divider: '#C5B8A2',
+  background: L_BG,
+  screenBackground: L_BG,
+  surface: L_BG_SOFT,
+  text: L_INK,
+  textSecondary: L_INK_2,
+  textTertiary: L_INK_3,
+  border: L_LINE,
+  divider: L_LINE_2,
   white: '#FFFFFF',
-  black: '#1A1410',
+  black: L_INK,
 
-  gradientWarm: ['#F7F5F2', '#FFFFFF'],
-  gradientGold: ['rgba(184, 90, 66, 0.04)', 'rgba(184, 90, 66, 0)'],
+  gradientWarm: [L_BG_SOFT, L_BG] as readonly string[],
+  gradientGold: ['rgba(199, 117, 90, 0.06)', 'rgba(199, 117, 90, 0)'] as readonly string[],
 };
 
 export type ColorScheme = {
   [K in keyof typeof dark]: string | readonly string[];
 };
 
-import { deepRose, sageWalnut, midnightHoney } from './colors-alternatives';
-
-export type PaletteKey = 'classic' | 'deepRose' | 'sageWalnut' | 'midnightHoney';
+export type PaletteKey = 'classic';
 
 export const PALETTE_OPTIONS: { value: PaletteKey; label: string }[] = [
   { value: 'classic', label: 'Classic' },
-  { value: 'midnightHoney', label: 'Midnight' },
-  { value: 'deepRose', label: 'Rose' },
-  { value: 'sageWalnut', label: 'Sage' },
 ];
 
 const palettes: Record<PaletteKey, { dark: typeof dark; light: typeof light }> = {
   classic: { dark, light },
-  deepRose: { dark: deepRose.dark as typeof dark, light: deepRose.light as typeof light },
-  sageWalnut: { dark: sageWalnut.dark as typeof dark, light: sageWalnut.light as typeof light },
-  midnightHoney: { dark: midnightHoney.dark as typeof dark, light: midnightHoney.light as typeof light },
 };
 
 let activePaletteKey: PaletteKey = 'classic';
@@ -184,7 +243,7 @@ export const themes: Record<'dark' | 'light', typeof dark> = {
   light: palettes.classic.light,
 };
 
-// Default export for convenience — auth screens use this directly
+// Default export — auth screens use this directly
 export let Colors: typeof dark = palettes.classic.dark;
 
 export function setActivePalette(key: PaletteKey) {

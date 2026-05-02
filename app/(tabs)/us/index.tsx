@@ -1,16 +1,16 @@
 import { router } from 'expo-router';
+import { differenceInCalendarDays, format, parseISO } from 'date-fns';
 import { useMemo } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import Animated, {
-  FadeInDown,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  Bucket,
+  BucketedList,
+  Card,
+} from '@/src/components/ui/pacto';
+import { Platform } from 'react-native';
 import { Icon, IconName } from '@/src/components/ui/Icon';
-import { Screen } from '@/src/components/ui/Screen';
-import { useTheme } from '@/src/lib/theme';
-import { db } from '@/src/lib/instant';
+import { PressScale } from '@/src/components/ui/PressScale';
 import { useSession } from '@/src/hooks/useSession';
 import { useLoveNotes } from '@/src/hooks/useLoveNotes';
 import { useCheckIns } from '@/src/hooks/useCheckIns';
@@ -19,360 +19,568 @@ import { useWishlists } from '@/src/hooks/useWishlists';
 import { useMilestones } from '@/src/hooks/useMilestones';
 import { usePlans } from '@/src/hooks/usePlans';
 import { useJournal } from '@/src/hooks/useJournal';
+import { Typography } from '@/src/constants/typography';
+import { useTheme } from '@/src/lib/theme';
 
-type ColorKey = 'rose' | 'butter' | 'mint' | 'lavender' | 'peach' | 'sky';
-
-type Feature = {
-  key: string;
+type Module = {
+  id: string;
   href: string;
   label: string;
-  sub: string;
-  count: string;
   icon: IconName;
-  color: ColorKey;
+  meta: string;
+  accentKey: 'a1' | 'a2' | 'a3';
 };
 
-const PLACEHOLDERS: Record<string, { count: string; sub: string }> = {
-  notes: { count: '—', sub: 'Loading…' },
-  checkins: { count: '—', sub: 'Loading…' },
-  expenses: { count: '—', sub: 'Loading…' },
-  wishlists: { count: '—', sub: 'Loading…' },
-  milestones: { count: '—', sub: 'Loading…' },
-  plans: { count: '—', sub: 'Loading…' },
-  timetables: { count: '—', sub: 'Loading…' },
-  journal: { count: '—', sub: 'Loading…' },
-};
+export default function UsScreen() {
+  const insets = useSafeAreaInsets();
+  const { C } = useTheme();
+  const { user, partner, mode, activeCouple } = useSession();
 
-const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const myFirstName = (user?.displayName ?? user?.email?.split('@')[0] ?? 'You').split(' ')[0];
+  const partnerFirstName = partner?.displayName?.split(' ')[0] ?? null;
 
-function daysUntil(dateISO: string): number {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const target = new Date(`${dateISO}T00:00:00`);
-  return Math.round((target.getTime() - today.getTime()) / 86400000);
-}
+  // Anniversary / day count
+  const anniversary = activeCouple?.couple?.anniversary;
+  const dayCount = useMemo(() => {
+    if (!anniversary) return null;
+    try {
+      const d = differenceInCalendarDays(new Date(), parseISO(anniversary));
+      return d >= 0 ? d : null;
+    } catch {
+      return null;
+    }
+  }, [anniversary]);
 
-// solo-mode: love-notes card hidden, header relabelled
-export default function UsEditorial() {
-  const { C, F } = useTheme();
-  const { activeCouple, isSolo } = useSession();
-  const coupleId = activeCouple?.couple?.id ?? null;
+  const yearsTogether = useMemo(() => {
+    if (!dayCount) return null;
+    return (dayCount / 365).toFixed(1);
+  }, [dayCount]);
 
-  const loveNotes = useLoveNotes();
-  const checkins = useCheckIns();
+  // Days until next anniversary
+  const daysUntilAnniversary = useMemo(() => {
+    if (!anniversary) return null;
+    try {
+      const ann = parseISO(anniversary);
+      const now = new Date();
+      const next = new Date(now.getFullYear(), ann.getMonth(), ann.getDate());
+      if (next < now) next.setFullYear(now.getFullYear() + 1);
+      return differenceInCalendarDays(next, now);
+    } catch {
+      return null;
+    }
+  }, [anniversary]);
+
+  const heroEyebrow = useMemo(() => {
+    if (mode === 'solo') return dayCount ? `ME · DAY ${dayCount}` : 'ME';
+    if (mode === 'crew') return 'CREW';
+    return dayCount ? `US · DAY ${dayCount}` : 'US';
+  }, [mode, dayCount]);
+
+  const heroTitle = useMemo(() => {
+    if (mode === 'solo') return myFirstName;
+    if (mode === 'crew') return activeCouple?.couple?.name || 'Our pact';
+    return partnerFirstName ? `${myFirstName} & ${partnerFirstName}` : myFirstName;
+  }, [mode, myFirstName, partnerFirstName, activeCouple?.couple?.name]);
+
+  // Module counts (live from hooks)
+  const notes = useLoveNotes();
+  const checkIns = useCheckIns();
   const expenses = useExpenses();
   const wishlists = useWishlists();
   const milestones = useMilestones();
-  const plans = usePlans(['active']);
+  const plans = usePlans();
   const journal = useJournal();
 
-  const { data: wlItemsData, isLoading: wlItemsLoading } = (db as any).useQuery(
-    coupleId ? { wishlistItems: { $: { where: { 'couple.id': coupleId } } } } : null,
-  );
-  const { data: ttData, isLoading: ttLoading } = (db as any).useQuery(
-    coupleId ? { timetables: { $: { where: { 'couple.id': coupleId } } } } : null,
-  );
+  // Solo-mode equivalent of Together: compute earliest activity (since-when),
+  // current consecutive-day streak, and best streak across user-owned items.
+  const soloStats = useMemo(() => {
+    if (mode !== 'solo') return null;
+    const allTs: number[] = [
+      ...(notes.notes ?? []).map((x: any) => x.createdAt as number),
+      ...(checkIns.checkIns ?? []).map((x: any) => x.createdAt as number),
+      ...(expenses.expenses ?? []).map((x: any) => x.createdAt as number),
+      ...(wishlists.wishlists ?? []).map((x: any) => x.createdAt as number),
+      ...(milestones.milestones ?? []).map((x: any) => x.createdAt as number),
+      ...(plans.plans ?? []).map((x: any) => x.createdAt as number),
+      ...(journal.entries ?? []).map((x: any) => x.createdAt as number),
+    ].filter((t) => typeof t === 'number' && t > 0);
 
-  const features: Feature[] = useMemo(() => {
-    const wishItemCount = wlItemsData?.wishlistItems?.length ?? 0;
-    const timetableCount = ttData?.timetables?.length ?? 0;
+    if (allTs.length === 0) {
+      return { daysSince: 0, sinceDate: null, streak: 0, best: 0 };
+    }
 
-    const notes = loveNotes.isLoading
-      ? PLACEHOLDERS.notes
-      : { count: String(loveNotes.notes.length), sub: `${loveNotes.notes.length} total` };
+    const earliest = Math.min(...allTs);
+    const now = new Date();
+    const daysSince = Math.max(0, differenceInCalendarDays(now, new Date(earliest)));
 
-    const cin = checkins.isLoading
-      ? PLACEHOLDERS.checkins
-      : {
-          count: `${checkins.todayCheckIns.length}/2`,
-          sub: `You · ${checkins.myTodayCheckIn?.mood ?? '—'}`,
-        };
+    // Build set of local YYYY-MM-DD active days, walk backwards for current
+    // streak and scan for best run.
+    const dayKeys = new Set<string>();
+    for (const t of allTs) {
+      dayKeys.add(format(new Date(t), 'yyyy-MM-dd'));
+    }
 
-    const exp = expenses.isLoading
-      ? PLACEHOLDERS.expenses
-      : (() => {
-          const sum = expenses.unsettled.reduce((a: number, e: any) => a + (e.amount ?? 0), 0);
-          return {
-            count: `€${Math.round(sum)}`,
-            sub: expenses.unsettled.length ? `${expenses.unsettled.length} owed` : 'Settled',
-          };
-        })();
+    const dayKeyOf = (d: Date) => format(d, 'yyyy-MM-dd');
+    let streak = 0;
+    const cursor = new Date(now);
+    while (dayKeys.has(dayKeyOf(cursor))) {
+      streak += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    }
 
-    const wl = wishlists.isLoading || wlItemsLoading
-      ? PLACEHOLDERS.wishlists
-      : {
-          count: String(wishItemCount),
-          sub: `${wishlists.wishlists.length} ${wishlists.wishlists.length === 1 ? 'list' : 'lists'}`,
-        };
+    // Best streak: walk from earliest day to today.
+    let best = 0;
+    let run = 0;
+    const walk = new Date(earliest);
+    walk.setHours(0, 0, 0, 0);
+    const todayMs = new Date(now);
+    todayMs.setHours(0, 0, 0, 0);
+    while (walk.getTime() <= todayMs.getTime()) {
+      if (dayKeys.has(dayKeyOf(walk))) {
+        run += 1;
+        if (run > best) best = run;
+      } else {
+        run = 0;
+      }
+      walk.setDate(walk.getDate() + 1);
+    }
 
-    const ms = milestones.isLoading
-      ? PLACEHOLDERS.milestones
-      : (() => {
-          const next = milestones.upcoming[0];
-          if (!next) return { count: '—', sub: 'Add a milestone' };
-          const d = daysUntil(next.date as string);
-          const wd = WEEKDAY_SHORT[new Date(`${next.date}T00:00:00`).getDay()];
-          return {
-            count: d <= 0 ? 'Today' : `${d}d`,
-            sub: `${next.title} · ${wd}`,
-          };
-        })();
-
-    const pl = plans.isLoading
-      ? PLACEHOLDERS.plans
-      : {
-          count: String(plans.plans.length),
-          sub: (plans.plans[0] as any)?.title ?? 'Add a plan',
-        };
-
-    const tt = ttLoading
-      ? PLACEHOLDERS.timetables
-      : {
-          count: String(timetableCount),
-          sub: `${timetableCount} ${timetableCount === 1 ? 'rhythm' : 'rhythms'}`,
-        };
-
-    const jr = journal.isLoading
-      ? PLACEHOLDERS.journal
-      : {
-          count: String(journal.allEntries.length),
-          sub: `${journal.allEntries.length} entries`,
-        };
-
-    const all: Feature[] = [
-      { key: 'notes', href: '/us/notes', label: 'Love notes', icon: 'heart', color: 'rose', ...notes },
-      { key: 'checkins', href: '/us/checkins', label: 'Check-ins', icon: 'sun', color: 'butter', ...cin },
-      { key: 'expenses', href: '/us/expenses', label: 'Expenses', icon: 'dollarSign', color: 'mint', ...exp },
-      { key: 'wishlists', href: '/us/wishlists', label: 'Wishlists', icon: 'gift', color: 'lavender', ...wl },
-      { key: 'milestones', href: '/us/milestones', label: 'Milestones', icon: 'flag', color: 'peach', ...ms },
-      { key: 'plans', href: '/us/plans', label: 'Plans', icon: 'map', color: 'sky', ...pl },
-      { key: 'timetables', href: '/us/timetables', label: 'Timetables', icon: 'calendar', color: 'peach', ...tt },
-      { key: 'journal', href: '/us/journal', label: 'Journal', icon: 'feather', color: 'butter', ...jr },
-    ];
-    return isSolo ? all.filter((f) => f.key !== 'notes') : all;
+    return { daysSince, sinceDate: new Date(earliest), streak, best };
   }, [
-    isSolo,
-    loveNotes.isLoading, loveNotes.notes,
-    checkins.isLoading, checkins.todayCheckIns, checkins.myTodayCheckIn,
-    expenses.isLoading, expenses.unsettled,
-    wishlists.isLoading, wishlists.wishlists,
-    wlItemsLoading, wlItemsData,
-    milestones.isLoading, milestones.upcoming,
-    plans.isLoading, plans.plans,
-    ttLoading, ttData,
-    journal.isLoading, journal.allEntries,
+    mode,
+    notes.notes,
+    checkIns.checkIns,
+    expenses.expenses,
+    wishlists.wishlists,
+    milestones.milestones,
+    plans.plans,
+    journal.entries,
   ]);
 
-  const enter = (i: number) => FadeInDown.delay(i * 60).duration(420);
+  // 7-day activity ribbon for the solo card footer (last 7 days, today on right).
+  const soloWeekDots = useMemo(() => {
+    if (mode !== 'solo') return null;
+    const now = new Date();
+    const dayKeys = new Set<string>();
+    const collect = (arr: any[] | undefined) => {
+      for (const x of arr ?? []) {
+        if (typeof x?.createdAt === 'number') {
+          dayKeys.add(format(new Date(x.createdAt), 'yyyy-MM-dd'));
+        }
+      }
+    };
+    collect(notes.notes);
+    collect(checkIns.checkIns);
+    collect(expenses.expenses);
+    collect(wishlists.wishlists);
+    collect(milestones.milestones);
+    collect(plans.plans);
+    collect(journal.entries);
+
+    const out: { active: boolean }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      out.push({ active: dayKeys.has(format(d, 'yyyy-MM-dd')) });
+    }
+    return out;
+  }, [
+    mode,
+    notes.notes,
+    checkIns.checkIns,
+    expenses.expenses,
+    wishlists.wishlists,
+    milestones.milestones,
+    plans.plans,
+    journal.entries,
+  ]);
+
+  const modules: Module[] = useMemo(
+    () => [
+      {
+        id: 'notes',
+        href: '/(tabs)/us/notes',
+        label: 'Notes',
+        icon: 'heart',
+        meta: countLabel(notes.notes?.length, 'note', 'notes'),
+        accentKey: 'a1',
+      },
+      {
+        id: 'checkins',
+        href: '/(tabs)/us/checkins',
+        label: 'Check-ins',
+        icon: 'feather',
+        meta: countLabel(checkIns.checkIns?.length, 'entry', 'entries'),
+        accentKey: 'a2',
+      },
+      {
+        id: 'expenses',
+        href: '/(tabs)/us/expenses',
+        label: 'Expenses',
+        icon: 'creditCard',
+        meta: countLabel(expenses.expenses?.length, 'item', 'items'),
+        accentKey: 'a3',
+      },
+      {
+        id: 'wishlists',
+        href: '/(tabs)/us/wishlists',
+        label: 'Wishlists',
+        icon: 'gift',
+        meta: countLabel(wishlists.wishlists?.length, 'wish', 'wishes'),
+        accentKey: 'a1',
+      },
+      {
+        id: 'milestones',
+        href: '/(tabs)/us/milestones',
+        label: 'Milestones',
+        icon: 'flag',
+        meta: countLabel(milestones.milestones?.length, 'mark', 'marks'),
+        accentKey: 'a2',
+      },
+      {
+        id: 'plans',
+        href: '/(tabs)/us/plans',
+        label: 'Plans',
+        icon: 'compass',
+        meta: countLabel(plans.plans?.length, 'plan', 'plans'),
+        accentKey: 'a3',
+      },
+      {
+        id: 'journal',
+        href: '/(tabs)/us/journal',
+        label: 'Journal',
+        icon: 'book',
+        meta: countLabel(journal.entries?.length, 'entry', 'entries'),
+        accentKey: 'a1',
+      },
+      {
+        id: 'timetables',
+        href: '/(tabs)/us/timetables',
+        label: 'Timetables',
+        icon: 'grid',
+        meta: 'rhythms',
+        accentKey: 'a2',
+      },
+    ],
+    [
+      notes.notes?.length,
+      checkIns.checkIns?.length,
+      expenses.expenses?.length,
+      wishlists.wishlists?.length,
+      milestones.milestones?.length,
+      plans.plans?.length,
+      journal.entries?.length,
+    ]
+  );
+  const moduleBuckets = useMemo<Bucket<Module>[]>(
+    () => [
+      {
+        label: 'Modules',
+        dotColor: C.accent2,
+        rows: modules,
+      },
+    ],
+    [modules, C.accent2],
+  );
+
+  const accentFor = (k: Module['accentKey']) =>
+    k === 'a1' ? C.accent : k === 'a2' ? C.accent2 : C.accent3;
 
   return (
-    <Screen>
-      {/* Shared spaces header */}
-      <Animated.View
-        entering={enter(0)}
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 12,
-          paddingHorizontal: 4,
-        }}
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingTop: insets.top + 60, paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
       >
-        <Text
-          style={{
-            fontSize: 10,
-            color: C.fog,
-            fontFamily: F.bodyBold,
-            letterSpacing: 1.4,
-          }}
-        >
-          {isSolo ? 'MY SPACES' : 'OUR SHARED SPACES'} · {features.length}
-        </Text>
-        <Text
-          style={{
-            fontSize: 10,
-            color: C.gold,
-            fontFamily: F.bodyBold,
-            letterSpacing: 1,
-          }}
-        >
-          EDIT →
-        </Text>
-      </Animated.View>
+        {/* Solo card — same layout as Together, with personal stats. */}
+        {mode === 'solo' && soloStats ? (
+          <View style={styles.section}>
+            <Card padded={false}>
+              <View style={styles.togetherBody}>
+                <View style={[styles.togetherLeft, { borderRightColor: C.lineColor }]}>
+                  <Text style={[Typography.eyebrow, { color: C.ink3 }]}>SOLO</Text>
+                  <View style={styles.yearsRow}>
+                    <Text style={[styles.yearsBig, { color: C.inkColor }]}>
+                      {soloStats.daysSince}
+                    </Text>
+                    <Text style={[styles.yearsUnit, { color: C.ink3 }]}>
+                      {soloStats.daysSince === 1 ? 'day' : 'days'}
+                    </Text>
+                  </View>
+                  {soloStats.sinceDate ? (
+                    <Text style={[Typography.mono, { color: C.ink3, marginTop: 6, fontSize: 11 }]}>
+                      since {format(soloStats.sinceDate, 'MMM d')}
+                    </Text>
+                  ) : (
+                    <Text style={[Typography.mono, { color: C.ink3, marginTop: 6, fontSize: 11 }]}>
+                      no entries yet
+                    </Text>
+                  )}
+                </View>
+                <View style={styles.togetherRight}>
+                  <Text style={[Typography.eyebrow, { color: C.ink3 }]}>STREAK</Text>
+                  <View style={{ marginTop: 'auto' }}>
+                    <Text style={[styles.annivDate, { color: C.inkColor }]} numberOfLines={1}>
+                      {soloStats.streak} {soloStats.streak === 1 ? 'day' : 'days'}
+                    </Text>
+                    {soloStats.best > 0 ? (
+                      <View style={[styles.daysChip, { backgroundColor: C.accentSoft }]}>
+                        <View style={[styles.daysChipDot, { backgroundColor: C.accent }]} />
+                        <Text style={[Typography.captionMedium, { color: C.accent }]}>
+                          best · {soloStats.best}d
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+              </View>
+              {/* 7-day ribbon */}
+              {soloWeekDots ? (
+                <View style={styles.monthDashRow}>
+                  {soloWeekDots.map((d, i) => (
+                    <View
+                      key={i}
+                      style={[
+                        styles.monthDash,
+                        { backgroundColor: d.active ? C.accent : C.lineColor },
+                      ]}
+                    />
+                  ))}
+                </View>
+              ) : null}
+            </Card>
+          </View>
+        ) : null}
 
-      {/* Asymmetric grid: 1 big + 2 small */}
-      <Animated.View entering={enter(1)} style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
-        <View style={{ flex: 1.3 }}>
-          <FeatureCard f={features[0]} variant="big" />
-        </View>
-        <View style={{ flex: 1, gap: 10 }}>
-          <FeatureCard f={features[1]} variant="flat" />
-          <FeatureCard f={features[2]} variant="flat" />
-        </View>
-      </Animated.View>
+        {/* Together card (pair/crew only) */}
+        {mode !== 'solo' ? (
+          <View style={styles.section}>
+            <Card padded={false}>
+              <View style={styles.togetherBody}>
+                <View style={[styles.togetherLeft, { borderRightColor: C.lineColor }]}>
+                  <Text style={[Typography.eyebrow, { color: C.ink3 }]}>
+                    {mode === 'crew' ? 'CREW' : 'TOGETHER'}
+                  </Text>
+                  <View style={styles.yearsRow}>
+                    <Text style={[styles.yearsBig, { color: C.inkColor }]}>
+                      {yearsTogether ?? '—'}
+                    </Text>
+                    <Text style={[styles.yearsUnit, { color: C.ink3 }]}>yrs</Text>
+                  </View>
+                  {anniversary ? (
+                    <Text style={[Typography.mono, { color: C.ink3, marginTop: 6, fontSize: 11 }]}>
+                      since {format(parseISO(anniversary), 'MMM d')}
+                    </Text>
+                  ) : null}
+                </View>
+                <View style={styles.togetherRight}>
+                  <Text style={[Typography.eyebrow, { color: C.ink3 }]}>
+                    ANNIVERSARY
+                  </Text>
+                  <View style={{ marginTop: 'auto' }}>
+                    <Text
+                      style={[styles.annivDate, { color: C.inkColor }]}
+                      numberOfLines={1}
+                    >
+                      {anniversary
+                        ? format(parseISO(anniversary), 'MMM d')
+                        : 'Add date'}
+                    </Text>
+                    {daysUntilAnniversary !== null ? (
+                      <View
+                        style={[
+                          styles.daysChip,
+                          { backgroundColor: C.accentSoft },
+                        ]}
+                      >
+                        <View
+                          style={[styles.daysChipDot, { backgroundColor: C.accent }]}
+                        />
+                        <Text style={[Typography.captionMedium, { color: C.accent }]}>
+                          in {daysUntilAnniversary}{' '}
+                          {daysUntilAnniversary === 1 ? 'day' : 'days'}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+              </View>
+              {/* 12-month progress dashes */}
+              <View style={styles.monthDashRow}>
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.monthDash,
+                      {
+                        backgroundColor:
+                          i < monthsElapsed(anniversary) ? C.accent : C.lineColor,
+                      },
+                    ]}
+                  />
+                ))}
+              </View>
+            </Card>
+          </View>
+        ) : null}
 
-      {/* Medium row */}
-      <Animated.View entering={enter(2)} style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
-        <View style={{ flex: 1 }}>
-          <FeatureCard f={features[3]} />
+        {/* Modules grid */}
+        <View style={styles.section}>
+          <View style={styles.moduleRows}>
+            <BucketedList
+              buckets={moduleBuckets}
+              rowKey={(m) => m.id}
+              renderRow={(m) => (
+                <PressScale
+                  onPress={() => router.push(m.href as any)}
+                  style={[
+                    styles.moduleRow,
+                    { backgroundColor: C.bgCard },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.moduleIcon,
+                      { backgroundColor: C.bgSoft },
+                    ]}
+                  >
+                    <Icon name={m.icon} size={16} color={accentFor(m.accentKey)} strokeWidth={2.3} />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={[Typography.bodyMedium, { color: C.inkColor }]} numberOfLines={1}>
+                      {m.label}
+                    </Text>
+                    <Text style={[Typography.eyebrowSm, { color: C.ink3, fontSize: 9.5, marginTop: 3 }]} numberOfLines={1}>
+                      {m.meta}
+                    </Text>
+                  </View>
+                  <Icon name="chevronRight" size={15} color={C.ink3} strokeWidth={2.2} />
+                </PressScale>
+              )}
+            />
+          </View>
         </View>
-        <View style={{ flex: 1 }}>
-          <FeatureCard f={features[4]} />
-        </View>
-      </Animated.View>
-
-      <Animated.View entering={enter(3)} style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
-        <View style={{ flex: 1 }}>
-          <FeatureCard f={features[5]} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <FeatureCard f={features[6]} />
-        </View>
-      </Animated.View>
-
-      {features[7] && (
-        <Animated.View entering={enter(4)} style={{ marginBottom: 10 }}>
-          <FeatureCard f={features[7]} variant="wide" />
-        </Animated.View>
-      )}
-    </Screen>
+      </ScrollView>
+    </View>
   );
 }
 
-function PressableScale({
-  children,
-  onPress,
-  style,
-  testID,
-}: {
-  children: React.ReactNode;
-  onPress: () => void;
-  style?: any;
-  testID?: string;
-}) {
-  const scale = useSharedValue(1);
-  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  return (
-    <Animated.View style={animStyle}>
-      <Pressable
-        testID={testID}
-        onPress={onPress}
-        onPressIn={() => {
-          scale.value = withTiming(0.97, { duration: 120 });
-        }}
-        onPressOut={() => {
-          scale.value = withTiming(1, { duration: 120 });
-        }}
-        style={style}
-      >
-        {children}
-      </Pressable>
-    </Animated.View>
-  );
+function countLabel(n: number | undefined | null, single: string, plural: string): string {
+  if (n == null || n === 0) return `no ${plural}`;
+  return n === 1 ? `1 ${single}` : `${n} ${plural}`;
 }
 
-function FeatureCard({
-  f,
-  variant,
-}: {
-  f: Feature;
-  variant?: 'big' | 'flat' | 'wide';
-}) {
-  const { C, F } = useTheme();
-  const bg = C[f.color] as string;
-  const inkKey = (`${f.color}Ink` as const) as keyof typeof C;
-  const ink = C[inkKey] as string;
-  const big = variant === 'big';
-  const flat = variant === 'flat';
-  const padding = flat ? 14 : 16;
-  const minH = big ? 200 : flat ? 0 : 120;
-
-  return (
-    <PressableScale
-      testID={`us-card-${f.key}`}
-      onPress={() => router.push(f.href as any)}
-      style={{
-        backgroundColor: bg,
-        borderRadius: 18,
-        padding: padding,
-        minHeight: minH,
-        justifyContent: 'space-between',
-        overflow: 'hidden',
-      }}
-    >
-      {big && (
-        <Text
-          style={{
-            position: 'absolute',
-            right: -10,
-            bottom: -30,
-            fontFamily: F.displayBold,
-            fontSize: 130,
-            color: ink,
-            opacity: 0.08,
-            letterSpacing: -4,
-          }}
-        >
-          {f.count}
-        </Text>
-      )}
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-        }}
-      >
-        <View
-          style={{
-            width: flat ? 26 : 32,
-            height: flat ? 26 : 32,
-            borderRadius: 8,
-            backgroundColor: 'rgba(0,0,0,0.15)',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Icon name={f.icon} size={flat ? 13 : 15} color={ink} />
-        </View>
-        {!flat && !big && (
-          <Text
-            style={{
-              fontFamily: F.displayBold,
-              fontSize: 14,
-              color: ink,
-              letterSpacing: -0.3,
-              opacity: 0.9,
-            }}
-          >
-            {f.count}
-          </Text>
-        )}
-      </View>
-      <View style={{ marginTop: flat ? 8 : big ? 20 : 14 }}>
-        <Text
-          style={{
-            fontFamily: F.displayBold,
-            fontSize: big ? 24 : flat ? 14 : 16,
-            color: ink,
-            letterSpacing: -0.4,
-            lineHeight: big ? 24 : flat ? 14 : 16,
-          }}
-        >
-          {f.label}
-        </Text>
-        <Text
-          style={{
-            fontSize: flat ? 10 : 11,
-            color: ink,
-            opacity: 0.6,
-            fontFamily: F.body,
-            marginTop: 3,
-          }}
-        >
-          {f.sub}
-        </Text>
-      </View>
-    </PressableScale>
-  );
+function monthsElapsed(anniversary: string | null | undefined): number {
+  if (!anniversary) return 0;
+  try {
+    const ann = parseISO(anniversary);
+    const now = new Date();
+    const annMonthThisYear = new Date(now.getFullYear(), ann.getMonth(), 1);
+    let months = (now.getMonth() - ann.getMonth() + 12) % 12;
+    if (now < annMonthThisYear && annMonthThisYear.getMonth() !== now.getMonth()) {
+      months = 12 - months;
+    }
+    return months;
+  } catch {
+    return 0;
+  }
 }
+
+const styles = StyleSheet.create({
+  topRow: {
+    paddingHorizontal: 22,
+    paddingTop: 6,
+    paddingBottom: 14,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  section: {
+    paddingHorizontal: 18,
+    paddingBottom: 18,
+  },
+  togetherBody: {
+    flexDirection: 'row',
+    padding: 18,
+    gap: 16,
+  },
+  togetherLeft: {
+    paddingRight: 16,
+    borderRightWidth: 1,
+    minWidth: 96,
+    justifyContent: 'center',
+  },
+  togetherRight: {
+    flex: 1,
+    justifyContent: 'space-between',
+    minHeight: 70,
+  },
+  yearsRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginTop: 4,
+  },
+  yearsBig: {
+    fontFamily: Typography.pixelFont,
+    fontSize: 30,
+    lineHeight: 30,
+    letterSpacing: -0.5,
+  },
+  yearsUnit: {
+    fontFamily: Typography.geistMonoMediumFont,
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginLeft: 4,
+  },
+  annivDate: {
+    fontFamily: Typography.pixelFont,
+    fontSize: 22,
+    lineHeight: 24,
+    letterSpacing: -0.3,
+    marginTop: 2,
+  },
+  daysChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 999,
+    marginTop: 6,
+    gap: 6,
+  },
+  daysChipDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 999,
+  },
+  monthDashRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 18,
+    paddingBottom: 14,
+    gap: 2,
+  },
+  monthDash: {
+    flex: 1,
+    height: 3,
+    borderRadius: 2,
+  },
+  moduleRows: {
+    marginTop: 0,
+  },
+  moduleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  moduleIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

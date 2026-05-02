@@ -156,6 +156,7 @@ const spaceActions = vi.hoisted(() => ({
   leaveSpace: vi.fn(async () => undefined),
   regenerateInviteCode: vi.fn(async () => 'NEW-CODE-99'),
   upgradeSoloToCouple: vi.fn(async () => 'UPGRADE-CODE'),
+  updateUserAvatar: vi.fn(async () => undefined),
 }));
 vi.mock('@/src/lib/space-actions', () => spaceActions);
 
@@ -177,6 +178,7 @@ describe('profile sheet', () => {
     spaceActions.leaveSpace.mockClear();
     spaceActions.regenerateInviteCode.mockClear();
     spaceActions.upgradeSoloToCouple.mockClear();
+    spaceActions.updateUserAvatar.mockClear();
     themeState.setMode.mockClear();
     themeState.mode = 'dark';
     alertSpy.mockClear();

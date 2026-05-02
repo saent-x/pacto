@@ -1,314 +1,695 @@
-import { router } from 'expo-router';
-import { useCallback, useMemo } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import { format } from 'date-fns';
-import { Icon } from '@/src/components/ui/Icon';
-import { Screen } from '@/src/components/ui/Screen';
+import { router, Stack } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  RowActionMenu,
-  type ActionMenuItem,
-  type ActionMenuPayload,
-} from '@/src/components/ui/RowActionMenu';
-import { confirmDestructive } from '@/src/lib/confirm';
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
+import { format, isToday, isYesterday, startOfDay } from 'date-fns';
+import {
+  Avatar,
+  AvatarPair,
+  CrewStack,
+  HeaderBrand,
+  PulsingDot,
+  SegmentedTabs,
+} from '@/src/components/ui/pacto';
+import { Icon } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
 import { useLoveNotes } from '@/src/hooks/useLoveNotes';
 import { useSession } from '@/src/hooks/useSession';
+import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
 
-type NoteRow = {
+type Bubble = {
   id: string;
   body: string;
   authorId: string;
+  authorName: string;
+  authorColor: string;
+  authorAvatarUrl: string | null;
+  isMine: boolean;
   createdAt: number;
 };
 
-// solo-mode: full screen replaced with empty state — partner required
-export default function LoveNotes() {
-  const { C, F } = useTheme();
-  const { user, partner, isSolo } = useSession();
-  const { notes, isLoading, remove } = useLoveNotes();
-  if (isSolo) return <SoloNotesEmpty />;
+type StreamItem =
+  | { kind: 'bubble'; data: Bubble }
+  | { kind: 'divider'; id: string; label: string };
 
-  const buildNoteMenu = useCallback(
-    (note: NoteRow, isMine: boolean): ActionMenuPayload => {
-      const baseActions: ActionMenuItem[] = [
-        {
-          key: 'delete',
-          label: 'Delete',
-          icon: 'trash',
-          destructive: true,
-          onPress: () => {
-            confirmDestructive(
-              'Delete note?',
-              'This love note will be removed.',
-              () => remove(note.id),
-            );
-          },
-        },
-      ];
-      return {
-        title: note.body.length > 40 ? `${note.body.slice(0, 40)}…` : note.body,
-        subtitle: format(new Date(note.createdAt), 'MMM d · h:mm a'),
-        actions: isMine
-          ? [
-              {
-                key: 'edit',
-                label: 'Edit',
-                icon: 'edit',
-                onPress: () => router.push(`/sheets/new-note?id=${note.id}` as any),
-              },
-              ...baseActions,
-            ]
-          : baseActions,
-      };
-    },
-    [remove],
-  );
-
-  const userId = user?.id ?? null;
-  const partnerName = partner?.displayName ?? 'Partner';
-
-  const sorted = useMemo<NoteRow[]>(
-    () =>
-      [...notes]
-        .map((n) => ({
-          id: n.id,
-          body: (n as { body: string }).body,
-          authorId: (n as { authorId: string }).authorId,
-          createdAt: Number((n as { createdAt: number }).createdAt ?? 0),
-        }))
-        .sort((a, b) => b.createdAt - a.createdAt),
-    [notes],
-  );
-
-  const featured = useMemo(
-    () => (isSolo ? null : sorted.find((n) => n.authorId !== userId) ?? null),
-    [isSolo, sorted, userId],
-  );
-  const timeline = featured ? sorted.filter((n) => n.id !== featured.id) : sorted;
-
-  const hasAny = sorted.length > 0;
-  if (isLoading && !hasAny) return <IndexSkeleton />;
-  if (!hasAny) return <EmptyNotes />;
-
-  return (
-    <Screen>
-      {featured ? (
-        <Animated.View
-          entering={FadeInDown.duration(400)}
-          style={{ marginBottom: 18 }}
-        >
-        <RowActionMenu {...buildNoteMenu(featured, featured.authorId === userId)}>
-        <Pressable
-          testID={`note-bubble-${featured.id}`}
-          style={{ backgroundColor: C.rose, borderRadius: 24, padding: 22 }}
-        >
-          <Text
-            style={{
-              fontSize: 10,
-              color: C.roseInk,
-              fontFamily: F.bodyBold,
-              letterSpacing: 1.4,
-              opacity: 0.55,
-              marginBottom: 10,
-            }}
-          >
-            {`FROM ${partnerName.toUpperCase()} · ${format(new Date(featured.createdAt), 'h:mm a')}`}
-          </Text>
-          <Text
-            style={{
-              fontFamily: F.serif,
-              fontStyle: 'italic',
-              fontSize: 19,
-              color: C.roseInk,
-              lineHeight: 26,
-              letterSpacing: -0.2,
-            }}
-          >
-            {`"${featured.body}"`}
-          </Text>
-        </Pressable>
-        </RowActionMenu>
-        </Animated.View>
-      ) : null}
-
-      <Animated.View entering={FadeInDown.delay(80).duration(400)}>
-        <Text
-          style={{
-            fontSize: 11,
-            color: C.fog,
-            fontFamily: F.bodyBold,
-            letterSpacing: 1.4,
-            paddingLeft: 4,
-            marginBottom: 10,
-          }}
-        >
-          {isSolo ? 'YOUR NOTES' : 'EARLIER'}
-        </Text>
-      </Animated.View>
-
-      {timeline.map((n, i) => {
-        const me = n.authorId === userId;
-        return (
-          <Animated.View
-            key={n.id}
-            entering={FadeInDown.delay(Math.min(i, 10) * 60 + 140).duration(380)}
-            style={{
-              flexDirection: 'row',
-              justifyContent: me ? 'flex-end' : 'flex-start',
-              marginBottom: 10,
-            }}
-          >
-            <RowActionMenu {...buildNoteMenu(n, me)}>
-            <Pressable
-              testID={`note-bubble-${n.id}`}
-              style={{
-                maxWidth: '80%',
-                paddingVertical: 12,
-                paddingHorizontal: 16,
-                borderRadius: 18,
-                backgroundColor: me ? C.butterInk : C.card,
-                borderWidth: me ? 0 : 1,
-                borderColor: C.line,
-                borderBottomRightRadius: me ? 6 : 18,
-                borderBottomLeftRadius: me ? 18 : 6,
-              }}
-            >
-              <Text
-                style={{
-                  fontFamily: F.serif,
-                  fontStyle: 'italic',
-                  fontSize: 14,
-                  color: me ? C.butter : C.bone,
-                  lineHeight: 20,
-                }}
-              >
-                {n.body}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 9,
-                  color: C.fog,
-                  fontFamily: F.bodyBold,
-                  letterSpacing: 0.8,
-                  marginTop: 6,
-                }}
-              >
-                {format(new Date(n.createdAt), 'EEE · h:mm a')}
-              </Text>
-            </Pressable>
-            </RowActionMenu>
-          </Animated.View>
-        );
-      })}
-    </Screen>
-  );
-}
-
-function EmptyNotes() {
-  const { C, F } = useTheme();
-  return (
-    <Screen>
-      <Pressable
-        onPress={() => router.push('/sheets/new-note')}
-        style={{
-          marginTop: 4,
-          padding: 24,
-          borderRadius: 22,
-          borderWidth: 1,
-          borderStyle: 'dashed',
-          borderColor: C.line,
-          alignItems: 'center',
-          gap: 8,
-        }}
-      >
-        <Icon name="heart" size={22} color={C.fog} />
-        <Text style={{ fontFamily: F.displayBold, fontSize: 16, color: C.mist }}>
-          No notes yet
-        </Text>
-        <Text
-          style={{
-            fontSize: 12,
-            color: C.fog,
-            fontFamily: F.body,
-            textAlign: 'center',
-          }}
-        >
-          Leave a first one. A sentence is enough.
-        </Text>
-      </Pressable>
-    </Screen>
-  );
-}
-
-function SoloNotesEmpty() {
-  const { C, F } = useTheme();
-  return (
-    <Screen>
-      <View
-        testID="love-notes-solo-empty"
-        style={{
-          marginTop: 4,
-          padding: 28,
-          borderRadius: 22,
-          borderWidth: 1,
-          borderStyle: 'dashed',
-          borderColor: C.line,
-          alignItems: 'center',
-          gap: 10,
-        }}
-      >
-        <Icon name="heart" size={26} color={C.fog} />
-        <Text style={{ fontFamily: F.displayBold, fontSize: 18, color: C.mist }}>
-          Love notes need a partner
-        </Text>
-        <Text
-          style={{
-            fontSize: 13,
-            color: C.fog,
-            fontFamily: F.body,
-            textAlign: 'center',
-            lineHeight: 19,
-          }}
-        >
-          Invite someone from settings to start sending notes.
-        </Text>
-      </View>
-    </Screen>
-  );
-}
-
-function IndexSkeleton() {
+export default function NotesScreen() {
   const { C } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { user, partner, mode, members } = useSession();
+  const { notes, isLoading, create } = useLoveNotes();
+
+  const [draft, setDraft] = useState('');
+  const [sending, setSending] = useState(false);
+  const [kbOpen, setKbOpen] = useState(false);
+  const [filter, setFilter] = useState<'all' | 'mine' | 'theirs' | 'today'>('all');
+  const scrollRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    const show = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setKbOpen(true)
+    );
+    const hide = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKbOpen(false)
+    );
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
+  const userId = user?.id ?? '';
+  const myName = (user?.displayName ?? user?.email?.split('@')[0] ?? 'You').split(' ')[0];
+  const myInitial = myName.charAt(0).toUpperCase();
+
+  // Color palette for chat participants — covers solo/pair/crew.
+  const participantColor = (authorId: string): string => {
+    if (authorId === userId) return C.accent;
+    const idx = members.findIndex((m) => m.id === authorId);
+    if (idx === -1) return C.accent2;
+    return [C.accent2, C.accent3, '#A89BD4', '#7BA0AF'][idx % 4];
+  };
+
+  const participantName = (authorId: string): string => {
+    if (authorId === userId) return myName;
+    const m = members.find((x) => x.id === authorId);
+    return m?.displayName?.split(' ')[0] ?? 'Member';
+  };
+
+  const participantAvatarUrl = (authorId: string): string | null => {
+    if (authorId === userId) return user?.avatarUrl ?? null;
+    const m = members.find((x) => x.id === authorId);
+    return m?.avatarUrl ?? null;
+  };
+
+  const stream = useMemo<StreamItem[]>(() => {
+    const todayMs = startOfDay(new Date()).getTime();
+    const sorted = [...notes]
+      .filter((n) => {
+        const authorId = (n as any).authorId as string;
+        const createdAt = Number((n as any).createdAt ?? 0);
+        if (filter === 'mine') return authorId === userId;
+        if (filter === 'theirs') return authorId !== userId;
+        if (filter === 'today') return createdAt >= todayMs;
+        return true;
+      })
+      .sort(
+        (a, b) =>
+          Number((a as any).createdAt ?? 0) - Number((b as any).createdAt ?? 0)
+      );
+    const out: StreamItem[] = [];
+    let lastDayKey: string | null = null;
+    for (const n of sorted) {
+      const id = (n as any).id as string;
+      const body = (n as any).body ?? '';
+      const authorId = (n as any).authorId as string;
+      const createdAt = Number((n as any).createdAt ?? 0);
+      const dayKey = startOfDay(new Date(createdAt)).toISOString();
+      if (dayKey !== lastDayKey) {
+        const d = new Date(createdAt);
+        const label = isToday(d)
+          ? 'Today'
+          : isYesterday(d)
+          ? 'Yesterday'
+          : format(d, 'EEE · MMM d');
+        out.push({ kind: 'divider', id: `div-${dayKey}`, label });
+        lastDayKey = dayKey;
+      }
+      out.push({
+        kind: 'bubble',
+        data: {
+          id,
+          body,
+          authorId,
+          authorName: participantName(authorId),
+          authorColor: participantColor(authorId),
+          authorAvatarUrl: participantAvatarUrl(authorId),
+          isMine: authorId === userId,
+          createdAt,
+        },
+      });
+    }
+    return out;
+  }, [notes, userId, members, filter]);
+
+  // Auto-scroll to bottom when content changes.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }, 50);
+    return () => clearTimeout(t);
+  }, [stream.length]);
+
+  const onSend = async () => {
+    const body = draft.trim();
+    if (!body || sending) return;
+    setSending(true);
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
+        () => undefined
+      );
+      await create({ body });
+      setDraft('');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const eyebrowLabel =
+    mode === 'solo'
+      ? 'ME · NOTES'
+      : mode === 'crew'
+      ? 'CREW · NOTES'
+      : 'US · NOTES';
+
   return (
-    <Screen>
-      <Animated.View
-        entering={FadeIn.duration(300)}
-        style={{
-          height: 168,
-          borderRadius: 24,
-          backgroundColor: C.rose,
-          opacity: 0.35,
-          marginBottom: 18,
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerTransparent: true,
+          headerShadowVisible: false,
+          headerBackground: () => null,
+          headerTintColor: C.inkColor,
+          title: '',
+          headerTitleAlign: 'center',
+          headerTitle: () => <HeaderBrand eyebrow={eyebrowLabel} title="notes" />,
+          headerLeft: () => (
+            <PressScale
+              onPress={() => router.back()}
+              hitSlop={12}
+              style={{ padding: 4 }}
+            >
+              <Icon
+                name="chevronLeft"
+                size={22}
+                color={C.inkColor}
+                strokeWidth={2.2}
+              />
+            </PressScale>
+          ),
+          headerRight: () => (
+            <PressScale
+              onPress={() => router.push('/sheets/profile' as any)}
+              style={{ flexDirection: 'row' }}
+            >
+              {mode === 'solo' ? (
+                <Avatar
+                  person={{
+                    initial: myInitial,
+                    color: C.accent,
+                    avatarUrl: user?.avatarUrl,
+                  }}
+                  size={30}
+                />
+              ) : mode === 'crew' ? (
+                <CrewStack size={28} />
+              ) : (
+                <AvatarPair
+                  a={{
+                    initial: myInitial,
+                    color: C.accent,
+                    avatarUrl: user?.avatarUrl,
+                  }}
+                  b={{
+                    initial: (partner?.displayName ?? 'P')
+                      .charAt(0)
+                      .toUpperCase(),
+                    color: C.accent2,
+                    avatarUrl: partner?.avatarUrl,
+                  }}
+                  size={30}
+                />
+              )}
+            </PressScale>
+          ),
         }}
       />
-      {[0, 1, 2].map((i) => (
-        <Animated.View
-          key={i}
-          entering={FadeIn.delay(80 + i * 60).duration(300)}
-          style={{
-            alignSelf: i % 2 ? 'flex-start' : 'flex-end',
-            width: '70%',
-            height: 56,
-            borderRadius: 18,
-            backgroundColor: C.card,
-            borderWidth: 1,
-            borderColor: C.line,
-            marginBottom: 10,
-            opacity: 0.55,
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+        style={{ flex: 1 }}
+      >
+        {/* Static region: hero + filter pills (don't scroll with chat) */}
+        <View style={{ paddingTop: insets.top + 56, paddingHorizontal: 14 }}>
+          <ChatHero
+            mode={mode}
+            myName={myName}
+            myInitial={myInitial}
+            myAvatarUrl={user?.avatarUrl ?? null}
+            partnerName={partner?.displayName ?? null}
+            partnerAvatarUrl={partner?.avatarUrl ?? null}
+            messageCount={notes.length}
+            firstMessageAt={
+              notes.length
+                ? Math.min(
+                    ...notes.map((n) => Number((n as any).createdAt ?? Date.now()))
+                  )
+                : null
+            }
+            lastMessageAt={
+              notes.length
+                ? Math.max(
+                    ...notes.map((n) => Number((n as any).createdAt ?? 0))
+                  )
+                : null
+            }
+          />
+          <View style={styles.filterRow}>
+            <SegmentedTabs<FilterKey>
+              value={filter}
+              onChange={setFilter}
+              options={filterOptions(mode).map((f) => ({
+                key: f.key,
+                label:
+                  f.key === 'theirs' && partner?.displayName
+                    ? `${partner.displayName.split(' ')[0]}'s`
+                    : f.label,
+              }))}
+            />
+          </View>
+        </View>
+
+        <ScrollView
+          ref={scrollRef}
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            paddingTop: 4,
+            paddingBottom: 12,
+            paddingHorizontal: 14,
+            flexGrow: 1,
           }}
-        />
-      ))}
-    </Screen>
+          showsVerticalScrollIndicator={false}
+        >
+          {stream.length === 0 && !isLoading ? (
+            <View style={styles.empty}>
+              <Text style={[Typography.eyebrow, { color: C.ink3 }]}>QUIET</Text>
+              <Text
+                style={[
+                  Typography.body,
+                  {
+                    color: C.ink2,
+                    marginTop: 8,
+                    textAlign: 'center',
+                    maxWidth: 260,
+                  },
+                ]}
+              >
+                {mode === 'solo'
+                  ? 'Leave yourself a thought below.'
+                  : 'Send a first note. Anything goes.'}
+              </Text>
+            </View>
+          ) : null}
+
+          {stream.map((item) =>
+            item.kind === 'divider' ? (
+              <View key={item.id} style={styles.divider}>
+                <View
+                  style={[styles.dividerLine, { backgroundColor: C.lineColor }]}
+                />
+                <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
+                  {item.label}
+                </Text>
+                <View
+                  style={[styles.dividerLine, { backgroundColor: C.lineColor }]}
+                />
+              </View>
+            ) : (
+              <BubbleView
+                key={item.data.id}
+                bubble={item.data}
+                showAuthor={mode === 'crew'}
+              />
+            )
+          )}
+        </ScrollView>
+
+        {/* Composer — floating pill, no surrounding background */}
+        <View
+          style={[
+            styles.composer,
+            {
+              paddingBottom: kbOpen ? 8 : insets.bottom + 8,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.composerInner,
+              {
+                backgroundColor: C.bgCard,
+                borderColor: C.lineColor,
+              },
+            ]}
+          >
+            <TextInput
+              value={draft}
+              onChangeText={setDraft}
+              placeholder={
+                mode === 'solo'
+                  ? 'A thought…'
+                  : mode === 'crew'
+                  ? 'Send to the crew…'
+                  : `Send to ${
+                      partner?.displayName?.split(' ')[0] ?? 'them'
+                    }…`
+              }
+              placeholderTextColor={C.ink3}
+              multiline
+              style={[
+                styles.input,
+                {
+                  color: C.inkColor,
+                  fontFamily: Typography.geistFont,
+                },
+              ]}
+            />
+            <PressScale
+              onPress={onSend}
+              disabled={!draft.trim() || sending}
+              haptic="impact"
+              style={[
+                styles.sendBtn,
+                {
+                  backgroundColor: !draft.trim() ? C.ink3 : C.accent,
+                  opacity: !draft.trim() || sending ? 0.5 : 1,
+                },
+              ]}
+            >
+              <Icon name="arrowUp" size={18} color={C.bg} strokeWidth={2.6} />
+            </PressScale>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
+
+function ChatHero({
+  mode,
+  myName,
+  myInitial,
+  myAvatarUrl,
+  partnerName,
+  partnerAvatarUrl,
+  messageCount,
+  firstMessageAt,
+  lastMessageAt,
+}: {
+  mode: 'solo' | 'pair' | 'crew';
+  myName: string;
+  myInitial: string;
+  myAvatarUrl: string | null;
+  partnerName: string | null;
+  partnerAvatarUrl: string | null;
+  messageCount: number;
+  firstMessageAt: number | null;
+  lastMessageAt: number | null;
+}) {
+  const { C } = useTheme();
+  const partnerFirst = partnerName?.split(' ')[0] ?? null;
+
+  const title =
+    mode === 'solo'
+      ? myName
+      : mode === 'crew'
+      ? 'crew'
+      : partnerFirst
+      ? `${myName.split(' ')[0]} & ${partnerFirst}`
+      : myName;
+
+  const sinceLabel = firstMessageAt
+    ? `since ${format(new Date(firstMessageAt), 'MMM yy')}`
+    : 'no thread yet';
+  const recencyLabel = lastMessageAt
+    ? isToday(new Date(lastMessageAt))
+      ? 'last today'
+      : isYesterday(new Date(lastMessageAt))
+      ? 'last yesterday'
+      : `last ${format(new Date(lastMessageAt), 'MMM d')}`
+    : '';
+
+  return (
+    <View style={styles.heroOuter}>
+      <View
+        style={[
+          styles.heroCard,
+          { backgroundColor: 'transparent', borderColor: 'transparent' },
+        ]}
+      >
+        <View style={styles.heroLeft}>
+          {mode === 'solo' ? (
+            <Avatar
+              person={{
+                initial: myInitial,
+                color: C.accent,
+                avatarUrl: myAvatarUrl,
+              }}
+              size={48}
+            />
+          ) : mode === 'crew' ? (
+            <CrewStack size={36} />
+          ) : (
+            <AvatarPair
+              a={{
+                initial: myInitial,
+                color: C.accent,
+                avatarUrl: myAvatarUrl,
+              }}
+              b={{
+                initial: (partnerFirst ?? 'P').charAt(0).toUpperCase(),
+                color: C.accent2,
+                avatarUrl: partnerAvatarUrl,
+              }}
+              size={40}
+            />
+          )}
+        </View>
+        <View style={styles.heroBody}>
+          <Text style={[Typography.eyebrowSm, { color: C.ink2, fontSize: 9.5 }]}>
+            {messageCount === 1 ? '1 NOTE' : `${messageCount} NOTES`}
+            {messageCount > 0 ? ` · ${sinceLabel.toUpperCase()}` : ''}
+          </Text>
+          <Text
+            style={{
+              fontFamily: Typography.pixelFont,
+              fontSize: 18,
+              lineHeight: 20,
+              color: C.inkColor,
+              marginTop: 4,
+              textTransform: 'uppercase',
+            }}
+            numberOfLines={1}
+          >
+            {title}
+            <PulsingDot color={C.accent} />
+          </Text>
+          {recencyLabel ? (
+            <Text style={[Typography.mono, { color: C.ink3, fontSize: 11, marginTop: 2 }]}>
+              {recencyLabel}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+type FilterKey = 'all' | 'mine' | 'theirs' | 'today';
+
+function filterOptions(
+  mode: 'solo' | 'pair' | 'crew'
+): { key: FilterKey; label: string }[] {
+  if (mode === 'solo') {
+    return [
+      { key: 'all', label: 'All' },
+      { key: 'today', label: 'Today' },
+    ];
+  }
+  return [
+    { key: 'all', label: 'All' },
+    { key: 'mine', label: 'Mine' },
+    { key: 'theirs', label: 'Theirs' },
+    { key: 'today', label: 'Today' },
+  ];
+}
+
+function BubbleView({
+  bubble,
+  showAuthor,
+}: {
+  bubble: Bubble;
+  showAuthor: boolean;
+}) {
+  const { C } = useTheme();
+  const align = bubble.isMine ? 'flex-end' : 'flex-start';
+  const bg = bubble.isMine ? C.accent : C.bgCard;
+  const fg = bubble.isMine ? C.bg : C.inkColor;
+  const radius = 18;
+  const tail = bubble.isMine
+    ? { borderBottomRightRadius: 6 }
+    : { borderBottomLeftRadius: 6 };
+
+  return (
+    <View style={[styles.bubbleRow, { justifyContent: align }]}>
+      {!bubble.isMine ? (
+        <View style={{ marginRight: 8, marginTop: showAuthor ? 18 : 0 }}>
+          <Avatar
+            person={{
+              initial: bubble.authorName.charAt(0).toUpperCase(),
+              color: bubble.authorColor,
+              avatarUrl: bubble.authorAvatarUrl,
+            }}
+            size={28}
+          />
+        </View>
+      ) : null}
+      <View style={{ maxWidth: '75%' }}>
+        {showAuthor && !bubble.isMine ? (
+          <Text
+            style={[
+              Typography.eyebrowSm,
+              {
+                color: bubble.authorColor,
+                fontSize: 9.5,
+                marginBottom: 2,
+                marginLeft: 6,
+              },
+            ]}
+          >
+            {bubble.authorName.toUpperCase()}
+          </Text>
+        ) : null}
+        <View
+          style={[
+            {
+              backgroundColor: bg,
+              borderRadius: radius,
+              paddingHorizontal: 14,
+              paddingVertical: 10,
+              borderWidth: bubble.isMine ? 0 : 1,
+              borderColor: C.lineColor,
+            },
+            tail,
+          ]}
+        >
+          <Text style={[Typography.body, { color: fg }]}>
+            {bubble.body || '(empty)'}
+          </Text>
+        </View>
+        <Text
+          style={[
+            Typography.mono,
+            {
+              color: C.ink3,
+              fontSize: 10,
+              marginTop: 3,
+              marginHorizontal: 6,
+              textAlign: bubble.isMine ? 'right' : 'left',
+            },
+          ]}
+        >
+          {format(new Date(bubble.createdAt), 'h:mm a')}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  empty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginVertical: 16,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  bubbleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginBottom: 10,
+  },
+  heroOuter: {
+    paddingTop: 4,
+    paddingBottom: 12,
+  },
+  heroCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  heroLeft: {
+    flexShrink: 0,
+  },
+  heroBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  heroBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterRow: {
+    paddingTop: 6,
+    paddingBottom: 14,
+    gap: 6,
+  },
+  composer: {
+    paddingHorizontal: 14,
+    paddingTop: 8,
+  },
+  composerInner: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    borderRadius: 22,
+    borderWidth: 1,
+    paddingLeft: 14,
+    paddingRight: 6,
+    paddingVertical: 6,
+    gap: 8,
+    minHeight: 44,
+  },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    lineHeight: 20,
+    paddingTop: 8,
+    paddingBottom: 8,
+    maxHeight: 120,
+  },
+  sendBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

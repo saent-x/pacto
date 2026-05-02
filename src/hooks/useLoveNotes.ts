@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { db, id } from '@/src/lib/instant';
+import { notifySpaceMutation } from '@/src/lib/push';
 import { useSession } from './useSession';
 import { useEncryption } from './useEncryption';
 
@@ -12,7 +13,7 @@ type LoveNoteInput = {
 };
 
 export function useLoveNotes() {
-  const { activeCouple, user } = useSession();
+  const { activeCouple, user, space } = useSession();
   const coupleId = activeCouple?.couple?.id ?? null;
   const { encrypt, decrypt, hasKey } = useEncryption();
 
@@ -68,8 +69,18 @@ export function useLoveNotes() {
           })
           .link({ couple: coupleId, author: user.id }),
       );
+      if (!input.isPrivate) {
+        await notifySpaceMutation({
+          spaceId: coupleId,
+          spaceKind: space?.kind ?? null,
+          excludeUserId: user.id,
+          title: user.displayName ?? 'Someone',
+          body: 'left you a love note',
+          route: '/(tabs)/us/notes',
+        });
+      }
     },
-    [coupleId, user, encrypt],
+    [coupleId, user, space?.kind, encrypt],
   );
 
   const update = useCallback(

@@ -84,23 +84,23 @@ describe('new-checkin sheet', () => {
     act(() => renderer.unmount());
   });
 
-  it('renders all 5 mood tiles', async () => {
+  it('renders all 4 check-in state tiles', async () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<NewCheckin />); await flush(); });
-    for (const n of [1, 2, 3, 4, 5]) {
+    for (const n of ['rough', 'low', 'steady', 'soft']) {
       expect(findByTestID(renderer.root, `new-checkin-mood-${n}`)).toBeDefined();
     }
     act(() => renderer.unmount());
   });
 
-  it('happy path: default mood 4 → save sends mood:"good", haptic, back', async () => {
+  it('happy path: default soft state saves mood:"soft", haptic, back', async () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<NewCheckin />); await flush(); });
     const btn = findSaveBtn(renderer.root, { enabled: true });
     await act(async () => { btn.props.onPress(); await flush(); });
     expect(checkInState.createOrUpdate).toHaveBeenCalledTimes(1);
     expect(checkInState.createOrUpdate).toHaveBeenCalledWith({
-      mood: 'good',
+      mood: 'soft',
       note: null,
       isPrivate: false,
     });
@@ -113,7 +113,7 @@ describe('new-checkin sheet', () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<NewCheckin />); await flush(); });
     await act(async () => {
-      findByTestID(renderer.root, 'new-checkin-mood-1').props.onPress();
+      findByTestID(renderer.root, 'new-checkin-mood-rough').props.onPress();
       await flush();
     });
     await act(async () => {
