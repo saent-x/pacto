@@ -1,9 +1,10 @@
 import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Image, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
 import {
+  ActivityHeatmap,
   Card,
   HeroPactoBadge,
   SectionHead,
@@ -169,11 +170,125 @@ function ArcStrip({ slots }: { slots: ArcSlot[] }) {
   );
 }
 
+type WeatherStatus =
+  | { state: 'loading'; title: string; detail: string; icon: IconName }
+  | { state: 'ready'; title: string; detail: string; icon: IconName }
+  | { state: 'unavailable'; title: string; detail: string; icon: IconName };
+
+function weatherMeta(code: number | null | undefined): { label: string; icon: IconName } {
+  if (code == null) return { label: 'Current conditions', icon: 'cloud' };
+  if (code === 0) return { label: 'Clear', icon: 'sun' };
+  if ([1, 2, 3].includes(code)) return { label: 'Partly cloudy', icon: 'cloud' };
+  if ([45, 48].includes(code)) return { label: 'Foggy', icon: 'cloud' };
+  if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code)) {
+    return { label: 'Rain nearby', icon: 'cloudRain' };
+  }
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return { label: 'Snowy', icon: 'cloud' };
+  if ([95, 96, 99].includes(code)) return { label: 'Storm watch', icon: 'zap' };
+  return { label: 'Weather update', icon: 'cloud' };
+}
+
+function useWeatherStatus(): WeatherStatus & { request: () => void } {
+  const [status, setStatus] = useState<WeatherStatus>({
+    state: 'unavailable',
+    title: 'Weather needs location',
+    detail: 'Tap to enable live local conditions.',
+    icon: 'mapPin',
+  });
+
+  const request = useCallback(() => {
+    const nav = (globalThis as any).navigator;
+    const geo = nav?.geolocation;
+    const fetcher = (globalThis as any).fetch;
+
+    setStatus({
+      state: 'loading',
+      title: 'Checking weather',
+      detail: 'Looking for local conditions.',
+      icon: 'cloud',
+    });
+
+    if (!geo?.getCurrentPosition || typeof fetcher !== 'function') {
+      setStatus({
+        state: 'unavailable',
+        title: 'Weather needs location',
+        detail: 'Location is not available in this environment.',
+        icon: 'mapPin',
+      });
+      return;
+    }
+
+    geo.getCurrentPosition(
+      async (position: any) => {
+        try {
+          const { latitude, longitude } = position.coords ?? {};
+          if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+            throw new Error('Missing coordinates');
+          }
+          const url =
+            `https://api.open-meteo.com/v1/forecast?latitude=${latitude.toFixed(3)}` +
+            `&longitude=${longitude.toFixed(3)}&current=temperature_2m,weather_code`;
+          const response = await fetcher(url);
+          if (!response?.ok) throw new Error('Weather request failed');
+          const data = await response.json();
+          const temp = data?.current?.temperature_2m;
+          const code = data?.current?.weather_code;
+          const meta = weatherMeta(typeof code === 'number' ? code : null);
+          const tempLabel = typeof temp === 'number' ? `${Math.round(temp)}°` : 'Live';
+          setStatus({
+            state: 'ready',
+            title: `${tempLabel} · ${meta.label}`,
+            detail: 'Live local weather for today.',
+            icon: meta.icon,
+          });
+        } catch {
+          setStatus({
+            state: 'unavailable',
+            title: 'Weather unavailable',
+            detail: 'Live conditions could not be loaded.',
+            icon: 'cloud',
+          });
+        }
+      },
+      () => {
+        setStatus({
+          state: 'unavailable',
+          title: 'Weather needs location',
+          detail: 'Allow location to show live conditions here.',
+          icon: 'mapPin',
+        });
+      },
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 30 * 60 * 1000 },
+    );
+  }, []);
+
+  return { ...status, request };
+}
+
+function timelineSourceLabel(type: TimelineItem['type']): string {
+  switch (type) {
+    case 'task':
+      return 'Task from Tasks';
+    case 'plan':
+      return 'Goal from Goals';
+    case 'event':
+      return 'Event from Calendar';
+    case 'ritual':
+      return 'Routine from Recurring';
+    case 'memory':
+      return 'Memory';
+    case 'reminder':
+    default:
+      return 'Reminder from Recurring';
+  }
+}
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { C } = useTheme();
-  const { partner, mode, isFeatureEnabled } = useSession();
+  const { partner, mode, user, isFeatureEnabled } = useSession();
   const home = useHomeTimeline({ previewDays: 30 });
+  const weather = useWeatherStatus();
   const checkinsEnabled = isFeatureEnabled('checkins');
   const { todayCheckIn, partnerTodayCheckIn, checkIns } = useCheckInSnapshot(checkinsEnabled);
   const today = useMemo(() => new Date(), []);
@@ -188,11 +303,20 @@ export default function HomeScreen() {
     () => todayRows.filter((row) => routeForTimelineItem(row, isFeatureEnabled)),
     [todayRows, isFeatureEnabled],
   );
-  const routedComingTimeline = useMemo(
-    () => home.timeline.find((row) => routeForTimelineItem(row, isFeatureEnabled)) ?? null,
+  const routedTimelineItems = useMemo(
+    () => home.timeline.filter((row) => routeForTimelineItem(row, isFeatureEnabled)),
     [home.timeline, isFeatureEnabled],
   );
+  const routedComingTimeline = useMemo(
+    () => routedTimelineItems[0] ?? null,
+    [routedTimelineItems],
+  );
   const hasComingUp = !!routedComingTimeline || !!comingMilestone;
+  const scheduledItemCount = routedTimelineItems.length + home.milestones.length;
+  const activitySeed = useMemo(
+    () => hashString(`${user?.id ?? 'home'}:${scheduledItemCount}:${home.milestones.length}`),
+    [user?.id, scheduledItemCount, home.milestones.length],
+  );
   const enabledShortcuts = useMemo(
     () => SHORTCUTS.filter((s) => isFeatureEnabled(s.feature)),
     [isFeatureEnabled],
@@ -348,14 +472,17 @@ export default function HomeScreen() {
               numberOfLines={1}
             >
               <Text style={[Typography.pixelHeroSm, { color: C.accent }]}>
-                {home.timeline.length + home.milestones.length}
+                {scheduledItemCount}
               </Text>
-              {' LIVE ITEMS'}
+              {' ITEMS AHEAD'}
+            </Text>
+            <Text style={[Typography.caption, { color: C.ink3, marginTop: 6 }]}>
+              Enabled timeline items and milestones due in the next 30 days.
             </Text>
             <View style={[styles.togetherFooter, { borderTopColor: C.lineColor }]}>
               <View style={{ flex: 1 }}>
                 <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
-                  NEXT
+                  NEXT ITEM
                 </Text>
                 <Text
                   style={[Typography.captionMedium, { color: C.inkColor, marginTop: 4 }]}
@@ -374,6 +501,27 @@ export default function HomeScreen() {
                 </Text>
               </View>
             </View>
+            <View style={[styles.activityPanel, { borderTopColor: C.lineColor }]}>
+              <View style={styles.activityHeader}>
+                <View style={styles.activityTitleRow}>
+                  <Icon name="activity" size={13} color={C.accent2} />
+                  <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
+                    RECENT ACTIVITY
+                  </Text>
+                </View>
+                <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>12 WEEKS</Text>
+              </View>
+              <ActivityHeatmap
+                weeks={12}
+                seed={activitySeed}
+                color={C.accent2}
+                showLegend={false}
+                showDayAxis={false}
+                showWeekAxis={false}
+                cellGap={3}
+                cellRadius={3}
+              />
+            </View>
           </Card>
         </View>
 
@@ -385,6 +533,21 @@ export default function HomeScreen() {
               {format(today, 'MMM d').toUpperCase()}
             </Text>
           </View>
+          <Card padded={false} elevated style={styles.weatherCard} onPress={weather.request}>
+            <View style={[styles.weatherIcon, { backgroundColor: C.accentSoft }]}>
+              <Icon name={weather.icon} size={17} color={C.accent} />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>WEATHER STATUS</Text>
+              <Text style={[Typography.bodyMedium, { color: C.inkColor, marginTop: 3 }]} numberOfLines={1}>
+                {weather.title}
+              </Text>
+              <Text style={[Typography.caption, { color: C.ink3, marginTop: 2 }]} numberOfLines={1}>
+                {weather.detail}
+              </Text>
+            </View>
+            <Icon name="chevronRight" size={15} color={C.ink3} />
+          </Card>
           <Card padded={false} elevated style={styles.todayCard}>
             {routedTodayRows.length === 0 ? (
               goalsEnabled ? (
@@ -493,11 +656,39 @@ export default function HomeScreen() {
                       {routedComingTimeline.title}
                     </Text>
                     <Text style={[Typography.caption, { color: C.ink3, marginTop: 8 }]} numberOfLines={2}>
-                      {routedComingTimeline.subtitle ?? 'From your live timeline'}
+                      {routedComingTimeline.subtitle ?? timelineSourceLabel(routedComingTimeline.type)}
                     </Text>
                   </View>
                 </Card>
-              ) : null}
+              ) : (
+                <Card padded={false} elevated style={styles.comingPlanCard}>
+                  <View style={[styles.comingCover, { backgroundColor: C.bgSoft }]}>
+                    <View style={[styles.comingPill, { borderColor: C.lineColor }]}>
+                      <Text style={[Typography.eyebrowSm, { color: C.ink3, letterSpacing: 1.4 }]}>
+                        TIMELINE
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.comingPlanMeta}>
+                    <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>NEXT ITEM</Text>
+                    <Text
+                      style={{
+                        fontFamily: Typography.fallbackSerif,
+                        fontSize: 22,
+                        lineHeight: 26,
+                        color: C.inkColor,
+                        marginTop: 4,
+                      }}
+                      numberOfLines={1}
+                    >
+                      Nothing scheduled
+                    </Text>
+                    <Text style={[Typography.caption, { color: C.ink3, marginTop: 8 }]} numberOfLines={2}>
+                      Add a dated task, reminder, event, or goal.
+                    </Text>
+                  </View>
+                </Card>
+              )}
               {comingMilestone ? (
                 <Card
                   padded={false}
@@ -527,7 +718,23 @@ export default function HomeScreen() {
                     </Text>
                   </View>
                 </Card>
-              ) : null}
+              ) : (
+                <Card padded={false} elevated style={styles.comingAnnivCard}>
+                  <View style={styles.annivInner}>
+                    <Icon name="flag" size={18} color={C.ink3} />
+                    <Text style={[Typography.eyebrowSm, { color: C.ink3, marginTop: 22 }]}>
+                      MILESTONES
+                    </Text>
+                    <Text style={[Typography.pixelHeroSm, { color: C.inkColor, marginTop: 4 }]} numberOfLines={2}>
+                      No dates yet
+                    </Text>
+                    <View style={{ flex: 1 }} />
+                    <Text style={[Typography.caption, { color: C.ink3 }]}>
+                      Add a milestone to keep this side panel active.
+                    </Text>
+                  </View>
+                </Card>
+              )}
             </View>
           ) : (
             <Card elevated style={styles.emptyBlock}>
@@ -583,6 +790,12 @@ function useCheckInSnapshot(enabled: boolean) {
     partnerTodayCheckIn: data.partnerTodayCheckIn ?? null,
     checkIns: data.checkIns,
   };
+}
+
+function hashString(input: string): number {
+  let h = 0;
+  for (let i = 0; i < input.length; i++) h = (h * 31 + input.charCodeAt(i)) >>> 0;
+  return (h % 1000) + 1;
 }
 
 const styles = StyleSheet.create({
@@ -757,6 +970,22 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     marginTop: 14,
   },
+  activityPanel: {
+    borderTopWidth: 1,
+    paddingTop: 14,
+    marginTop: 14,
+  },
+  activityHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  activityTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   todayRow: {
     flexDirection: 'row',
     gap: 10,
@@ -771,6 +1000,21 @@ const styles = StyleSheet.create({
   todayCard: {
     overflow: 'hidden',
     borderRadius: 18,
+  },
+  weatherCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    marginBottom: 10,
+  },
+  weatherIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyBlock: {
     paddingHorizontal: 16,

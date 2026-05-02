@@ -136,7 +136,7 @@ function RemindersScreenInner() {
                 <Text style={[Typography.pixelHeroSm, { color: C.inkColor }]}>
                   {overdueCount > 0 ? overdueCount : activeCount}
                 </Text>
-                <Text style={[Typography.bodyMedium, { color: C.ink2 }]}>
+                <Text style={[styles.heroMetricLabel, { color: C.ink2 }]}>
                   {overdueCount > 0 ? 'overdue' : 'active'}
                 </Text>
                 {nextReminder ? (
@@ -345,5 +345,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
+  },
+  heroMetricLabel: {
+    fontFamily: Typography.geistSemiBoldFont,
+    fontSize: 18,
+    lineHeight: 23,
+    letterSpacing: 0,
   },
 });

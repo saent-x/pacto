@@ -35,6 +35,7 @@ vi.mock('@/src/components/ui/pacto', () => {
       onPress
         ? Reactx.createElement('MockPressable', { onPress, style }, children)
         : Reactx.createElement('MockView', { style }, children),
+    ActivityHeatmap: (props: any) => Reactx.createElement('MockView', { ...props, testID: 'activity-heatmap' }),
     HeroPactoBadge: (props: any) => Reactx.createElement('MockView', props),
     SectionHead: ({ children }: any) => Reactx.createElement('MockText', null, children),
   };

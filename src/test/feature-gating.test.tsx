@@ -73,12 +73,16 @@ describe('feature gate mapping helpers', () => {
   });
 
   it.each<[string, FeatureId | null]>([
+    ['memories', 'memories'],
     ['notes', 'memories'],
     ['milestones', 'memories'],
+    ['goals', 'goals'],
     ['plans', 'goals'],
+    ['wishlist', 'wishlist'],
     ['wishlists', 'wishlist'],
     ['journal', 'journal'],
     ['checkins', 'checkins'],
+    ['timetable', 'timetable'],
     ['timetables', 'timetable'],
     ['expenses', null],
     ['unknown', null],

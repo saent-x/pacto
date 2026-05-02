@@ -150,14 +150,13 @@ describe('UsIndex feature gates', () => {
     const renderer = await render();
     const text = readText(renderer.root);
 
-    expect(text).toContain('Notes');
-    expect(text).toContain('Milestones');
-    expect(text).toContain('Plans');
+    expect(text).toContain('Memories');
+    expect(text).toContain('Goals');
     expect(text).toContain('Expenses');
-    expect(text).not.toContain('Wishlists');
+    expect(text).not.toContain('Wishlist');
     expect(text).not.toContain('Journal');
     expect(text).not.toContain('Check-ins');
-    expect(text).not.toContain('Timetables');
+    expect(text).not.toContain('Timetable');
 
     act(() => renderer.unmount());
   });

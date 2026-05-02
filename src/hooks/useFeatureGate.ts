@@ -33,12 +33,16 @@ const ROUTE_FEATURES: readonly [string, FeatureId][] = [
 ];
 
 const US_MODULE_FEATURES = {
+  memories: 'memories',
   notes: 'memories',
   milestones: 'memories',
+  goals: 'goals',
   plans: 'goals',
+  wishlist: 'wishlist',
   wishlists: 'wishlist',
   journal: 'journal',
   checkins: 'checkins',
+  timetable: 'timetable',
   timetables: 'timetable',
 } as const satisfies Record<string, FeatureId>;
 

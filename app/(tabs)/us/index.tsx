@@ -21,7 +21,7 @@ import { usePlans } from '@/src/hooks/usePlans';
 import { useJournal } from '@/src/hooks/useJournal';
 import { Typography } from '@/src/constants/typography';
 import { featureForUsModule } from '@/src/hooks/useFeatureGate';
-import { isFeatureSupportedForMode } from '@/src/lib/features/registry';
+import { getFeature, isFeatureSupportedForMode } from '@/src/lib/features/registry';
 import { useTheme } from '@/src/lib/theme';
 
 type Module = {
@@ -198,20 +198,29 @@ export default function UsScreen() {
   ]);
 
   const modules: Module[] = useMemo(
-    () => [
+    () => {
+      const memoriesFeature = getFeature('memories')!;
+      const checkinsFeature = getFeature('checkins')!;
+      const wishlistFeature = getFeature('wishlist')!;
+      const goalsFeature = getFeature('goals')!;
+      const journalFeature = getFeature('journal')!;
+      const timetableFeature = getFeature('timetable')!;
+      const memoryCount = (notes.notes?.length ?? 0) + (milestones.milestones?.length ?? 0);
+
+      return [
       {
-        id: 'notes',
+        id: 'memories',
         href: '/(tabs)/us/notes',
-        label: 'Notes',
-        icon: 'heart',
-        meta: countLabel(notes.notes?.length, 'note', 'notes'),
+        label: memoriesFeature.label,
+        icon: memoriesFeature.icon,
+        meta: countLabel(memoryCount, 'moment', 'moments'),
         accentKey: 'a1',
       },
       {
         id: 'checkins',
         href: '/(tabs)/us/checkins',
-        label: 'Check-ins',
-        icon: 'feather',
+        label: checkinsFeature.label,
+        icon: checkinsFeature.icon,
         meta: countLabel(checkIns.checkIns?.length, 'entry', 'entries'),
         accentKey: 'a2',
       },
@@ -226,44 +235,37 @@ export default function UsScreen() {
       {
         id: 'wishlists',
         href: '/(tabs)/us/wishlists',
-        label: 'Wishlists',
-        icon: 'gift',
+        label: wishlistFeature.label,
+        icon: wishlistFeature.icon,
         meta: countLabel(wishlists.wishlists?.length, 'wish', 'wishes'),
         accentKey: 'a1',
       },
       {
-        id: 'milestones',
-        href: '/(tabs)/us/milestones',
-        label: 'Milestones',
-        icon: 'flag',
-        meta: countLabel(milestones.milestones?.length, 'mark', 'marks'),
-        accentKey: 'a2',
-      },
-      {
         id: 'plans',
         href: '/(tabs)/us/plans',
-        label: 'Plans',
-        icon: 'compass',
-        meta: countLabel(plans.plans?.length, 'plan', 'plans'),
+        label: goalsFeature.label,
+        icon: goalsFeature.icon,
+        meta: countLabel(plans.plans?.length, 'goal', 'goals'),
         accentKey: 'a3',
       },
       {
         id: 'journal',
         href: '/(tabs)/us/journal',
-        label: 'Journal',
-        icon: 'book',
+        label: journalFeature.label,
+        icon: journalFeature.icon,
         meta: countLabel(journal.entries?.length, 'entry', 'entries'),
         accentKey: 'a1',
       },
       {
         id: 'timetables',
         href: '/(tabs)/us/timetables',
-        label: 'Timetables',
-        icon: 'grid',
+        label: timetableFeature.label,
+        icon: timetableFeature.icon,
         meta: 'rhythms',
         accentKey: 'a2',
       },
-    ],
+      ];
+    },
     [
       notes.notes?.length,
       checkIns.checkIns?.length,

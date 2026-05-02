@@ -44,6 +44,7 @@ function TasksScreenInner() {
             <StatBar
               eyebrow={`${stats.listCount} ${stats.listCount === 1 ? 'LIST' : 'LISTS'}  ·  TASKS`}
               meta="STREAK 14d"
+              metaIcon="zap"
               primary={
                 <>
                   <Text
@@ -52,7 +53,7 @@ function TasksScreenInner() {
                   >
                     {stats.open}
                   </Text>
-                  <Text style={[Typography.bodyMedium, { color: C.ink2 }]}>open</Text>
+                  <Text style={[styles.heroMetricLabel, { color: C.ink2 }]}>open</Text>
                   <Text style={[Typography.caption, { color: C.ink3, marginLeft: 'auto' }]}>
                     {`${stats.done} done · ${stats.total} total`}
                   </Text>
@@ -254,6 +255,12 @@ const styles = StyleSheet.create({
   tileFooter: {
     marginTop: 'auto',
     paddingTop: 10,
+  },
+  heroMetricLabel: {
+    fontFamily: Typography.geistSemiBoldFont,
+    fontSize: 18,
+    lineHeight: 23,
+    letterSpacing: 0,
   },
   tileBar: {
     height: 4,
