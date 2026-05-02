@@ -556,6 +556,7 @@ function DateTimeFieldImpl({
           }}
         >
           <DateTimePicker
+            testID={pressTestID ? `${pressTestID}-picker-control` : undefined}
             value={value}
             mode={mode}
             display={Platform.OS === 'ios' ? 'spinner' : 'default'}

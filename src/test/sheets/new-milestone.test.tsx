@@ -20,6 +20,11 @@ vi.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 
+vi.mock('@react-native-community/datetimepicker', () => ({
+  __esModule: true,
+  default: (props: any) => React.createElement('DateTimePicker', props),
+}));
+
 const alertSpy = vi.hoisted(() => vi.fn());
 vi.mock('react-native', async () => {
   const actual: any = await vi.importActual('react-native');
@@ -127,6 +132,31 @@ describe('new-milestone sheet', () => {
     expect(call.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(Haptics.notificationAsync).toHaveBeenCalledWith('success');
     expect(router.back).toHaveBeenCalledTimes(1);
+    act(() => renderer.unmount());
+  });
+
+  it('saves the selected milestone date', async () => {
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<NewMilestone />); await flush(); });
+    await act(async () => {
+      findByTestID(renderer.root, 'new-milestone-title-input').props.onChangeText('Known date');
+      await flush();
+    });
+    await act(async () => {
+      findByTestID(renderer.root, 'new-milestone-date').props.onPress();
+      await flush();
+    });
+    await act(async () => {
+      findByTestID(renderer.root, 'new-milestone-date-picker-control').props.onChange(
+        { type: 'set' },
+        new Date('2030-04-15T00:00:00'),
+      );
+      await flush();
+    });
+    await act(async () => { findSaveBtn(renderer.root, { enabled: true }).props.onPress(); await flush(); });
+
+    expect(milestoneState.create).toHaveBeenCalledTimes(1);
+    expect(milestoneState.create.mock.calls[0][0].date).toBe('2030-04-15');
     act(() => renderer.unmount());
   });
 
