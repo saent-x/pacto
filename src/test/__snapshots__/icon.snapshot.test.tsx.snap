@@ -18,7 +18,7 @@ exports[`Icon snapshots > bell — color=#ff0 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/bell.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/bell.png")",
         "filter": "url(#tint-2)",
       }
     }
@@ -33,7 +33,7 @@ exports[`Icon snapshots > bell — color=#ff0 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/bell.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/bell.png"
   />
   <svg
     style={
@@ -81,7 +81,7 @@ exports[`Icon snapshots > bell — default 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/bell.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/bell.png")",
         "filter": "url(#tint-0)",
       }
     }
@@ -96,7 +96,7 @@ exports[`Icon snapshots > bell — default 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/bell.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/bell.png"
   />
   <svg
     style={
@@ -144,7 +144,7 @@ exports[`Icon snapshots > bell — strokeWidth=3 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/bell.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/bell.png")",
         "filter": "url(#tint-4)",
       }
     }
@@ -159,7 +159,7 @@ exports[`Icon snapshots > bell — strokeWidth=3 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/bell.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/bell.png"
   />
   <svg
     style={
@@ -207,7 +207,7 @@ exports[`Icon snapshots > check — color=#ff0 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/check.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/check.png")",
         "filter": "url(#tint-14)",
       }
     }
@@ -222,7 +222,7 @@ exports[`Icon snapshots > check — color=#ff0 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/check.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/check.png"
   />
   <svg
     style={
@@ -270,7 +270,7 @@ exports[`Icon snapshots > check — default 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/check.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/check.png")",
         "filter": "url(#tint-12)",
       }
     }
@@ -285,7 +285,7 @@ exports[`Icon snapshots > check — default 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/check.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/check.png"
   />
   <svg
     style={
@@ -333,7 +333,7 @@ exports[`Icon snapshots > check — strokeWidth=3 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/check.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/check.png")",
         "filter": "url(#tint-16)",
       }
     }
@@ -348,7 +348,7 @@ exports[`Icon snapshots > check — strokeWidth=3 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/check.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/check.png"
   />
   <svg
     style={
@@ -396,7 +396,7 @@ exports[`Icon snapshots > chevronRight — color=#ff0 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/chevronRight.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/chevronRight.png")",
         "filter": "url(#tint-20)",
       }
     }
@@ -411,7 +411,7 @@ exports[`Icon snapshots > chevronRight — color=#ff0 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/chevronRight.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/chevronRight.png"
   />
   <svg
     style={
@@ -459,7 +459,7 @@ exports[`Icon snapshots > chevronRight — default 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/chevronRight.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/chevronRight.png")",
         "filter": "url(#tint-18)",
       }
     }
@@ -474,7 +474,7 @@ exports[`Icon snapshots > chevronRight — default 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/chevronRight.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/chevronRight.png"
   />
   <svg
     style={
@@ -522,7 +522,7 @@ exports[`Icon snapshots > chevronRight — strokeWidth=3 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/chevronRight.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/chevronRight.png")",
         "filter": "url(#tint-22)",
       }
     }
@@ -537,7 +537,7 @@ exports[`Icon snapshots > chevronRight — strokeWidth=3 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/chevronRight.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/chevronRight.png"
   />
   <svg
     style={
@@ -585,7 +585,7 @@ exports[`Icon snapshots > heart — color=#ff0 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/heart.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/heart.png")",
         "filter": "url(#tint-8)",
       }
     }
@@ -600,7 +600,7 @@ exports[`Icon snapshots > heart — color=#ff0 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/heart.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/heart.png"
   />
   <svg
     style={
@@ -648,7 +648,7 @@ exports[`Icon snapshots > heart — default 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/heart.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/heart.png")",
         "filter": "url(#tint-6)",
       }
     }
@@ -663,7 +663,7 @@ exports[`Icon snapshots > heart — default 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/heart.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/heart.png"
   />
   <svg
     style={
@@ -711,7 +711,7 @@ exports[`Icon snapshots > heart — strokeWidth=3 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/heart.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/heart.png")",
         "filter": "url(#tint-10)",
       }
     }
@@ -726,7 +726,7 @@ exports[`Icon snapshots > heart — strokeWidth=3 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/heart.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/heart.png"
   />
   <svg
     style={
@@ -774,7 +774,7 @@ exports[`Icon snapshots > home — color=#ff0 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/home.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/home.png")",
         "filter": "url(#tint-38)",
       }
     }
@@ -789,7 +789,7 @@ exports[`Icon snapshots > home — color=#ff0 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/home.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/home.png"
   />
   <svg
     style={
@@ -837,7 +837,7 @@ exports[`Icon snapshots > home — default 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/home.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/home.png")",
         "filter": "url(#tint-36)",
       }
     }
@@ -852,7 +852,7 @@ exports[`Icon snapshots > home — default 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/home.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/home.png"
   />
   <svg
     style={
@@ -900,7 +900,7 @@ exports[`Icon snapshots > home — strokeWidth=3 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/home.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/home.png")",
         "filter": "url(#tint-40)",
       }
     }
@@ -915,7 +915,7 @@ exports[`Icon snapshots > home — strokeWidth=3 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/home.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/home.png"
   />
   <svg
     style={
@@ -963,7 +963,7 @@ exports[`Icon snapshots > plus — color=#ff0 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/plus.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/plus.png")",
         "filter": "url(#tint-32)",
       }
     }
@@ -978,7 +978,7 @@ exports[`Icon snapshots > plus — color=#ff0 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/plus.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/plus.png"
   />
   <svg
     style={
@@ -1026,7 +1026,7 @@ exports[`Icon snapshots > plus — default 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/plus.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/plus.png")",
         "filter": "url(#tint-30)",
       }
     }
@@ -1041,7 +1041,7 @@ exports[`Icon snapshots > plus — default 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/plus.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/plus.png"
   />
   <svg
     style={
@@ -1089,7 +1089,7 @@ exports[`Icon snapshots > plus — strokeWidth=3 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/plus.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/plus.png")",
         "filter": "url(#tint-34)",
       }
     }
@@ -1104,7 +1104,7 @@ exports[`Icon snapshots > plus — strokeWidth=3 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/plus.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/plus.png"
   />
   <svg
     style={
@@ -1154,7 +1154,7 @@ exports[`Icon snapshots > respects size prop 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/bell.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/bell.png")",
         "filter": "url(#tint-48)",
       }
     }
@@ -1169,7 +1169,7 @@ exports[`Icon snapshots > respects size prop 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/bell.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/bell.png"
   />
   <svg
     style={
@@ -1217,7 +1217,7 @@ exports[`Icon snapshots > user — color=#ff0 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/user.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/user.png")",
         "filter": "url(#tint-44)",
       }
     }
@@ -1232,7 +1232,7 @@ exports[`Icon snapshots > user — color=#ff0 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/user.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/user.png"
   />
   <svg
     style={
@@ -1280,7 +1280,7 @@ exports[`Icon snapshots > user — default 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/user.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/user.png")",
         "filter": "url(#tint-42)",
       }
     }
@@ -1295,7 +1295,7 @@ exports[`Icon snapshots > user — default 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/user.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/user.png"
   />
   <svg
     style={
@@ -1343,7 +1343,7 @@ exports[`Icon snapshots > user — strokeWidth=3 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/user.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/user.png")",
         "filter": "url(#tint-46)",
       }
     }
@@ -1358,7 +1358,7 @@ exports[`Icon snapshots > user — strokeWidth=3 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/user.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/user.png"
   />
   <svg
     style={
@@ -1406,7 +1406,7 @@ exports[`Icon snapshots > x — color=#ff0 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/x.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/x.png")",
         "filter": "url(#tint-26)",
       }
     }
@@ -1421,7 +1421,7 @@ exports[`Icon snapshots > x — color=#ff0 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/x.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/x.png"
   />
   <svg
     style={
@@ -1469,7 +1469,7 @@ exports[`Icon snapshots > x — default 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/x.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/x.png")",
         "filter": "url(#tint-24)",
       }
     }
@@ -1484,7 +1484,7 @@ exports[`Icon snapshots > x — default 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/x.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/x.png"
   />
   <svg
     style={
@@ -1532,7 +1532,7 @@ exports[`Icon snapshots > x — strokeWidth=3 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/x.png")",
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/x.png")",
         "filter": "url(#tint-28)",
       }
     }
@@ -1547,7 +1547,7 @@ exports[`Icon snapshots > x — strokeWidth=3 1`] = `
         "current": null,
       }
     }
-    src="/Users/tor/Documents/projects/coupl/assets/images/icons/x.png"
+    src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/x.png"
   />
   <svg
     style={

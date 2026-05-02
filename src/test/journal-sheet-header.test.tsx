@@ -1,116 +1,65 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
 import { describe, expect, it, vi } from 'vitest';
 import { format } from 'date-fns';
 
-import { sheet } from '@/src/components/ui/sheetStyles';
-import { CreateEntrySheet } from '@/src/components/journal/CreateEntrySheet';
-
-// `react-test-renderer` is available in tests but not typed in this project.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const TestRenderer: any = require('react-test-renderer');
-const { act } = TestRenderer;
-
-vi.mock('@/src/components/ui', () => ({
-  ThemedSheet: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
-  BottomSheetTextInput: (props: any) => <input {...props} />,
-}));
-
-vi.mock('@/src/hooks/useColors', () => ({
-  useColors: () => ({
-    journal: '#a87258',
-    primary: '#b68c72',
-    primaryMuted: '#f3e6dc',
-    journalLight: '#f4e8df',
-    ink: '#221b16',
-    text: '#221b16',
-    textSecondary: '#6b5f52',
-    textTertiary: '#8a7e72',
-    fog: '#998b7d',
-    haze: '#7d7065',
-    dim: '#c9b8aa',
-    white: '#ffffff',
-  }),
-}));
-
-vi.mock('@/src/lib/theme', () => ({
-  useTheme: () => ({
-    mode: 'light',
-  }),
+vi.mock('expo-router', () => ({
+  router: { back: vi.fn(), push: vi.fn() },
+  Stack: { Screen: () => null },
 }));
 
 vi.mock('expo-haptics', () => ({
-  notificationAsync: vi.fn(),
-  selectionAsync: vi.fn(),
-  NotificationFeedbackType: { Success: 'success' },
+  notificationAsync: vi.fn(async () => undefined),
+  selectionAsync: vi.fn(async () => undefined),
+  NotificationFeedbackType: { Success: 'success', Warning: 'warning' },
 }));
 
-vi.mock('expo-image-picker', () => ({
-  requestMediaLibraryPermissionsAsync: vi.fn(),
-  launchImageLibraryAsync: vi.fn(),
+vi.mock('expo-constants', () => ({ default: { statusBarHeight: 44 } }));
+
+vi.mock('react-native-safe-area-context', () => ({
+  SafeAreaView: ({ children }: any) => <>{children}</>,
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 
-vi.mock('@expo/vector-icons', () => ({
-  Feather: () => null,
+vi.mock('@/src/hooks/useJournal', () => ({
+  useJournal: () => ({ create: vi.fn(async () => undefined) }),
 }));
 
-vi.mock('@10play/tentap-editor', () => ({
-  editorHtml: '<html><head></head><body></body></html>',
-  RichText: () => null,
-  useEditorBridge: () => ({
-    getHTML: vi.fn(async () => '<p>Body</p>'),
-    setContent: vi.fn(),
-    blur: vi.fn(),
+vi.mock('@/src/hooks/useSession', () => ({
+  useSession: () => ({
+    mode: 'pair',
+    isSolo: false,
+    partner: { id: 'partner-1', displayName: 'Sam' },
+    isFeatureEnabled: () => true,
   }),
-  useBridgeState: () => ({}),
-  TenTapStartKit: [],
 }));
 
-vi.mock('@/src/components/journal/MarkdownText', () => ({
-  MarkdownText: () => null,
-}));
+import NewEntry from '@/app/sheets/new-entry';
 
-describe('CreateEntrySheet header', () => {
-  it('uses the shared bottom-sheet header styles', () => {
-    let tree: any;
+const TestRenderer: any = require('react-test-renderer');
+const { act } = TestRenderer;
+const flush = () => new Promise((r) => setTimeout(r, 0));
 
-    act(() => {
-      tree = TestRenderer.create(
-        <CreateEntrySheet
-          sheetRef={{ current: null }}
-          onSave={vi.fn(async () => {})}
-        />,
-      );
+function hasText(root: any, text: string) {
+  return root.findAll((node: any) => node.children?.includes?.(text)).length > 0;
+}
+
+function findByTestID(root: any, id: string) {
+  return root.findAll((node: any) => node.props?.testID === id)[0];
+}
+
+describe('new-entry sheet header', () => {
+  it('renders the current SheetShell header and entry inputs', async () => {
+    let renderer: any;
+    await act(async () => {
+      renderer = TestRenderer.create(<NewEntry />);
+      await flush();
     });
 
-    const label = tree.root.findByProps({ children: 'NEW ENTRY' });
-    const todayLabel = format(new Date(), 'EEEE, MMMM d');
-    const date = tree.root.findByProps({ children: todayLabel });
-    expect(label.props.style[0]).toBe(sheet.sheetLabel);
-    expect(date.props.style[0]).toBe(sheet.dateDisplay);
+    expect(hasText(renderer.root, format(new Date(), 'EEEE, MMMM d').toUpperCase())).toBe(true);
+    expect(hasText(renderer.root, 'New entry')).toBe(true);
+    expect(findByTestID(renderer.root, 'new-entry-title-input')).toBeDefined();
+    expect(findByTestID(renderer.root, 'new-entry-body-input')).toBeDefined();
 
-    expect(StyleSheet.flatten(date.props.style)).toMatchObject(
-      StyleSheet.flatten(sheet.dateDisplay),
-    );
-  });
-
-  it('uses the shared bottom-sheet title input style', () => {
-    let tree: any;
-
-    act(() => {
-      tree = TestRenderer.create(
-        <CreateEntrySheet
-          sheetRef={{ current: null }}
-          onSave={vi.fn(async () => {})}
-        />,
-      );
-    });
-
-    const titleInput = tree.root.findByProps({ placeholder: 'Give it a title...' });
-
-    expect(titleInput.props.style[0]).toBe(sheet.titleInput);
-    expect(StyleSheet.flatten(titleInput.props.style)).toMatchObject(
-      StyleSheet.flatten(sheet.titleInput),
-    );
+    act(() => renderer.unmount());
   });
 });

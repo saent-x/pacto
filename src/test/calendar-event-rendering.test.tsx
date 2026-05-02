@@ -1,10 +1,31 @@
 import React from 'react';
+import { Pressable } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { WeekDay } from '@/src/lib/calendar/builders';
 import type { TimelineItem } from '@/src/lib/home/types';
 
+vi.hoisted(() => {
+  (globalThis as any).__DEV__ = true;
+  process.env.EXPO_OS = 'ios';
+  (globalThis as any).expo = {
+    EventEmitter: class {
+      addListener() {
+        return { remove: () => undefined };
+      }
+    },
+  };
+});
+
 vi.mock('expo-haptics', () => ({
   selectionAsync: vi.fn(async () => undefined),
+}));
+
+vi.mock('expo-audio', () => ({
+  useAudioPlayer: () => ({
+    play: vi.fn(),
+    pause: vi.fn(),
+    seekTo: vi.fn(),
+  }),
 }));
 
 vi.mock('expo-router', () => ({
@@ -19,6 +40,10 @@ vi.mock('react-native-safe-area-context', () => ({
 }));
 
 vi.mock('expo-constants', () => ({ default: { statusBarHeight: 44 } }));
+
+vi.mock('react-native-gesture-handler/ReanimatedSwipeable', () => ({
+  default: (props: any) => props.children,
+}));
 
 vi.mock('react-native-reanimated', () => {
   const Reactx = require('react');
@@ -77,6 +102,14 @@ vi.mock('@/src/lib/calendar/context', () => ({
   CalendarProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+vi.mock('@/src/hooks/useSession', () => ({
+  useSession: () => ({
+    mode: 'pair',
+    partner: { id: 'partner-1', displayName: 'Sam' },
+    isFeatureEnabled: () => true,
+  }),
+}));
+
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -95,6 +128,10 @@ async function renderCalendar() {
 
 const findByTestID = (renderer: any, id: string) =>
   renderer.root.findAll((node: any) => node.props?.testID === id);
+
+function hasText(renderer: any, text: string) {
+  return renderer.root.findAll((node: any) => node.children?.join?.('') === text).length > 0;
+}
 
 function timelineItem(
   id: string,
@@ -138,72 +175,82 @@ describe('Calendar · event + state rendering', () => {
     calendarState.tomorrow = null;
   });
 
-  it('shows loading skeletons when isLoading and no cached week data', async () => {
+  it('keeps the empty agenda state visible while loading without cached agenda data', async () => {
     calendarState.isLoading = true;
     calendarState.week = makeWeek().map((d) => ({ ...d, hasEvent: false }));
     const renderer = await renderCalendar();
-    expect(findByTestID(renderer, 'calendar-hero-skeleton').length).toBeGreaterThanOrEqual(1);
-    expect(findByTestID(renderer, 'calendar-day-skeleton').length).toBeGreaterThanOrEqual(7);
-    expect(findByTestID(renderer, 'calendar-agenda-skeleton').length).toBeGreaterThanOrEqual(3);
+    expect(hasText(renderer, 'FRIDAY · 17 APR')).toBe(true);
+    expect(hasText(renderer, 'Nothing on the books for this day.')).toBe(true);
     act(() => renderer.unmount());
   });
 
   it('shows empty-agenda card when no events on selected day', async () => {
     const renderer = await renderCalendar();
-    expect(findByTestID(renderer, 'calendar-agenda-empty').length).toBeGreaterThanOrEqual(1);
+    expect(hasText(renderer, 'FRIDAY · 17 APR')).toBe(true);
+    expect(hasText(renderer, 'Nothing on the books for this day.')).toBe(true);
     act(() => renderer.unmount());
   });
 
-  it('renders one AgendaRow per timeline item with stable testIDs', async () => {
+  it('renders one agenda row per timeline item title', async () => {
     calendarState.agenda = [
       timelineItem('e1', 'event', Date.parse('2026-04-17T18:00:00Z')),
       timelineItem('r1', 'reminder', Date.parse('2026-04-17T09:00:00Z')),
       timelineItem('t1', 'task', Date.parse('2026-04-17T14:00:00Z')),
     ];
     const renderer = await renderCalendar();
-    expect(findByTestID(renderer, 'calendar-agenda-e1').length).toBeGreaterThanOrEqual(1);
-    expect(findByTestID(renderer, 'calendar-agenda-r1').length).toBeGreaterThanOrEqual(1);
-    expect(findByTestID(renderer, 'calendar-agenda-t1').length).toBeGreaterThanOrEqual(1);
-    expect(findByTestID(renderer, 'calendar-agenda-empty').length).toBe(0);
+    expect(hasText(renderer, 'event title e1')).toBe(true);
+    expect(hasText(renderer, 'reminder title r1')).toBe(true);
+    expect(hasText(renderer, 'task title t1')).toBe(true);
+    expect(hasText(renderer, 'Nothing on the books for this day.')).toBe(false);
     act(() => renderer.unmount());
   });
 
-  it('hero reflects heroStats.total, handles 0 → "nothing booked" subtitle', async () => {
+  it('buckets agenda rows by time of day', async () => {
+    calendarState.agenda = [
+      timelineItem('r1', 'reminder', Date.parse('2026-04-17T09:00:00Z')),
+      timelineItem('t1', 'task', Date.parse('2026-04-17T14:00:00Z')),
+      timelineItem('e1', 'event', Date.parse('2026-04-17T20:00:00Z')),
+    ];
     const renderer = await renderCalendar();
-    const count = findByTestID(renderer, 'calendar-hero-count')[0];
-    expect(count.props.children).toBe(0);
+    expect(hasText(renderer, 'Morning')).toBe(true);
+    expect(hasText(renderer, 'Afternoon')).toBe(true);
+    expect(hasText(renderer, 'Evening')).toBe(true);
     act(() => renderer.unmount());
   });
 
-  it('hero shows subtitle "shared · upcoming · next in Nh" with populated stats', async () => {
-    calendarState.heroStats = { total: 8, shared: 3, upcoming: 2, nextInHours: 6 };
+  it('renders all-day agenda rows without a timestamp', async () => {
+    calendarState.agenda = [
+      timelineItem('e1', 'event', 0),
+    ];
     const renderer = await renderCalendar();
-    const hero = findByTestID(renderer, 'calendar-hero')[0];
-    const texts = hero.findAll((n: any) => typeof n.children?.[0] === 'string');
-    const combined = texts.map((n: any) => n.children.join('')).join('|');
-    expect(combined).toContain('3 shared · 2 upcoming · next in 6h');
+    expect(hasText(renderer, 'All day')).toBe(true);
+    expect(hasText(renderer, 'all day')).toBe(true);
     act(() => renderer.unmount());
   });
 
-  it('renders TOMORROW card when cal.tomorrow is set', async () => {
-    calendarState.tomorrow = {
-      kind: 'milestone',
-      id: 'anniversary',
-      title: 'Anniversary · 3 yrs',
-      subtitle: 'Sat 18 · All day',
-      accent: 'mint',
-    };
+  it('uses Today as the empty agenda title for the selected current date', async () => {
+    calendarState.selectedDate = new Date().toISOString().slice(0, 10);
     const renderer = await renderCalendar();
-    expect(findByTestID(renderer, 'calendar-tomorrow-anniversary').length).toBeGreaterThanOrEqual(1);
+    expect(hasText(renderer, 'Today')).toBe(true);
     act(() => renderer.unmount());
   });
 
-  it('skips TOMORROW card when cal.tomorrow is null', async () => {
+  it('routes the empty agenda action to the reminder sheet', async () => {
+    const { router } = await import('expo-router');
+    (router.push as any).mockClear();
     const renderer = await renderCalendar();
-    const tomorrowRows = renderer.root.findAll(
-      (n: any) => typeof n.props?.testID === 'string' && n.props.testID.startsWith('calendar-tomorrow-'),
+    const addAction = renderer.root.findAll(
+      (n: any) =>
+        n.type === Pressable &&
+        typeof n.props?.onPress === 'function' &&
+        n.findAll((child: any) => child.children?.join?.('') === 'Add reminder').length > 0,
     );
-    expect(tomorrowRows.length).toBe(0);
+    expect(addAction).toHaveLength(1);
+    await act(async () => {
+      addAction[0].props.onPress();
+      await flush();
+    });
+    expect(router.push).toHaveBeenCalledWith('/sheets/new-reminder');
     act(() => renderer.unmount());
   });
 });

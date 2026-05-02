@@ -143,7 +143,8 @@ vi.mock('@/src/hooks/useSession', () => ({
   useSession: () => ({
     user: { id: 'u1' },
     partner: { id: 'u2', displayName: 'Sam' },
-    mode: 'couple',
+    mode: 'pair',
+    isFeatureEnabled: () => true,
   }),
 }));
 

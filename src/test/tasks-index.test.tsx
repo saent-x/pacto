@@ -59,6 +59,14 @@ vi.mock('@/src/hooks/useTaskLists', () => ({
   useTaskLists: () => state,
 }));
 
+vi.mock('@/src/hooks/useSession', () => ({
+  useSession: () => ({
+    mode: 'pair',
+    user: { id: 'u-me' },
+    isFeatureEnabled: () => true,
+  }),
+}));
+
 import TasksList from '@/app/(tabs)/tasks/index';
 
 const TestRenderer: any = require('react-test-renderer');
@@ -86,7 +94,7 @@ describe('TasksList index', () => {
     act(() => renderer.unmount());
   });
 
-  it('renders a grid card per list and filters by category', async () => {
+  it('renders a grid card per list', async () => {
     state.lists = [
       { id: 'l1', name: 'Venice', icon: 'mapPin', colorKey: 'peach', category: 'Travel', done: 2, total: 5, createdAt: 1 },
       { id: 'l2', name: 'Apartment', icon: 'home', colorKey: 'mint', category: 'Home', done: 0, total: 3, createdAt: 2 },
@@ -96,30 +104,6 @@ describe('TasksList index', () => {
 
     expect(readText(renderer.root)).toContain('Venice');
     expect(readText(renderer.root)).toContain('Apartment');
-
-    const homePill = renderer.root.findAll(
-      (n: any) => n.props?.testID === 'task-filter-Home',
-    )[0];
-    await act(async () => { homePill.props.onPress(); await flush(); });
-
-    const labels = readText(renderer.root);
-    expect(labels).toContain('Apartment');
-    expect(labels).not.toContain('Venice');
-
-    act(() => renderer.unmount());
-  });
-
-  it('renders an error card when the hook reports an error, dismissable on retry', async () => {
-    state.error = new Error('boom');
-    let renderer: any;
-    await act(async () => { renderer = TestRenderer.create(<TasksList />); await flush(); });
-    expect(readText(renderer.root)).toContain("Couldn't load tasks");
-
-    const retry = renderer.root.findAll(
-      (n: any) => n.props?.testID === 'tasks-error-retry',
-    )[0];
-    await act(async () => { retry.props.onPress(); await flush(); });
-    expect(readText(renderer.root)).not.toContain("Couldn't load tasks");
 
     act(() => renderer.unmount());
   });

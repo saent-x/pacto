@@ -39,8 +39,8 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
         ref={[Function]}
         style={
           {
-            "color": "rgba(134,118,106,1.00)",
-            "fontFamily": "SpaceGrotesk_700Bold",
+            "color": "rgba(145,136,117,1.00)",
+            "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
             "letterSpacing": "1.4px",
             "marginBottom": "8px",
@@ -56,8 +56,8 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
         ref={[Function]}
         style={
           {
-            "color": "rgba(31,22,17,1.00)",
-            "fontFamily": "BricolageGrotesque_800ExtraBold",
+            "color": "rgba(42,36,27,1.00)",
+            "fontFamily": "BitcountPropSingle_700Bold",
             "fontSize": "42px",
             "letterSpacing": "-1.2px",
             "lineHeight": "41.16px",
@@ -111,8 +111,8 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
     ref={[Function]}
     style={
       {
-        "color": "rgba(90,75,62,1.00)",
-        "fontFamily": "SpaceGrotesk_500Medium",
+        "color": "rgba(92,83,69,1.00)",
+        "fontFamily": "Geist_400Regular",
         "fontSize": "11px",
         "letterSpacing": "0.4px",
         "marginTop": "10px",
@@ -163,8 +163,8 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
         ref={[Function]}
         style={
           {
-            "color": "rgba(31,22,17,1.00)",
-            "fontFamily": "BricolageGrotesque_800ExtraBold",
+            "color": "rgba(42,36,27,1.00)",
+            "fontFamily": "BitcountPropSingle_700Bold",
             "fontSize": "42px",
             "letterSpacing": "-1.2px",
             "lineHeight": "41.16px",
@@ -178,7 +178,7 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
           ref={[Function]}
           style={
             {
-              "color": "rgba(184,135,46,1.00)",
+              "color": "rgba(199,117,90,1.00)",
             }
           }
         >
@@ -206,7 +206,7 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
       <Path
         d="M0 4 Q 12 0, 24 4 T 48 4 T 72 4 T 96 4"
         fill="none"
-        stroke="#B8872E"
+        stroke="#C7755A"
         strokeLinecap="round"
         strokeWidth={2}
       />
@@ -237,24 +237,24 @@ exports[`ScreenHeader — both variants coexist > ui/ScreenHeader.tsx — gold a
       ref={[Function]}
     >
       <div
-        className="css-text-146c3p1 r-fontFamily-1cbjb0v r-fontSize-10x49cs r-fontWeight-b88u0q r-letterSpacing-10b5y5f r-lineHeight-1f529hi r-textTransform-tsynxw r-marginBottom-f1odvy"
+        className="css-text-146c3p1 r-fontFamily-177ha3a r-fontSize-10x49cs r-fontWeight-b88u0q r-letterSpacing-10b5y5f r-lineHeight-1f529hi r-textTransform-tsynxw r-marginBottom-f1odvy"
         dir="auto"
         ref={[Function]}
         style={
           {
-            "color": "rgba(134,118,106,1.00)",
+            "color": "rgba(145,136,117,1.00)",
           }
         }
       >
         01 · HOME
       </div>
       <div
-        className="css-text-146c3p1 r-fontFamily-119jj6t r-fontSize-1ui5ee8 r-letterSpacing-f2mvze r-lineHeight-2agvir"
+        className="css-text-146c3p1 r-fontFamily-wx4ldx r-fontSize-1ui5ee8 r-letterSpacing-f2mvze r-lineHeight-2agvir"
         dir="auto"
         ref={[Function]}
         style={
           {
-            "color": "rgba(31,22,17,1.00)",
+            "color": "rgba(42,36,27,1.00)",
           }
         }
       >
@@ -326,12 +326,12 @@ exports[`ScreenHeader — both variants coexist > ui/ScreenHeader.tsx — with b
       ref={[Function]}
     >
       <div
-        className="css-text-146c3p1 r-fontFamily-119jj6t r-fontSize-1ui5ee8 r-letterSpacing-f2mvze r-lineHeight-2agvir"
+        className="css-text-146c3p1 r-fontFamily-wx4ldx r-fontSize-1ui5ee8 r-letterSpacing-f2mvze r-lineHeight-2agvir"
         dir="auto"
         ref={[Function]}
         style={
           {
-            "color": "rgba(31,22,17,1.00)",
+            "color": "rgba(42,36,27,1.00)",
           }
         }
       >

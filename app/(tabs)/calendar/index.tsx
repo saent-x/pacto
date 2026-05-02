@@ -221,6 +221,9 @@ function DayCell({
 
   return (
     <PressScale
+      testID={`calendar-day-${day.date}`}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
       onPress={onPress}
       style={[
         styles.dayCell,

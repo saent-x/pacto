@@ -395,6 +395,7 @@ export default function ProfileSheet() {
               return (
                 <PressScale
                   key={m}
+                  testID={`profile-theme-${m}`}
                   onPress={() => {
                     Haptics.selectionAsync().catch(() => undefined);
                     setMode(m);

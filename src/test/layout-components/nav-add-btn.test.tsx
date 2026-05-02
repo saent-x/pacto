@@ -9,7 +9,7 @@ const { iconSpy, routerPush } = vi.hoisted(() => ({
 
 vi.mock('@/src/lib/theme', () => ({
   useTheme: () => ({
-    C: { bone: '#F5EEE3' },
+    C: { inkColor: '#F5EEE3' },
     F: {},
     mode: 'dark',
     setMode: () => undefined,

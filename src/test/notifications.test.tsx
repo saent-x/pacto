@@ -95,6 +95,8 @@ const findByTestID = (root: any, id: string) =>
   root.findAll((n: any) => n.props?.testID === id)[0];
 const findAllByTestIDPrefix = (root: any, prefix: string) =>
   root.findAll((n: any) => typeof n.props?.testID === 'string' && n.props.testID.startsWith(prefix));
+const hasText = (root: any, text: string) =>
+  root.findAll((n: any) => n.children?.join?.('') === text).length > 0;
 
 function itemFixture(partial: Partial<Item>): Item {
   return {
@@ -132,8 +134,9 @@ describe('notifications screen', () => {
       renderer = TestRenderer.create(<Notifications />);
       await flush();
     });
-    expect(findByTestID(renderer.root, 'notifications-loading')).toBeDefined();
-    expect(findByTestID(renderer.root, 'notifications-empty')).toBeUndefined();
+    expect(hasText(renderer.root, 'LOADING')).toBe(true);
+    expect(hasText(renderer.root, 'Catching up…')).toBe(true);
+    expect(hasText(renderer.root, 'Quiet right now')).toBe(false);
     act(() => renderer.unmount());
   });
 
@@ -143,7 +146,8 @@ describe('notifications screen', () => {
       renderer = TestRenderer.create(<Notifications />);
       await flush();
     });
-    expect(findByTestID(renderer.root, 'notifications-empty')).toBeDefined();
+    expect(hasText(renderer.root, 'Quiet right now')).toBe(true);
+    expect(hasText(renderer.root, 'Your next note, check-in, or reminder will land here.')).toBe(true);
     expect(findAllByTestIDPrefix(renderer.root, 'notifications-bucket-')).toHaveLength(0);
     act(() => renderer.unmount());
   });
@@ -167,8 +171,8 @@ describe('notifications screen', () => {
       renderer = TestRenderer.create(<Notifications />);
       await flush();
     });
-    expect(findByTestID(renderer.root, 'notifications-bucket-Today')).toBeDefined();
-    expect(findByTestID(renderer.root, 'notifications-bucket-Earlier')).toBeDefined();
+    expect(hasText(renderer.root, 'Today')).toBe(true);
+    expect(hasText(renderer.root, 'Earlier')).toBe(true);
     expect(findByTestID(renderer.root, 'notification-row-loveNote:a')).toBeDefined();
     expect(findByTestID(renderer.root, 'notification-row-checkIn:b')).toBeDefined();
     expect(findByTestID(renderer.root, 'notification-row-expense:c')).toBeDefined();

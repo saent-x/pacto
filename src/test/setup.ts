@@ -1,5 +1,24 @@
 import { vi } from 'vitest';
 
+const expoGlobal = globalThis as typeof globalThis & {
+  __DEV__?: boolean;
+  expo?: {
+    EventEmitter: new () => {
+      addListener: () => { remove: () => void };
+    };
+  };
+};
+
+expoGlobal.__DEV__ = true;
+process.env.EXPO_OS ??= 'ios';
+expoGlobal.expo ??= {
+  EventEmitter: class {
+    addListener() {
+      return { remove: () => undefined };
+    }
+  },
+};
+
 // react-native-get-random-values is a CJS polyfill that uses require(),
 // which fails in Vitest's ESM environment. jsdom already provides
 // crypto.getRandomValues, so mock it as a no-op.
@@ -14,6 +33,14 @@ vi.mock('expo-haptics', () => ({
   notificationAsync: vi.fn(async () => undefined),
   ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
   NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
+}));
+
+vi.mock('expo-audio', () => ({
+  useAudioPlayer: () => ({
+    play: vi.fn(),
+    pause: vi.fn(),
+    seekTo: vi.fn(),
+  }),
 }));
 
 // @instantdb/react-native transitively imports react-native-get-random-values
@@ -92,6 +119,11 @@ vi.mock('@react-native-community/datetimepicker', () => ({
   default: () => null,
 }));
 
+vi.mock('react-native-gesture-handler/ReanimatedSwipeable', () => ({
+  __esModule: true,
+  default: (props: any) => props.children,
+}));
+
 // SheetShell + atoms use reanimated for ToggleRow, Pill scale, etc. Tests
 // that don't already mock reanimated would hit native bindings. Provide a
 // passthrough mock matching the shape used across the suite.
@@ -99,6 +131,7 @@ vi.mock('react-native-reanimated', () => {
   const Reactx = require('react');
   const MockView = (props: any) => Reactx.createElement('AnimatedView', props, props.children);
   const MockScrollView = (props: any) => Reactx.createElement('AnimatedScrollView', props, props.children);
+  const MockText = (props: any) => Reactx.createElement('AnimatedText', props, props.children);
   const chainable: any = {
     duration: () => chainable,
     delay: () => chainable,
@@ -108,9 +141,10 @@ vi.mock('react-native-reanimated', () => {
   };
   return {
     __esModule: true,
-    default: { View: MockView, ScrollView: MockScrollView, createAnimatedComponent: (C: any) => C },
+    default: { View: MockView, ScrollView: MockScrollView, Text: MockText, createAnimatedComponent: (C: any) => C },
     View: MockView,
     ScrollView: MockScrollView,
+    Text: MockText,
     createAnimatedComponent: (C: any) => C,
     FadeIn: chainable,
     FadeInDown: chainable,
@@ -121,8 +155,11 @@ vi.mock('react-native-reanimated', () => {
     useAnimatedStyle: (fn: any) => fn(),
     withTiming: (v: any) => v,
     withDelay: (_d: any, v: any) => v,
+    withSequence: (...args: any[]) => args[args.length - 1],
+    withRepeat: (v: any) => v,
     useReducedMotion: () => false,
     useAnimatedProps: (fn: any) => fn(),
+    interpolate: () => 0,
     interpolateColor: () => '#000000',
     withSpring: (v: any) => v,
     runOnJS: (fn: any) => fn,

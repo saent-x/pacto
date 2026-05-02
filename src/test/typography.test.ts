@@ -9,8 +9,8 @@ describe('Typography', () => {
     expect(Typography.heading.fontStyle).toBeUndefined();
   });
 
-  it('keeps editorial styles available for special accents only', () => {
-    expect(Typography.editorial.fontStyle).toBe('italic');
-    expect(Typography.editorialLargeTitle.fontStyle).toBe('italic');
+  it('keeps legacy editorial styles neutral under the current design system', () => {
+    expect(Typography.editorial.fontStyle).toBeUndefined();
+    expect(Typography.editorialLargeTitle.fontStyle).toBeUndefined();
   });
 });

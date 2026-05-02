@@ -105,6 +105,7 @@ const sessionState = vi.hoisted(() => ({
   partner: { id: 'partner-1', displayName: 'Sam Lee' },
   members: [] as any[],
   mode: 'pair' as 'solo' | 'pair' | 'crew',
+  isFeatureEnabled: vi.fn(() => true),
 }));
 
 const dbMock = vi.hoisted(() => ({
@@ -156,6 +157,7 @@ describe('useWishlists', () => {
     sessionState.mode = 'pair';
     sessionState.partner = { id: 'partner-1', displayName: 'Sam Lee' };
     sessionState.members = [];
+    sessionState.isFeatureEnabled.mockClear();
     dbMock.useQuery.mockClear();
     dbMock.transact.mockClear();
   });

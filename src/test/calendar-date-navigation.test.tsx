@@ -2,10 +2,30 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { WeekDay } from '@/src/lib/calendar/builders';
 
+vi.hoisted(() => {
+  (globalThis as any).__DEV__ = true;
+  process.env.EXPO_OS = 'ios';
+  (globalThis as any).expo = {
+    EventEmitter: class {
+      addListener() {
+        return { remove: () => undefined };
+      }
+    },
+  };
+});
+
 vi.mock('expo-haptics', () => ({
   selectionAsync: vi.fn(async () => undefined),
   impactAsync: vi.fn(async () => undefined),
   ImpactFeedbackStyle: { Light: 'light' },
+}));
+
+vi.mock('expo-audio', () => ({
+  useAudioPlayer: () => ({
+    play: vi.fn(),
+    pause: vi.fn(),
+    seekTo: vi.fn(),
+  }),
 }));
 
 vi.mock('expo-router', () => ({
@@ -21,6 +41,10 @@ vi.mock('react-native-safe-area-context', () => ({
 }));
 
 vi.mock('expo-constants', () => ({ default: { statusBarHeight: 44 } }));
+
+vi.mock('react-native-gesture-handler/ReanimatedSwipeable', () => ({
+  default: (props: any) => props.children,
+}));
 
 vi.mock('react-native-reanimated', () => {
   const Reactx = require('react');
@@ -81,6 +105,14 @@ vi.mock('@/src/lib/calendar/context', () => ({
   CalendarProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+vi.mock('@/src/hooks/useSession', () => ({
+  useSession: () => ({
+    mode: 'pair',
+    partner: { id: 'partner-1', displayName: 'Sam' },
+    isFeatureEnabled: () => true,
+  }),
+}));
+
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -99,6 +131,10 @@ async function renderCalendar() {
 
 const findByTestID = (renderer: any, id: string) =>
   renderer.root.findAll((node: any) => node.props?.testID === id);
+
+function hasText(renderer: any, text: string) {
+  return renderer.root.findAll((node: any) => node.children?.join?.('') === text).length > 0;
+}
 
 function makeWeek(selectedDate: string): WeekDay[] {
   const dates = ['2026-04-13', '2026-04-14', '2026-04-15', '2026-04-16', '2026-04-17', '2026-04-18', '2026-04-19'];
@@ -152,8 +188,7 @@ describe('Calendar · date navigation', () => {
 
   it('renders the agenda day header in WEEKDAY · DD MON format', async () => {
     const renderer = await renderCalendar();
-    const header = findByTestID(renderer, 'calendar-day-header')[0];
-    expect(header.props.children).toBe('FRIDAY · 17 APR');
+    expect(hasText(renderer, 'FRIDAY · 17 APR')).toBe(true);
     act(() => renderer.unmount());
   });
 });

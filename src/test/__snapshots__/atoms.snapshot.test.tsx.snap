@@ -34,7 +34,7 @@ exports[`atoms snapshots > Avatar — custom size + colors + border 1`] = `
     style={
       {
         "color": "rgba(0,0,0,1.00)",
-        "fontFamily": "BricolageGrotesque_700Bold",
+        "fontFamily": "BitcountPropSingle_700Bold",
         "fontSize": "21.12px",
       }
     }
@@ -78,7 +78,7 @@ exports[`atoms snapshots > Avatar — default 1`] = `
     style={
       {
         "color": "rgba(58,31,20,1.00)",
-        "fontFamily": "BricolageGrotesque_700Bold",
+        "fontFamily": "BitcountPropSingle_700Bold",
         "fontSize": "15.84px",
       }
     }
@@ -97,7 +97,7 @@ exports[`atoms snapshots > Badge — default 1`] = `
     {
       "alignItems": "center",
       "alignSelf": "flex-start",
-      "backgroundColor": "rgba(184,135,46,0.12)",
+      "backgroundColor": "rgba(199,117,90,0.14)",
       "borderBottomLeftRadius": "999px",
       "borderBottomRightRadius": "999px",
       "borderTopLeftRadius": "999px",
@@ -117,8 +117,8 @@ exports[`atoms snapshots > Badge — default 1`] = `
     ref={[Function]}
     style={
       {
-        "color": "rgba(184,135,46,1.00)",
-        "fontFamily": "SpaceGrotesk_700Bold",
+        "color": "rgba(199,117,90,1.00)",
+        "fontFamily": "Geist_700Bold",
         "fontSize": "10px",
         "letterSpacing": "0.6px",
         "textTransform": "uppercase",
@@ -258,16 +258,16 @@ exports[`atoms snapshots > DarkCard — borderless + custom padding 1`] = `
   ref={[Function]}
   style={
     {
-      "backgroundColor": "rgba(249,243,232,1.00)",
-      "borderBottomColor": "rgba(217,207,190,1.00)",
+      "backgroundColor": "rgba(255,255,255,1.00)",
+      "borderBottomColor": "rgba(232,226,212,1.00)",
       "borderBottomLeftRadius": "22px",
       "borderBottomRightRadius": "22px",
       "borderBottomWidth": "0px",
-      "borderLeftColor": "rgba(217,207,190,1.00)",
+      "borderLeftColor": "rgba(232,226,212,1.00)",
       "borderLeftWidth": "0px",
-      "borderRightColor": "rgba(217,207,190,1.00)",
+      "borderRightColor": "rgba(232,226,212,1.00)",
       "borderRightWidth": "0px",
-      "borderTopColor": "rgba(217,207,190,1.00)",
+      "borderTopColor": "rgba(232,226,212,1.00)",
       "borderTopLeftRadius": "22px",
       "borderTopRightRadius": "22px",
       "borderTopWidth": "0px",
@@ -295,16 +295,16 @@ exports[`atoms snapshots > DarkCard — default 1`] = `
   ref={[Function]}
   style={
     {
-      "backgroundColor": "rgba(249,243,232,1.00)",
-      "borderBottomColor": "rgba(217,207,190,1.00)",
+      "backgroundColor": "rgba(255,255,255,1.00)",
+      "borderBottomColor": "rgba(232,226,212,1.00)",
       "borderBottomLeftRadius": "22px",
       "borderBottomRightRadius": "22px",
       "borderBottomWidth": "1px",
-      "borderLeftColor": "rgba(217,207,190,1.00)",
+      "borderLeftColor": "rgba(232,226,212,1.00)",
       "borderLeftWidth": "1px",
-      "borderRightColor": "rgba(217,207,190,1.00)",
+      "borderRightColor": "rgba(232,226,212,1.00)",
       "borderRightWidth": "1px",
-      "borderTopColor": "rgba(217,207,190,1.00)",
+      "borderTopColor": "rgba(232,226,212,1.00)",
       "borderTopLeftRadius": "22px",
       "borderTopRightRadius": "22px",
       "borderTopWidth": "1px",
@@ -348,7 +348,7 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
       style={
         {
           "alignItems": "center",
-          "borderBottomColor": "rgba(217,207,190,1.00)",
+          "borderBottomColor": "rgba(232,226,212,1.00)",
           "borderBottomWidth": "1px",
           "flexDirection": "row",
           "gap": "10px",
@@ -364,7 +364,7 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
         ref={[Function]}
         style={
           {
-            "backgroundColor": "rgba(184,135,46,1.00)",
+            "backgroundColor": "rgba(199,117,90,1.00)",
             "borderBottomLeftRadius": "3px",
             "borderBottomRightRadius": "3px",
             "borderTopLeftRadius": "3px",
@@ -380,8 +380,8 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
         ref={[Function]}
         style={
           {
-            "color": "rgba(31,22,17,1.00)",
-            "fontFamily": "SpaceGrotesk_700Bold",
+            "color": "rgba(42,36,27,1.00)",
+            "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
             "letterSpacing": "1.6px",
             "textTransform": "uppercase",
@@ -396,9 +396,9 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
         ref={[Function]}
         style={
           {
-            "color": "rgba(134,118,106,1.00)",
+            "color": "rgba(145,136,117,1.00)",
             "flex": 1,
-            "fontFamily": "SpaceGrotesk_700Bold",
+            "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
           }
         }
@@ -442,7 +442,7 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
       style={
         {
           "alignItems": "center",
-          "borderBottomColor": "rgba(217,207,190,1.00)",
+          "borderBottomColor": "rgba(232,226,212,1.00)",
           "borderBottomWidth": "1px",
           "flexDirection": "row",
           "gap": "10px",
@@ -458,7 +458,7 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
         ref={[Function]}
         style={
           {
-            "backgroundColor": "rgba(184,135,46,1.00)",
+            "backgroundColor": "rgba(199,117,90,1.00)",
             "borderBottomLeftRadius": "3px",
             "borderBottomRightRadius": "3px",
             "borderTopLeftRadius": "3px",
@@ -474,8 +474,8 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
         ref={[Function]}
         style={
           {
-            "color": "rgba(31,22,17,1.00)",
-            "fontFamily": "SpaceGrotesk_700Bold",
+            "color": "rgba(42,36,27,1.00)",
+            "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
             "letterSpacing": "1.6px",
             "textTransform": "uppercase",
@@ -490,9 +490,9 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
         ref={[Function]}
         style={
           {
-            "color": "rgba(134,118,106,1.00)",
+            "color": "rgba(145,136,117,1.00)",
             "flex": 1,
-            "fontFamily": "SpaceGrotesk_700Bold",
+            "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
           }
         }
@@ -541,7 +541,7 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
       style={
         {
           "alignItems": "center",
-          "borderBottomColor": "rgba(217,207,190,1.00)",
+          "borderBottomColor": "rgba(232,226,212,1.00)",
           "borderBottomWidth": "1px",
           "flexDirection": "row",
           "gap": "10px",
@@ -558,7 +558,7 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
         ref={[Function]}
         style={
           {
-            "backgroundColor": "rgba(184,135,46,1.00)",
+            "backgroundColor": "rgba(199,117,90,1.00)",
             "borderBottomLeftRadius": "3px",
             "borderBottomRightRadius": "3px",
             "borderTopLeftRadius": "3px",
@@ -574,8 +574,8 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
         ref={[Function]}
         style={
           {
-            "color": "rgba(31,22,17,1.00)",
-            "fontFamily": "SpaceGrotesk_700Bold",
+            "color": "rgba(42,36,27,1.00)",
+            "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
             "letterSpacing": "1.6px",
             "textTransform": "uppercase",
@@ -590,29 +590,75 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
         ref={[Function]}
         style={
           {
-            "color": "rgba(134,118,106,1.00)",
+            "color": "rgba(145,136,117,1.00)",
             "flex": 1,
-            "fontFamily": "SpaceGrotesk_700Bold",
+            "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
           }
         }
       >
         3
       </div>
-      <Svg
-        height={14}
-        viewBox="0 0 24 24"
-        width={14}
+      <div
+        className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+        dir={null}
+        ref={[Function]}
+        style={
+          {
+            "height": "14px",
+            "width": "14px",
+          }
+        }
       >
-        <Polyline
-          fill="none"
-          points="9 18 15 12 9 6"
-          stroke="#86766A"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
+        <div
+          className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+          dir={null}
+          ref={[Function]}
+          style={
+            {
+              "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/chevronRight.png")",
+              "filter": "url(#tint-14)",
+            }
+          }
+          suppressHydrationWarning={true}
         />
-      </Svg>
+        <img
+          alt=""
+          className="css-accessibilityImage-9pa8cd"
+          draggable={false}
+          ref={
+            {
+              "current": null,
+            }
+          }
+          src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/chevronRight.png"
+        />
+        <svg
+          style={
+            {
+              "height": 0,
+              "position": "absolute",
+              "visibility": "hidden",
+              "width": 0,
+            }
+          }
+        >
+          <defs>
+            <filter
+              id="tint-14"
+              suppressHydrationWarning={true}
+            >
+              <feFlood
+                floodColor="#918875"
+              />
+              <feComposite
+                in2="SourceAlpha"
+                operator="in"
+              />
+            </filter>
+          </defs>
+        </svg>
+      </div>
     </div>
     <div
       className="css-view-g5y9jx r-cursor-1loqt21 r-touchAction-1otgn73"
@@ -626,18 +672,18 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
       style={
         {
           "alignItems": "center",
-          "borderBottomColor": "rgba(217,207,190,1.00)",
+          "borderBottomColor": "rgba(232,226,212,1.00)",
           "borderBottomLeftRadius": "14px",
           "borderBottomRightRadius": "14px",
           "borderBottomStyle": "dashed",
           "borderBottomWidth": "1px",
-          "borderLeftColor": "rgba(217,207,190,1.00)",
+          "borderLeftColor": "rgba(232,226,212,1.00)",
           "borderLeftStyle": "dashed",
           "borderLeftWidth": "1px",
-          "borderRightColor": "rgba(217,207,190,1.00)",
+          "borderRightColor": "rgba(232,226,212,1.00)",
           "borderRightStyle": "dashed",
           "borderRightWidth": "1px",
-          "borderTopColor": "rgba(217,207,190,1.00)",
+          "borderTopColor": "rgba(232,226,212,1.00)",
           "borderTopLeftRadius": "14px",
           "borderTopRightRadius": "14px",
           "borderTopStyle": "dashed",
@@ -658,8 +704,8 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
         ref={[Function]}
         style={
           {
-            "color": "rgba(90,75,62,1.00)",
-            "fontFamily": "SpaceGrotesk_700Bold",
+            "color": "rgba(92,83,69,1.00)",
+            "fontFamily": "Geist_700Bold",
             "fontSize": "12px",
           }
         }
@@ -668,20 +714,66 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
         3
          more
       </div>
-      <Svg
-        height={14}
-        viewBox="0 0 24 24"
-        width={14}
+      <div
+        className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+        dir={null}
+        ref={[Function]}
+        style={
+          {
+            "height": "14px",
+            "width": "14px",
+          }
+        }
       >
-        <Polyline
-          fill="none"
-          points="6 9 12 15 18 9"
-          stroke="#5A4B3E"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
+        <div
+          className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+          dir={null}
+          ref={[Function]}
+          style={
+            {
+              "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/chevronDown.png")",
+              "filter": "url(#tint-15)",
+            }
+          }
+          suppressHydrationWarning={true}
         />
-      </Svg>
+        <img
+          alt=""
+          className="css-accessibilityImage-9pa8cd"
+          draggable={false}
+          ref={
+            {
+              "current": null,
+            }
+          }
+          src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/chevronDown.png"
+        />
+        <svg
+          style={
+            {
+              "height": 0,
+              "position": "absolute",
+              "visibility": "hidden",
+              "width": 0,
+            }
+          }
+        >
+          <defs>
+            <filter
+              id="tint-15"
+              suppressHydrationWarning={true}
+            >
+              <feFlood
+                floodColor="#5C5345"
+              />
+              <feComposite
+                in2="SourceAlpha"
+                operator="in"
+              />
+            </filter>
+          </defs>
+        </svg>
+      </div>
     </div>
   </div>
 </div>
@@ -710,7 +802,7 @@ exports[`atoms snapshots > DateSectioned — two sections, both open 1`] = `
       style={
         {
           "alignItems": "center",
-          "borderBottomColor": "rgba(217,207,190,1.00)",
+          "borderBottomColor": "rgba(232,226,212,1.00)",
           "borderBottomWidth": "1px",
           "flexDirection": "row",
           "gap": "10px",
@@ -726,7 +818,7 @@ exports[`atoms snapshots > DateSectioned — two sections, both open 1`] = `
         ref={[Function]}
         style={
           {
-            "backgroundColor": "rgba(184,135,46,1.00)",
+            "backgroundColor": "rgba(199,117,90,1.00)",
             "borderBottomLeftRadius": "3px",
             "borderBottomRightRadius": "3px",
             "borderTopLeftRadius": "3px",
@@ -742,8 +834,8 @@ exports[`atoms snapshots > DateSectioned — two sections, both open 1`] = `
         ref={[Function]}
         style={
           {
-            "color": "rgba(31,22,17,1.00)",
-            "fontFamily": "SpaceGrotesk_700Bold",
+            "color": "rgba(42,36,27,1.00)",
+            "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
             "letterSpacing": "1.6px",
             "textTransform": "uppercase",
@@ -758,9 +850,9 @@ exports[`atoms snapshots > DateSectioned — two sections, both open 1`] = `
         ref={[Function]}
         style={
           {
-            "color": "rgba(134,118,106,1.00)",
+            "color": "rgba(145,136,117,1.00)",
             "flex": 1,
-            "fontFamily": "SpaceGrotesk_700Bold",
+            "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
           }
         }
@@ -811,7 +903,7 @@ exports[`atoms snapshots > DateSectioned — two sections, both open 1`] = `
       style={
         {
           "alignItems": "center",
-          "borderBottomColor": "rgba(217,207,190,1.00)",
+          "borderBottomColor": "rgba(232,226,212,1.00)",
           "borderBottomWidth": "1px",
           "flexDirection": "row",
           "gap": "10px",
@@ -827,7 +919,7 @@ exports[`atoms snapshots > DateSectioned — two sections, both open 1`] = `
         ref={[Function]}
         style={
           {
-            "backgroundColor": "rgba(184,135,46,1.00)",
+            "backgroundColor": "rgba(199,117,90,1.00)",
             "borderBottomLeftRadius": "3px",
             "borderBottomRightRadius": "3px",
             "borderTopLeftRadius": "3px",
@@ -843,8 +935,8 @@ exports[`atoms snapshots > DateSectioned — two sections, both open 1`] = `
         ref={[Function]}
         style={
           {
-            "color": "rgba(31,22,17,1.00)",
-            "fontFamily": "SpaceGrotesk_700Bold",
+            "color": "rgba(42,36,27,1.00)",
+            "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
             "letterSpacing": "1.6px",
             "textTransform": "uppercase",
@@ -859,9 +951,9 @@ exports[`atoms snapshots > DateSectioned — two sections, both open 1`] = `
         ref={[Function]}
         style={
           {
-            "color": "rgba(134,118,106,1.00)",
+            "color": "rgba(145,136,117,1.00)",
             "flex": 1,
-            "fontFamily": "SpaceGrotesk_700Bold",
+            "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
           }
         }
@@ -898,8 +990,8 @@ exports[`atoms snapshots > Display — numeric size 1`] = `
   ref={[Function]}
   style={
     {
-      "color": "rgba(31,22,17,1.00)",
-      "fontFamily": "BricolageGrotesque_800ExtraBold",
+      "color": "rgba(42,36,27,1.00)",
+      "fontFamily": "BitcountPropSingle_700Bold",
       "fontSize": "40px",
       "letterSpacing": "-1px",
       "lineHeight": "38px",
@@ -929,20 +1021,66 @@ exports[`atoms snapshots > IconTile — custom size + palette 1`] = `
     }
   }
 >
-  <Svg
-    height={24}
-    viewBox="0 0 24 24"
-    width={24}
+  <div
+    className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "height": "24px",
+        "width": "24px",
+      }
+    }
   >
-    <Path
-      d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
-      fill="none"
-      stroke="#fdd"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2.2}
+    <div
+      className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+      dir={null}
+      ref={[Function]}
+      style={
+        {
+          "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/heart.png")",
+          "filter": "url(#tint-2)",
+        }
+      }
+      suppressHydrationWarning={true}
     />
-  </Svg>
+    <img
+      alt=""
+      className="css-accessibilityImage-9pa8cd"
+      draggable={false}
+      ref={
+        {
+          "current": null,
+        }
+      }
+      src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/heart.png"
+    />
+    <svg
+      style={
+        {
+          "height": 0,
+          "position": "absolute",
+          "visibility": "hidden",
+          "width": 0,
+        }
+      }
+    >
+      <defs>
+        <filter
+          id="tint-2"
+          suppressHydrationWarning={true}
+        >
+          <feFlood
+            floodColor="#fdd"
+          />
+          <feComposite
+            in2="SourceAlpha"
+            operator="in"
+          />
+        </filter>
+      </defs>
+    </svg>
+  </div>
 </div>
 `;
 
@@ -954,7 +1092,7 @@ exports[`atoms snapshots > IconTile — default 1`] = `
   style={
     {
       "alignItems": "center",
-      "backgroundColor": "rgba(184,135,46,0.12)",
+      "backgroundColor": "rgba(199,117,90,0.14)",
       "borderBottomLeftRadius": "11px",
       "borderBottomRightRadius": "11px",
       "borderTopLeftRadius": "11px",
@@ -965,28 +1103,66 @@ exports[`atoms snapshots > IconTile — default 1`] = `
     }
   }
 >
-  <Svg
-    height={18}
-    viewBox="0 0 24 24"
-    width={18}
+  <div
+    className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "height": "18px",
+        "width": "18px",
+      }
+    }
   >
-    <Path
-      d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"
-      fill="none"
-      stroke="#B8872E"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2.2}
+    <div
+      className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+      dir={null}
+      ref={[Function]}
+      style={
+        {
+          "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/bell.png")",
+          "filter": "url(#tint-0)",
+        }
+      }
+      suppressHydrationWarning={true}
     />
-    <Path
-      d="M10.3 21a1.94 1.94 0 0 0 3.4 0"
-      fill="none"
-      stroke="#B8872E"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2.2}
+    <img
+      alt=""
+      className="css-accessibilityImage-9pa8cd"
+      draggable={false}
+      ref={
+        {
+          "current": null,
+        }
+      }
+      src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/bell.png"
     />
-  </Svg>
+    <svg
+      style={
+        {
+          "height": 0,
+          "position": "absolute",
+          "visibility": "hidden",
+          "width": 0,
+        }
+      }
+    >
+      <defs>
+        <filter
+          id="tint-0"
+          suppressHydrationWarning={true}
+        >
+          <feFlood
+            floodColor="#C7755A"
+          />
+          <feComposite
+            in2="SourceAlpha"
+            operator="in"
+          />
+        </filter>
+      </defs>
+    </svg>
+  </div>
 </div>
 `;
 
@@ -997,8 +1173,8 @@ exports[`atoms snapshots > Overline — default 1`] = `
   ref={[Function]}
   style={
     {
-      "color": "rgba(134,118,106,1.00)",
-      "fontFamily": "SpaceGrotesk_700Bold",
+      "color": "rgba(145,136,117,1.00)",
+      "fontFamily": "Geist_700Bold",
       "fontSize": "10px",
       "letterSpacing": "1.4px",
       "textTransform": "uppercase",
@@ -1010,111 +1186,145 @@ exports[`atoms snapshots > Overline — default 1`] = `
 `;
 
 exports[`atoms snapshots > Pill — active sm 1`] = `
-<div
-  className="css-view-g5y9jx r-cursor-1loqt21 r-touchAction-1otgn73"
-  dir={null}
-  onBlur={[Function]}
-  onClick={[Function]}
-  onContextMenu={[Function]}
-  onFocus={[Function]}
-  onKeyDown={[Function]}
-  ref={[Function]}
+<AnimatedView
   style={
-    {
-      "alignSelf": "flex-start",
-      "backgroundColor": "rgba(184,135,46,0.12)",
-      "borderBottomColor": "rgba(217,207,190,1.00)",
-      "borderBottomLeftRadius": "999px",
-      "borderBottomRightRadius": "999px",
-      "borderBottomWidth": "0px",
-      "borderLeftColor": "rgba(217,207,190,1.00)",
-      "borderLeftWidth": "0px",
-      "borderRightColor": "rgba(217,207,190,1.00)",
-      "borderRightWidth": "0px",
-      "borderTopColor": "rgba(217,207,190,1.00)",
-      "borderTopLeftRadius": "999px",
-      "borderTopRightRadius": "999px",
-      "borderTopWidth": "0px",
-      "paddingBottom": "6px",
-      "paddingLeft": "12px",
-      "paddingRight": "12px",
-      "paddingTop": "6px",
-      "transform": "scale(1)",
-    }
+    [
+      {
+        "alignSelf": "flex-start",
+      },
+      {
+        "transform": [
+          {
+            "scale": 1.04,
+          },
+        ],
+      },
+    ]
   }
-  tabIndex={0}
 >
   <div
-    className="css-text-146c3p1"
-    dir="auto"
+    className="css-view-g5y9jx r-cursor-1loqt21 r-touchAction-1otgn73"
+    dir={null}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onContextMenu={[Function]}
+    onFocus={[Function]}
+    onKeyDown={[Function]}
     ref={[Function]}
     style={
       {
-        "color": "rgba(184,135,46,1.00)",
-        "fontFamily": "SpaceGrotesk_700Bold",
-        "fontSize": "11px",
-        "letterSpacing": "0.3px",
-        "textTransform": "uppercase",
+        "alignSelf": "flex-start",
+        "backgroundColor": "rgba(199,117,90,0.14)",
+        "borderBottomColor": "rgba(232,226,212,1.00)",
+        "borderBottomLeftRadius": "999px",
+        "borderBottomRightRadius": "999px",
+        "borderBottomWidth": "0px",
+        "borderLeftColor": "rgba(232,226,212,1.00)",
+        "borderLeftWidth": "0px",
+        "borderRightColor": "rgba(232,226,212,1.00)",
+        "borderRightWidth": "0px",
+        "borderTopColor": "rgba(232,226,212,1.00)",
+        "borderTopLeftRadius": "999px",
+        "borderTopRightRadius": "999px",
+        "borderTopWidth": "0px",
+        "paddingBottom": "6px",
+        "paddingLeft": "12px",
+        "paddingRight": "12px",
+        "paddingTop": "6px",
+        "transform": "scale(1)",
       }
     }
+    tabIndex={0}
   >
-    Active
+    <div
+      className="css-text-146c3p1"
+      dir="auto"
+      ref={[Function]}
+      style={
+        {
+          "color": "rgba(199,117,90,1.00)",
+          "fontFamily": "Geist_700Bold",
+          "fontSize": "11px",
+          "letterSpacing": "0.3px",
+          "textTransform": "uppercase",
+        }
+      }
+    >
+      Active
+    </div>
   </div>
-</div>
+</AnimatedView>
 `;
 
 exports[`atoms snapshots > Pill — inactive md 1`] = `
-<div
-  className="css-view-g5y9jx r-cursor-1loqt21 r-touchAction-1otgn73"
-  dir={null}
-  onBlur={[Function]}
-  onClick={[Function]}
-  onContextMenu={[Function]}
-  onFocus={[Function]}
-  onKeyDown={[Function]}
-  ref={[Function]}
+<AnimatedView
   style={
-    {
-      "alignSelf": "flex-start",
-      "backgroundColor": "rgba(0,0,0,0.00)",
-      "borderBottomColor": "rgba(217,207,190,1.00)",
-      "borderBottomLeftRadius": "999px",
-      "borderBottomRightRadius": "999px",
-      "borderBottomWidth": "1px",
-      "borderLeftColor": "rgba(217,207,190,1.00)",
-      "borderLeftWidth": "1px",
-      "borderRightColor": "rgba(217,207,190,1.00)",
-      "borderRightWidth": "1px",
-      "borderTopColor": "rgba(217,207,190,1.00)",
-      "borderTopLeftRadius": "999px",
-      "borderTopRightRadius": "999px",
-      "borderTopWidth": "1px",
-      "paddingBottom": "8px",
-      "paddingLeft": "14px",
-      "paddingRight": "14px",
-      "paddingTop": "8px",
-      "transform": "scale(1)",
-    }
+    [
+      {
+        "alignSelf": "flex-start",
+      },
+      {
+        "transform": [
+          {
+            "scale": 1,
+          },
+        ],
+      },
+    ]
   }
-  tabIndex={0}
 >
   <div
-    className="css-text-146c3p1"
-    dir="auto"
+    className="css-view-g5y9jx r-cursor-1loqt21 r-touchAction-1otgn73"
+    dir={null}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onContextMenu={[Function]}
+    onFocus={[Function]}
+    onKeyDown={[Function]}
     ref={[Function]}
     style={
       {
-        "color": "rgba(90,75,62,1.00)",
-        "fontFamily": "SpaceGrotesk_700Bold",
-        "fontSize": "12px",
-        "letterSpacing": "0.3px",
-        "textTransform": "uppercase",
+        "alignSelf": "flex-start",
+        "backgroundColor": "rgba(0,0,0,0.00)",
+        "borderBottomColor": "rgba(232,226,212,1.00)",
+        "borderBottomLeftRadius": "999px",
+        "borderBottomRightRadius": "999px",
+        "borderBottomWidth": "1px",
+        "borderLeftColor": "rgba(232,226,212,1.00)",
+        "borderLeftWidth": "1px",
+        "borderRightColor": "rgba(232,226,212,1.00)",
+        "borderRightWidth": "1px",
+        "borderTopColor": "rgba(232,226,212,1.00)",
+        "borderTopLeftRadius": "999px",
+        "borderTopRightRadius": "999px",
+        "borderTopWidth": "1px",
+        "paddingBottom": "8px",
+        "paddingLeft": "14px",
+        "paddingRight": "14px",
+        "paddingTop": "8px",
+        "transform": "scale(1)",
       }
     }
+    tabIndex={0}
   >
-    Tag
+    <div
+      className="css-text-146c3p1"
+      dir="auto"
+      ref={[Function]}
+      style={
+        {
+          "color": "rgba(92,83,69,1.00)",
+          "fontFamily": "Geist_700Bold",
+          "fontSize": "12px",
+          "letterSpacing": "0.3px",
+          "textTransform": "uppercase",
+        }
+      }
+    >
+      Tag
+    </div>
   </div>
-</div>
+</AnimatedView>
 `;
 
 exports[`atoms snapshots > PrimaryButton — disabled with icon 1`] = `
@@ -1131,7 +1341,7 @@ exports[`atoms snapshots > PrimaryButton — disabled with icon 1`] = `
   style={
     {
       "alignItems": "center",
-      "backgroundColor": "rgba(255,249,238,1.00)",
+      "backgroundColor": "rgba(255,253,247,1.00)",
       "borderBottomLeftRadius": "999px",
       "borderBottomRightRadius": "999px",
       "borderTopLeftRadius": "999px",
@@ -1145,28 +1355,74 @@ exports[`atoms snapshots > PrimaryButton — disabled with icon 1`] = `
   }
   tabIndex={-1}
 >
-  <Svg
-    height={18}
-    viewBox="0 0 24 24"
-    width={18}
+  <div
+    className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "height": "18px",
+        "width": "18px",
+      }
+    }
   >
-    <Polyline
-      fill="none"
-      points="20 6 9 17 4 12"
-      stroke="#86766A"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
+    <div
+      className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+      dir={null}
+      ref={[Function]}
+      style={
+        {
+          "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/check.png")",
+          "filter": "url(#tint-4)",
+        }
+      }
+      suppressHydrationWarning={true}
     />
-  </Svg>
+    <img
+      alt=""
+      className="css-accessibilityImage-9pa8cd"
+      draggable={false}
+      ref={
+        {
+          "current": null,
+        }
+      }
+      src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/check.png"
+    />
+    <svg
+      style={
+        {
+          "height": 0,
+          "position": "absolute",
+          "visibility": "hidden",
+          "width": 0,
+        }
+      }
+    >
+      <defs>
+        <filter
+          id="tint-4"
+          suppressHydrationWarning={true}
+        >
+          <feFlood
+            floodColor="#918875"
+          />
+          <feComposite
+            in2="SourceAlpha"
+            operator="in"
+          />
+        </filter>
+      </defs>
+    </svg>
+  </div>
   <div
     className="css-text-146c3p1"
     dir="auto"
     ref={[Function]}
     style={
       {
-        "color": "rgba(134,118,106,1.00)",
-        "fontFamily": "BricolageGrotesque_800ExtraBold",
+        "color": "rgba(145,136,117,1.00)",
+        "fontFamily": "BitcountPropSingle_700Bold",
         "fontSize": "16px",
         "letterSpacing": "0.3px",
         "textTransform": "uppercase",
@@ -1191,7 +1447,7 @@ exports[`atoms snapshots > PrimaryButton — enabled, no icon 1`] = `
   style={
     {
       "alignItems": "center",
-      "backgroundColor": "rgba(184,135,46,1.00)",
+      "backgroundColor": "rgba(199,117,90,1.00)",
       "borderBottomLeftRadius": "999px",
       "borderBottomRightRadius": "999px",
       "borderTopLeftRadius": "999px",
@@ -1213,7 +1469,7 @@ exports[`atoms snapshots > PrimaryButton — enabled, no icon 1`] = `
     style={
       {
         "color": "rgba(58,31,20,1.00)",
-        "fontFamily": "BricolageGrotesque_800ExtraBold",
+        "fontFamily": "BitcountPropSingle_700Bold",
         "fontSize": "16px",
         "letterSpacing": "0.3px",
         "textTransform": "uppercase",
@@ -1254,7 +1510,7 @@ exports[`atoms snapshots > ProgressRing — default 1`] = `
   >
     <Defs>
       <LinearGradient
-        id="rg-90-0.82"
+        id="rg-90"
         x1="0%"
         x2="100%"
         y1="0%"
@@ -1283,13 +1539,17 @@ exports[`atoms snapshots > ProgressRing — default 1`] = `
       strokeWidth={8}
     />
     <Circle
+      animatedProps={
+        {
+          "strokeDashoffset": 257.610597594363,
+        }
+      }
       cx={45}
       cy={45}
       fill="none"
       r={41}
-      stroke="url(#rg-90-0.82)"
+      stroke="url(#rg-90)"
       strokeDasharray="257.610597594363 257.610597594363"
-      strokeDashoffset={46.369907566985354}
       strokeLinecap="round"
       strokeWidth={8}
     />
@@ -1326,7 +1586,7 @@ exports[`atoms snapshots > ProgressRing — with label + custom colors 1`] = `
   >
     <Defs>
       <LinearGradient
-        id="rg-120-0.5"
+        id="rg-120"
         x1="0%"
         x2="100%"
         y1="0%"
@@ -1351,13 +1611,17 @@ exports[`atoms snapshots > ProgressRing — with label + custom colors 1`] = `
       strokeWidth={10}
     />
     <Circle
+      animatedProps={
+        {
+          "strokeDashoffset": 345.57519189487726,
+        }
+      }
       cx={60}
       cy={60}
       fill="none"
       r={55}
-      stroke="url(#rg-120-0.5)"
+      stroke="url(#rg-120)"
       strokeDasharray="345.57519189487726 345.57519189487726"
-      strokeDashoffset={172.78759594743863}
       strokeLinecap="round"
       strokeWidth={10}
     />
@@ -1369,7 +1633,7 @@ exports[`atoms snapshots > ProgressRing — with label + custom colors 1`] = `
     style={
       {
         "color": "rgba(58,31,20,1.00)",
-        "fontFamily": "BricolageGrotesque_800ExtraBold",
+        "fontFamily": "BitcountPropSingle_700Bold",
         "fontSize": "31.200000000000003px",
         "fontVariant": "tabular-nums",
         "letterSpacing": "-0.5px",
@@ -1416,34 +1680,66 @@ exports[`atoms snapshots > RoundBtn — borderless + custom size 1`] = `
   }
   tabIndex={0}
 >
-  <Svg
-    height={25.2}
-    viewBox="0 0 24 24"
-    width={25.2}
+  <div
+    className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "height": "25.2px",
+        "width": "25.2px",
+      }
+    }
   >
-    <Line
-      fill="none"
-      stroke="#fff"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2.2}
-      x1="18"
-      x2="6"
-      y1="6"
-      y2="18"
+    <div
+      className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+      dir={null}
+      ref={[Function]}
+      style={
+        {
+          "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/x.png")",
+          "filter": "url(#tint-8)",
+        }
+      }
+      suppressHydrationWarning={true}
     />
-    <Line
-      fill="none"
-      stroke="#fff"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2.2}
-      x1="6"
-      x2="18"
-      y1="6"
-      y2="18"
+    <img
+      alt=""
+      className="css-accessibilityImage-9pa8cd"
+      draggable={false}
+      ref={
+        {
+          "current": null,
+        }
+      }
+      src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/x.png"
     />
-  </Svg>
+    <svg
+      style={
+        {
+          "height": 0,
+          "position": "absolute",
+          "visibility": "hidden",
+          "width": 0,
+        }
+      }
+    >
+      <defs>
+        <filter
+          id="tint-8"
+          suppressHydrationWarning={true}
+        >
+          <feFlood
+            floodColor="#fff"
+          />
+          <feComposite
+            in2="SourceAlpha"
+            operator="in"
+          />
+        </filter>
+      </defs>
+    </svg>
+  </div>
 </div>
 `;
 
@@ -1460,16 +1756,16 @@ exports[`atoms snapshots > RoundBtn — default border 1`] = `
   style={
     {
       "alignItems": "center",
-      "backgroundColor": "rgba(249,243,232,1.00)",
-      "borderBottomColor": "rgba(217,207,190,1.00)",
+      "backgroundColor": "rgba(255,255,255,1.00)",
+      "borderBottomColor": "rgba(232,226,212,1.00)",
       "borderBottomLeftRadius": "20px",
       "borderBottomRightRadius": "20px",
       "borderBottomWidth": "1px",
-      "borderLeftColor": "rgba(217,207,190,1.00)",
+      "borderLeftColor": "rgba(232,226,212,1.00)",
       "borderLeftWidth": "1px",
-      "borderRightColor": "rgba(217,207,190,1.00)",
+      "borderRightColor": "rgba(232,226,212,1.00)",
       "borderRightWidth": "1px",
-      "borderTopColor": "rgba(217,207,190,1.00)",
+      "borderTopColor": "rgba(232,226,212,1.00)",
       "borderTopLeftRadius": "20px",
       "borderTopRightRadius": "20px",
       "borderTopWidth": "1px",
@@ -1481,34 +1777,66 @@ exports[`atoms snapshots > RoundBtn — default border 1`] = `
   }
   tabIndex={0}
 >
-  <Svg
-    height={18}
-    viewBox="0 0 24 24"
-    width={18}
+  <div
+    className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "height": "18px",
+        "width": "18px",
+      }
+    }
   >
-    <Line
-      fill="none"
-      stroke="#1F1611"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2.2}
-      x1="12"
-      x2="12"
-      y1="5"
-      y2="19"
+    <div
+      className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+      dir={null}
+      ref={[Function]}
+      style={
+        {
+          "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/plus.png")",
+          "filter": "url(#tint-6)",
+        }
+      }
+      suppressHydrationWarning={true}
     />
-    <Line
-      fill="none"
-      stroke="#1F1611"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2.2}
-      x1="5"
-      x2="19"
-      y1="12"
-      y2="12"
+    <img
+      alt=""
+      className="css-accessibilityImage-9pa8cd"
+      draggable={false}
+      ref={
+        {
+          "current": null,
+        }
+      }
+      src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/plus.png"
     />
-  </Svg>
+    <svg
+      style={
+        {
+          "height": 0,
+          "position": "absolute",
+          "visibility": "hidden",
+          "width": 0,
+        }
+      }
+    >
+      <defs>
+        <filter
+          id="tint-6"
+          suppressHydrationWarning={true}
+        >
+          <feFlood
+            floodColor="#2A241B"
+          />
+          <feComposite
+            in2="SourceAlpha"
+            operator="in"
+          />
+        </filter>
+      </defs>
+    </svg>
+  </div>
 </div>
 `;
 
@@ -1551,8 +1879,8 @@ exports[`atoms snapshots > ScreenHeader — eyebrow + meta + custom accent 1`] =
         ref={[Function]}
         style={
           {
-            "color": "rgba(134,118,106,1.00)",
-            "fontFamily": "SpaceGrotesk_700Bold",
+            "color": "rgba(145,136,117,1.00)",
+            "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
             "letterSpacing": "1.4px",
             "marginBottom": "8px",
@@ -1568,8 +1896,8 @@ exports[`atoms snapshots > ScreenHeader — eyebrow + meta + custom accent 1`] =
         ref={[Function]}
         style={
           {
-            "color": "rgba(31,22,17,1.00)",
-            "fontFamily": "BricolageGrotesque_800ExtraBold",
+            "color": "rgba(42,36,27,1.00)",
+            "fontFamily": "BitcountPropSingle_700Bold",
             "fontSize": "42px",
             "letterSpacing": "-1.2px",
             "lineHeight": "41.16px",
@@ -1623,8 +1951,8 @@ exports[`atoms snapshots > ScreenHeader — eyebrow + meta + custom accent 1`] =
     ref={[Function]}
     style={
       {
-        "color": "rgba(90,75,62,1.00)",
-        "fontFamily": "SpaceGrotesk_500Medium",
+        "color": "rgba(92,83,69,1.00)",
+        "fontFamily": "Geist_400Regular",
         "fontSize": "11px",
         "letterSpacing": "0.4px",
         "marginTop": "10px",
@@ -1675,8 +2003,8 @@ exports[`atoms snapshots > ScreenHeader — title only 1`] = `
         ref={[Function]}
         style={
           {
-            "color": "rgba(31,22,17,1.00)",
-            "fontFamily": "BricolageGrotesque_800ExtraBold",
+            "color": "rgba(42,36,27,1.00)",
+            "fontFamily": "BitcountPropSingle_700Bold",
             "fontSize": "42px",
             "letterSpacing": "-1.2px",
             "lineHeight": "41.16px",
@@ -1690,7 +2018,7 @@ exports[`atoms snapshots > ScreenHeader — title only 1`] = `
           ref={[Function]}
           style={
             {
-              "color": "rgba(184,135,46,1.00)",
+              "color": "rgba(199,117,90,1.00)",
             }
           }
         >
@@ -1718,7 +2046,7 @@ exports[`atoms snapshots > ScreenHeader — title only 1`] = `
       <Path
         d="M0 4 Q 12 0, 24 4 T 48 4 T 72 4 T 96 4"
         fill="none"
-        stroke="#B8872E"
+        stroke="#C7755A"
         strokeLinecap="round"
         strokeWidth={2}
       />
@@ -1749,8 +2077,8 @@ exports[`atoms snapshots > SectionHeader — label only 1`] = `
     ref={[Function]}
     style={
       {
-        "color": "rgba(134,118,106,1.00)",
-        "fontFamily": "SpaceGrotesk_700Bold",
+        "color": "rgba(145,136,117,1.00)",
+        "fontFamily": "Geist_700Bold",
         "fontSize": "10px",
         "letterSpacing": "1.4px",
         "textTransform": "uppercase",
@@ -1784,8 +2112,8 @@ exports[`atoms snapshots > SectionHeader — with action 1`] = `
     ref={[Function]}
     style={
       {
-        "color": "rgba(134,118,106,1.00)",
-        "fontFamily": "SpaceGrotesk_700Bold",
+        "color": "rgba(145,136,117,1.00)",
+        "fontFamily": "Geist_700Bold",
         "fontSize": "10px",
         "letterSpacing": "1.4px",
         "textTransform": "uppercase",
@@ -1817,7 +2145,7 @@ exports[`atoms snapshots > StickyDate — collapsible closed 1`] = `
   style={
     {
       "alignItems": "center",
-      "borderBottomColor": "rgba(217,207,190,1.00)",
+      "borderBottomColor": "rgba(232,226,212,1.00)",
       "borderBottomWidth": "1px",
       "flexDirection": "row",
       "gap": "10px",
@@ -1834,7 +2162,7 @@ exports[`atoms snapshots > StickyDate — collapsible closed 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundColor": "rgba(184,135,46,1.00)",
+        "backgroundColor": "rgba(199,117,90,1.00)",
         "borderBottomLeftRadius": "3px",
         "borderBottomRightRadius": "3px",
         "borderTopLeftRadius": "3px",
@@ -1850,8 +2178,8 @@ exports[`atoms snapshots > StickyDate — collapsible closed 1`] = `
     ref={[Function]}
     style={
       {
-        "color": "rgba(31,22,17,1.00)",
-        "fontFamily": "SpaceGrotesk_700Bold",
+        "color": "rgba(42,36,27,1.00)",
+        "fontFamily": "Geist_700Bold",
         "fontSize": "10px",
         "letterSpacing": "1.6px",
         "textTransform": "uppercase",
@@ -1866,29 +2194,75 @@ exports[`atoms snapshots > StickyDate — collapsible closed 1`] = `
     ref={[Function]}
     style={
       {
-        "color": "rgba(134,118,106,1.00)",
+        "color": "rgba(145,136,117,1.00)",
         "flex": 1,
-        "fontFamily": "SpaceGrotesk_700Bold",
+        "fontFamily": "Geist_700Bold",
         "fontSize": "10px",
       }
     }
   >
     12
   </div>
-  <Svg
-    height={14}
-    viewBox="0 0 24 24"
-    width={14}
+  <div
+    className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "height": "14px",
+        "width": "14px",
+      }
+    }
   >
-    <Polyline
-      fill="none"
-      points="9 18 15 12 9 6"
-      stroke="#86766A"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
+    <div
+      className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+      dir={null}
+      ref={[Function]}
+      style={
+        {
+          "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/chevronRight.png")",
+          "filter": "url(#tint-12)",
+        }
+      }
+      suppressHydrationWarning={true}
     />
-  </Svg>
+    <img
+      alt=""
+      className="css-accessibilityImage-9pa8cd"
+      draggable={false}
+      ref={
+        {
+          "current": null,
+        }
+      }
+      src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/chevronRight.png"
+    />
+    <svg
+      style={
+        {
+          "height": 0,
+          "position": "absolute",
+          "visibility": "hidden",
+          "width": 0,
+        }
+      }
+    >
+      <defs>
+        <filter
+          id="tint-12"
+          suppressHydrationWarning={true}
+        >
+          <feFlood
+            floodColor="#918875"
+          />
+          <feComposite
+            in2="SourceAlpha"
+            operator="in"
+          />
+        </filter>
+      </defs>
+    </svg>
+  </div>
 </div>
 `;
 
@@ -1905,7 +2279,7 @@ exports[`atoms snapshots > StickyDate — collapsible open 1`] = `
   style={
     {
       "alignItems": "center",
-      "borderBottomColor": "rgba(217,207,190,1.00)",
+      "borderBottomColor": "rgba(232,226,212,1.00)",
       "borderBottomWidth": "1px",
       "flexDirection": "row",
       "gap": "10px",
@@ -1922,7 +2296,7 @@ exports[`atoms snapshots > StickyDate — collapsible open 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundColor": "rgba(184,135,46,1.00)",
+        "backgroundColor": "rgba(199,117,90,1.00)",
         "borderBottomLeftRadius": "3px",
         "borderBottomRightRadius": "3px",
         "borderTopLeftRadius": "3px",
@@ -1938,8 +2312,8 @@ exports[`atoms snapshots > StickyDate — collapsible open 1`] = `
     ref={[Function]}
     style={
       {
-        "color": "rgba(31,22,17,1.00)",
-        "fontFamily": "SpaceGrotesk_700Bold",
+        "color": "rgba(42,36,27,1.00)",
+        "fontFamily": "Geist_700Bold",
         "fontSize": "10px",
         "letterSpacing": "1.6px",
         "textTransform": "uppercase",
@@ -1954,29 +2328,75 @@ exports[`atoms snapshots > StickyDate — collapsible open 1`] = `
     ref={[Function]}
     style={
       {
-        "color": "rgba(134,118,106,1.00)",
+        "color": "rgba(145,136,117,1.00)",
         "flex": 1,
-        "fontFamily": "SpaceGrotesk_700Bold",
+        "fontFamily": "Geist_700Bold",
         "fontSize": "10px",
       }
     }
   >
     7
   </div>
-  <Svg
-    height={14}
-    viewBox="0 0 24 24"
-    width={14}
+  <div
+    className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "height": "14px",
+        "width": "14px",
+      }
+    }
   >
-    <Polyline
-      fill="none"
-      points="6 9 12 15 18 9"
-      stroke="#86766A"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
+    <div
+      className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+      dir={null}
+      ref={[Function]}
+      style={
+        {
+          "backgroundImage": "url("/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/chevronDown.png")",
+          "filter": "url(#tint-10)",
+        }
+      }
+      suppressHydrationWarning={true}
     />
-  </Svg>
+    <img
+      alt=""
+      className="css-accessibilityImage-9pa8cd"
+      draggable={false}
+      ref={
+        {
+          "current": null,
+        }
+      }
+      src="/Users/tor/Documents/projects/coupl/.worktrees/functional-completion-feature-controls/assets/images/icons/chevronDown.png"
+    />
+    <svg
+      style={
+        {
+          "height": 0,
+          "position": "absolute",
+          "visibility": "hidden",
+          "width": 0,
+        }
+      }
+    >
+      <defs>
+        <filter
+          id="tint-10"
+          suppressHydrationWarning={true}
+        >
+          <feFlood
+            floodColor="#918875"
+          />
+          <feComposite
+            in2="SourceAlpha"
+            operator="in"
+          />
+        </filter>
+      </defs>
+    </svg>
+  </div>
 </div>
 `;
 
@@ -1988,7 +2408,7 @@ exports[`atoms snapshots > StickyDate — static label 1`] = `
   style={
     {
       "alignItems": "center",
-      "borderBottomColor": "rgba(217,207,190,1.00)",
+      "borderBottomColor": "rgba(232,226,212,1.00)",
       "borderBottomWidth": "1px",
       "flexDirection": "row",
       "gap": "10px",
@@ -2004,7 +2424,7 @@ exports[`atoms snapshots > StickyDate — static label 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundColor": "rgba(184,135,46,1.00)",
+        "backgroundColor": "rgba(199,117,90,1.00)",
         "borderBottomLeftRadius": "3px",
         "borderBottomRightRadius": "3px",
         "borderTopLeftRadius": "3px",
@@ -2020,8 +2440,8 @@ exports[`atoms snapshots > StickyDate — static label 1`] = `
     ref={[Function]}
     style={
       {
-        "color": "rgba(31,22,17,1.00)",
-        "fontFamily": "SpaceGrotesk_700Bold",
+        "color": "rgba(42,36,27,1.00)",
+        "fontFamily": "Geist_700Bold",
         "fontSize": "10px",
         "letterSpacing": "1.6px",
         "textTransform": "uppercase",
@@ -2036,9 +2456,9 @@ exports[`atoms snapshots > StickyDate — static label 1`] = `
     ref={[Function]}
     style={
       {
-        "color": "rgba(134,118,106,1.00)",
+        "color": "rgba(145,136,117,1.00)",
         "flex": 1,
-        "fontFamily": "SpaceGrotesk_700Bold",
+        "fontFamily": "Geist_700Bold",
         "fontSize": "10px",
       }
     }
@@ -2223,7 +2643,7 @@ exports[`atoms snapshots > WavyUnderline — default 1`] = `
   <Path
     d="M0 4 Q 16.25 0, 32.5 4 T 65 4 T 97.5 4 T 130 4"
     fill="none"
-    stroke="#B8872E"
+    stroke="#C7755A"
     strokeLinecap="round"
     strokeWidth={2}
   />
@@ -2242,8 +2662,8 @@ exports[`atoms snapshots > contains a View for composition sanity 1`] = `
     ref={[Function]}
     style={
       {
-        "color": "rgba(134,118,106,1.00)",
-        "fontFamily": "SpaceGrotesk_700Bold",
+        "color": "rgba(145,136,117,1.00)",
+        "fontFamily": "Geist_700Bold",
         "fontSize": "10px",
         "letterSpacing": "1.4px",
         "textTransform": "uppercase",

@@ -1,14 +1,6 @@
 import React from 'react';
-import { Text } from 'react-native';
-import { describe, expect, it, vi } from 'vitest';
-
-vi.mock('@react-native-menu/menu', () => {
-  const Reactx = require('react');
-  return {
-    MenuView: (props: any) =>
-      Reactx.createElement('MockMenuView', props, props.children),
-  };
-});
+import { Alert, Pressable, Text } from 'react-native';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as Haptics from 'expo-haptics';
 import { RowActionMenu } from '@/src/components/ui/RowActionMenu';
@@ -17,6 +9,8 @@ const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
 
 describe('RowActionMenu', () => {
+  let alertButtons: any[] = [];
+
   const baseActions = [
     { key: 'edit', label: 'Edit', icon: 'edit' as const, onPress: vi.fn() },
     {
@@ -28,7 +22,14 @@ describe('RowActionMenu', () => {
     },
   ];
 
-  it('mounts MenuView with mapped actions and shouldOpenOnLongPress', () => {
+  beforeEach(() => {
+    alertButtons = [];
+    vi.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
+      alertButtons = buttons ?? [];
+    });
+  });
+
+  it('renders a long-press action sheet trigger with children', () => {
     let renderer: any;
     act(() => {
       renderer = TestRenderer.create(
@@ -37,15 +38,8 @@ describe('RowActionMenu', () => {
         </RowActionMenu>,
       );
     });
-    const menu = renderer.root.findAll((n: any) => n.type === 'MockMenuView')[0];
-    expect(menu).toBeTruthy();
-    expect(menu.props.shouldOpenOnLongPress).toBe(true);
-    expect(menu.props.title).toBe('Item');
-    expect(menu.props.actions).toHaveLength(2);
-    expect(menu.props.actions.map((a: any) => a.id)).toEqual(['edit', 'delete']);
-    expect(menu.props.actions[0].title).toBe('Edit');
-    expect(menu.props.actions[1].attributes.destructive).toBe(true);
-    expect(menu.props.actions[0].attributes.destructive).toBeFalsy();
+    const trigger = renderer.root.findByType(Pressable);
+    expect(trigger.props.delayLongPress).toBe(350);
     const body = renderer.root.findAll((n: any) => n.props?.testID === 'row-body')[0];
     expect(body).toBeTruthy();
     act(() => renderer.unmount());
@@ -80,20 +74,34 @@ describe('RowActionMenu', () => {
         </RowActionMenu>,
       );
     });
-    const menu = renderer.root.findAll((n: any) => n.type === 'MockMenuView')[0];
+    const trigger = renderer.root.findByType(Pressable);
 
     await act(async () => {
-      await menu.props.onPressAction({ nativeEvent: { event: 'edit' } });
+      trigger.props.onLongPress();
+    });
+    expect(Alert.alert).toHaveBeenCalledWith(
+      '',
+      undefined,
+      [
+        expect.objectContaining({ text: 'Edit', style: 'default' }),
+        expect.objectContaining({ text: 'Delete', style: 'destructive' }),
+        expect.objectContaining({ text: 'Cancel', style: 'cancel' }),
+      ],
+      { cancelable: true },
+    );
+
+    await act(async () => {
+      await alertButtons[0].onPress();
     });
     expect(editPress).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      await menu.props.onPressAction({ nativeEvent: { event: 'reorder' } });
+      alertButtons[2].onPress?.();
     });
     expect(disabledPress).not.toHaveBeenCalled();
 
     await act(async () => {
-      await menu.props.onPressAction({ nativeEvent: { event: 'delete' } });
+      await alertButtons[1].onPress();
     });
     expect(deletePress).toHaveBeenCalledTimes(1);
 
@@ -113,22 +121,24 @@ describe('RowActionMenu', () => {
         </RowActionMenu>,
       );
     });
-    const menu = renderer.root.findAll((n: any) => n.type === 'MockMenuView')[0];
+    const trigger = renderer.root.findByType(Pressable);
 
     await act(async () => {
-      menu.props.onOpenMenu();
+      trigger.props.onLongPress();
     });
     expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      await menu.props.onPressAction({ nativeEvent: { event: 'edit' } });
+      await alertButtons[0].onPress();
     });
-    expect(Haptics.impactAsync).toHaveBeenCalledWith('light');
+    expect(Haptics.impactAsync).toHaveBeenCalledWith(Haptics.ImpactFeedbackStyle.Light);
 
     await act(async () => {
-      await menu.props.onPressAction({ nativeEvent: { event: 'delete' } });
+      await alertButtons[1].onPress();
     });
-    expect(Haptics.notificationAsync).toHaveBeenCalledWith('warning');
+    expect(Haptics.notificationAsync).toHaveBeenCalledWith(
+      Haptics.NotificationFeedbackType.Warning,
+    );
 
     act(() => renderer.unmount());
   });
