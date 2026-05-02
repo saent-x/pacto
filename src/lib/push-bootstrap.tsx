@@ -1,8 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
-import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
-import { registerPushToken, touchDeviceLastSeen } from './notifications';
+import {
+  addNotificationResponseRouteListener,
+  registerPushToken,
+  touchDeviceLastSeen,
+} from './notifications';
 import { useSession } from './session';
 
 /**
@@ -36,19 +39,29 @@ export function PushBootstrap() {
   }, []);
 
   useEffect(() => {
-    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data as
-        | { route?: string }
-        | undefined;
-      if (data?.route) {
+    let cancelled = false;
+    let sub: { remove: () => void } | null = null;
+
+    addNotificationResponseRouteListener((route) => {
+      if (!cancelled) {
         try {
-          router.push(data.route as any);
+          router.push(route as any);
         } catch {
           /* ignore bad routes */
         }
       }
+    }).then((listener) => {
+      if (cancelled) {
+        listener?.remove();
+        return;
+      }
+      sub = listener;
     });
-    return () => sub.remove();
+
+    return () => {
+      cancelled = true;
+      sub?.remove();
+    };
   }, []);
 
   return null;

@@ -111,6 +111,11 @@ describe('onboarding feature selection', () => {
     routerSpy.push.mockClear();
     routerSpy.replace.mockClear();
     routerSpy.back.mockClear();
+    sessionState.user = {
+      id: 'user-1',
+      email: 'test@coupl.app',
+      avatarUrl: null,
+    };
     spaceActions.createSpace.mockClear();
     spaceActions.ensureUserRow.mockClear();
     spaceActions.createSpace.mockResolvedValue({ spaceId: 'space-1', inviteCode: 'PAIR-CODE' });
@@ -163,5 +168,17 @@ describe('onboarding feature selection', () => {
 
     expect(findAllByTestID(renderer.root, 'feature-toggle-journal')).toHaveLength(0);
     expect(findAllByTestID(renderer.root, 'feature-toggle-checkins')).toHaveLength(0);
+  });
+
+  it('redirects unauthenticated users to sign in before creating a space', async () => {
+    sessionState.user = null;
+    const renderer = await renderOnboarding();
+
+    await press(findByTestID(renderer.root, 'onboarding-mode-pair'));
+    await press(findByTestID(renderer.root, 'onboarding-create-space'));
+
+    expect(routerSpy.replace).toHaveBeenCalledWith('/(auth)/sign-in');
+    expect(spaceActions.ensureUserRow).not.toHaveBeenCalled();
+    expect(spaceActions.createSpace).not.toHaveBeenCalled();
   });
 });

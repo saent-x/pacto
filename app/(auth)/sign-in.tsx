@@ -37,6 +37,11 @@ export default function SignIn() {
     }
   }, [stage]);
 
+  function updateEmail(nextEmail: string) {
+    setEmail(nextEmail);
+    if (error) setError(null);
+  }
+
   async function sendCode() {
     if (!email.includes('@')) {
       setError('Enter a valid email');
@@ -153,7 +158,7 @@ export default function SignIn() {
               />
               <TextInput
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={updateEmail}
                 editable={stage === 'email' && !busy}
                 placeholder="you@example.com"
                 placeholderTextColor={C.ink3}
@@ -292,7 +297,7 @@ export default function SignIn() {
 
             {isSimulator ? (
               <PressScale
-                onPress={() => setEmail('dev@pacto.app')}
+                onPress={() => updateEmail('dev@pacto.app')}
                 style={{ alignSelf: 'center', paddingVertical: 8 }}
               >
                 <Text style={[Typography.small, { color: C.ink3 }]}>

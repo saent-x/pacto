@@ -1,21 +1,36 @@
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { db, id } from './instant';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+type ExpoNotifications = typeof import('expo-notifications');
+type NotificationSubscription = { remove: () => void };
+
+let notificationsPromise: Promise<ExpoNotifications> | null = null;
+
+async function loadNotifications(): Promise<ExpoNotifications | null> {
+  if (Platform.OS === 'web') return null;
+
+  notificationsPromise ??= import('expo-notifications').then((Notifications) => {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+    return Notifications;
+  });
+
+  return notificationsPromise;
+}
 
 const idFor = (reminderId: string) => `reminder:${reminderId}`;
 
 export async function ensureNotificationPermission(): Promise<boolean> {
+  const Notifications = await loadNotifications();
+  if (!Notifications) return false;
   const current = await Notifications.getPermissionsAsync();
   if (current.status === 'granted') return true;
   const req = await Notifications.requestPermissionsAsync();
@@ -27,6 +42,8 @@ export async function scheduleReminderNotification(
   title: string,
   dueAtIso: string,
 ): Promise<string | null> {
+  const Notifications = await loadNotifications();
+  if (!Notifications) return null;
   const fireAt = new Date(dueAtIso).getTime();
   if (!Number.isFinite(fireAt) || fireAt <= Date.now()) return null;
   const granted = await ensureNotificationPermission();
@@ -45,6 +62,8 @@ export async function scheduleReminderNotification(
 }
 
 export async function cancelReminderNotification(reminderId: string): Promise<void> {
+  const Notifications = await loadNotifications();
+  if (!Notifications) return;
   await Notifications.cancelScheduledNotificationAsync(idFor(reminderId)).catch(() => undefined);
 }
 
@@ -55,7 +74,7 @@ function getProjectId(): string | undefined {
   return expo?.extra?.eas?.projectId ?? (Constants as any).easConfig?.projectId;
 }
 
-async function ensureAndroidChannel(): Promise<void> {
+async function ensureAndroidChannel(Notifications: ExpoNotifications): Promise<void> {
   if (Platform.OS !== 'android') return;
   await Notifications.setNotificationChannelAsync('default', {
     name: 'Default',
@@ -70,10 +89,12 @@ async function ensureAndroidChannel(): Promise<void> {
  * Returns the token, or null if running on a simulator / permission denied / no projectId.
  */
 export async function registerPushToken(userId: string): Promise<string | null> {
+  const Notifications = await loadNotifications();
+  if (!Notifications) return null;
   if (!Device.isDevice) return null; // simulators cannot get APNs/FCM tokens
   const granted = await ensureNotificationPermission();
   if (!granted) return null;
-  await ensureAndroidChannel();
+  await ensureAndroidChannel(Notifications);
 
   const projectId = getProjectId();
   if (!projectId) {
@@ -134,4 +155,17 @@ export async function touchDeviceLastSeen(token: string): Promise<void> {
   } catch {
     /* best-effort */
   }
+}
+
+export async function addNotificationResponseRouteListener(
+  onRoute: (route: string) => void,
+): Promise<NotificationSubscription | null> {
+  const Notifications = await loadNotifications();
+  if (!Notifications) return null;
+  return Notifications.addNotificationResponseReceivedListener((response) => {
+    const data = response.notification.request.content.data as
+      | { route?: string }
+      | undefined;
+    if (data?.route) onRoute(data.route);
+  });
 }
