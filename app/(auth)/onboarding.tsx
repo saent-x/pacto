@@ -16,6 +16,13 @@ import { DEFAULT_AVATARS, randomDefaultAvatarId } from '@/src/constants/defaultA
 import { useTheme } from '@/src/lib/theme';
 import { useSession } from '@/src/lib/session';
 import { createSpace, ensureUserRow } from '@/src/lib/space-actions';
+import {
+  type FeatureEntry,
+  type FeatureId,
+  getDefaultFeatureIds,
+  getSupportedFeatures,
+  sanitizeFeatureIds,
+} from '@/src/lib/features/registry';
 
 type Mode = 'solo' | 'pair' | 'crew';
 
@@ -23,12 +30,29 @@ export default function Onboarding() {
   const router = useRouter();
   const { C } = useTheme();
   const { user } = useSession();
-  const [busy, setBusy] = useState<Mode | 'join' | null>(null);
+  const [mode, setMode] = useState<Mode | null>(null);
+  const [selectedFeatures, setSelectedFeatures] = useState<FeatureId[]>([]);
+  const [busy, setBusy] = useState<'create' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function pick(mode: Mode) {
+  function pick(mode: Mode) {
+    setMode(mode);
+    setSelectedFeatures(getDefaultFeatureIds(mode));
+    setError(null);
+  }
+
+  function toggleFeature(id: FeatureId) {
+    setSelectedFeatures((current) =>
+      current.includes(id)
+        ? current.filter((featureId) => featureId !== id)
+        : [...current, id],
+    );
+  }
+
+  async function createSelectedSpace() {
+    if (!mode) return;
     if (!user) return;
-    setBusy(mode);
+    setBusy('create');
     setError(null);
     try {
       await ensureUserRow({
@@ -40,7 +64,12 @@ export default function Onboarding() {
       // 'pair' and 'crew' both map to 'couple' on the wire for now; session
       // boundary normalizes back to mode.
       const wireKind: 'solo' | 'couple' = mode === 'solo' ? 'solo' : 'couple';
-      const result = await createSpace({ userId: user.id, kind: wireKind });
+      const result = await createSpace({
+        userId: user.id,
+        kind: wireKind,
+        mode,
+        enabledFeatures: sanitizeFeatureIds(selectedFeatures, mode),
+      });
       if (mode !== 'solo' && result.inviteCode) {
         router.push({
           pathname: '/(auth)/invite-code',
@@ -54,6 +83,8 @@ export default function Onboarding() {
       setBusy(null);
     }
   }
+
+  const supportedFeatures = mode ? getSupportedFeatures(mode) : [];
 
   function goJoin() {
     router.push('/(auth)/invite' as any);
@@ -93,7 +124,8 @@ export default function Onboarding() {
           description="Pacts with yourself."
           accent={C.accent}
           left={<Avatar person={{ avatarUrl: DEFAULT_AVATARS[0].id, color: C.accent }} size={36} />}
-          busy={busy === 'solo'}
+          selected={mode === 'solo'}
+          testID="onboarding-mode-solo"
           onPress={() => pick('solo')}
         />
 
@@ -109,7 +141,8 @@ export default function Onboarding() {
               size={32}
             />
           }
-          busy={busy === 'pair'}
+          selected={mode === 'pair'}
+          testID="onboarding-mode-pair"
           onPress={() => pick('pair')}
         />
 
@@ -119,10 +152,45 @@ export default function Onboarding() {
           description="3–8 people. House, family, project crew."
           accent={C.accent3}
           left={<CrewStack size={28} />}
-          busy={busy === 'crew'}
+          selected={mode === 'crew'}
+          testID="onboarding-mode-crew"
           onPress={() => pick('crew')}
         />
       </View>
+
+      {mode ? (
+        <View style={styles.featureSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>ENABLE FEATURES</Text>
+            <Text style={[Typography.caption, { color: C.ink2, marginTop: 6 }]}>
+              Start with defaults, adjust anytime.
+            </Text>
+          </View>
+
+          <View style={styles.features}>
+            {supportedFeatures.map((feature) => (
+              <FeatureRow
+                key={feature.id}
+                feature={feature}
+                selected={selectedFeatures.includes(feature.id)}
+                onPress={() => toggleFeature(feature.id)}
+              />
+            ))}
+          </View>
+
+          <PressScale
+            testID="onboarding-create-space"
+            onPress={busy === 'create' ? undefined : createSelectedSpace}
+            style={[styles.createButton, { backgroundColor: C.accent }]}
+            haptic="success"
+          >
+            <Text style={[Typography.bodyMedium, { color: C.bg }]}>
+              {busy === 'create' ? 'Creating…' : 'Continue'}
+            </Text>
+            <Icon name="arrowRight" size={16} color={C.bg} />
+          </PressScale>
+        </View>
+      ) : null}
 
       <PressScale onPress={goJoin} style={styles.joinLink}>
         <Text style={[Typography.captionMedium, { color: C.ink2 }]}>
@@ -140,7 +208,8 @@ function ModeCard({
   description,
   accent,
   left,
-  busy,
+  selected,
+  testID,
   onPress,
 }: {
   eyebrow: string;
@@ -148,38 +217,98 @@ function ModeCard({
   description: string;
   accent: string;
   left: React.ReactNode;
-  busy: boolean;
+  selected: boolean;
+  testID: string;
   onPress: () => void;
 }) {
   const { C } = useTheme();
   return (
-    <Card onPress={busy ? undefined : onPress} style={styles.modeCard}>
-      <View style={styles.modeRow}>
-        <View style={styles.modeLeft}>{left}</View>
-        <View style={{ flex: 1 }}>
-          <Text style={[Typography.eyebrowSm, { color: accent }]}>{eyebrow}</Text>
-          <Text
+    <PressScale testID={testID} onPress={onPress}>
+      <Card
+        style={[
+          styles.modeCard,
+          selected ? { borderColor: accent, backgroundColor: C.bgSoft } : null,
+        ]}
+      >
+        <View style={styles.modeRow}>
+          <View style={styles.modeLeft}>{left}</View>
+          <View style={{ flex: 1 }}>
+            <Text style={[Typography.eyebrowSm, { color: accent }]}>{eyebrow}</Text>
+            <Text
+              style={[
+                {
+                  fontFamily: Typography.pixelFont,
+                  fontSize: 22,
+                  lineHeight: 24,
+                  color: C.inkColor,
+                  letterSpacing: -0.3,
+                  marginTop: 4,
+                },
+              ]}
+            >
+              {title}
+              <Text style={{ color: accent }}>.</Text>
+            </Text>
+            <Text style={[Typography.caption, { color: C.ink2, marginTop: 6 }]}>
+              {description}
+            </Text>
+          </View>
+          <Icon name={selected ? 'check' : 'arrowRight'} size={16} color={selected ? accent : C.ink3} />
+        </View>
+      </Card>
+    </PressScale>
+  );
+}
+
+function FeatureRow({
+  feature,
+  selected,
+  onPress,
+}: {
+  feature: FeatureEntry;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const { C } = useTheme();
+  return (
+    <PressScale testID={`feature-toggle-${feature.id}`} onPress={onPress}>
+      <Card
+        style={[
+          styles.featureCard,
+          selected ? { borderColor: C.accent, backgroundColor: C.bgSoft } : null,
+        ]}
+      >
+        <View style={styles.featureRow}>
+          <View
             style={[
+              styles.featureIcon,
+              { backgroundColor: selected ? C.accentSoft : C.bgSoft },
+            ]}
+          >
+            <Icon name={feature.icon} size={18} color={selected ? C.accent : C.ink2} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[Typography.bodyMedium, { color: C.inkColor }]}>
+              {feature.label}
+            </Text>
+            <Text style={[Typography.caption, { color: C.ink2, marginTop: 3 }]}>
+              {feature.description}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.featureCheck,
               {
-                fontFamily: Typography.pixelFont,
-                fontSize: 22,
-                lineHeight: 24,
-                color: C.inkColor,
-                letterSpacing: -0.3,
-                marginTop: 4,
+                borderColor: selected ? C.accent : C.lineColor,
+                backgroundColor: selected ? C.accent : 'transparent',
               },
             ]}
           >
-            {title}
-            <Text style={{ color: accent }}>.</Text>
-          </Text>
-          <Text style={[Typography.caption, { color: C.ink2, marginTop: 6 }]}>
-            {busy ? 'Creating…' : description}
-          </Text>
+            {selected ? <Icon name="check" size={13} color={C.bg} /> : null}
+          </View>
         </View>
-        <Icon name="arrowRight" size={16} color={C.ink3} />
-      </View>
-    </Card>
+      </Card>
+    </PressScale>
   );
 }
 
@@ -196,6 +325,39 @@ const styles = StyleSheet.create({
   modeLeft: {
     width: 56,
     alignItems: 'center',
+  },
+  featureSection: { marginTop: 28 },
+  sectionHeader: { marginBottom: 12 },
+  features: { gap: 10 },
+  featureCard: { padding: 14 },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  featureIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featureCheck: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  createButton: {
+    marginTop: 18,
+    minHeight: 52,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   joinLink: {
     marginTop: 28,
