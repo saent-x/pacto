@@ -254,6 +254,46 @@ describe('HomeRoute', () => {
     act(() => renderer.unmount());
   });
 
+  it('labels milestone data as memory dates and renders the summary below activity', async () => {
+    homeState.timeline = [
+      {
+        id: 'task:next',
+        type: 'task',
+        sourceId: 'next',
+        sourceTable: 'tasks',
+        title: 'Book dinner',
+        subtitle: null,
+        occursAt: localDayAt(2, 19),
+        priority: 0,
+        isPrivate: false,
+        isOverdue: false,
+      },
+    ];
+    homeState.milestones = [
+      {
+        id: 'milestone:anniversary',
+        type: 'milestone',
+        title: 'Anniversary',
+        subtitle: null,
+        date: '2026-06-10',
+        daysUntil: 39,
+      },
+    ];
+
+    const renderer = await renderHome();
+    const texts = allText(renderer);
+    const text = texts.join('\n');
+
+    expect(text).toContain('MEMORY DATES');
+    expect(text).toContain('MEMORY DATE');
+    expect(text).toContain('Enabled timeline items and memory dates due in the next 30 days.');
+    expect(text).not.toContain('MILESTONES');
+    expect(texts.indexOf('RECENT ACTIVITY')).toBeGreaterThanOrEqual(0);
+    expect(texts.indexOf('NEXT ITEM')).toBeGreaterThan(texts.indexOf('RECENT ACTIVITY'));
+
+    act(() => renderer.unmount());
+  });
+
   it('renders only current local date items under Today', async () => {
     homeState.timeline = [
       {

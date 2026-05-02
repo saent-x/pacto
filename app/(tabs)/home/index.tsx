@@ -111,6 +111,10 @@ function dateLabelForMilestone(item: MilestoneStripItem): string {
   return format(new Date(`${item.date}T12:00:00`), 'EEE · MMM d').toUpperCase();
 }
 
+function memoryDateTypeLabel(item: MilestoneStripItem): string {
+  return item.type === 'countdown' ? 'COUNTDOWN' : 'MEMORY DATE';
+}
+
 function timelineDot(type: TimelineItem['type']): string {
   switch (type) {
     case 'task':
@@ -477,30 +481,8 @@ export default function HomeScreen() {
               {' ITEMS AHEAD'}
             </Text>
             <Text style={[Typography.caption, { color: C.ink3, marginTop: 6 }]}>
-              Enabled timeline items and milestones due in the next 30 days.
+              Enabled timeline items and memory dates due in the next 30 days.
             </Text>
-            <View style={[styles.togetherFooter, { borderTopColor: C.lineColor }]}>
-              <View style={{ flex: 1 }}>
-                <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
-                  NEXT ITEM
-                </Text>
-                <Text
-                  style={[Typography.captionMedium, { color: C.inkColor, marginTop: 4 }]}
-                >
-                  {routedComingTimeline ? routedComingTimeline.title : comingMilestone ? comingMilestone.title : 'Nothing scheduled yet'}
-                </Text>
-              </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
-                  MILESTONES
-                </Text>
-                <Text
-                  style={[Typography.captionMedium, { color: C.inkColor, marginTop: 4 }]}
-                >
-                  {home.milestones.length}
-                </Text>
-              </View>
-            </View>
             <View style={[styles.activityPanel, { borderTopColor: C.lineColor }]}>
               <View style={styles.activityHeader}>
                 <View style={styles.activityTitleRow}>
@@ -521,6 +503,32 @@ export default function HomeScreen() {
                 cellGap={3}
                 cellRadius={3}
               />
+            </View>
+            <View style={[styles.togetherFooter, { borderTopColor: C.lineColor }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
+                  NEXT ITEM
+                </Text>
+                <Text
+                  style={[Typography.captionMedium, { color: C.inkColor, marginTop: 4 }]}
+                >
+                  {routedComingTimeline
+                    ? routedComingTimeline.title
+                    : comingMilestone
+                      ? comingMilestone.title
+                      : 'Nothing scheduled yet'}
+                </Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
+                  MEMORY DATES
+                </Text>
+                <Text
+                  style={[Typography.captionMedium, { color: C.inkColor, marginTop: 4 }]}
+                >
+                  {home.milestones.length}
+                </Text>
+              </View>
             </View>
           </Card>
         </View>
@@ -699,7 +707,7 @@ export default function HomeScreen() {
                   <View style={styles.annivInner}>
                     <Icon name="flag" size={18} color={C.accent} />
                     <Text style={[Typography.eyebrowSm, { color: C.ink3, marginTop: 22 }]}>
-                      {comingMilestone.type.toUpperCase()}
+                      {memoryDateTypeLabel(comingMilestone)}
                     </Text>
                     <Text style={[Typography.pixelHeroSm, { color: C.inkColor, marginTop: 4 }]} numberOfLines={2}>
                       {comingMilestone.title}
@@ -723,14 +731,14 @@ export default function HomeScreen() {
                   <View style={styles.annivInner}>
                     <Icon name="flag" size={18} color={C.ink3} />
                     <Text style={[Typography.eyebrowSm, { color: C.ink3, marginTop: 22 }]}>
-                      MILESTONES
+                      MEMORY DATES
                     </Text>
                     <Text style={[Typography.pixelHeroSm, { color: C.inkColor, marginTop: 4 }]} numberOfLines={2}>
                       No dates yet
                     </Text>
                     <View style={{ flex: 1 }} />
                     <Text style={[Typography.caption, { color: C.ink3 }]}>
-                      Add a milestone to keep this side panel active.
+                      Add a memory date to keep this side panel active.
                     </Text>
                   </View>
                 </Card>
