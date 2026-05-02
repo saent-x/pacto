@@ -22,11 +22,24 @@ export default function Invite() {
   const refs = useRef<Array<TextInput | null>>([]);
 
   const setSlot = (i: number, v: string) => {
+    const cleaned = v.replace(/[^a-z0-9]/gi, '').toUpperCase();
     const next = [...code];
-    next[i] = v.slice(-1).toUpperCase();
+    if (cleaned.length > 1) {
+      cleaned
+        .slice(0, SLOTS - i)
+        .split('')
+        .forEach((char, offset) => {
+          next[i + offset] = char;
+        });
+      setCode(next);
+      setError(null);
+      refs.current[Math.min(i + cleaned.length, SLOTS - 1)]?.focus();
+      return;
+    }
+    next[i] = cleaned;
     setCode(next);
     setError(null);
-    if (v && i < SLOTS - 1) refs.current[i + 1]?.focus();
+    if (cleaned && i < SLOTS - 1) refs.current[i + 1]?.focus();
   };
 
   const joined = code.join('');
@@ -85,8 +98,18 @@ export default function Invite() {
         </Text>
       </View>
 
-      <View style={styles.codeWrap}>
-        <Text style={[Typography.eyebrow, { color: C.ink3, marginBottom: 12, marginLeft: 4 }]}>
+      <View style={[
+        styles.codeWrap,
+        {
+          backgroundColor: C.bgSoft,
+          borderColor: error ? C.error : C.line2,
+        },
+      ]}>
+        <View style={[styles.codeAccent, { backgroundColor: error ? C.error : C.accent }]} />
+        <View style={[styles.codeBadge, { backgroundColor: C.bgCard, borderColor: C.lineColor }]}>
+          <Text style={[Typography.captionMedium, { color: error ? C.error : C.accent }]}>#</Text>
+        </View>
+        <Text style={[Typography.eyebrowSm, { color: C.ink3, marginBottom: 14, textAlign: 'center' }]}>
           Invite code
         </Text>
         <View style={styles.slotRow}>
@@ -98,15 +121,15 @@ export default function Invite() {
               }}
               value={ch}
               onChangeText={(v) => setSlot(i, v)}
-              maxLength={1}
               autoCapitalize="characters"
+              autoCorrect={false}
               style={[
                 styles.slot,
                 {
-                  borderColor: error ? C.error : ch ? C.accent : C.lineColor,
+                  borderColor: error ? C.error : ch ? C.accent : C.line2,
                   color: C.inkColor,
                   fontFamily: Typography.pixelFont,
-                  backgroundColor: C.bgCard,
+                  backgroundColor: ch ? C.bgCard : C.bg,
                 },
               ]}
             />
@@ -142,14 +165,44 @@ export default function Invite() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, padding: 24, paddingTop: 24, paddingBottom: 40 },
-  hero: { alignItems: 'center', marginTop: 8, marginBottom: 36 },
-  codeWrap: { marginBottom: 28 },
+  hero: { alignItems: 'center', marginTop: 44, marginBottom: 38 },
+  codeWrap: {
+    width: '100%',
+    maxWidth: 420,
+    alignSelf: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingTop: 26,
+    paddingBottom: 22,
+    marginBottom: 28,
+    overflow: 'hidden',
+  },
+  codeAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+  },
+  codeBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
   slotRow: {
     flexDirection: 'row',
-    gap: 10,
+    justifyContent: 'center',
+    gap: 8,
+    width: '100%',
   },
   slot: {
-    width: 48,
+    width: 44,
     height: 56,
     borderWidth: 1.5,
     borderRadius: 12,

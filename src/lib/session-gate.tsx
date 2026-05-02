@@ -20,7 +20,12 @@ export function SessionGate({ children }: PropsWithChildren) {
     }
 
     if (status === 'onboarding') {
-      const allowed = group === '(auth)' && (leaf === 'onboarding' || leaf === 'invite' || leaf === 'invite-code');
+      const allowed = group === '(auth)' && (
+        leaf === 'onboarding'
+        || leaf === 'onboarding-features'
+        || leaf === 'invite'
+        || leaf === 'invite-code'
+      );
       if (!allowed) router.replace('/(auth)/onboarding' as any);
       return;
     }

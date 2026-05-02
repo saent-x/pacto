@@ -7,9 +7,14 @@ const routerSpy = vi.hoisted(() => ({
   back: vi.fn(),
 }));
 
+const routeParams = vi.hoisted(() => ({
+  value: { mode: 'pair' } as Record<string, string>,
+}));
+
 vi.mock('expo-router', () => ({
   router: routerSpy,
   useRouter: () => routerSpy,
+  useLocalSearchParams: () => routeParams.value,
   Stack: { Screen: () => null },
 }));
 
@@ -79,6 +84,7 @@ const spaceActions = vi.hoisted(() => ({
 vi.mock('@/src/lib/space-actions', () => spaceActions);
 
 import Onboarding from '@/app/(auth)/onboarding';
+import OnboardingFeatures from '@/app/(auth)/onboarding-features';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -94,6 +100,16 @@ async function renderOnboarding() {
   let renderer: any;
   await act(async () => {
     renderer = TestRenderer.create(<Onboarding />);
+    await flush();
+  });
+  return renderer;
+}
+
+async function renderOnboardingFeatures(mode: 'solo' | 'pair' | 'crew' = 'pair') {
+  routeParams.value = { mode };
+  let renderer: any;
+  await act(async () => {
+    renderer = TestRenderer.create(<OnboardingFeatures />);
     await flush();
   });
   return renderer;
@@ -121,11 +137,21 @@ describe('onboarding feature selection', () => {
     spaceActions.createSpace.mockResolvedValue({ spaceId: 'space-1', inviteCode: 'PAIR-CODE' });
   });
 
-  it('pair mode initializes defaults and persists selected feature ids after toggling a default off', async () => {
+  it('selecting a mode navigates to the dedicated feature selection screen', async () => {
     const renderer = await renderOnboarding();
 
     await press(findByTestID(renderer.root, 'onboarding-mode-pair'));
+    await press(findByTestID(renderer.root, 'onboarding-continue'));
+
+    expect(routerSpy.push).toHaveBeenCalledWith({
+      pathname: '/(auth)/onboarding-features',
+      params: { mode: 'pair' },
+    });
     expect(spaceActions.createSpace).not.toHaveBeenCalled();
+  });
+
+  it('pair mode initializes defaults and persists selected feature ids after toggling a default off', async () => {
+    const renderer = await renderOnboardingFeatures('pair');
 
     await press(findByTestID(renderer.root, 'feature-toggle-checkins'));
     await press(findByTestID(renderer.root, 'onboarding-create-space'));
@@ -139,9 +165,8 @@ describe('onboarding feature selection', () => {
   });
 
   it('crew mode passes crew mode and includes crew defaults without unsupported features', async () => {
-    const renderer = await renderOnboarding();
+    const renderer = await renderOnboardingFeatures('crew');
 
-    await press(findByTestID(renderer.root, 'onboarding-mode-crew'));
     await press(findByTestID(renderer.root, 'onboarding-create-space'));
 
     expect(spaceActions.createSpace).toHaveBeenCalledWith({
@@ -161,9 +186,7 @@ describe('onboarding feature selection', () => {
   });
 
   it('does not render unsupported features for crew', async () => {
-    const renderer = await renderOnboarding();
-
-    await press(findByTestID(renderer.root, 'onboarding-mode-crew'));
+    const renderer = await renderOnboardingFeatures('crew');
 
     expect(findAllByTestID(renderer.root, 'feature-toggle-journal')).toHaveLength(0);
     expect(findAllByTestID(renderer.root, 'feature-toggle-checkins')).toHaveLength(0);
@@ -171,9 +194,8 @@ describe('onboarding feature selection', () => {
 
   it('redirects unauthenticated users to sign in before creating a space', async () => {
     sessionState.user = null;
-    const renderer = await renderOnboarding();
+    const renderer = await renderOnboardingFeatures('pair');
 
-    await press(findByTestID(renderer.root, 'onboarding-mode-pair'));
     await press(findByTestID(renderer.root, 'onboarding-create-space'));
 
     expect(routerSpy.replace).toHaveBeenCalledWith('/(auth)/sign-in');

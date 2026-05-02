@@ -12,94 +12,24 @@ import {
 import { Icon } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
 import { Typography } from '@/src/constants/typography';
-import { DEFAULT_AVATARS, randomDefaultAvatarId } from '@/src/constants/defaultAvatars';
+import { DEFAULT_AVATARS } from '@/src/constants/defaultAvatars';
 import { useTheme } from '@/src/lib/theme';
-import { useSession } from '@/src/lib/session';
-import { createSpace, ensureUserRow } from '@/src/lib/space-actions';
-import {
-  type FeatureEntry,
-  type FeatureId,
-  getDefaultFeatureIds,
-  getSupportedFeatures,
-  sanitizeFeatureIds,
-} from '@/src/lib/features/registry';
 
 type Mode = 'solo' | 'pair' | 'crew';
-
-const FEATURE_TILE_COPY: Record<FeatureId, string> = {
-  tasks: 'Lists & chores',
-  calendar: 'Dates & events',
-  wishlist: 'Gift ideas',
-  memories: 'Notes & moments',
-  journal: 'Private/shared',
-  checkins: 'Mood updates',
-  recurring: 'Repeating routines',
-  timetable: 'Weekly rhythm',
-  goals: 'Plans & priorities',
-};
 
 export default function Onboarding() {
   const router = useRouter();
   const { C } = useTheme();
-  const { user } = useSession();
   const [mode, setMode] = useState<Mode | null>(null);
-  const [selectedFeatures, setSelectedFeatures] = useState<FeatureId[]>([]);
-  const [busy, setBusy] = useState<'create' | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   function pick(mode: Mode) {
     setMode(mode);
-    setSelectedFeatures(getDefaultFeatureIds(mode));
-    setError(null);
   }
 
-  function toggleFeature(id: FeatureId) {
-    setSelectedFeatures((current) =>
-      current.includes(id)
-        ? current.filter((featureId) => featureId !== id)
-        : [...current, id],
-    );
-  }
-
-  async function createSelectedSpace() {
+  function continueToFeatures() {
     if (!mode) return;
-    if (!user) {
-      router.replace('/(auth)/sign-in' as any);
-      return;
-    }
-    setBusy('create');
-    setError(null);
-    try {
-      await ensureUserRow({
-        userId: user.id,
-        email: user.email,
-        avatarUrl: user.avatarUrl ?? randomDefaultAvatarId(),
-      });
-      // Schema-side kind value is still 'solo'/'couple' until Phase 9 migration.
-      // 'pair' and 'crew' both map to 'couple' on the wire for now; session
-      // boundary normalizes back to mode.
-      const wireKind: 'solo' | 'couple' = mode === 'solo' ? 'solo' : 'couple';
-      const result = await createSpace({
-        userId: user.id,
-        kind: wireKind,
-        mode,
-        enabledFeatures: sanitizeFeatureIds(selectedFeatures, mode),
-      });
-      if (mode !== 'solo' && result.inviteCode) {
-        router.push({
-          pathname: '/(auth)/invite-code',
-          params: { code: result.inviteCode },
-        } as any);
-      }
-    } catch (e: any) {
-      console.warn('[onboarding] failed', e);
-      setError(e?.message ?? e?.body?.message ?? 'Could not create space');
-    } finally {
-      setBusy(null);
-    }
+    router.push({ pathname: '/(auth)/onboarding-features', params: { mode } } as any);
   }
-
-  const supportedFeatures = mode ? getSupportedFeatures(mode) : [];
 
   function goJoin() {
     router.push('/(auth)/invite' as any);
@@ -120,17 +50,6 @@ export default function Onboarding() {
           What kind of pact are you starting?
         </Text>
       </View>
-
-      {error ? (
-        <Text
-          style={[
-            Typography.caption,
-            { color: C.error, marginBottom: 16, textAlign: 'center' },
-          ]}
-        >
-          {error}
-        </Text>
-      ) : null}
 
       <View style={styles.cards}>
         <ModeCard
@@ -173,39 +92,23 @@ export default function Onboarding() {
         />
       </View>
 
-      {mode ? (
-        <View style={styles.featureSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>ENABLE FEATURES</Text>
-            <Text style={[Typography.caption, { color: C.ink2, marginTop: 6 }]}>
-              Start with defaults, adjust anytime.
-            </Text>
-          </View>
-
-          <View style={styles.features}>
-            {supportedFeatures.map((feature) => (
-              <FeatureTile
-                key={feature.id}
-                feature={feature}
-                selected={selectedFeatures.includes(feature.id)}
-                onPress={() => toggleFeature(feature.id)}
-              />
-            ))}
-          </View>
-
-          <PressScale
-            testID="onboarding-create-space"
-            onPress={busy === 'create' ? undefined : createSelectedSpace}
-            style={[styles.createButton, { backgroundColor: C.accent }]}
-            haptic="success"
-          >
-            <Text style={[Typography.bodyMedium, { color: C.bg }]}>
-              {busy === 'create' ? 'Creating…' : 'Continue'}
-            </Text>
-            <Icon name="arrowRight" size={16} color={C.bg} />
-          </PressScale>
-        </View>
-      ) : null}
+      <PressScale
+        testID="onboarding-continue"
+        onPress={mode ? continueToFeatures : undefined}
+        style={[
+          styles.createButton,
+          {
+            backgroundColor: mode ? C.accent : C.line2,
+            opacity: mode ? 1 : 0.62,
+          },
+        ]}
+        haptic="selection"
+      >
+        <Text style={[Typography.bodyMedium, { color: mode ? C.bg : C.ink3 }]}>
+          Continue
+        </Text>
+        <Icon name="arrowRight" size={16} color={mode ? C.bg : C.ink3} />
+      </PressScale>
 
       <PressScale onPress={goJoin} style={styles.joinLink}>
         <Text style={[Typography.captionMedium, { color: C.ink2 }]}>
@@ -275,91 +178,6 @@ function ModeCard({
   );
 }
 
-function FeatureTile({
-  feature,
-  selected,
-  onPress,
-}: {
-  feature: FeatureEntry;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  const { C } = useTheme();
-  const accent = featureTileAccent(feature.id, C);
-  return (
-    <PressScale
-      testID={`feature-toggle-${feature.id}`}
-      onPress={onPress}
-      style={styles.featureTilePressable}
-    >
-      <Card
-        style={[
-          styles.featureTile,
-          {
-            borderColor: selected ? accent : `${accent}55`,
-            backgroundColor: selected ? `${accent}1F` : C.bgSoft,
-          },
-        ]}
-      >
-        <View style={[styles.featureAccentRail, { backgroundColor: accent }]} />
-        <View style={styles.featureTileTop}>
-          <View
-            style={[
-              styles.featureIcon,
-              {
-                backgroundColor: `${accent}24`,
-                borderColor: `${accent}45`,
-              },
-            ]}
-          >
-            <Icon name={feature.icon} size={17} color={selected ? accent : C.ink2} />
-          </View>
-          <View
-            style={[
-              styles.featureCheck,
-              {
-                borderColor: selected ? accent : `${accent}4D`,
-                backgroundColor: selected ? accent : 'transparent',
-              },
-            ]}
-          >
-            {selected ? <Icon name="check" size={13} color={C.bg} /> : null}
-          </View>
-        </View>
-        <View style={styles.featureTileCopy}>
-          <Text
-            numberOfLines={1}
-            style={[Typography.captionMedium, { color: C.inkColor, lineHeight: 17 }]}
-          >
-            {feature.label}
-          </Text>
-          <Text
-            numberOfLines={1}
-            style={[Typography.smallMedium, { color: selected ? C.ink2 : C.ink3, marginTop: 5, fontSize: 10.5, lineHeight: 14 }]}
-          >
-            {FEATURE_TILE_COPY[feature.id]}
-          </Text>
-        </View>
-      </Card>
-    </PressScale>
-  );
-}
-
-function featureTileAccent(featureId: FeatureId, C: ReturnType<typeof useTheme>['C']) {
-  const map: Record<FeatureId, string> = {
-    tasks: C.accent,
-    calendar: C.accent2,
-    wishlist: C.accent3,
-    memories: C.peach,
-    journal: C.journal,
-    checkins: C.sky,
-    recurring: C.reminders,
-    timetable: C.lavender,
-    goals: C.plans,
-  };
-  return map[featureId];
-}
-
 const styles = StyleSheet.create({
   root: { padding: 24, paddingTop: 64, paddingBottom: 60 },
   hero: { alignItems: 'center', marginBottom: 32 },
@@ -374,57 +192,8 @@ const styles = StyleSheet.create({
     width: 64,
     alignItems: 'center',
   },
-  featureSection: { marginTop: 28 },
-  sectionHeader: { marginBottom: 12 },
-  features: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  featureTilePressable: {
-    width: '31.8%',
-    minWidth: 84,
-    flexGrow: 0,
-  },
-  featureTile: {
-    height: 108,
-    padding: 11,
-    justifyContent: 'space-between',
-  },
-  featureAccentRail: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-  },
-  featureTileTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  featureIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 10,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  featureTileCopy: {
-    marginTop: 10,
-  },
-  featureCheck: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   createButton: {
-    marginTop: 18,
+    marginTop: 24,
     minHeight: 52,
     borderRadius: 16,
     flexDirection: 'row',
