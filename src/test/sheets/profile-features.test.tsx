@@ -147,6 +147,16 @@ const findByTestID = (root: any, id: string) =>
 const findAllByTestID = (root: any, id: string) =>
   root.findAll((node: any) => node.props?.testID === id);
 
+function deferred<T = void>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 async function renderProfile() {
   let renderer: any;
   await act(async () => {
@@ -255,6 +265,45 @@ describe('profile feature toggles', () => {
 
     expect(findByTestID(renderer.root, 'profile-feature-state-wishlist').props.children).toBe('On');
     expect(alertSpy).toHaveBeenCalledWith('Feature update failed', 'Try again.');
+    act(() => renderer.unmount());
+  });
+
+  it('ignores additional feature toggles while a save is pending', async () => {
+    const pending = deferred();
+    spaceActions.updateSpaceFeatures.mockImplementationOnce(() => pending.promise);
+    const renderer = await renderProfile();
+
+    act(() => {
+      findByTestID(renderer.root, 'profile-feature-wishlist').props.onPress();
+    });
+    await act(async () => {
+      await flush();
+    });
+
+    expect(spaceActions.updateSpaceFeatures).toHaveBeenCalledTimes(1);
+    expect(findByTestID(renderer.root, 'profile-feature-state-wishlist').props.children).toBe('Off');
+    expect(findByTestID(renderer.root, 'profile-feature-calendar').props.disabled).toBe(true);
+
+    act(() => {
+      findByTestID(renderer.root, 'profile-feature-calendar').props.onPress();
+    });
+    await act(async () => {
+      await flush();
+    });
+
+    expect(spaceActions.updateSpaceFeatures).toHaveBeenCalledTimes(1);
+    expect(findByTestID(renderer.root, 'profile-feature-state-wishlist').props.children).toBe('Off');
+    expect(findByTestID(renderer.root, 'profile-feature-state-calendar').props.children).toBe('On');
+
+    await act(async () => {
+      pending.resolve();
+      await pending.promise;
+      await flush();
+    });
+
+    expect(spaceActions.updateSpaceFeatures).toHaveBeenCalledTimes(1);
+    expect(findByTestID(renderer.root, 'profile-feature-state-wishlist').props.children).toBe('Off');
+    expect(findByTestID(renderer.root, 'profile-feature-state-calendar').props.children).toBe('On');
     act(() => renderer.unmount());
   });
 });
