@@ -74,6 +74,7 @@ vi.mock('react-native-svg', () => {
     Svg,
     Circle: passthrough('Circle'),
     Defs: passthrough('Defs'),
+    G: passthrough('G'),
     LinearGradient: passthrough('LinearGradient'),
     Line: passthrough('Line'),
     Path: passthrough('Path'),

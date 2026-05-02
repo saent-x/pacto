@@ -16,7 +16,7 @@ export type TodaySummary = TodayRingSummary;
 const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? '';
 
 export function useHomeTimeline(options?: { previewDays?: number }) {
-  const { activeCouple, profile } = useSession();
+  const { activeCouple, profile, isFeatureEnabled } = useSession();
   const coupleId = activeCouple?.couple?.id ?? null;
   const previewDays = options?.previewDays ?? 7;
   const todayKey = new Date().toISOString().slice(0, 10);
@@ -79,10 +79,19 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
 
   const homeView = useMemo(() => {
     const now = Date.now();
+    const events = isFeatureEnabled('calendar') ? data?.events ?? [] : [];
+    const plans = isFeatureEnabled('goals') ? data?.plans ?? [] : [];
+    const reminders = isFeatureEnabled('recurring') ? data?.reminders ?? [] : [];
+    const rituals = isFeatureEnabled('recurring') ? data?.rituals ?? [] : [];
+    const tasks = isFeatureEnabled('tasks') ? data?.tasks ?? [] : [];
+    const journalEntries = isFeatureEnabled('journal') ? data?.journalEntries ?? [] : [];
+    const loveNotes = isFeatureEnabled('memories') ? data?.loveNotes ?? [] : [];
+    const checkIns = isFeatureEnabled('checkins') ? data?.checkIns ?? [] : [];
+    const milestones = isFeatureEnabled('memories') ? data?.milestones ?? [] : [];
 
     const memories = buildMemoryPreviews({
-      journalEntries: data?.journalEntries ?? [],
-      loveNotes: data?.loveNotes ?? [],
+      journalEntries,
+      loveNotes,
     });
     const memoryPreview = memories[0] ?? null;
 
@@ -92,17 +101,17 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
         id: coupleId ?? '',
         anniversary: activeCouple?.couple?.anniversary ?? null,
       },
-      milestones: data?.milestones ?? [],
+      milestones,
     });
 
     const timeline = buildTimelineItems({
       now,
       previewDays,
-      events: data?.events ?? [],
-      plans: data?.plans ?? [],
-      reminders: data?.reminders ?? [],
-      tasks: data?.tasks ?? [],
-      rituals: data?.rituals ?? [],
+      events,
+      plans,
+      reminders,
+      tasks,
+      rituals,
       memories: memoryPreview ? [memoryPreview] : [],
     });
 
@@ -111,7 +120,7 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
       presence,
       milestones: milestoneStrip,
       memoryPreview,
-      checkIns: data?.checkIns ?? [],
+      checkIns,
     });
 
     const verseRecord = (data?.dailyVerseCache ?? [])[0];
@@ -127,10 +136,10 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
 
     const todaySummary = buildTodayRingSummary({
       now,
-      plans: data?.plans ?? [],
-      events: data?.events ?? [],
-      tasks: data?.tasks ?? [],
-      reminders: data?.reminders ?? [],
+      plans,
+      events,
+      tasks,
+      reminders,
     });
 
     return {
@@ -142,7 +151,7 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
       dailyVerse,
       todaySummary,
     };
-  }, [data, previewDays, coupleId, activeCouple?.couple?.anniversary, presence, todayKey]);
+  }, [data, previewDays, coupleId, activeCouple?.couple?.anniversary, presence, todayKey, isFeatureEnabled]);
 
   return {
     isLoading: queryLoading,

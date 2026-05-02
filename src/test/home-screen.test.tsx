@@ -1,6 +1,8 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+(globalThis as any).__DEV__ = false;
+
 const routerSpy = vi.hoisted(() => ({
   push: vi.fn(),
   back: vi.fn(),
@@ -26,8 +28,35 @@ vi.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 
+vi.mock('@/src/components/ui/pacto', () => {
+  const Reactx = require('react');
+  return {
+    Card: ({ children, onPress, style }: any) =>
+      onPress
+        ? Reactx.createElement('MockPressable', { onPress, style }, children)
+        : Reactx.createElement('MockView', { style }, children),
+    HeroPactoBadge: (props: any) => Reactx.createElement('MockView', props),
+    SectionHead: ({ children }: any) => Reactx.createElement('MockText', null, children),
+  };
+});
+
 vi.mock('expo-constants', () => ({
   default: { statusBarHeight: 44 },
+}));
+
+vi.mock('expo-haptics', () => ({
+  selectionAsync: vi.fn(async () => undefined),
+  impactAsync: vi.fn(async () => undefined),
+  notificationAsync: vi.fn(async () => undefined),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium' },
+  NotificationFeedbackType: { Warning: 'warning', Success: 'success' },
+}));
+
+vi.mock('expo-audio', () => ({
+  useAudioPlayer: () => ({
+    seekTo: vi.fn(async () => undefined),
+    play: vi.fn(),
+  }),
 }));
 
 vi.mock('react-native-svg', () => {
@@ -42,6 +71,7 @@ vi.mock('react-native-svg', () => {
     Polygon: Stub,
     Polyline: Stub,
     Rect: Stub,
+    G: Stub,
     Defs: Stub,
     LinearGradient: Stub,
     Stop: Stub,
@@ -71,9 +101,10 @@ vi.mock('react-native-reanimated', () => {
   };
   return {
     __esModule: true,
-    default: { View: MockView, ScrollView: MockScrollView },
+    default: { View: MockView, ScrollView: MockScrollView, createAnimatedComponent: (Component: any) => Component },
     View: MockView,
     ScrollView: MockScrollView,
+    createAnimatedComponent: (Component: any) => Component,
     FadeInDown: fadeInDown,
     FadeIn: fadeInDown,
     Easing: { inOut: () => 0, out: (fn: any) => fn ?? 0, cubic: (v: any) => v, bezier: () => 0, ease: 0 },
@@ -98,6 +129,7 @@ const sessionState = vi.hoisted(() => ({
   user: null as any,
   profile: null as any,
   status: 'ready',
+  isFeatureEnabled: vi.fn(() => true),
 }));
 
 vi.mock('@/src/hooks/useSession', () => ({
@@ -181,6 +213,7 @@ describe('HomeRoute', () => {
     sessionState.partner = null;
     sessionState.user = { id: 'me', email: 'a@b', displayName: 'Mattia', avatarUrl: null };
     sessionState.profile = { id: 'me', displayName: 'Mattia', avatarUrl: null };
+    sessionState.isFeatureEnabled = vi.fn(() => true);
     homeState.timeline = [];
     homeState.todaySummary = { plans: { done: 0, total: 0 }, focus: { done: 0, total: 0 } };
     homeState.isLoading = false;
@@ -189,17 +222,20 @@ describe('HomeRoute', () => {
     checkInsState.partnerTodayCheckIn = null;
   });
 
-  it('renders skeletons while loading with no cached data', async () => {
-    homeState.isLoading = true;
+  it('does not render demo personalized home content with empty live data', async () => {
     const renderer = await renderHome();
-    expect(findByTestID(renderer, 'home-hero-skeleton').length).toBe(1);
-    expect(findByTestID(renderer, 'home-timeline-skeleton').length).toBeGreaterThanOrEqual(4);
-    act(() => renderer.unmount());
-  });
+    const texts = renderer.root
+      .findAll((node: any) => typeof node.children?.[0] === 'string')
+      .map((node: any) => node.children.join(''));
+    const text = texts.join('\n');
 
-  it('shows rings empty state when no activity', async () => {
-    const renderer = await renderHome();
-    expect(findByTestID(renderer, 'home-rings-empty').length).toBe(1);
+    expect(text).not.toContain('Brooklyn');
+    expect(text).not.toContain('Pay electricity bill');
+    expect(text).not.toContain('Sheet-pan salmon');
+    expect(text).not.toContain('Picnic at Buttermilk');
+    expect(text).not.toContain('Cloudy, mild');
+    expect(text).not.toContain('Yoga class');
+
     act(() => renderer.unmount());
   });
 
@@ -211,54 +247,6 @@ describe('HomeRoute', () => {
       await empty.props.onPress();
     });
     expect(routerSpy.push).toHaveBeenCalledWith('/sheets/new-plan');
-    act(() => renderer.unmount());
-  });
-
-  it('mood press calls createOrUpdate with chosen mood', async () => {
-    const renderer = await renderHome();
-    const btn = findByTestID(renderer, 'home-mood-good')[0];
-    await act(async () => {
-      await btn.props.onPress();
-    });
-    expect(checkInsState.createOrUpdate).toHaveBeenCalledWith({
-      mood: 'good',
-      note: null,
-      isPrivate: false,
-    });
-    act(() => renderer.unmount());
-  });
-
-  it('tapping selected mood clears selection', async () => {
-    checkInsState.myTodayCheckIn = {
-      id: 'x',
-      authorId: 'me',
-      mood: 'good',
-      note: null,
-      isPrivate: false,
-      checkInDate: '2026-04-22',
-      createdAt: 0,
-    };
-    const renderer = await renderHome();
-    const btn = findByTestID(renderer, 'home-mood-good')[0];
-    await act(async () => {
-      await btn.props.onPress();
-    });
-    expect(checkInsState.createOrUpdate).toHaveBeenCalledWith({
-      mood: null,
-      note: null,
-      isPrivate: false,
-    });
-    act(() => renderer.unmount());
-  });
-
-  it('hero press navigates to /sheets/rings-history', async () => {
-    const renderer = await renderHome();
-    const hero = findByTestID(renderer, 'home-hero')[0];
-    expect(hero).toBeDefined();
-    await act(async () => {
-      await hero.props.onPress();
-    });
-    expect(routerSpy.push).toHaveBeenCalledWith('/sheets/rings-history');
     act(() => renderer.unmount());
   });
 
@@ -341,53 +329,18 @@ describe('HomeRoute', () => {
     act(() => renderer.unmount());
   });
 
-  it('explore "Us" chip navigates to /us', async () => {
-    const renderer = await renderHome();
-    const btn = findByTestID(renderer, 'home-explore-us')[0];
-    expect(btn).toBeDefined();
-    await act(async () => {
-      await btn.props.onPress();
-    });
-    expect(routerSpy.push).toHaveBeenCalledWith('/us');
-    act(() => renderer.unmount());
-  });
-
-  it('derived ring counts reflect todaySummary in solo mode', async () => {
-    homeState.todaySummary = {
-      plans: { done: 1, total: 3 },
-      focus: { done: 2, total: 4 },
-    };
-    checkInsState.myTodayCheckIn = {
-      id: 'x',
-      authorId: 'me',
-      mood: 'good',
-      note: null,
-      isPrivate: false,
-      checkInDate: '2026-04-22',
-      createdAt: 0,
-    };
-    sessionState.isSolo = true;
-    sessionState.isCouple = false;
+  it('filters shortcuts through enabled features', async () => {
+    sessionState.isFeatureEnabled = vi.fn((featureId: string) => featureId === 'tasks');
     const renderer = await renderHome();
     const texts = renderer.root
       .findAll((node: any) => typeof node.children?.[0] === 'string')
       .map((node: any) => node.children.join(''));
-    expect(texts).toContain('1/3');
-    expect(texts).toContain('2/4');
-    expect(texts).toContain('1/1');
-    act(() => renderer.unmount());
-  });
 
-  it('pull-to-refresh invokes both refetchHome and refetchCheckIns', async () => {
-    const renderer = await renderHome();
-    const withRC = renderer.root.findAll((node: any) => node.props?.refreshControl);
-    expect(withRC.length).toBeGreaterThan(0);
-    const rc = withRC[0].props.refreshControl;
-    await act(async () => {
-      await rc.props.onRefresh();
-    });
-    expect(homeState.refetch).toHaveBeenCalled();
-    expect(checkInsState.refetch).toHaveBeenCalled();
+    expect(texts).toContain('Task');
+    expect(texts).not.toContain('Note');
+    expect(texts).not.toContain('Check in');
+    expect(texts).not.toContain('Calendar');
+
     act(() => renderer.unmount());
   });
 });

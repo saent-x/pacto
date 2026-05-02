@@ -11,10 +11,14 @@ import {
 import { Icon, IconName } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
 import { useCheckIns, getLocalDateKey, type CheckInRecord } from '@/src/hooks/useCheckIns';
+import { useHomeTimeline } from '@/src/hooks/useHomeTimeline';
 import { useSession } from '@/src/hooks/useSession';
 import { getCheckInStateMeta } from '@/src/constants/checkInStates';
 import { Typography } from '@/src/constants/typography';
+import { routeForMilestoneItem, routeForTimelineItem } from '@/src/lib/homeNavigation';
+import type { TimelineItem, MilestoneStripItem } from '@/src/lib/home/types';
 import { useTheme } from '@/src/lib/theme';
+import type { FeatureId } from '@/src/lib/features/registry';
 
 const ARC_BUCKETS = 14;
 const ARC_START_HOUR = 6;
@@ -25,32 +29,14 @@ function moodFor(key: string | null | undefined) {
 
 type ArcSlot = { color: string | null; height: number };
 
-// Bar heights tied to mood "intensity" so the arc reads as a chart, not a swatch
-// row. Empty slots get a short stub. Tweaked per-slot in the mock so bars sit
-// at varied levels even when the mood id repeats.
+// Bar heights tied to mood "intensity" so the arc reads as a chart, not a swatch.
+// Empty slots get a short stub.
 const MOOD_HEIGHT: Record<string, number> = {
   soft: 22,
   steady: 18,
   low: 13,
   rough: 30,
 };
-
-const ARC_MOCK: { mood: 'soft' | 'low' | 'steady' | 'rough'; jitter?: number }[] = [
-  { mood: 'soft',   jitter: -2 },
-  { mood: 'soft',   jitter: 2  },
-  { mood: 'low',    jitter: 1  },
-  { mood: 'low',    jitter: -1 },
-  { mood: 'soft',   jitter: 3  },
-  { mood: 'steady', jitter: -2 },
-  { mood: 'steady', jitter: 1  },
-  { mood: 'rough',  jitter: -3 },
-  { mood: 'rough',  jitter: 2  },
-  { mood: 'steady', jitter: -1 },
-  { mood: 'steady', jitter: 2  },
-  { mood: 'soft',   jitter: -3 },
-  { mood: 'soft',   jitter: 1  },
-  { mood: 'soft',   jitter: -1 },
-];
 
 const EMPTY_HEIGHT = 8;
 
@@ -67,14 +53,8 @@ function buildArc(checkIns: CheckInRecord[], todayKey: string): ArcSlot[] {
   const currentHour = new Date().getHours();
   const total = Math.min(ARC_BUCKETS, Math.max(1, currentHour - ARC_START_HOUR + 1));
 
-  // No data yet — return mock pattern truncated to "now".
   if (today.length === 0) {
-    const slots: ArcSlot[] = ARC_MOCK.slice(0, total).map((m) => ({
-      color: getCheckInStateMeta(m.mood).color,
-      height: heightFor(m.mood, m.jitter ?? 0),
-    }));
-    while (slots.length < ARC_BUCKETS) slots.push({ color: null, height: EMPTY_HEIGHT });
-    return slots;
+    return Array.from({ length: ARC_BUCKETS }, () => ({ color: null, height: EMPTY_HEIGHT }));
   }
 
   const slots: ArcSlot[] = [];
@@ -94,6 +74,45 @@ function buildArc(checkIns: CheckInRecord[], todayKey: string): ArcSlot[] {
   }
   while (slots.length < ARC_BUCKETS) slots.push({ color: null, height: EMPTY_HEIGHT });
   return slots;
+}
+
+function timeLabel(occursAt: number | null): string {
+  if (!occursAt) return 'SOON';
+  const date = new Date(occursAt);
+  return format(date, 'h:mma').toLowerCase();
+}
+
+function dateLabelForTimeline(occursAt: number | null): string {
+  if (!occursAt) return 'NO DATE';
+  return format(new Date(occursAt), 'EEE · MMM d').toUpperCase();
+}
+
+function dateLabelForMilestone(item: MilestoneStripItem): string {
+  return format(new Date(`${item.date}T12:00:00`), 'EEE · MMM d').toUpperCase();
+}
+
+function timelineDot(type: TimelineItem['type']): string {
+  switch (type) {
+    case 'task':
+      return '#C7755A';
+    case 'plan':
+      return '#6FB3A2';
+    case 'event':
+      return '#8BA7C9';
+    case 'ritual':
+      return '#C8AE73';
+    case 'memory':
+      return '#D08D75';
+    case 'reminder':
+    default:
+      return '#A894C2';
+  }
+}
+
+function comingUpLabel(daysUntil: number): string {
+  if (daysUntil === 0) return 'TODAY';
+  if (daysUntil === 1) return 'TOMORROW';
+  return `IN ${daysUntil} DAYS`;
 }
 
 function ArcStrip({ slots }: { slots: ArcSlot[] }) {
@@ -134,10 +153,19 @@ function ArcStrip({ slots }: { slots: ArcSlot[] }) {
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { C } = useTheme();
-  const { user, partner, mode } = useSession();
+  const { partner, mode, isFeatureEnabled } = useSession();
+  const home = useHomeTimeline({ previewDays: 30 });
   const { todayCheckIn, partnerTodayCheckIn, checkIns } = useCheckInSnapshot();
   const today = useMemo(() => new Date(), []);
   const dateLabel = format(today, 'EEE · MMM d').toUpperCase();
+  const todayRows = home.timeline.slice(0, 5);
+  const comingTimeline = home.timeline[0] ?? null;
+  const comingMilestone = home.milestones[0] ?? null;
+  const hasComingUp = !!comingTimeline || !!comingMilestone;
+  const enabledShortcuts = useMemo(
+    () => SHORTCUTS.filter((s) => isFeatureEnabled(s.feature)),
+    [isFeatureEnabled],
+  );
 
   const partnerFirstName = partner?.displayName?.split(' ')[0] ?? null;
 
@@ -146,57 +174,6 @@ export default function HomeScreen() {
 
   const todayKey = getLocalDateKey();
   const arcSlots = useMemo(() => buildArc(checkIns, todayKey), [checkIns, todayKey]);
-
-  // Together heatmap — 7 days × 4 time slots. Deterministic seeded values
-  // until real co-presence data wires up.
-  const togetherData = useMemo(() => {
-    const seed = user?.id ? hashSeed(user.id + 'together') : 11;
-    const rand = mulberry32(seed);
-    const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-    const slotLabels = ['morn', 'noon', 'eve', 'night'];
-    // Bias evenings & weekends higher so the chart reads like a real rhythm.
-    const slotBias = [0.15, 0.35, 0.7, 0.55];
-    const dayBias = [0.45, 0.45, 0.4, 0.5, 0.55, 0.75, 0.7];
-    const grid: number[][] = slotLabels.map((_, si) =>
-      dayLabels.map((_, di) => {
-        const noise = rand() * 0.4 - 0.2;
-        const v = Math.min(1, Math.max(0.05, slotBias[si] * 0.6 + dayBias[di] * 0.5 + noise));
-        return v;
-      }),
-    );
-    let peak = { si: 0, di: 0, v: -1 };
-    let quiet = { si: 0, di: 0, v: 2 };
-    for (let si = 0; si < grid.length; si++) {
-      for (let di = 0; di < grid[si].length; di++) {
-        const v = grid[si][di];
-        if (v > peak.v) peak = { si, di, v };
-        if (v < quiet.v) quiet = { si, di, v };
-      }
-    }
-    const slotAvg = slotLabels.map((_, si) =>
-      grid[si].reduce((a, b) => a + b, 0) / grid[si].length,
-    );
-    const winnerSlot = slotAvg.indexOf(Math.max(...slotAvg));
-    const slotLong = ['Mornings', 'Noons', 'Evenings', 'Nights'];
-    const dayLong = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const slotShort = ['morning', 'noon', 'evening', 'night'];
-    return {
-      dayLabels,
-      slotLabels,
-      grid,
-      title: slotLong[winnerSlot],
-      peakLabel: `${dayLong[peak.di]} ${slotShort[peak.si]}`,
-      quietLabel: `${dayLong[quiet.di]} ${slotShort[quiet.si]}`,
-    };
-  }, [user?.id]);
-
-  const togetherTier = (v: number) => {
-    if (v < 0.2) return '#F5DDD3';
-    if (v < 0.4) return '#EFC3B5';
-    if (v < 0.6) return '#E0A795';
-    if (v < 0.8) return '#D08D75';
-    return '#C7755A';
-  };
 
   const onCheckIn = () => router.push('/sheets/new-checkin');
 
@@ -319,16 +296,16 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* When you're together — 7×4 co-presence heatmap */}
+        {/* When you're together — live-derived summary */}
         <View style={styles.section}>
           <View style={styles.togetherHeadRow}>
             <Text style={[Typography.eyebrow, { color: C.ink3 }]}>
-              {mode === 'solo' ? "WHEN YOU'RE FREE" : "WHEN YOU'RE TOGETHER"}
+              {mode === 'solo' ? "WHAT'S AHEAD" : "WHEN YOU'RE TOGETHER"}
             </Text>
             <Text
               style={[Typography.eyebrow, styles.tabularText, { color: C.ink3 }]}
             >
-              THIS WEEK
+              NEXT 30 DAYS
             </Text>
           </View>
           <Card elevated style={{ padding: 18 }}>
@@ -337,71 +314,36 @@ export default function HomeScreen() {
               numberOfLines={1}
             >
               <Text style={[Typography.pixelHeroSm, { color: C.accent }]}>
-                {togetherData.title.toUpperCase()}
+                {home.timeline.length + home.milestones.length}
               </Text>
-              {' ARE YOURS'}
+              {' LIVE ITEMS'}
             </Text>
-
-            {/* Day labels */}
-            <View style={styles.togetherDayRow}>
-              <View style={styles.togetherSlotLabelGutter} />
-              {togetherData.dayLabels.map((d, i) => (
-                <View key={i} style={styles.togetherCellSlot}>
-                  <Text style={[Typography.eyebrowSm, { color: C.ink3, fontSize: 10 }]}>
-                    {d}
-                  </Text>
-                </View>
-              ))}
-            </View>
-
-            {/* Rows */}
-            {togetherData.slotLabels.map((slot, si) => (
-              <View key={slot} style={styles.togetherRow}>
-                <View style={styles.togetherSlotLabelGutter}>
-                  <Text style={[Typography.eyebrowSm, { color: C.ink3, fontSize: 10 }]}>
-                    {slot.toUpperCase()}
-                  </Text>
-                </View>
-                {togetherData.grid[si].map((v, di) => (
-                  <View key={di} style={styles.togetherCellSlot}>
-                    <View
-                      style={[
-                        styles.togetherCell,
-                        { backgroundColor: togetherTier(v) },
-                      ]}
-                    />
-                  </View>
-                ))}
-              </View>
-            ))}
-
-            {/* Footer */}
             <View style={[styles.togetherFooter, { borderTopColor: C.lineColor }]}>
               <View style={{ flex: 1 }}>
                 <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
-                  PEAK
+                  NEXT
                 </Text>
                 <Text
                   style={[Typography.captionMedium, { color: C.inkColor, marginTop: 4 }]}
                 >
-                  {togetherData.peakLabel}
+                  {comingTimeline ? comingTimeline.title : comingMilestone ? comingMilestone.title : 'Nothing scheduled yet'}
                 </Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
                 <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
-                  QUIETEST
+                  MILESTONES
                 </Text>
                 <Text
                   style={[Typography.captionMedium, { color: C.inkColor, marginTop: 4 }]}
                 >
-                  {togetherData.quietLabel}
+                  {home.milestones.length}
                 </Text>
               </View>
             </View>
           </Card>
         </View>
 
-        {/* Today — weather banner + timeline rows */}
+        {/* Today — live timeline rows */}
         <View style={styles.section}>
           <View style={styles.todayHeadRow}>
             <Text style={[Typography.eyebrow, { color: C.ink3 }]}>TODAY</Text>
@@ -410,49 +352,48 @@ export default function HomeScreen() {
             </Text>
           </View>
           <Card padded={false} elevated style={styles.todayCard}>
-            <View style={[styles.weatherBanner, { backgroundColor: '#DCE7EE' }]}>
-              <Icon name="cloud" size={22} color="#2A3A48" strokeWidth={1.6} />
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={[Typography.bodyMedium, { color: '#1F2A33' }]}>Cloudy, mild</Text>
-                <Text style={[Typography.mono, { color: '#5A6B78', fontSize: 11, marginTop: 2 }]}>
-                  Brooklyn · feels 60°
+            {todayRows.length === 0 ? (
+              <PressScale
+                testID="home-timeline-empty"
+                onPress={() => router.push('/sheets/new-plan' as any)}
+                style={styles.emptyBlock}
+              >
+                <Text style={[Typography.bodyMedium, { color: C.inkColor }]}>
+                  Nothing scheduled yet
                 </Text>
-              </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text
-                  style={[
-                    Typography.pixelHeroSm,
-                    styles.tabularText,
-                    { color: '#1F2A33' },
-                  ]}
-                >
-                  62°
+                <Text style={[Typography.captionMedium, { color: C.accent, marginTop: 4 }]}>
+                  Add a plan
                 </Text>
-                <Text style={[Typography.mono, { color: '#5A6B78', fontSize: 11, marginTop: 2 }]}>
-                  ↑68  ↓54
-                </Text>
-              </View>
-            </View>
-            {TODAY_ROWS.map((row, i) => (
-              <View key={row.title}>
-                {i > 0 ? <View style={[styles.todayDivider, { backgroundColor: C.lineColor }]} /> : null}
-                <PressScale onPress={() => router.push(row.route as any)} style={styles.todayRow2}>
+              </PressScale>
+            ) : todayRows.map((row, i) => {
+              const route = routeForTimelineItem(row);
+              return (
+                <View key={row.id}>
+                  {i > 0 ? <View style={[styles.todayDivider, { backgroundColor: C.lineColor }]} /> : null}
+                  <PressScale
+                    testID={`home-timeline-${row.type}-${row.sourceId}`}
+                    onPress={() => {
+                      if (route) router.push(route as any);
+                    }}
+                    style={styles.todayRow2}
+                  >
                   <Text style={[Typography.mono, styles.tabularText, styles.todayTime, { color: C.ink3 }]}>
-                    {row.time}
+                    {timeLabel(row.occursAt)}
                   </Text>
-                  <View style={[styles.todayDot, { backgroundColor: row.dot }]} />
+                  <View style={[styles.todayDot, { backgroundColor: timelineDot(row.type) }]} />
                   <View style={{ flex: 1 }}>
                     <Text style={[Typography.bodyMedium, { color: C.inkColor }]} numberOfLines={1}>
                       {row.title}
                     </Text>
                     <Text style={[Typography.caption, { color: C.ink3, marginTop: 2 }]} numberOfLines={1}>
-                      {row.subtitle}
+                      {row.subtitle ?? row.type}
                     </Text>
                   </View>
                   <Icon name="chevronRight" size={16} color={C.ink3} />
-                </PressScale>
-              </View>
-            ))}
+                  </PressScale>
+                </View>
+              );
+            })}
           </Card>
         </View>
 
@@ -468,108 +409,95 @@ export default function HomeScreen() {
               <Text style={[Typography.eyebrow, { color: C.ink3 }]}>ALL  →</Text>
             </PressScale>
           </View>
-          <View style={styles.comingRow}>
-            {/* Plan card */}
-            <Card
-              padded={false}
-              elevated
-              style={styles.comingPlanCard}
-              onPress={() => router.push('/(tabs)/us/plans' as any)}
-            >
-              <View style={[styles.comingCover, { backgroundColor: '#CFE8D9' }]}>
-                <View style={[styles.comingPill, { borderColor: '#7FB89B' }]}>
-                  <Text
-                    style={[
-                      Typography.eyebrowSm,
-                      { color: '#3F7A5C', letterSpacing: 1.4 },
-                    ]}
-                  >
-                    IN 2 DAYS
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.comingPlanMeta}>
-                <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
-                  SUN · APR 27
-                </Text>
-                <Text
-                  style={[
-                    {
-                      fontFamily: Typography.fallbackSerif,
-                      fontSize: 22,
-                      lineHeight: 26,
-                      color: C.inkColor,
-                      marginTop: 4,
-                    },
-                  ]}
-                  numberOfLines={1}
+          {hasComingUp ? (
+            <View style={styles.comingRow}>
+              {comingTimeline ? (
+                <Card
+                  padded={false}
+                  elevated
+                  style={styles.comingPlanCard}
+                  onPress={() => {
+                    const route = routeForTimelineItem(comingTimeline);
+                    if (route) router.push(route as any);
+                  }}
                 >
-                  Picnic at Buttermilk
-                </Text>
-                <View style={styles.comingAttendees}>
-                  <View style={[styles.miniAvatar, { backgroundColor: C.accent, marginRight: -8 }]}>
-                    <Text style={styles.miniAvatarTxt}>M</Text>
+                  <View style={[styles.comingCover, { backgroundColor: '#CFE8D9' }]}>
+                    <View style={[styles.comingPill, { borderColor: '#7FB89B' }]}>
+                      <Text style={[Typography.eyebrowSm, { color: '#3F7A5C', letterSpacing: 1.4 }]}>
+                        {dateLabelForTimeline(comingTimeline.occursAt)}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={[styles.miniAvatar, { backgroundColor: C.accent2 }]}>
-                    <Text style={styles.miniAvatarTxt}>J</Text>
+                  <View style={styles.comingPlanMeta}>
+                    <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
+                      {comingTimeline.type.toUpperCase()}
+                    </Text>
+                    <Text
+                      style={{
+                        fontFamily: Typography.fallbackSerif,
+                        fontSize: 22,
+                        lineHeight: 26,
+                        color: C.inkColor,
+                        marginTop: 4,
+                      }}
+                      numberOfLines={1}
+                    >
+                      {comingTimeline.title}
+                    </Text>
+                    <Text style={[Typography.caption, { color: C.ink3, marginTop: 8 }]} numberOfLines={2}>
+                      {comingTimeline.subtitle ?? 'From your live timeline'}
+                    </Text>
                   </View>
-                  <Text style={[Typography.caption, { color: C.ink3, marginLeft: 8 }]}>
-                    both going
-                  </Text>
-                </View>
-              </View>
-            </Card>
-            {/* Anniversary card */}
-            <Card padded={false} elevated style={styles.comingAnnivCard}>
-              <View style={styles.annivInner}>
-                <Icon name="flag" size={18} color={C.accent} />
-                <Text style={[Typography.eyebrowSm, { color: C.ink3, marginTop: 22 }]}>
-                  ANNIVERSARY
-                </Text>
-                <Text
-                  style={[
-                    Typography.pixelHeroSm,
-                    { color: C.inkColor, marginTop: 4 },
-                  ]}
+                </Card>
+              ) : null}
+              {comingMilestone ? (
+                <Card
+                  padded={false}
+                  elevated
+                  style={styles.comingAnnivCard}
+                  onPress={() => router.push(routeForMilestoneItem(comingMilestone) as any)}
                 >
-                  4 years
-                </Text>
-                <View style={{ flex: 1 }} />
-                <View style={styles.annivCount}>
-                  <Text
-                    style={[
-                      Typography.pixelHero,
-                      { color: C.accent },
-                    ]}
-                  >
-                    22
-                  </Text>
-                  <Text
-                    style={[
-                      Typography.captionMedium,
-                      {
-                        color: C.ink3,
-                        marginLeft: 6,
-                        marginBottom: 6,
-                      },
-                    ]}
-                  >
-                    days
-                  </Text>
-                </View>
-                <View style={[styles.annivProgressTrack, { backgroundColor: C.bgSoft }]}>
-                  <View style={[styles.annivProgressFill, { backgroundColor: C.accent, width: '40%' }]} />
-                </View>
-              </View>
+                  <View style={styles.annivInner}>
+                    <Icon name="flag" size={18} color={C.accent} />
+                    <Text style={[Typography.eyebrowSm, { color: C.ink3, marginTop: 22 }]}>
+                      {comingMilestone.type.toUpperCase()}
+                    </Text>
+                    <Text style={[Typography.pixelHeroSm, { color: C.inkColor, marginTop: 4 }]} numberOfLines={2}>
+                      {comingMilestone.title}
+                    </Text>
+                    <View style={{ flex: 1 }} />
+                    <View style={styles.annivCount}>
+                      <Text style={[Typography.pixelHero, { color: C.accent }]}>
+                        {comingMilestone.daysUntil}
+                      </Text>
+                      <Text style={[Typography.captionMedium, { color: C.ink3, marginLeft: 6, marginBottom: 6 }]}>
+                        days
+                      </Text>
+                    </View>
+                    <Text style={[Typography.caption, { color: C.ink3 }]}>
+                      {comingUpLabel(comingMilestone.daysUntil)} · {dateLabelForMilestone(comingMilestone)}
+                    </Text>
+                  </View>
+                </Card>
+              ) : null}
+            </View>
+          ) : (
+            <Card elevated style={styles.emptyBlock}>
+              <Text style={[Typography.bodyMedium, { color: C.inkColor }]}>
+                Nothing coming up yet
+              </Text>
+              <Text style={[Typography.caption, { color: C.ink3, marginTop: 4 }]}>
+                Add a plan or milestone when there is something real to track.
+              </Text>
             </Card>
-          </View>
+          )}
         </View>
 
         {/* Shortcuts */}
         <View style={styles.section}>
           <SectionHead>Shortcuts</SectionHead>
           <View style={styles.shortcuts}>
-            {SHORTCUTS.map((s) => (
+            {enabledShortcuts.map((s) => (
               <PressScale
                 key={s.label}
                 onPress={() => router.push(s.route as any)}
@@ -593,41 +521,11 @@ export default function HomeScreen() {
   );
 }
 
-const TODAY_ROWS: {
-  time: string;
-  dot: string;
-  title: string;
-  subtitle: string;
-  route: string;
-}[] = [
-  {
-    time: '6:00p',
-    dot: '#C7755A',
-    title: 'Pay electricity bill',
-    subtitle: 'monthly · auto-recurring',
-    route: '/(tabs)/reminders',
-  },
-  {
-    time: '7:00p',
-    dot: '#C8AE73',
-    title: 'Sheet-pan salmon',
-    subtitle: 'Maya cooks · Jordan plates',
-    route: '/(tabs)/tasks',
-  },
-  {
-    time: '7:30p',
-    dot: '#6FB3A2',
-    title: 'Yoga class',
-    subtitle: '45 min · Maya',
-    route: '/(tabs)/calendar',
-  },
-];
-
-const SHORTCUTS: { icon: IconName; label: string; route: string }[] = [
-  { icon: 'heart', label: 'Note', route: '/sheets/new-note' },
-  { icon: 'feather', label: 'Check in', route: '/sheets/new-checkin' },
-  { icon: 'checkSquare', label: 'Task', route: '/sheets/new-task' },
-  { icon: 'calendar', label: 'Calendar', route: '/(tabs)/calendar' },
+const SHORTCUTS: { icon: IconName; label: string; route: string; feature: FeatureId }[] = [
+  { icon: 'heart', label: 'Note', route: '/sheets/new-note', feature: 'memories' },
+  { icon: 'feather', label: 'Check in', route: '/sheets/new-checkin', feature: 'checkins' },
+  { icon: 'checkSquare', label: 'Task', route: '/sheets/new-task', feature: 'tasks' },
+  { icon: 'calendar', label: 'Calendar', route: '/(tabs)/calendar', feature: 'calendar' },
 ];
 
 function useCheckInSnapshot() {
@@ -636,21 +534,6 @@ function useCheckInSnapshot() {
     todayCheckIn: data.myTodayCheckIn ?? null,
     partnerTodayCheckIn: data.partnerTodayCheckIn ?? null,
     checkIns: data.checkIns,
-  };
-}
-
-function hashSeed(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return h % 1000 + 1;
-}
-
-function mulberry32(a: number) {
-  return function () {
-    let t = (a += 0x6d2b79f5);
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
 
@@ -841,11 +724,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: 18,
   },
-  weatherBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  emptyBlock: {
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 16,
   },
   todayDivider: {
     height: 1,
