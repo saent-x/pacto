@@ -133,8 +133,8 @@ export function normalizeTimetableItem(raw: any): TimetableItem {
   // The new-timetable-item sheet stores `duration` in MINUTES (e.g. 90).
   // The views (and fmtHour math) expect `dur` in HOURS (e.g. 1.5). Convert
   // here so consumers don't have to know the storage unit.
-  // Legacy values that were already <= 24 are treated as hours to remain
-  // compatible with any seeded demo data.
+  // Legacy values that were already <= 24 are treated as hours so older
+  // persisted rows continue to render correctly.
   const rawDuration =
     typeof raw.duration === 'number' && Number.isFinite(raw.duration)
       ? raw.duration
