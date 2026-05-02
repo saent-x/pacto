@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -9,12 +9,18 @@ import { PressScale } from '@/src/components/ui/PressScale';
 import { SheetShell } from '@/src/components/ui/SheetShell';
 import { DEFAULT_AVATARS, type DefaultAvatarId } from '@/src/constants/defaultAvatars';
 import { Typography } from '@/src/constants/typography';
+import {
+  type FeatureId,
+  getSupportedFeatures,
+  sanitizeFeatureIds,
+} from '@/src/lib/features/registry';
 import { useTheme } from '@/src/lib/theme';
-import { useSession } from '@/src/lib/session';
+import { type SpaceMode, useSession } from '@/src/lib/session';
 import { db } from '@/src/lib/db';
 import {
   leaveSpace,
   regenerateInviteCode,
+  updateSpaceFeatures,
   updateUserAvatar,
 } from '@/src/lib/space-actions';
 
@@ -22,12 +28,20 @@ export default function ProfileSheet() {
   const { C, mode: themeMode, setMode } = useTheme();
   const navRouter = useRouter();
   const session = useSession();
+  const featureMode = normalizeProfileMode(session.space?.kind ?? session.mode);
+  const [enabledFeatureIds, setEnabledFeatureIds] = useState<FeatureId[]>(() =>
+    sanitizeFeatureIds(session.enabledFeatures, featureMode),
+  );
 
   useEffect(() => {
     if (session.status === 'unauthed') {
       navRouter.replace('/(auth)/sign-in' as any);
     }
   }, [session.status, navRouter]);
+
+  useEffect(() => {
+    setEnabledFeatureIds(sanitizeFeatureIds(session.enabledFeatures, featureMode));
+  }, [featureMode, session.enabledFeatures]);
 
   const me =
     session.user?.displayName?.trim() ||
@@ -47,6 +61,10 @@ export default function ProfileSheet() {
   const isSolo = spaceMode === 'solo';
   const isCrew = spaceMode === 'crew';
   const isPair = spaceMode === 'pair';
+  const supportedFeatures =
+    session.status === 'ready' && session.space
+      ? getSupportedFeatures(featureMode)
+      : [];
 
   const anniversary = session.space?.anniversary
     ? parseISO(session.space.anniversary)
@@ -111,6 +129,33 @@ export default function ProfileSheet() {
     } catch (err) {
       console.warn('[profile] avatar update failed', err);
       Alert.alert('Avatar update failed', 'Try again.');
+    }
+  }
+
+  async function onToggleFeature(featureId: FeatureId) {
+    if (session.status !== 'ready' || !session.space) return;
+
+    const previous = enabledFeatureIds;
+    const enabled = previous.includes(featureId);
+    const next = sanitizeFeatureIds(
+      enabled
+        ? previous.filter((id) => id !== featureId)
+        : [...previous, featureId],
+      featureMode,
+    );
+
+    setEnabledFeatureIds(next);
+
+    try {
+      await updateSpaceFeatures({
+        spaceId: session.space.id,
+        enabledFeatures: next,
+        mode: featureMode,
+      });
+    } catch (err) {
+      console.warn('[profile] feature update failed', err);
+      setEnabledFeatureIds(previous);
+      Alert.alert('Feature update failed', 'Try again.');
     }
   }
 
@@ -277,6 +322,59 @@ export default function ProfileSheet() {
         ))}
       </Card>
 
+      {supportedFeatures.length > 0 ? (
+        <>
+          <Text style={[Typography.eyebrowSm, { color: C.ink3, marginLeft: 4, marginBottom: 10 }]}>
+            Features
+          </Text>
+          <Card padded={false} style={{ marginBottom: 14 }}>
+            {supportedFeatures.map((feature, i) => {
+              const enabled = enabledFeatureIds.includes(feature.id);
+              return (
+                <PressScale
+                  key={feature.id}
+                  testID={`profile-feature-${feature.id}`}
+                  onPress={() => onToggleFeature(feature.id)}
+                  style={[
+                    styles.featureRow,
+                    i < supportedFeatures.length - 1
+                      ? { borderBottomWidth: 1, borderBottomColor: C.lineColor }
+                      : null,
+                  ]}
+                >
+                  <Icon
+                    name={feature.icon}
+                    size={18}
+                    color={enabled ? C.accent : C.ink3}
+                    strokeWidth={1.8}
+                  />
+                  <View style={styles.featureCopy}>
+                    <Text style={[Typography.body, { color: C.inkColor }]}>
+                      {feature.label}
+                    </Text>
+                    <Text
+                      style={[Typography.caption, { color: C.ink3, marginTop: 2 }]}
+                      numberOfLines={2}
+                    >
+                      {feature.description}
+                    </Text>
+                  </View>
+                  <Text
+                    testID={`profile-feature-state-${feature.id}`}
+                    style={[
+                      Typography.captionMedium,
+                      { color: enabled ? C.accent : C.ink3 },
+                    ]}
+                  >
+                    {enabled ? 'On' : 'Off'}
+                  </Text>
+                </PressScale>
+              );
+            })}
+          </Card>
+        </>
+      ) : null}
+
       {/* Theme card */}
       <Card padded={false} style={{ marginBottom: 22 }}>
         <View style={styles.themeRow}>
@@ -357,6 +455,17 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     paddingHorizontal: 16,
   },
+  featureRow: {
+    minHeight: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  featureCopy: {
+    flex: 1,
+  },
   avatarPicker: {
     paddingVertical: 13,
     paddingHorizontal: 16,
@@ -409,3 +518,7 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
   },
 });
+
+function normalizeProfileMode(mode: SpaceMode | 'couple'): SpaceMode {
+  return mode === 'couple' ? 'pair' : mode;
+}
