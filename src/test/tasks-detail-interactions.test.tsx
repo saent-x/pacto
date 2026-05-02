@@ -159,7 +159,6 @@ vi.mock('@/src/hooks/useTasks', () => ({
   }),
 }));
 
-import { Alert } from 'react-native';
 import TaskListDetail from '@/app/(tabs)/tasks/[listId]';
 import { router } from 'expo-router';
 
@@ -194,29 +193,21 @@ function makeTask(over: any = {}) {
 }
 
 function findMenuFor(root: any, predicate: (n: any) => boolean) {
-  const menus = root.findAll((n: any) => n.type === 'MockMenuView');
+  const menus = root.findAll((n: any) => n.type === 'MockSwipeableRow');
   return menus.find((m: any) => m.findAll(predicate).length > 0);
 }
 
 function findRowMenu(root: any, taskId: string) {
   const menu = findMenuFor(
     root,
-    (n: any) => n.props?.testID === `task-row-${taskId}-checkbox`,
+    (n: any) => typeof n.children?.[0] === 'string' && n.children.join('') === (taskId === 't1' ? 'Pack bags' : 'Other'),
   );
-  if (!menu) throw new Error(`MockMenuView for task ${taskId} not found`);
+  if (!menu) throw new Error(`MockSwipeableRow for task ${taskId} not found`);
   return menu;
 }
 
 function findByTestID(root: any, testID: string) {
   return root.findAll((n: any) => n.props?.testID === testID)[0];
-}
-
-function actionKeys(menu: any): string[] {
-  return (menu.props.actions || []).map((a: any) => a.id);
-}
-
-async function fireMenuAction(menu: any, key: string) {
-  await menu.props.onPressAction({ nativeEvent: { event: key } });
 }
 
 describe('Task list detail interactions', () => {
@@ -247,23 +238,20 @@ describe('Task list detail interactions', () => {
   it('toggles complete when the checkbox is tapped', async () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<TaskListDetail />); await flush(); });
-    const checkbox = renderer.root.findAll(
-      (n: any) => n.props?.testID === 'task-row-t1-checkbox',
-    )[0];
+    const checkbox = renderer.root.findAll((n: any) => n.type === 'MockCheckbox')[0];
     await act(async () => { checkbox.props.onPress(); await flush(); });
     expect(taskState.toggle).toHaveBeenCalledTimes(1);
     act(() => renderer.unmount());
   });
 
-  it('mounts the native menu on each task row with edit/reorder/delete', async () => {
+  it('mounts swipe actions on each task row with edit/delete', async () => {
     taskState.tasks = [makeTask({ id: 't1' }), makeTask({ id: 't2', title: 'Other' })];
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<TaskListDetail />); await flush(); });
     const menu = findRowMenu(renderer.root, 't1');
-    expect(menu.props.shouldOpenOnLongPress).toBe(true);
-    expect(actionKeys(menu)).toEqual(['edit', 'reorder', 'delete']);
-    const deleteAction = menu.props.actions.find((a: any) => a.id === 'delete');
-    expect(deleteAction.attributes.destructive).toBe(true);
+    expect(menu.props.onEdit).toEqual(expect.any(Function));
+    expect(menu.props.onDelete).toEqual(expect.any(Function));
+    expect(menu.props.deleteTitle).toBe('Delete task?');
     act(() => renderer.unmount());
   });
 
@@ -271,23 +259,17 @@ describe('Task list detail interactions', () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<TaskListDetail />); await flush(); });
     const menu = findRowMenu(renderer.root, 't1');
-    await act(async () => { await fireMenuAction(menu, 'edit'); await flush(); });
+    await act(async () => { await menu.props.onEdit(); await flush(); });
     expect(router.push).toHaveBeenCalledWith('/sheets/new-task?listId=l1&id=t1');
     act(() => renderer.unmount());
   });
 
-  it('confirms then deletes via native Alert', async () => {
-    const alertSpy = vi.spyOn(Alert, 'alert').mockImplementation((_t, _m, buttons: any) => {
-      const destructive = buttons?.find((b: any) => b.style === 'destructive');
-      destructive?.onPress?.();
-    });
+  it('deletes through the row delete action', async () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<TaskListDetail />); await flush(); });
     const menu = findRowMenu(renderer.root, 't1');
-    await act(async () => { await fireMenuAction(menu, 'delete'); await flush(); });
-    expect(alertSpy).toHaveBeenCalledTimes(1);
+    await act(async () => { await menu.props.onDelete(); await flush(); });
     expect(taskState.remove).toHaveBeenCalledWith('t1');
-    alertSpy.mockRestore();
     act(() => renderer.unmount());
   });
 
@@ -298,7 +280,7 @@ describe('Task list detail interactions', () => {
     const labels = renderer.root
       .findAll((n: any) => typeof n.children?.[0] === 'string')
       .map((n: any) => n.children.join(''));
-    expect(labels).toContain('All clear.');
+    expect(labels).toContain('Nothing on this list');
     act(() => renderer.unmount());
   });
 
@@ -338,28 +320,29 @@ describe('Task list detail interactions', () => {
     act(() => renderer.unmount());
   });
 
-  it('enters reorder mode via menu and persists the new order on Done', async () => {
-    taskState.tasks = [makeTask({ id: 't1', title: 'A' }), makeTask({ id: 't2', title: 'B' })];
+  it('quick-add ignores a second submit while create is in flight', async () => {
+    let resolveCreate: (() => void) | null = null;
+    taskState.create.mockImplementationOnce(
+      () => new Promise<void>((resolve) => { resolveCreate = resolve; }),
+    );
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<TaskListDetail />); await flush(); });
 
-    const menu = findRowMenu(renderer.root, 't1');
-    await act(async () => { await fireMenuAction(menu, 'reorder'); await flush(); });
+    const input = findByTestID(renderer.root, 'task-detail-quickadd-input');
+    await act(async () => { input.props.onChangeText('Duplicate guard'); await flush(); });
 
-    const moveDown = renderer.root.findAll(
-      (n: any) => n.props?.testID === 'task-row-t1-move-down',
-    )[0];
-    await act(async () => { moveDown.props.onPress(); await flush(); });
+    const send = findByTestID(renderer.root, 'task-detail-quickadd-send');
+    await act(async () => {
+      send.props.onPress();
+      send.props.onPress();
+      await flush();
+    });
 
-    const doneBtn = renderer.root.findAll(
-      (n: any) => typeof n.props?.testID === 'string' && n.props.testID.startsWith('task-reorder-done-'),
-    )[0];
-    await act(async () => { doneBtn.props.onPress(); await flush(); });
-
-    expect(taskState.reorder).toHaveBeenCalledTimes(1);
-    const arg = (taskState.reorder as any).mock.calls[0][0];
-    expect(arg[0]).toBe('t2');
-    expect(arg[1]).toBe('t1');
+    expect(taskState.create).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      resolveCreate?.();
+      await flush();
+    });
 
     act(() => renderer.unmount());
   });

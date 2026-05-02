@@ -1,5 +1,5 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionEmptyState } from '@/src/components/ui/pacto/ActionEmptyState';
@@ -35,6 +35,7 @@ export default function TaskListDetail() {
   const { tasks, toggleComplete, remove, create } = useTaskItems(listId ?? null);
   const [quickAddTitle, setQuickAddTitle] = useState('');
   const [quickAddSaving, setQuickAddSaving] = useState(false);
+  const quickAddSavingRef = useRef(false);
 
   const partnerName = partner?.displayName ?? null;
   const youId = useSession().user?.id ?? null;
@@ -103,13 +104,15 @@ export default function TaskListDetail() {
 
   const handleQuickAdd = async () => {
     const title = quickAddTitle.trim();
-    if (!title || quickAddSaving) return;
+    if (!title || quickAddSavingRef.current) return;
 
+    quickAddSavingRef.current = true;
     setQuickAddSaving(true);
     try {
       await create({ title, due_date: null, priority: 0 });
       setQuickAddTitle('');
     } finally {
+      quickAddSavingRef.current = false;
       setQuickAddSaving(false);
     }
   };
