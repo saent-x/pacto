@@ -46,7 +46,7 @@ vi.mock('@/src/hooks/useReminders', () => ({
   }),
 }));
 
-import RemindersScreen from '@/app/(tabs)/reminders/index';
+import RemindersScreen from '@/app/(tabs)/us/reminders/index';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
