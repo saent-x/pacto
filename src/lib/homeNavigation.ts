@@ -15,9 +15,9 @@ export function routeForTimelineItem(
     case "plan":
       return isFeatureEnabled("goals") ? "/(tabs)/us/plans" : null;
     case "reminder":
-      return isFeatureEnabled("recurring") ? "/(tabs)/reminders" : null;
+      return isFeatureEnabled("recurring") ? "/(tabs)/us/reminders" : null;
     case "task":
-      return isFeatureEnabled("tasks") ? "/(tabs)/tasks" : null;
+      return isFeatureEnabled("tasks") ? "/(tabs)/us/tasks" : null;
     case "ritual":
       return isFeatureEnabled("recurring") && isFeatureEnabled("calendar") ? "/(tabs)/calendar" : null;
     case "memory": {

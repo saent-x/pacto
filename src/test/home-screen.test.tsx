@@ -492,7 +492,7 @@ describe('HomeRoute', () => {
     act(() => renderer.unmount());
   });
 
-  it('timeline task item routes to /(tabs)/tasks', async () => {
+  it('timeline task item routes to /(tabs)/us/tasks', async () => {
     const occursAt = new Date();
     occursAt.setHours(12, 0, 0, 0);
     homeState.timeline = [
@@ -515,7 +515,7 @@ describe('HomeRoute', () => {
     await act(async () => {
       await btn.props.onPress();
     });
-    expect(routerSpy.push).toHaveBeenCalledWith('/(tabs)/tasks');
+    expect(routerSpy.push).toHaveBeenCalledWith('/(tabs)/us/tasks');
     act(() => renderer.unmount());
   });
 
@@ -545,7 +545,7 @@ describe('HomeRoute', () => {
     act(() => renderer.unmount());
   });
 
-  it('timeline reminder item routes to /(tabs)/reminders', async () => {
+  it('timeline reminder item routes to /(tabs)/us/reminders', async () => {
     const occursAt = new Date();
     occursAt.setHours(9, 0, 0, 0);
     homeState.timeline = [
@@ -567,7 +567,7 @@ describe('HomeRoute', () => {
     await act(async () => {
       await btn.props.onPress();
     });
-    expect(routerSpy.push).toHaveBeenCalledWith('/(tabs)/reminders');
+    expect(routerSpy.push).toHaveBeenCalledWith('/(tabs)/us/reminders');
     act(() => renderer.unmount());
   });
 
