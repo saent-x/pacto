@@ -220,6 +220,10 @@ const _schema = i.schema({
       lastSeenAt: i.number().indexed(),
       createdAt: i.number(),
     }),
+    $files: i.entity({
+      path: i.string().unique().indexed(),
+      url: i.string(),
+    }),
   },
   links: {
     // --- existing core ---

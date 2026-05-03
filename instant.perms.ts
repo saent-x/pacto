@@ -79,6 +79,15 @@ const rules = {
       delete: "false",
     },
   },
+  $files: {
+    // Avatars under `avatars/{userId}/*` — owner writes, any signed-in user reads.
+    allow: {
+      view: "auth.id != null && data.path.startsWith('avatars/')",
+      create: "data.path.startsWith('avatars/' + auth.id + '/')",
+      update: "data.path.startsWith('avatars/' + auth.id + '/')",
+      delete: "data.path.startsWith('avatars/' + auth.id + '/')",
+    },
+  },
 } satisfies InstantRules;
 
 export default rules;

@@ -106,7 +106,9 @@ export function SessionProvider({ children }: PropsWithChildren) {
     if (!myMembership) {
       return {
         ...emptySession('onboarding'),
-        user: authUserToSessionUser(user),
+        user: myMembership?.user
+        ? userToSessionUser(myMembership.user)
+        : authUserToSessionUser(user),
       };
     }
 
@@ -114,7 +116,9 @@ export function SessionProvider({ children }: PropsWithChildren) {
     if (!space) {
       return {
         ...emptySession('onboarding'),
-        user: authUserToSessionUser(user),
+        user: myMembership?.user
+        ? userToSessionUser(myMembership.user)
+        : authUserToSessionUser(user),
       };
     }
 
@@ -132,7 +136,9 @@ export function SessionProvider({ children }: PropsWithChildren) {
 
     return {
       status: 'ready',
-      user: authUserToSessionUser(user),
+      user: myMembership?.user
+        ? userToSessionUser(myMembership.user)
+        : authUserToSessionUser(user),
       space: {
         id: space.id,
         kind: mode,

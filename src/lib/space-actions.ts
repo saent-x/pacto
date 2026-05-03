@@ -152,3 +152,31 @@ export async function updateUserAvatar(params: {
     }),
   ]);
 }
+
+/**
+ * Upload a local image (file:// URI) to InstantDB storage and return its
+ * public URL. Used to persist user-picked avatars across devices/sessions.
+ */
+export async function uploadAvatarFromUri(params: {
+  userId: string;
+  uri: string;
+  contentType?: string;
+}): Promise<string> {
+  const { userId, uri, contentType = 'image/jpeg' } = params;
+  const ext = contentType.split('/')[1] ?? 'jpg';
+  const path = `avatars/${userId}/${Date.now()}.${ext}`;
+
+  const res = await fetch(uri);
+  const blob = await res.blob();
+  const file = new File([blob], path.split('/').pop()!, { type: contentType });
+
+  await (db as any).storage.uploadFile(path, file, { contentType });
+
+  // Pull the public URL back via a one-shot query.
+  const result = await (db as any).queryOnce({
+    $files: { $: { where: { path } } },
+  });
+  const url = result?.data?.$files?.[0]?.url as string | undefined;
+  if (!url) throw new Error('upload succeeded but no URL returned');
+  return url;
+}

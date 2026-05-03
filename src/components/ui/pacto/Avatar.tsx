@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Image, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { resolveAvatarSource } from '@/src/constants/defaultAvatars';
 import { useTheme } from '@/src/lib/theme';
@@ -24,12 +25,22 @@ type AvatarProps = {
  */
 export function Avatar({ person, size = 36, ring, style }: AvatarProps) {
   const { C } = useTheme();
+  const [imgFailed, setImgFailed] = useState(false);
   const initial =
-    person?.initial ??
-    person?.displayName?.charAt(0)?.toUpperCase() ??
+    person?.initial?.charAt(0)?.toUpperCase() ||
+    person?.displayName?.charAt(0)?.toUpperCase() ||
     '?';
   const bg = person?.color ?? C.accent;
   const avatarSource = resolveAvatarSource(person?.avatarUrl);
+  // Uploaded photos use { uri }; bundled defaults use require() and resolve to
+  // a number on native, an object with `uri` on web.
+  const isUploaded =
+    !!avatarSource &&
+    typeof avatarSource === 'object' &&
+    typeof (avatarSource as { uri?: string }).uri === 'string' &&
+    !!person?.avatarUrl &&
+    !person.avatarUrl.startsWith('pacto:');
+  const showImage = !!avatarSource && !imgFailed;
 
   const wrap: ViewStyle = {
     width: size,
@@ -39,6 +50,7 @@ export function Avatar({ person, size = 36, ring, style }: AvatarProps) {
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    overflow: 'hidden',
     ...(ring
       ? {
           borderWidth: 2,
@@ -50,11 +62,12 @@ export function Avatar({ person, size = 36, ring, style }: AvatarProps) {
 
   return (
     <View style={wrap}>
-      {avatarSource ? (
+      {showImage ? (
         <Image
           source={avatarSource}
           style={{ width: size, height: size }}
-          resizeMode="contain"
+          resizeMode={isUploaded ? 'cover' : 'contain'}
+          onError={() => setImgFailed(true)}
         />
       ) : (
         <Text

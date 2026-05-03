@@ -3,11 +3,10 @@ import { useRouter } from 'expo-router';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { format, parseISO } from 'date-fns';
-import { Avatar, AvatarPair, Card, CrewStack, Pill } from '@/src/components/ui/pacto';
+import { Card } from '@/src/components/ui/pacto';
 import { Icon, IconName } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
 import { SheetShell } from '@/src/components/ui/SheetShell';
-import { DEFAULT_AVATARS, type DefaultAvatarId } from '@/src/constants/defaultAvatars';
 import { Typography } from '@/src/constants/typography';
 import {
   getSupportedFeatures,
@@ -19,7 +18,6 @@ import { db } from '@/src/lib/db';
 import {
   leaveSpace,
   regenerateInviteCode,
-  updateUserAvatar,
 } from '@/src/lib/space-actions';
 
 export default function ProfileSheet() {
@@ -44,10 +42,6 @@ export default function ProfileSheet() {
       'Partner'
     : null;
 
-  const myInitial = me.charAt(0).toUpperCase();
-  const partnerInitial = partnerName?.charAt(0).toUpperCase() ?? 'P';
-  const selectedAvatar = session.user?.avatarUrl ?? null;
-
   const spaceMode = session.space?.kind ?? 'solo';
   const isSolo = spaceMode === 'solo';
   const isCrew = spaceMode === 'crew';
@@ -66,11 +60,6 @@ export default function ProfileSheet() {
     : 'Add date →';
 
   const inviteCode = session.space?.inviteCode ?? null;
-  const statusLine = isSolo
-    ? 'Solo pact'
-    : isCrew
-    ? session.space?.name ?? 'Crew pact'
-    : `Paired with ${partnerName ?? 'someone'}`;
 
   async function onGenerateCode() {
     if (!session.space) return;
@@ -113,17 +102,6 @@ export default function ProfileSheet() {
     ]);
   }
 
-  async function onSelectAvatar(avatarUrl: DefaultAvatarId) {
-    if (!session.user) return;
-    Haptics.selectionAsync().catch(() => undefined);
-    try {
-      await updateUserAvatar({ userId: session.user.id, avatarUrl });
-    } catch (err) {
-      console.warn('[profile] avatar update failed', err);
-      Alert.alert('Avatar update failed', 'Try again.');
-    }
-  }
-
   type SettingRow =
     | {
         kind: 'value';
@@ -139,18 +117,11 @@ export default function ProfileSheet() {
   const rows: SettingRow[] = [
     {
       kind: 'value',
-      label: 'Display name',
+      label: 'Account',
       value: me,
       icon: 'user',
-      testID: 'profile-row-name',
-    },
-    {
-      kind: 'value',
-      label: 'Email',
-      value: session.user?.email ?? '—',
-      icon: 'mail',
-      muted: true,
-      testID: 'profile-row-email',
+      onPress: () => navRouter.push('/sheets/account' as any),
+      testID: 'profile-row-account',
     },
     ...(isPair || isCrew
       ? ([
@@ -199,64 +170,6 @@ export default function ProfileSheet() {
 
   return (
     <SheetShell eyebrow="PROFILE" title="profile">
-      {/* Identity */}
-      <View style={styles.identity}>
-        {isSolo ? (
-          <Avatar
-            person={{ initial: myInitial, color: C.accent, avatarUrl: session.user?.avatarUrl }}
-            size={62}
-          />
-        ) : isCrew ? (
-          <CrewStack size={42} />
-        ) : (
-          <AvatarPair
-            a={{ initial: myInitial, color: C.accent, avatarUrl: session.user?.avatarUrl }}
-            b={{ initial: partnerInitial, color: C.accent2, avatarUrl: session.partner?.avatarUrl }}
-            size={48}
-          />
-        )}
-        <View style={{ flex: 1 }}>
-          <Text style={[Typography.bodyLg, { color: C.inkColor, fontFamily: Typography.geistSemiBoldFont }]}>
-            {me}
-          </Text>
-          <Text style={[Typography.caption, { color: C.ink3, marginTop: 2 }]} numberOfLines={1}>
-            {session.user?.email ?? '—'}
-          </Text>
-          <Pill color={isSolo ? C.accent : isCrew ? C.accent3 : C.accent2} style={{ marginTop: 7 }}>
-            {statusLine}
-          </Pill>
-        </View>
-      </View>
-
-      <Card padded={false} style={{ marginBottom: 14 }}>
-        <View style={styles.avatarPicker}>
-          <Text style={[Typography.body, { flex: 1, color: C.inkColor }]}>
-            Avatar
-          </Text>
-          <View style={styles.avatarChoices}>
-            {DEFAULT_AVATARS.map((avatar) => {
-              const selected = selectedAvatar === avatar.id;
-              return (
-                <PressScale
-                  key={avatar.id}
-                  testID={`profile-avatar-${avatar.id}`}
-                  onPress={() => onSelectAvatar(avatar.id)}
-                  style={[
-                    styles.avatarChoice,
-                    {
-                      borderColor: selected ? C.accent : C.lineColor,
-                      backgroundColor: selected ? `${C.accent}22` : C.bgSoft,
-                    },
-                  ]}
-                >
-                  <Avatar person={{ avatarUrl: avatar.id, color: C.accent }} size={34} />
-                </PressScale>
-              );
-            })}
-          </View>
-        </View>
-      </Card>
-
       {/* Settings card */}
       <Card padded={false} style={{ marginBottom: 14 }}>
         {rows.map((r, i) => (
@@ -367,36 +280,12 @@ export default function ProfileSheet() {
 }
 
 const styles = StyleSheet.create({
-  identity: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    marginBottom: 22,
-  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     paddingVertical: 13,
     paddingHorizontal: 16,
-  },
-  avatarPicker: {
-    paddingVertical: 13,
-    paddingHorizontal: 16,
-    gap: 12,
-  },
-  avatarChoices: {
-    flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-  avatarChoice: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   themeRow: {
     flexDirection: 'row',
