@@ -4,6 +4,7 @@ import { PressScale } from '@/src/components/ui/PressScale';
 import { useTheme } from '@/src/lib/theme';
 import { useSession } from '@/src/hooks/useSession';
 import { useMemoryActions } from '@/src/hooks/memories/useMemoryActions';
+import { useAssistantOverlay } from '@/src/lib/assistant-overlay';
 import { MemoryActions, type SpaceMode } from './MemoryActions';
 import { MemoryAttachments } from './MemoryAttachments';
 import { MemoryBody } from './MemoryBody';
@@ -41,6 +42,7 @@ export function MemoryCard({ memory, variant }: Props) {
   const user = session?.user;
   const mode: SpaceMode = (session?.mode ?? session?.space?.kind ?? 'solo') as SpaceMode;
   const actions = useMemoryActions();
+  const overlay = useAssistantOverlay() as any;
 
   // Repost: surface the original memory inside this card.
   if (memory.kind === 'repost' && memory.repostOf) {
@@ -74,6 +76,13 @@ export function MemoryCard({ memory, variant }: Props) {
   return (
     <PressScale
       onPress={variant === 'feed' ? () => router.push(`/(tabs)/memories/${memory.id}` as any) : undefined}
+      onLongPress={() => {
+        if (typeof overlay.openWithContext === 'function') {
+          overlay.openWithContext(`Memory: ${memory.body}`);
+        } else if (typeof overlay.openVoiceOverlay === 'function') {
+          overlay.openVoiceOverlay();
+        }
+      }}
       style={[styles.card, { borderColor: C.ink3 }]}
     >
       <MemoryHeader

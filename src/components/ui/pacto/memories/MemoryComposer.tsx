@@ -9,6 +9,8 @@ import { useSession } from '@/src/hooks/useSession';
 import { useMemoryComposer } from '@/src/hooks/memories/useMemoryComposer';
 import { useMediaUpload } from '@/src/hooks/memories/useMediaUpload';
 import { useMediaQuota } from '@/src/hooks/memories/useMediaQuota';
+import { polishDraft } from '@/src/lib/ai';
+import { useAiQuota } from '@/src/hooks/useAiQuota';
 import { QuotaBadge } from './QuotaBadge';
 import { useMediaPicker } from './MediaPickerSheet';
 
@@ -22,6 +24,7 @@ export function MemoryComposer() {
   const { upload } = useMediaUpload();
   const { pick } = useMediaPicker();
   const quota = useMediaQuota(space?.id);
+  const aiQuota = useAiQuota(space?.id);
   const [submitting, setSubmitting] = useState(false);
 
   // initialize mode/parent/quote from route (only if not already aligned to avoid loops)
@@ -133,6 +136,21 @@ export function MemoryComposer() {
             <Icon name="pieChart" size={20} color={C.ink3} />
           </PressScale>
         ) : null}
+        {/* sparkles icon not in set — substituted with sparkle (singular, closest available) */}
+        <PressScale
+          onPress={async () => {
+            if (aiQuota.isExhausted) {
+              router.push('/sheets/upgrade' as any);
+              return;
+            }
+            const polished = await polishDraft(draft.body);
+            setDraft({ ...draft, body: polished });
+          }}
+          hitSlop={8}
+          style={styles.toolBtn}
+        >
+          <Icon name="sparkle" size={20} color={C.ink3} />
+        </PressScale>
       </View>
 
       {draft.pollOptions.length > 0 ? (
