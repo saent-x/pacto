@@ -88,6 +88,99 @@ const rules = {
       delete: "data.path.startsWith('avatars/' + auth.id + '/')",
     },
   },
+  memories: {
+    allow: {
+      view: "auth.id in data.ref('space.memberships.user.id')",
+      create:
+        "auth.id in data.ref('space.memberships.user.id')" +
+        " && (newData.isPrivate != true || data.ref('space.kind')[0] in ['pair','couple','crew'])" +
+        " && (newData.isPrivate != true || newData.notifyMembers == false)" +
+        " && (newData.kind in ['post','reply','quote'] || data.ref('space.kind')[0] in ['pair','couple','crew'])",
+      update:
+        "auth.id == data.ref('author.id')[0]" +
+        " && newData.kind == data.kind" +
+        " && newData.isPrivate == data.isPrivate",
+      delete:
+        "auth.id == data.ref('author.id')[0]" +
+        " || auth.id in data.ref('space.memberships[role==\"owner\"].user.id')",
+    },
+  },
+  memoryReactions: {
+    allow: {
+      view: "auth.id in data.ref('memory.space.memberships.user.id')",
+      create:
+        "auth.id in data.ref('memory.space.memberships.user.id')" +
+        " && data.ref('memory.space.kind')[0] in ['pair','couple','crew']" +
+        " && auth.id == newData.user",
+      update: "false",
+      delete: "auth.id == data.ref('user.id')[0]",
+    },
+  },
+  memoryAttachments: {
+    allow: {
+      view: "auth.id in data.ref('memory.space.memberships.user.id')",
+      create:
+        "auth.id == data.ref('memory.author.id')[0]" +
+        // Quota check: server-resolves cap from space.plan ('pro' → 10GB else 500MB).
+        " && data.ref('memory.space.mediaQuota.bytesUsed')[0] + newData.mediaSize" +
+        "    <= (data.ref('memory.space.plan')[0] == 'pro' ? 10737418240 : 524288000)",
+      update: "false",
+      delete:
+        "auth.id == data.ref('memory.author.id')[0]" +
+        " || auth.id in data.ref('memory.space.memberships[role==\"owner\"].user.id')",
+    },
+  },
+  memoryPolls: {
+    allow: {
+      view: "auth.id in data.ref('memory.space.memberships.user.id')",
+      create:
+        "auth.id in data.ref('memory.space.memberships.user.id')" +
+        " && data.ref('memory.space.kind')[0] == 'crew'",
+      update: "false",
+      delete:
+        "auth.id == data.ref('memory.author.id')[0]" +
+        " || auth.id in data.ref('memory.space.memberships[role==\"owner\"].user.id')",
+    },
+  },
+  memoryPollOptions: {
+    allow: {
+      view: "auth.id in data.ref('poll.memory.space.memberships.user.id')",
+      create:
+        "auth.id in data.ref('poll.memory.space.memberships.user.id')" +
+        " && data.ref('poll.memory.space.kind')[0] == 'crew'",
+      update: "false",
+      delete:
+        "auth.id == data.ref('poll.memory.author.id')[0]" +
+        " || auth.id in data.ref('poll.memory.space.memberships[role==\"owner\"].user.id')",
+    },
+  },
+  memoryPollVotes: {
+    allow: {
+      view: "auth.id in data.ref('option.poll.memory.space.memberships.user.id')",
+      create:
+        "auth.id in data.ref('option.poll.memory.space.memberships.user.id')" +
+        " && auth.id == newData.user" +
+        " && auth.id not in data.ref('option.poll.options.votes.user.id')",
+      update: "false",
+      delete: "auth.id == data.ref('user.id')[0]",
+    },
+  },
+  mediaQuotaUsage: {
+    allow: {
+      view: "auth.id in data.ref('space.memberships.user.id')",
+      create: "false",
+      update: "false",
+      delete: "false",
+    },
+  },
+  aiUsage: {
+    allow: {
+      view: "auth.id in data.ref('space.memberships.user.id')",
+      create: "false",
+      update: "false",
+      delete: "false",
+    },
+  },
 } satisfies InstantRules;
 
 export default rules;

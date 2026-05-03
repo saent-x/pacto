@@ -502,14 +502,17 @@ const _schema = i.schema({
       forward: { on: 'memories', has: 'one', label: 'author' },
       reverse: { on: '$users', has: 'many', label: 'memories' },
     },
+    // Self-link: replies/reposts/quotes survive parent deletion (intentional, not cascaded).
     memoryReplyParent: {
       forward: { on: 'memories', has: 'one', label: 'replyTo' },
       reverse: { on: 'memories', has: 'many', label: 'replies' },
     },
+    // Self-link: replies/reposts/quotes survive parent deletion (intentional, not cascaded).
     memoryRepostSource: {
       forward: { on: 'memories', has: 'one', label: 'repostOf' },
       reverse: { on: 'memories', has: 'many', label: 'reposts' },
     },
+    // Self-link: replies/reposts/quotes survive parent deletion (intentional, not cascaded).
     memoryQuoteSource: {
       forward: { on: 'memories', has: 'one', label: 'quoteOf' },
       reverse: { on: 'memories', has: 'many', label: 'quotes' },
