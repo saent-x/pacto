@@ -165,6 +165,11 @@ function pressablesWithText(renderer: any, text: string | RegExp) {
   });
 }
 
+const findByTestID = (renderer: any, id: string) =>
+  renderer.root.findAll(
+    (node: any) => typeof node.type !== 'function' && node.props?.testID === id,
+  );
+
 function nodeText(node: any): string {
   return node.children
     .map((child: any) => {
@@ -230,6 +235,34 @@ describe('Timetable detail rendering', () => {
 
     expect(routerPush).toHaveBeenCalledTimes(1);
     expect(routerPush).toHaveBeenCalledWith('/sheets/new-timetable-item?timetableId=tt-1');
+    act(() => renderer.unmount());
+  });
+
+  it('keeps the timeline grid constrained to an internal padded scroll panel', async () => {
+    const renderer = await renderTimetable();
+
+    await act(async () => {
+      pressablesWithText(renderer, 'timeline')[0].props.onPress();
+      await flush();
+    });
+
+    expect(findByTestID(renderer, 'timetable-timeline-panel')).toHaveLength(1);
+    const panelStyles = findByTestID(renderer, 'timetable-timeline-panel')[0].props.style.flat();
+    expect(panelStyles).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ padding: 14, borderRadius: 24, overflow: 'hidden' }),
+      ]),
+    );
+
+    const scrollStyles = findByTestID(renderer, 'timetable-timeline-scroll')[0].props.style.flat();
+    expect(scrollStyles).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ height: expect.any(Number) }),
+      ]),
+    );
+    expect(findByTestID(renderer, 'timetable-timeline-block-tue-lunch')).toHaveLength(1);
+    expect(findByTestID(renderer, 'timetable-timeline-block-tue-dinner')).toHaveLength(1);
+
     act(() => renderer.unmount());
   });
 });

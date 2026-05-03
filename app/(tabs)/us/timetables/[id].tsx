@@ -1,6 +1,6 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { addDays, format, startOfWeek } from 'date-fns';
 import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
@@ -26,7 +26,7 @@ import {
 type LayoutMode = 'grid' | 'list' | 'timeline';
 
 const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-const HOUR_HEIGHT = 44;
+const HOUR_HEIGHT = 64;
 
 const PEACH = '#F4A68C';
 const PEACH_INK = '#3A1F14';
@@ -582,112 +582,145 @@ function TimelineBody({
   onOpenItem: (item: TimetableItem) => void;
 }) {
   const { C } = useTheme();
-  const startHour = 6;
-  const endHour = 23;
+  const { height: windowHeight } = useWindowDimensions();
+  const firstStart = Math.min(...dayItems.map((item) => item.start));
+  const lastEnd = Math.max(...dayItems.map((item) => item.start + item.dur));
+  const startHour = dayItems.length > 0
+    ? Math.max(6, Math.floor(firstStart) - 1)
+    : 6;
+  const endHour = dayItems.length > 0
+    ? Math.min(23, Math.ceil(lastEnd) + 1)
+    : 23;
   const totalHours = endHour - startHour;
   const gridHeight = (totalHours + 1) * HOUR_HEIGHT;
+  const viewportHeight = Math.min(420, Math.max(280, windowHeight - 540), gridHeight + 22);
+  const totalMinutes = dayItems.reduce((sum, item) => sum + item.dur * 60, 0);
+  const durationLabel = totalMinutes >= 60
+    ? `${Math.floor(totalMinutes / 60)}h${totalMinutes % 60 ? ` ${Math.round(totalMinutes % 60)}m` : ''}`
+    : `${Math.round(totalMinutes)}m`;
 
   return (
-    <View style={{ paddingHorizontal: 18 }}>
-      <View style={styles.timelineHeader}>
-        <Text style={[styles.dayHeaderTitle, { color: C.inkColor }]}>
-          {DAYS_FULL[selectedDay]}
-        </Text>
-        <Text
-          style={[
-            Typography.mono,
-            { color: C.ink3, fontSize: 10 },
-          ]}
-        >
-          6 AM — 11 PM
-        </Text>
-      </View>
+    <View style={styles.timelineSection}>
+      <View
+        testID="timetable-timeline-panel"
+        style={[
+          styles.timelinePanel,
+          { backgroundColor: C.bgCard, borderColor: C.lineColor },
+        ]}
+      >
+        <View style={styles.timelineHeader}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={[styles.dayHeaderTitle, { color: C.inkColor }]}>
+              {DAYS_FULL[selectedDay]}
+            </Text>
+            <Text style={[Typography.caption, { color: C.ink3, marginTop: 4 }]}>
+              {dayItems.length} {dayItems.length === 1 ? 'block' : 'blocks'} · {durationLabel}
+            </Text>
+          </View>
+          <View style={[styles.timelineRangePill, { backgroundColor: C.bgSoft, borderColor: C.lineColor }]}>
+            <Icon name="clock" size={14} color={C.ink3} />
+            <Text style={[Typography.mono, { color: C.ink2, fontSize: 10 }]}>
+              {fmtHour(startHour).toUpperCase()} — {fmtHour(endHour).toUpperCase()}
+            </Text>
+          </View>
+        </View>
 
-      {dayItems.length === 0 ? (
-        <View style={[styles.emptyDay, { borderColor: C.lineColor }]}>
-          <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
-            NOTHING ON
-          </Text>
-          <Text
+        {dayItems.length === 0 ? (
+          <View style={[styles.emptyDay, { borderColor: C.lineColor }]}>
+            <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
+              NOTHING ON
+            </Text>
+            <Text
+              style={[
+                Typography.body,
+                { color: C.ink2, marginTop: 4, textAlign: 'center' },
+              ]}
+            >
+              Nothing scheduled on {DAYS_FULL[selectedDay]}.
+            </Text>
+          </View>
+        ) : (
+          <View
             style={[
-              Typography.body,
-              { color: C.ink2, marginTop: 4, textAlign: 'center' },
+              styles.timelineViewport,
+              { backgroundColor: C.bgSoft, borderColor: C.lineColor },
             ]}
           >
-            Nothing scheduled on {DAYS_FULL[selectedDay]}.
-          </Text>
-        </View>
-      ) : (
-        <View style={{ position: 'relative', paddingLeft: 44 }}>
-          {Array.from({ length: totalHours + 1 }).map((_, i) => {
-            const h = startHour + i;
-            return (
-              <View
-                key={i}
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  top: i * HOUR_HEIGHT,
-                  height: 1,
-                  backgroundColor: C.lineColor,
-                  opacity: 0.5,
-                }}
-              >
-                <Text
-                  style={{
-                    position: 'absolute',
-                    left: -44,
-                    top: -6,
-                    fontFamily: Typography.geistMonoFont,
-                    fontSize: 9,
-                    color: C.ink3,
-                    letterSpacing: 0.4,
-                    width: 40,
-                    textAlign: 'right',
-                  }}
-                >
-                  {fmtHour(h).toUpperCase()}
-                </Text>
-              </View>
-            );
-          })}
+            <ScrollView
+              testID="timetable-timeline-scroll"
+              style={[styles.timelineScroll, { height: viewportHeight }]}
+              contentContainerStyle={styles.timelineScrollContent}
+              nestedScrollEnabled
+              showsVerticalScrollIndicator
+            >
+              <View style={{ height: gridHeight, position: 'relative' }}>
+                <View style={[styles.timelineRail, { backgroundColor: C.lineColor }]} />
+                {Array.from({ length: totalHours + 1 }).map((_, i) => {
+                  const h = startHour + i;
+                  return (
+                    <View
+                      key={i}
+                      style={[
+                        styles.timelineHourLine,
+                        {
+                          top: i * HOUR_HEIGHT,
+                          borderTopColor: C.lineColor,
+                        },
+                      ]}
+                    >
+                      <View style={[styles.timelineHourDot, { backgroundColor: C.bgSoft, borderColor: C.lineColor }]} />
+                      <Text
+                        style={[
+                          styles.timelineHourLabel,
+                          { color: C.ink3 },
+                        ]}
+                      >
+                        {fmtHour(h).toUpperCase()}
+                      </Text>
+                    </View>
+                  );
+                })}
 
-          <View style={{ height: gridHeight, position: 'relative' }}>
-            {dayItems.map((item) => {
-              const top = (item.start - startHour) * HOUR_HEIGHT;
-              const height = Math.max(36, item.dur * HOUR_HEIGHT - 3);
-              return (
-                <PressScale
-                  key={String(item.id)}
-                  onPress={() => onOpenItem(item)}
-                  style={{
-                    position: 'absolute',
-                    left: 4,
-                    right: 0,
-                    top,
-                    height,
-                    backgroundColor: item.color,
-                    borderRadius: 12,
-                    paddingHorizontal: 12,
-                    paddingVertical: 8,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'flex-start',
-                      justifyContent: 'space-between',
-                      gap: 8,
-                    }}
-                  >
-                    <View style={{ flex: 1, minWidth: 0 }}>
+                {dayItems.map((item) => {
+                  const top = (item.start - startHour) * HOUR_HEIGHT;
+                  const height = Math.max(72, item.dur * HOUR_HEIGHT - 8);
+                  return (
+                    <PressScale
+                      key={String(item.id)}
+                      testID={`timetable-timeline-block-${item.id}`}
+                      onPress={() => onOpenItem(item)}
+                      style={[
+                        styles.timelineBlock,
+                        {
+                          top,
+                          height,
+                          backgroundColor: item.color,
+                        },
+                      ]}
+                    >
+                      <View style={styles.timelineBlockTop}>
+                        <View style={[styles.timelineBlockIcon, { backgroundColor: item.ink }]}>
+                          <Icon
+                            name={(item.icon as IconName) ?? 'coffee'}
+                            size={15}
+                            color={item.color}
+                          />
+                        </View>
+                        <Text style={[styles.timelineBlockTime, { color: item.ink }]}>
+                          {fmtHour(item.start)} — {fmtHour(item.start + item.dur)}
+                        </Text>
+                        <WhoBadge
+                          who={item.who}
+                          size={18}
+                          borderColor={item.color}
+                        />
+                      </View>
                       <Text
                         style={[
                           styles.itemCat,
-                          { color: item.ink, opacity: 0.6 },
+                          { color: item.ink, opacity: 0.62, marginTop: 8 },
                         ]}
+                        numberOfLines={1}
                       >
                         {String(item.cat || '').toUpperCase()}
                       </Text>
@@ -701,33 +734,14 @@ function TimelineBody({
                         {item.title}
                         {item.star ? ' ★' : ''}
                       </Text>
-                    </View>
-                    <WhoBadge
-                      who={item.who}
-                      size={16}
-                      borderColor={item.color}
-                    />
-                  </View>
-                  {height > 50 ? (
-                    <Text
-                      style={{
-                        fontFamily: Typography.geistMonoFont,
-                        fontSize: 9,
-                        color: item.ink,
-                        opacity: 0.6,
-                        letterSpacing: 0.3,
-                        marginTop: 4,
-                      }}
-                    >
-                      {fmtHour(item.start)} – {fmtHour(item.start + item.dur)}
-                    </Text>
-                  ) : null}
-                </PressScale>
-              );
-            })}
+                    </PressScale>
+                  );
+                })}
+              </View>
+            </ScrollView>
           </View>
-        </View>
-      )}
+        )}
+      </View>
     </View>
   );
 }
@@ -879,17 +893,114 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   // Timeline
+  timelineSection: {
+    paddingHorizontal: 18,
+  },
+  timelinePanel: {
+    borderWidth: 1,
+    borderRadius: 24,
+    padding: 14,
+    overflow: 'hidden',
+  },
   timelineHeader: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    gap: 12,
+    marginBottom: 14,
+  },
+  timelineRangePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  timelineViewport: {
+    borderWidth: 1,
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
+  timelineScroll: {
+    borderRadius: 17,
+  },
+  timelineScrollContent: {
+    paddingHorizontal: 12,
+    paddingTop: 16,
+    paddingBottom: 16,
+  },
+  timelineRail: {
+    position: 'absolute',
+    left: 48,
+    top: 0,
+    bottom: 0,
+    width: 1,
+    opacity: 0.6,
+  },
+  timelineHourLine: {
+    position: 'absolute',
+    left: 48,
+    right: 0,
+    height: 1,
+    borderTopWidth: 1,
+    opacity: 0.45,
+  },
+  timelineHourDot: {
+    position: 'absolute',
+    left: -4,
+    top: -4,
+    width: 8,
+    height: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  timelineHourLabel: {
+    position: 'absolute',
+    left: -48,
+    top: -8,
+    width: 36,
+    fontFamily: Typography.geistMonoFont,
+    fontSize: 10,
+    letterSpacing: 0.4,
+    textAlign: 'right',
+  },
+  timelineBlock: {
+    position: 'absolute',
+    left: 64,
+    right: 0,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    overflow: 'hidden',
+  },
+  timelineBlockTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  timelineBlockIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.9,
+  },
+  timelineBlockTime: {
+    flex: 1,
+    minWidth: 0,
+    fontFamily: Typography.geistMonoFont,
+    fontSize: 10,
+    letterSpacing: 0.4,
+    opacity: 0.72,
   },
   timelineBlockTitle: {
     fontFamily: Typography.geistSemiBoldFont,
-    fontSize: 13,
+    fontSize: 16,
     letterSpacing: -0.2,
-    lineHeight: 16,
+    lineHeight: 19,
     marginTop: 2,
   },
 });

@@ -19,6 +19,7 @@ type Props = {
   showLegend?: boolean;
   showDayAxis?: boolean;
   showWeekAxis?: boolean;
+  weekLabelMode?: 'markers' | 'months';
   cellGap?: number;
   cellRadius?: number;
   maxCellSize?: number;
@@ -42,6 +43,7 @@ export function ActivityHeatmap({
   showLegend = true,
   showDayAxis = true,
   showWeekAxis = true,
+  weekLabelMode = 'markers',
   cellGap = DEFAULT_GAP,
   cellRadius = 3,
   maxCellSize,
@@ -129,6 +131,13 @@ export function ActivityHeatmap({
 
   const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
   const weekLabelFor = (index: number) => {
+    if (weekLabelMode === 'months') {
+      const date = columnDates[index];
+      const previous = columnDates[index - 1];
+      if (!date) return '';
+      if (index !== 0 && previous && previous.getMonth() === date.getMonth()) return '';
+      return date.toLocaleDateString(undefined, { month: 'short' });
+    }
     const firstMarker = 0;
     const secondMarker = Math.floor(weeks / 3);
     const thirdMarker = Math.floor((weeks * 2) / 3);
