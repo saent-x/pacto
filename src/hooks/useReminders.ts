@@ -93,7 +93,7 @@ export function useReminders() {
         excludeUserId: userId,
         title: actorName,
         body: `added a reminder: ${input.title}`,
-        route: '/(tabs)/reminders',
+        route: '/(tabs)/us/reminders',
       });
     },
     [coupleId, userId, space?.kind, actorName],

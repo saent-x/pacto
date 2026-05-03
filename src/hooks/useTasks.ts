@@ -171,7 +171,7 @@ export function useTasks() {
         excludeUserId: userId,
         title: user?.displayName ?? 'Someone',
         body: `added a task: ${input.title}`,
-        route: '/(tabs)/tasks',
+        route: '/(tabs)/us/tasks',
       });
     },
     [coupleId, userId, allTasks.length, space?.kind, user?.displayName],
