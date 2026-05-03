@@ -184,6 +184,10 @@ function ThemedRoot() {
           'sheets/new-timetable-item',
           'sheets/currency',
           'sheets/journal-entry',
+          'sheets/memory-composer',
+          'sheets/memory-attach-entity',
+          'sheets/upgrade',
+          'sheets/account',
         ].map((name) => (
           <Stack.Screen
             key={name}
