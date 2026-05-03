@@ -17,11 +17,16 @@ const _schema = i.schema({
       inviteCode: i.string().optional().unique().indexed(),
       createdAt: i.number(),
       updatedAt: i.number(),
+      plan: i.string().optional(),
     }),
     memberships: i.entity({
       role: i.string(),                                     // 'owner' | 'partner'
       joinedAt: i.number(),
       lastNotificationsReadAt: i.number().optional(),
+      notifyOnPost: i.boolean().optional(),
+      notifyOnReply: i.boolean().optional(),
+      notifyOnReaction: i.boolean().optional(),
+      notifyOnRepost: i.boolean().optional(),
     }),
     profiles: i.entity({
       displayName: i.string().optional(),
@@ -223,6 +228,56 @@ const _schema = i.schema({
     $files: i.entity({
       path: i.string().unique().indexed(),
       url: i.string(),
+    }),
+    memories: i.entity({
+      body: i.string(),
+      kind: i.string(),
+      isPrivate: i.boolean().optional(),
+      isPinned: i.boolean().optional(),
+      notifyMembers: i.boolean().optional(),
+      reactionCount: i.number().optional(),
+      replyCount: i.number().optional(),
+      repostCount: i.number().optional(),
+      createdAt: i.number().indexed(),
+      updatedAt: i.number().optional(),
+    }),
+    memoryReactions: i.entity({
+      emoji: i.string(),
+      createdAt: i.number().indexed(),
+    }),
+    memoryAttachments: i.entity({
+      type: i.string(),
+      refId: i.string().optional(),
+      mediaUrl: i.string().optional(),
+      mediaPath: i.string().optional(),
+      mediaWidth: i.number().optional(),
+      mediaHeight: i.number().optional(),
+      mediaSize: i.number().optional(),
+      sortOrder: i.number().optional(),
+      createdAt: i.number().indexed(),
+    }),
+    memoryPolls: i.entity({
+      question: i.string().optional(),
+      closesAt: i.number().optional(),
+      createdAt: i.number().indexed(),
+    }),
+    memoryPollOptions: i.entity({
+      label: i.string(),
+      voteCount: i.number().optional(),
+      sortOrder: i.number().optional(),
+      createdAt: i.number().indexed(),
+    }),
+    memoryPollVotes: i.entity({
+      createdAt: i.number().indexed(),
+    }),
+    mediaQuotaUsage: i.entity({
+      bytesUsed: i.number(),
+      updatedAt: i.number().indexed(),
+    }),
+    aiUsage: i.entity({
+      monthKey: i.string().indexed(),
+      turns: i.number(),
+      updatedAt: i.number().indexed(),
     }),
   },
   links: {
