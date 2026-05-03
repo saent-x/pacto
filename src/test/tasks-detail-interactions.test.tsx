@@ -160,7 +160,7 @@ vi.mock('@/src/hooks/useTasks', () => ({
   }),
 }));
 
-import TaskListDetail from '@/app/(tabs)/tasks/[listId]';
+import TaskListDetail from '@/app/(tabs)/us/tasks/[listId]';
 import { router } from 'expo-router';
 
 const TestRenderer: any = require('react-test-renderer');

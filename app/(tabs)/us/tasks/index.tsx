@@ -103,7 +103,7 @@ function ListTile({ list }: { list: ListRow }) {
 
   return (
     <Card
-      onPress={() => router.push(`/(tabs)/tasks/${list.id}` as any)}
+      onPress={() => router.push(`/(tabs)/us/tasks/${list.id}` as any)}
       style={[styles.tile, { backgroundColor: C.bgCard, borderColor: C.lineColor }]}
     >
       <View style={styles.tileTop}>

@@ -67,7 +67,7 @@ vi.mock('@/src/hooks/useSession', () => ({
   }),
 }));
 
-import TasksList from '@/app/(tabs)/tasks/index';
+import TasksList from '@/app/(tabs)/us/tasks/index';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;

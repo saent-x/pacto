@@ -102,7 +102,7 @@ import NewTask from '@/app/sheets/new-task';
 import NewEntry from '@/app/sheets/new-entry';
 import NewTimetable from '@/app/sheets/new-timetable';
 import CalendarLayout from '@/app/(tabs)/calendar/_layout';
-import TaskListDetail from '@/app/(tabs)/tasks/[listId]';
+import TaskListDetail from '@/app/(tabs)/us/tasks/[listId]';
 import WishlistsScreen from '@/app/(tabs)/us/wishlists';
 
 const TestRenderer: any = require('react-test-renderer');
