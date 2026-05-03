@@ -1,15 +1,11 @@
 import { useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
 import { Avatar, AvatarPair, CrewStack } from '@/src/components/ui/pacto';
-import { PressScale } from '@/src/components/ui/PressScale';
 import { ComposerRail } from '@/src/components/ui/pacto/memories/ComposerRail';
 import { EmptyMemoriesState } from '@/src/components/ui/pacto/memories/EmptyMemoriesState';
 import { MemoriesHero } from '@/src/components/ui/pacto/memories/MemoriesHero';
-import { MemoriesIcon } from '@/src/components/ui/pacto/memories/MemoriesIcon';
 import { MemoryPost } from '@/src/components/ui/pacto/memories/MemoryPost';
-import { PactoMark } from '@/src/components/ui/pacto/memories/PactoMark';
 import { TopicChipStrip } from '@/src/components/ui/pacto/memories/TopicChipStrip';
 import { useMemoriesFeed } from '@/src/hooks/memories/useMemoriesFeed';
 import { useMemoryTopics } from '@/src/hooks/memories/useMemoryTopics';
@@ -84,7 +80,7 @@ export default function MemoriesScreen() {
   return (
     <FlatList
       style={[styles.root, { backgroundColor: C.bg }]}
-      contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 100 }}
+      contentContainerStyle={{ paddingTop: insets.top + 56, paddingBottom: insets.bottom + 100 }}
       data={memories}
       keyExtractor={(m: any) => m.id}
       renderItem={({ item, index }) => (
@@ -96,21 +92,6 @@ export default function MemoriesScreen() {
       )}
       ListHeaderComponent={
         <View>
-          {/* Top brand row — menu / Pacto / create */}
-          <View style={styles.brandRow}>
-            <PressScale hitSlop={12} onPress={() => undefined} style={styles.iconBtn}>
-              <MemoriesIcon name="menu" size={20} color={C.inkColor} stroke={1.8} />
-            </PressScale>
-            <PactoMark size={28} />
-            <PressScale
-              hitSlop={12}
-              onPress={() => router.push('/sheets/memory-composer' as any)}
-              style={styles.iconBtn}
-            >
-              <MemoriesIcon name="plus" size={22} color={C.inkColor} stroke={1.8} />
-            </PressScale>
-          </View>
-
           <MemoriesHero
             eyebrow={eyebrow}
             title={heroTitle}
@@ -156,21 +137,6 @@ export default function MemoriesScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 18,
-    paddingTop: 14,
-    paddingBottom: 10,
-  },
-  iconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   divider: {
     height: StyleSheet.hairlineWidth,
   },
