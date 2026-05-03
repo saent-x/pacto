@@ -8,11 +8,11 @@ import {
 import { useSession } from '@/src/hooks/useSession';
 
 const ROUTE_FEATURES: readonly [string, FeatureId][] = [
-  ['/(tabs)/tasks', 'tasks'],
+  ['/(tabs)/us/tasks', 'tasks'],
   ['/sheets/new-task', 'tasks'],
   ['/sheets/new-list', 'tasks'],
   ['/(tabs)/calendar', 'calendar'],
-  ['/(tabs)/reminders', 'recurring'],
+  ['/(tabs)/us/reminders', 'recurring'],
   ['/sheets/new-reminder', 'recurring'],
   ['/(tabs)/us/wishlists', 'wishlist'],
   ['/sheets/new-wish', 'wishlist'],

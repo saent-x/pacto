@@ -31,15 +31,15 @@ describe('feature gate mapping helpers', () => {
   });
 
   it.each<[string, FeatureId | null]>([
-    ['/(tabs)/tasks', 'tasks'],
-    ['/tasks', 'tasks'],
-    ['/tasks/abc', 'tasks'],
+    ['/(tabs)/us/tasks', 'tasks'],
+    ['/us/tasks', 'tasks'],
+    ['/us/tasks/abc', 'tasks'],
     ['/sheets/new-task', 'tasks'],
     ['/sheets/new-list', 'tasks'],
     ['/(tabs)/calendar', 'calendar'],
     ['/calendar', 'calendar'],
-    ['/(tabs)/reminders', 'recurring'],
-    ['/reminders', 'recurring'],
+    ['/(tabs)/us/reminders', 'recurring'],
+    ['/us/reminders', 'recurring'],
     ['/sheets/new-reminder', 'recurring'],
     ['/(tabs)/us/wishlists', 'wishlist'],
     ['/us/wishlists', 'wishlist'],
