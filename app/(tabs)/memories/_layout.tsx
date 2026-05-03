@@ -1,7 +1,6 @@
-import { router, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import { HeaderBrand } from '@/src/components/ui/pacto';
-import { NavAddBtn } from '@/src/components/ui/NavAddBtn';
 import { useTheme } from '@/src/lib/theme';
 
 export default function MemoriesLayout() {
@@ -26,14 +25,11 @@ function MemoriesStack() {
 
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg } }}>
-      <Stack.Screen
-        name="index"
-        options={{
-          ...baseHeader,
-          headerTitle: () => <HeaderBrand eyebrow="MEMORIES" title="memories" />,
-          headerRight: () => <NavAddBtn href="/sheets/memory-composer" />,
-        }}
-      />
+      {/*
+        index uses a full-screen Threads layout — the brand row + hero render inside
+        the screen body, so the system header is hidden here.
+      */}
+      <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen
         name="[id]"
         options={{ ...baseHeader, headerTitle: () => <HeaderBrand eyebrow="MEMORY" title="thread" /> }}

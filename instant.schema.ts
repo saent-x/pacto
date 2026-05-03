@@ -238,6 +238,7 @@ const _schema = i.schema({
       reactionCount: i.number().optional(),
       replyCount: i.number().optional(),
       repostCount: i.number().optional(),
+      tags: i.json().optional(),                    // string[] of hashtags parsed from body
       createdAt: i.number().indexed(),
       updatedAt: i.number().optional(),
     }),

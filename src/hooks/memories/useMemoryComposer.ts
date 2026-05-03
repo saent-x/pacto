@@ -6,6 +6,24 @@ import { canUse } from '@/src/lib/plan';
 
 export type ComposerMode = 'post' | 'reply' | 'quote';
 
+const HASHTAG_RE = /#([\p{L}\p{N}_]+)/gu;
+
+/** Parse #hashtags from body text into a deduped lowercase array. */
+export function extractHashtags(body: string): string[] {
+  const matches = body.match(HASHTAG_RE);
+  if (!matches) return [];
+  const seen = new Set<string>();
+  const tags: string[] = [];
+  for (const raw of matches) {
+    const tag = raw.slice(1).toLowerCase();
+    if (!seen.has(tag)) {
+      seen.add(tag);
+      tags.push(tag);
+    }
+  }
+  return tags;
+}
+
 export interface AttachmentDraft {
   type: 'image' | 'gif' | 'video' | 'milestone' | 'plan' | 'checkIn' | 'expense' | 'wishlistItem';
   refId?: string;
@@ -67,6 +85,7 @@ export function useMemoryComposer() {
     const now = Date.now();
     const isPrivate = draft.isPrivate ?? false;
     const notifyMembers = isPrivate ? false : draft.notifyMembers ?? true;
+    const tags = extractHashtags(draft.body);
 
     const ops: any[] = [
       db.tx.memories[memoryId]
@@ -75,6 +94,7 @@ export function useMemoryComposer() {
           kind: draft.mode,
           isPrivate,
           notifyMembers,
+          tags,
           createdAt: now,
         })
         .link({

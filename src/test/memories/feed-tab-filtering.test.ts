@@ -1,30 +1,26 @@
 import { describe, expect, it } from 'vitest';
 import { buildFeedQuery } from '@/src/hooks/memories/useMemoriesFeed';
 
-describe('buildFeedQuery', () => {
+describe('buildFeedQuery (post Threads-redesign — single feed, topic filter is client-side)', () => {
   const spaceId = 'space-1';
-  const userId  = 'user-1';
 
-  it('recent: orders by createdAt desc, no isPrivate filter, no isPinned', () => {
-    const q = buildFeedQuery({ tab: 'recent', spaceId, userId });
+  it('orders by createdAt desc with limit 50, scoped to space', () => {
+    const q = buildFeedQuery({ spaceId });
     const where = (q.memories as any).$.where;
     expect(where['space.id']).toBe(spaceId);
-    expect(where).not.toHaveProperty('isPinned');
     expect((q.memories as any).$.order).toEqual({ createdAt: 'desc' });
+    expect((q.memories as any).$.limit).toBe(50);
   });
 
-  it('highlights: filters isPinned=true OR reactionCount>=threshold', () => {
-    const q = buildFeedQuery({ tab: 'highlights', spaceId, userId });
-    const where = (q.memories as any).$.where;
-    const stringified = JSON.stringify(where);
-    expect(stringified).toContain('isPinned');
-    expect(stringified).toContain('reactionCount');
-  });
-
-  it('private: requires author == userId AND isPrivate == true', () => {
-    const q = buildFeedQuery({ tab: 'private', spaceId, userId });
-    const where = (q.memories as any).$.where;
-    expect(where['author.id']).toBe(userId);
-    expect(where.isPrivate).toBe(true);
+  it('expands relevant entity links for the feed cards', () => {
+    const q = buildFeedQuery({ spaceId });
+    const m = q.memories as any;
+    expect(m.author).toBeDefined();
+    expect(m.attachments).toBeDefined();
+    expect(m.reactions).toBeDefined();
+    expect(m.poll).toBeDefined();
+    expect(m.replyTo).toBeDefined();
+    expect(m.quoteOf).toBeDefined();
+    expect(m.repostOf).toBeDefined();
   });
 });

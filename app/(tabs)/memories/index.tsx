@@ -1,55 +1,180 @@
 import { useState } from 'react';
-import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
-import { useTheme } from '@/src/lib/theme';
-import { useSession } from '@/src/hooks/useSession';
-import { useMemoriesFeed, type FeedTab } from '@/src/hooks/memories/useMemoriesFeed';
-import { MemoryCard } from '@/src/components/ui/pacto/memories/MemoryCard';
+import { Avatar, AvatarPair, CrewStack } from '@/src/components/ui/pacto';
+import { Icon } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
+import { ComposerRail } from '@/src/components/ui/pacto/memories/ComposerRail';
 import { EmptyMemoriesState } from '@/src/components/ui/pacto/memories/EmptyMemoriesState';
+import { MemoriesHero } from '@/src/components/ui/pacto/memories/MemoriesHero';
+import { MemoryPost } from '@/src/components/ui/pacto/memories/MemoryPost';
+import { PactoMark } from '@/src/components/ui/pacto/memories/PactoMark';
+import { TopicChipStrip } from '@/src/components/ui/pacto/memories/TopicChipStrip';
+import { useMemoriesFeed } from '@/src/hooks/memories/useMemoriesFeed';
+import { useMemoryTopics } from '@/src/hooks/memories/useMemoryTopics';
+import { useSession } from '@/src/hooks/useSession';
+import { useTheme } from '@/src/lib/theme';
 
 export default function MemoriesScreen() {
   const insets = useSafeAreaInsets();
   const { C } = useTheme();
   const session = useSession() as any;
-  const userId = session?.user?.id;
-  const mode = session?.mode ?? session?.space?.kind ?? 'solo';
+  const me = session?.user;
+  const partner = session?.partner;
+  const mode: 'solo' | 'pair' | 'couple' | 'crew' =
+    session?.mode ?? session?.space?.kind ?? 'solo';
+  const isSolo = mode === 'solo';
   const spaceId = session?.activeCouple?.couple?.id ?? session?.space?.id;
-  const [tab, setTab] = useState<FeedTab>('recent');
+
+  const [topic, setTopic] = useState<string>('all');
   const [refreshing, setRefreshing] = useState(false);
 
-  const tabs: FeedTab[] = mode === 'solo' ? ['recent', 'highlights'] : ['recent', 'highlights', 'private'];
-  const labels: Record<FeedTab, string> = { recent: 'Recent', highlights: 'Highlights', private: 'Private' };
+  const { topics } = useMemoryTopics(spaceId, me?.id);
+  const { memories } = useMemoriesFeed(topic, spaceId, me?.id);
 
-  const { memories } = useMemoriesFeed(tab, spaceId, userId);
+  // ── Hero copy adapts to the mode ───────────────────────────────────────
+  const meName = (me?.displayName ?? me?.email?.split('@')[0] ?? 'You')
+    .toString()
+    .charAt(0)
+    .toUpperCase();
+  const partnerInitial = partner?.displayName?.charAt(0)?.toUpperCase();
+  const crewMemberCount = session?.activeCouple?.couple?.memberCount ?? 4;
+
+  const eyebrow = isSolo
+    ? 'YOUR MEMORIES'
+    : mode === 'crew'
+    ? `CREW MEMORIES · ${crewMemberCount} AUTHORS`
+    : `SHARED MEMORIES${partnerInitial ? ` · ${meName} & ${partnerInitial}` : ''}`;
+
+  const heroTitle = isSolo
+    ? 'Field notes'
+    : mode === 'crew'
+    ? 'House journal'
+    : 'A long quiet thread';
+
+  const heroCaption = isSolo
+    ? "a private timeline for the small things you don't want to forget"
+    : mode === 'crew'
+    ? 'one thread, every voice, all the small stuff'
+    : 'small things, one shared thread, just for the two of you';
+
+  const heroRightSlot = isSolo ? (
+    <Avatar
+      person={{ initial: meName, color: C.accent, avatarUrl: me?.avatarUrl }}
+      size={48}
+    />
+  ) : mode === 'crew' ? (
+    <CrewStack size={40} />
+  ) : (
+    <AvatarPair
+      a={{ initial: meName, color: C.accent, avatarUrl: me?.avatarUrl }}
+      b={{
+        initial: partnerInitial ?? 'P',
+        color: C.accent2,
+        avatarUrl: partner?.avatarUrl,
+      }}
+      size={44}
+    />
+  );
+
+  // Solo hides the "Just us" topic chip (no second author)
+  const visibleTopics = isSolo ? topics.filter((t) => t.id !== 'us') : topics;
 
   return (
-    <View style={[styles.root, { backgroundColor: C.bg, paddingTop: insets.top + 80 }]}>
-      <View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
-        <SegmentedControl
-          segments={tabs.map((t) => ({ value: t, label: labels[t] }))}
-          selected={tab}
-          onSelect={(v) => setTab(v as FeedTab)}
+    <FlatList
+      style={[styles.root, { backgroundColor: C.bg }]}
+      contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 100 }}
+      data={memories}
+      keyExtractor={(m: any) => m.id}
+      renderItem={({ item, index }) => (
+        <MemoryPost
+          memory={item as any}
+          variant="feed"
+          isLast={index === memories.length - 1}
         />
-      </View>
-      <FlatList
-        data={memories}
-        keyExtractor={(m) => m.id}
-        renderItem={({ item }) => <MemoryCard memory={item as any} variant="feed" />}
-        ListEmptyComponent={<EmptyMemoriesState />}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => {
-              setRefreshing(true);
-              setTimeout(() => setRefreshing(false), 600);
-            }}
+      )}
+      ListHeaderComponent={
+        <View>
+          {/* Top brand row — menu / Pacto / search-style filter */}
+          <View style={styles.brandRow}>
+            <PressScale hitSlop={12} onPress={() => undefined} style={styles.iconBtn}>
+              <Icon name="grid" size={20} color={C.inkColor} strokeWidth={1.8} />
+            </PressScale>
+            <PactoMark size={28} />
+            <PressScale hitSlop={12} onPress={() => undefined} style={styles.iconBtn}>
+              <Icon name="filter" size={18} color={C.inkColor} strokeWidth={1.8} />
+            </PressScale>
+          </View>
+
+          <MemoriesHero
+            eyebrow={eyebrow}
+            title={heroTitle}
+            caption={heroCaption}
+            rightSlot={heroRightSlot}
           />
-        }
-        contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
-      />
-    </View>
+
+          <TopicChipStrip
+            topics={visibleTopics}
+            selected={topic}
+            onSelect={setTopic}
+          />
+
+          <ComposerRail
+            meDisplayName={me?.displayName ?? me?.email}
+            meAvatarUrl={me?.avatarUrl}
+            isSolo={isSolo}
+          />
+
+          <View style={[styles.divider, { backgroundColor: C.lineColor }]} />
+        </View>
+      }
+      ListEmptyComponent={<EmptyMemoriesState />}
+      ListFooterComponent={
+        memories.length > 0 ? (
+          <Text style={[styles.footerCap, { color: C.ink3 }]}>
+            — caught up · {memories.length} {memories.length === 1 ? 'memory' : 'memories'} —
+          </Text>
+        ) : null
+      }
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => {
+            setRefreshing(true);
+            setTimeout(() => setRefreshing(false), 600);
+          }}
+        />
+      }
+    />
   );
 }
 
-const styles = StyleSheet.create({ root: { flex: 1 } });
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 10,
+  },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+  },
+  footerCap: {
+    textAlign: 'center',
+    paddingVertical: 24,
+    fontFamily: 'GeistMono_400Regular',
+    fontSize: 10,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
+  },
+});
