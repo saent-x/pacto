@@ -23,7 +23,7 @@ import { useTimetables } from '@/src/hooks/useTimetables';
 import { useTasks } from '@/src/hooks/useTasks';
 import { useReminders } from '@/src/hooks/useReminders';
 import { Typography } from '@/src/constants/typography';
-import { featureForUsModule } from '@/src/hooks/useFeatureGate';
+import { featureForUsModule, useFeatureGate } from '@/src/hooks/useFeatureGate';
 import { getFeature, isFeatureSupportedForMode } from '@/src/lib/features/registry';
 import { useTheme } from '@/src/lib/theme';
 
@@ -40,6 +40,7 @@ export default function UsScreen() {
   const insets = useSafeAreaInsets();
   const { C } = useTheme();
   const { user, partner, mode, activeCouple, isFeatureEnabled } = useSession();
+  const memoryFeedGate = useFeatureGate('memoryFeed');
 
   const myFirstName = (user?.displayName ?? user?.email?.split('@')[0] ?? 'You').split(' ')[0];
   const partnerFirstName = partner?.displayName?.split(' ')[0] ?? null;
@@ -469,6 +470,30 @@ export default function UsScreen() {
           </View>
         ) : null}
 
+        {/* Quick actions */}
+        <View style={styles.quickActions}>
+          <PressScale
+            onPress={() => router.push('/sheets/new-task')}
+            style={[styles.quickAction, { backgroundColor: C.bgSoft }]}
+          >
+            <Text style={[Typography.body, { color: C.inkColor }]}>+ Task</Text>
+          </PressScale>
+          <PressScale
+            onPress={() => router.push('/sheets/new-reminder')}
+            style={[styles.quickAction, { backgroundColor: C.bgSoft }]}
+          >
+            <Text style={[Typography.body, { color: C.inkColor }]}>+ Reminder</Text>
+          </PressScale>
+          {memoryFeedGate.enabled ? (
+            <PressScale
+              onPress={() => router.push('/sheets/memory-composer')}
+              style={[styles.quickAction, { backgroundColor: C.bgSoft }]}
+            >
+              <Text style={[Typography.body, { color: C.inkColor }]}>+ Memory</Text>
+            </PressScale>
+          ) : null}
+        </View>
+
         {/* Modules grid */}
         <View style={styles.section}>
           <View style={styles.moduleRows}>
@@ -624,6 +649,19 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickActions: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  quickAction: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },

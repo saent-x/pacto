@@ -84,6 +84,8 @@ describe('feature gate mapping helpers', () => {
     ['checkins', 'checkins'],
     ['timetable', 'timetable'],
     ['timetables', 'timetable'],
+    ['tasks', 'tasks'],
+    ['reminders', 'recurring'],
     ['expenses', null],
     ['unknown', null],
   ])('maps Us module %s to %s', (moduleId, featureId) => {
