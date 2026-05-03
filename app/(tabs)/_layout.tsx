@@ -8,16 +8,14 @@ const TAB_ICONS = {
   me: require('../../assets/images/tabs/tab-me.png'),
   us: require('../../assets/images/tabs/tab-us.png'),
   calendar: require('../../assets/images/tabs/tab-calendar.png'),
-  tasks: require('../../assets/images/tabs/tab-tasks.png'),
-  reminders: require('../../assets/images/tabs/tab-reminders.png'),
+  memories: require('../../assets/images/tabs/tab-reminders.png'), // reuse asset until a memories icon ships
 };
 
 export default function TabsLayout() {
   const { C } = useTheme();
   const { isSolo } = useSession();
   const calendarGate = useFeatureGate('calendar');
-  const tasksGate = useFeatureGate('tasks');
-  const remindersGate = useFeatureGate('recurring');
+  const memoryFeedGate = useFeatureGate('memoryFeed');
 
   return (
     <NativeTabs
@@ -37,24 +35,17 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Icon src={isSolo ? TAB_ICONS.me : TAB_ICONS.us} renderingMode="template" />
       </NativeTabs.Trigger>
 
+      {memoryFeedGate.enabled ? (
+        <NativeTabs.Trigger name="memories">
+          <NativeTabs.Trigger.Label hidden>Memories</NativeTabs.Trigger.Label>
+          <NativeTabs.Trigger.Icon src={TAB_ICONS.memories} renderingMode="template" />
+        </NativeTabs.Trigger>
+      ) : null}
+
       {calendarGate.enabled ? (
         <NativeTabs.Trigger name="calendar">
           <NativeTabs.Trigger.Label hidden>Calendar</NativeTabs.Trigger.Label>
           <NativeTabs.Trigger.Icon src={TAB_ICONS.calendar} renderingMode="template" />
-        </NativeTabs.Trigger>
-      ) : null}
-
-      {tasksGate.enabled ? (
-        <NativeTabs.Trigger name="tasks">
-          <NativeTabs.Trigger.Label hidden>Tasks</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon src={TAB_ICONS.tasks} renderingMode="template" />
-        </NativeTabs.Trigger>
-      ) : null}
-
-      {remindersGate.enabled ? (
-        <NativeTabs.Trigger name="reminders">
-          <NativeTabs.Trigger.Label hidden>Reminders</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon src={TAB_ICONS.reminders} renderingMode="template" />
         </NativeTabs.Trigger>
       ) : null}
     </NativeTabs>
