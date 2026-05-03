@@ -25,7 +25,7 @@ export function useEntityAttachment(type: AttachableEntity) {
     };
   }, [type, spaceId]);
 
-  const { data, isLoading } = db.useQuery(query);
+  const { data, isLoading } = db.useQuery(query as any);
   return {
     entities: ((data as any)?.[ENTITY_KEYS[type]] as any[] | undefined) ?? [],
     isLoading,

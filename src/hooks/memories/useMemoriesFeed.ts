@@ -49,7 +49,7 @@ export function useMemoriesFeed(tab: FeedTab, spaceId: string | null | undefined
     return buildFeedQuery({ tab, spaceId, userId });
   }, [tab, spaceId, userId]);
 
-  const { data, isLoading, error } = db.useQuery(query);
+  const { data, isLoading, error } = db.useQuery(query as any);
   return {
     memories: (data as any)?.memories ?? [],
     isLoading,
