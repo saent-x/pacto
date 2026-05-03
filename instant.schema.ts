@@ -492,6 +492,64 @@ const _schema = i.schema({
       forward: { on: 'devices', has: 'one', label: 'user', onDelete: 'cascade' },
       reverse: { on: '$users', has: 'many', label: 'devices' },
     },
+
+    // --- memories ---
+    memorySpace: {
+      forward: { on: 'memories', has: 'one', label: 'space', onDelete: 'cascade' },
+      reverse: { on: 'spaces', has: 'many', label: 'memories' },
+    },
+    memoryAuthor: {
+      forward: { on: 'memories', has: 'one', label: 'author' },
+      reverse: { on: '$users', has: 'many', label: 'memories' },
+    },
+    memoryReplyParent: {
+      forward: { on: 'memories', has: 'one', label: 'replyTo' },
+      reverse: { on: 'memories', has: 'many', label: 'replies' },
+    },
+    memoryRepostSource: {
+      forward: { on: 'memories', has: 'one', label: 'repostOf' },
+      reverse: { on: 'memories', has: 'many', label: 'reposts' },
+    },
+    memoryQuoteSource: {
+      forward: { on: 'memories', has: 'one', label: 'quoteOf' },
+      reverse: { on: 'memories', has: 'many', label: 'quotes' },
+    },
+    reactionMemory: {
+      forward: { on: 'memoryReactions', has: 'one', label: 'memory', onDelete: 'cascade' },
+      reverse: { on: 'memories', has: 'many', label: 'reactions' },
+    },
+    reactionUser: {
+      forward: { on: 'memoryReactions', has: 'one', label: 'user' },
+      reverse: { on: '$users', has: 'many', label: 'memoryReactions' },
+    },
+    attachmentMemory: {
+      forward: { on: 'memoryAttachments', has: 'one', label: 'memory', onDelete: 'cascade' },
+      reverse: { on: 'memories', has: 'many', label: 'attachments' },
+    },
+    pollMemory: {
+      forward: { on: 'memoryPolls', has: 'one', label: 'memory', onDelete: 'cascade' },
+      reverse: { on: 'memories', has: 'one', label: 'poll' },
+    },
+    pollOptionPoll: {
+      forward: { on: 'memoryPollOptions', has: 'one', label: 'poll', onDelete: 'cascade' },
+      reverse: { on: 'memoryPolls', has: 'many', label: 'options' },
+    },
+    pollVoteOption: {
+      forward: { on: 'memoryPollVotes', has: 'one', label: 'option', onDelete: 'cascade' },
+      reverse: { on: 'memoryPollOptions', has: 'many', label: 'votes' },
+    },
+    pollVoteUser: {
+      forward: { on: 'memoryPollVotes', has: 'one', label: 'user' },
+      reverse: { on: '$users', has: 'many', label: 'memoryPollVotes' },
+    },
+    quotaSpace: {
+      forward: { on: 'mediaQuotaUsage', has: 'one', label: 'space', onDelete: 'cascade' },
+      reverse: { on: 'spaces', has: 'one', label: 'mediaQuota' },
+    },
+    aiUsageSpace: {
+      forward: { on: 'aiUsage', has: 'one', label: 'space', onDelete: 'cascade' },
+      reverse: { on: 'spaces', has: 'many', label: 'aiUsage' },
+    },
   },
 });
 
