@@ -6,6 +6,7 @@ export type FeatureId =
   | 'calendar'
   | 'wishlist'
   | 'memories'
+  | 'memoryFeed'
   | 'journal'
   | 'checkins'
   | 'recurring'
@@ -63,6 +64,16 @@ const RAW_FEATURE_REGISTRY = [
     defaultForSolo: false,
     defaultForPair: true,
     defaultForCrew: true,
+  },
+  {
+    id: 'memoryFeed',
+    label: 'Memory Feed',
+    description: 'Private feed of moments, scoped to your space.',
+    icon: 'heart',
+    supportedModes: ['solo', 'pair', 'crew'],
+    defaultForSolo: false,
+    defaultForPair: false,
+    defaultForCrew: false,
   },
   {
     id: 'journal',

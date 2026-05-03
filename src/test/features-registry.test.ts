@@ -9,12 +9,45 @@ import {
   sanitizeFeatureIds,
 } from '@/src/lib/features/registry';
 
+describe('memoryFeed feature', () => {
+  it('is registered', () => {
+    expect(getFeature('memoryFeed')).toMatchObject({
+      id: 'memoryFeed',
+      label: 'Memory Feed',
+      icon: 'heart',
+      supportedModes: ['solo', 'pair', 'crew'],
+    });
+  });
+
+  it('is supported in solo, pair, and crew modes', () => {
+    expect(isFeatureSupportedForMode('memoryFeed', 'solo')).toBe(true);
+    expect(isFeatureSupportedForMode('memoryFeed', 'pair')).toBe(true);
+    expect(isFeatureSupportedForMode('memoryFeed', 'crew')).toBe(true);
+  });
+
+  it('is OFF by default in every mode (gated rollout)', () => {
+    const feature = getFeature('memoryFeed');
+    expect(feature?.defaultForSolo).toBe(false);
+    expect(feature?.defaultForPair).toBe(false);
+    expect(feature?.defaultForCrew).toBe(false);
+  });
+
+  it('does not collide with the existing memories feature id', () => {
+    expect(getFeature('memories')).toBeDefined();
+    expect(getFeature('memoryFeed')).toBeDefined();
+    expect(getAllFeatures().filter(f => f.id === 'memoryFeed')).toHaveLength(1);
+    expect(getFeature('memories')?.id).not.toBe(getFeature('memoryFeed')?.id);
+    expect(getFeature('memories')?.label).not.toBe(getFeature('memoryFeed')?.label);
+  });
+});
+
 describe('feature registry', () => {
   const expectedOrder = [
     'tasks',
     'calendar',
     'wishlist',
     'memories',
+    'memoryFeed',
     'journal',
     'checkins',
     'recurring',
@@ -62,6 +95,7 @@ describe('feature registry', () => {
       'calendar',
       'wishlist',
       'memories',
+      'memoryFeed',
       'recurring',
       'timetable',
       'goals',
@@ -115,6 +149,7 @@ describe('feature registry', () => {
       'calendar',
       'wishlist',
       'memories',
+      'memoryFeed',
       'journal',
       'checkins',
       'recurring',
