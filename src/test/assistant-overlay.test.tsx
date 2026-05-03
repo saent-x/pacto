@@ -114,6 +114,10 @@ describe('assistant overlay', () => {
     expect(findByTestID(tree.root, 'pacto-ai-voice-overlay')).toHaveLength(1);
     expect(findByTestID(tree.root, 'pacto-ai-voice-wave')).toHaveLength(1);
     expect(findByTestID(tree.root, 'pacto-ai-voice-pill')).toHaveLength(1);
+    expect(findByTestID(tree.root, 'pacto-ai-listening-dots')).toHaveLength(1);
+    expect(findByTestID(tree.root, 'pacto-ai-listening-ring').length).toBeGreaterThan(0);
+    expect(findByTestID(tree.root, 'pacto-ai-listening-meter')).toHaveLength(1);
+    expect(tree.root.findAll((node: any) => node.props?.children === 'Ask Anything')).toHaveLength(0);
     expect(findByTestID(tree.root, 'pacto-ai-message')).toHaveLength(0);
     expect(recorder.prepareToRecordAsync).toHaveBeenCalledTimes(1);
     expect(recorder.record).toHaveBeenCalledTimes(1);

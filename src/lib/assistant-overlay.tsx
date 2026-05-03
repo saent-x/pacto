@@ -27,6 +27,22 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAiAssistant } from './ai';
 import { useTheme } from './theme';
 
+const LISTENING_DOTS = Array.from({ length: 231 }, (_, index) => {
+  const columns = 21;
+  const row = Math.floor(index / columns);
+  const column = index % columns;
+  const centerColumn = (columns - 1) / 2;
+  const centerRow = 5;
+  const distance = Math.hypot(column - centerColumn, row - centerRow);
+
+  return {
+    key: `dot-${index}`,
+    left: `${(column / (columns - 1)) * 100}%` as const,
+    top: `${(row / 10) * 100}%` as const,
+    opacity: Math.max(0.08, 0.34 - distance * 0.025),
+  };
+});
+
 type AssistantOverlayContextValue = {
   isVoiceOverlayOpen: boolean;
   openVoiceOverlay: () => void;
@@ -97,7 +113,7 @@ function AssistantVoiceOverlay({
   processAudioRecording: (audioUri: string) => Promise<void>;
   turn: ReturnType<typeof useAiAssistant>['turn'];
 }) {
-  const { C, F } = useTheme();
+  const { F } = useTheme();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
@@ -143,7 +159,7 @@ function AssistantVoiceOverlay({
           styles.overlay,
           {
             backgroundColor: 'rgba(10, 8, 7, 0.72)',
-            paddingBottom: Math.max(insets.bottom + 48, height * 0.12),
+            paddingBottom: 0,
           },
         ]}
       >
@@ -155,7 +171,34 @@ function AssistantVoiceOverlay({
           style={StyleSheet.absoluteFill}
         />
 
-        <View style={styles.bottomStack}>
+        <View style={[styles.centerStack, { paddingBottom: Math.max(insets.bottom + 52, height * 0.08) }]}>
+          <View
+            testID="pacto-ai-voice-pill"
+            style={styles.listeningSurface}
+          >
+            <ListeningAura />
+
+            <Pressable
+              testID="pacto-ai-submit-recording"
+              accessibilityRole="button"
+              accessibilityLabel="Submit Pacto AI recording"
+              onPress={submitRecording}
+              style={({ pressed }) => [
+                styles.listeningPill,
+                {
+                  opacity: pressed ? 0.9 : 1,
+                  transform: [{ scale: pressed ? 0.98 : 1 }],
+                  borderColor: recorderState.isRecording ? 'rgba(236, 102, 255, 0.72)' : 'rgba(255,255,255,0.2)',
+                },
+              ]}
+            >
+              <Text style={[styles.listeningText, { color: '#FFF8FF', fontFamily: F.geistMonoMedium }]}>
+                {labelForState(turn.state)}
+              </Text>
+              <VoiceMeter active={recorderState.isRecording} />
+            </Pressable>
+          </View>
+
           <View style={styles.messageStack}>
             {turn.messages.map((message) => {
               const isUser = message.from === 'user';
@@ -238,40 +281,6 @@ function AssistantVoiceOverlay({
               </View>
             ))}
           </View>
-
-          <View
-            testID="pacto-ai-voice-pill"
-            style={[
-              styles.voicePanel,
-              styles.nonInteractive,
-              {
-                borderColor: 'rgba(255,255,255,0.18)',
-                backgroundColor: 'rgba(250,248,242,0.12)',
-              },
-            ]}
-          >
-            <Text style={[styles.label, { color: '#FFF8ED', fontFamily: F.geistMonoMedium }]}>
-              {labelForState(turn.state)}
-            </Text>
-            <VoiceWave color={C.accent2} />
-          </View>
-
-          <Pressable
-            testID="pacto-ai-submit-recording"
-            accessibilityRole="button"
-            accessibilityLabel="Submit Pacto AI recording"
-            onPress={submitRecording}
-            style={[
-              styles.submitButton,
-              {
-                backgroundColor: recorderState.isRecording ? '#7FBFAF' : 'rgba(255,255,255,0.16)',
-              },
-            ]}
-          >
-            <Text style={[styles.submitButtonText, { color: '#10201D', fontFamily: F.geistMonoMedium }]}>
-              submit
-            </Text>
-          </Pressable>
         </View>
       </View>
     </Modal>
@@ -288,24 +297,25 @@ function labelForState(state: ReturnType<typeof useAiAssistant>['turn']['state']
   return 'listening';
 }
 
-function VoiceWave({ color }: { color: string }) {
+function VoiceMeter({ active }: { active: boolean }) {
   const values = useRef(
-    Array.from({ length: 7 }, (_, index) => new Animated.Value(index % 2 ? 0.35 : 0.72)),
+    Array.from({ length: 9 }, (_, index) => new Animated.Value(index % 2 ? 0.35 : 0.7)),
   ).current;
 
   useEffect(() => {
     const loops = values.map((value, index) =>
       Animated.loop(
         Animated.sequence([
+          Animated.delay(index * 58),
           Animated.timing(value, {
-            toValue: index % 2 ? 1 : 0.45,
-            duration: 360 + index * 42,
+            toValue: active ? (index % 3 === 0 ? 0.82 : 1) : 0.48,
+            duration: 220 + index * 22,
             easing: Easing.inOut(Easing.quad),
             useNativeDriver: false,
           }),
           Animated.timing(value, {
-            toValue: index % 2 ? 0.35 : 0.72,
-            duration: 420 + index * 36,
+            toValue: active ? (index % 2 ? 0.28 : 0.52) : 0.36,
+            duration: 260 + index * 24,
             easing: Easing.inOut(Easing.quad),
             useNativeDriver: false,
           }),
@@ -317,26 +327,25 @@ function VoiceWave({ color }: { color: string }) {
     return () => {
       loops.forEach((loop) => loop.stop());
     };
-  }, [values]);
+  }, [active, values]);
 
   return (
-    <View testID="pacto-ai-voice-wave" style={styles.wave}>
+    <View testID="pacto-ai-listening-meter" style={styles.listeningMeter}>
       {values.map((value, index) => (
         <Animated.View
           key={index}
           style={[
-            styles.waveBar,
+            styles.meterBar,
             {
-              backgroundColor: color,
               opacity: value.interpolate({
                 inputRange: [0.35, 1],
-                outputRange: [0.52, 1],
+                outputRange: [0.5, 1],
               }),
               transform: [
                 {
                   scaleY: value.interpolate({
-                    inputRange: [0.35, 1],
-                    outputRange: [0.55, 1.8],
+                    inputRange: [0.28, 1],
+                    outputRange: [0.24, 2.15],
                   }),
                 },
               ],
@@ -348,6 +357,204 @@ function VoiceWave({ color }: { color: string }) {
   );
 }
 
+function ListeningAura() {
+  const spin = useRef(new Animated.Value(0)).current;
+  const pulse = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const spinLoop = Animated.loop(
+      Animated.timing(spin, {
+        toValue: 1,
+        duration: 5200,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+    const pulseLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 1180,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0,
+          duration: 1180,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    spinLoop.start();
+    pulseLoop.start();
+    return () => {
+      spinLoop.stop();
+      pulseLoop.stop();
+    };
+  }, [pulse, spin]);
+
+  return (
+    <View testID="pacto-ai-voice-wave" style={[styles.auraField, styles.nonInteractive]}>
+      <View testID="pacto-ai-listening-dots" style={styles.dotField}>
+        {LISTENING_DOTS.map((dot) => (
+          <View
+            key={dot.key}
+            style={[
+              styles.dot,
+              {
+                left: dot.left,
+                top: dot.top,
+                opacity: dot.opacity,
+              },
+            ]}
+          />
+        ))}
+      </View>
+
+      <Animated.View
+        testID="pacto-ai-listening-ring"
+        style={[
+          styles.outerRing,
+          {
+            opacity: pulse.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.2, 0.46],
+            }),
+            transform: [
+              {
+                rotate: spin.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0deg', '360deg'],
+                }),
+              },
+              {
+                scaleX: pulse.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.9, 1.08],
+                }),
+              },
+              {
+                scaleY: pulse.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1.08, 0.86],
+                }),
+              },
+            ],
+          },
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.gasCloudViolet,
+          {
+            opacity: pulse.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.16, 0.4],
+            }),
+            transform: [
+              {
+                rotate: spin.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['28deg', '388deg'],
+                }),
+              },
+              {
+                translateX: pulse.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-24, 38],
+                }),
+              },
+              {
+                scale: pulse.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.92, 1.1],
+                }),
+              },
+            ],
+          },
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.gasCloudBlue,
+          {
+            opacity: pulse.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.12, 0.34],
+            }),
+            transform: [
+              {
+                translateX: pulse.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [42, -30],
+                }),
+              },
+              {
+                translateY: pulse.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [18, -12],
+                }),
+              },
+              {
+                scale: pulse.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1.02, 0.88],
+                }),
+              },
+            ],
+          },
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.innerGlow,
+          {
+            opacity: pulse.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.74, 1],
+            }),
+            transform: [
+              {
+                scaleX: pulse.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.72, 1.04],
+                }),
+              },
+              {
+                scaleY: pulse.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1.14, 0.82],
+                }),
+              },
+            ],
+          },
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.sideGlow,
+          {
+            opacity: pulse.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.18, 0.48],
+            }),
+            transform: [
+              {
+                translateX: pulse.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-54, 54],
+                }),
+              },
+            ],
+          },
+        ]}
+      />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
@@ -355,10 +562,141 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 28,
   },
-  bottomStack: {
+  centerStack: {
     width: '100%',
-    maxWidth: 390,
-    gap: 14,
+    maxWidth: 430,
+    alignItems: 'center',
+    gap: 18,
+  },
+  listeningSurface: {
+    width: '100%',
+    height: 330,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 18,
+    overflow: 'visible',
+  },
+  auraField: {
+    position: 'absolute',
+    bottom: -76,
+    width: 440,
+    height: 260,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'visible',
+  },
+  dotField: {
+    position: 'absolute',
+    left: 18,
+    right: 18,
+    top: 24,
+    bottom: 24,
+  },
+  dot: {
+    position: 'absolute',
+    width: 2,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: '#D7BBFF',
+  },
+  outerRing: {
+    position: 'absolute',
+    left: '50%',
+    top: '50%',
+    width: 380,
+    height: 180,
+    marginLeft: -190,
+    marginTop: -90,
+    borderRadius: 120,
+    backgroundColor: 'rgba(218, 62, 255, 0.11)',
+    boxShadow: '0 0 96px 64px rgba(213, 52, 255, 0.26)',
+  },
+  gasCloudViolet: {
+    position: 'absolute',
+    left: '50%',
+    top: '50%',
+    width: 310,
+    height: 150,
+    marginLeft: -155,
+    marginTop: -75,
+    borderRadius: 110,
+    backgroundColor: 'rgba(147, 76, 255, 0.12)',
+    boxShadow: '0 0 86px 54px rgba(154, 83, 255, 0.24)',
+  },
+  gasCloudBlue: {
+    position: 'absolute',
+    left: '50%',
+    top: '50%',
+    width: 250,
+    height: 150,
+    marginLeft: -125,
+    marginTop: -75,
+    borderRadius: 100,
+    backgroundColor: 'rgba(73, 174, 255, 0.09)',
+    boxShadow: '0 0 82px 48px rgba(79, 190, 255, 0.18)',
+  },
+  innerGlow: {
+    position: 'absolute',
+    left: '50%',
+    top: '50%',
+    width: 138,
+    height: 112,
+    marginLeft: -69,
+    marginTop: -56,
+    borderRadius: 70,
+    backgroundColor: 'rgba(238, 96, 255, 0.18)',
+    boxShadow: '0 0 72px 36px rgba(241, 78, 255, 0.36)',
+  },
+  sideGlow: {
+    position: 'absolute',
+    left: '50%',
+    top: '50%',
+    width: 180,
+    height: 98,
+    marginLeft: -90,
+    marginTop: -49,
+    borderRadius: 70,
+    backgroundColor: 'rgba(255, 79, 210, 0.1)',
+    boxShadow: '0 0 78px 40px rgba(226, 66, 255, 0.24)',
+  },
+  listeningPill: {
+    minWidth: 164,
+    minHeight: 64,
+    borderRadius: 26,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 26,
+    paddingVertical: 11,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(20, 26, 38, 0.46)',
+    boxShadow: '0 14px 36px rgba(0,0,0,0.34)',
+    elevation: 18,
+  },
+  listeningText: {
+    fontSize: 10,
+    lineHeight: 13,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+  listeningMeter: {
+    height: 18,
+    minWidth: 82,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  meterBar: {
+    width: 4,
+    height: 12,
+    borderRadius: 2,
+    backgroundColor: '#F4B8FF',
+    boxShadow: '0 0 10px rgba(241, 78, 255, 0.72)',
+  },
+  nonInteractive: {
+    pointerEvents: 'none',
   },
   messageStack: {
     width: '100%',
@@ -432,53 +770,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
-  },
-  submitButton: {
-    alignSelf: 'center',
-    minHeight: 42,
-    minWidth: 120,
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 18,
-  },
-  submitButtonText: {
-    fontSize: 11,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
-  },
-  voicePanel: {
-    alignSelf: 'center',
-    minHeight: 58,
-    minWidth: 210,
-    borderWidth: 1,
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingHorizontal: 20,
-    paddingVertical: 9,
-  },
-  nonInteractive: {
-    pointerEvents: 'none',
-  },
-  label: {
-    fontSize: 11,
-    letterSpacing: 1.7,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  wave: {
-    height: 30,
-    minWidth: 112,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  waveBar: {
-    width: 6,
-    height: 16,
-    borderRadius: 3,
   },
 });
