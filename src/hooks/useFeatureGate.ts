@@ -44,6 +44,8 @@ const US_MODULE_FEATURES = {
   checkins: 'checkins',
   timetable: 'timetable',
   timetables: 'timetable',
+  tasks: 'tasks',
+  reminders: 'recurring',
 } as const satisfies Record<string, FeatureId>;
 
 type FeatureGate = {

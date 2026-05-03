@@ -20,6 +20,8 @@ import { useMilestones } from '@/src/hooks/useMilestones';
 import { usePlans } from '@/src/hooks/usePlans';
 import { useJournal } from '@/src/hooks/useJournal';
 import { useTimetables } from '@/src/hooks/useTimetables';
+import { useTasks } from '@/src/hooks/useTasks';
+import { useReminders } from '@/src/hooks/useReminders';
 import { Typography } from '@/src/constants/typography';
 import { featureForUsModule } from '@/src/hooks/useFeatureGate';
 import { getFeature, isFeatureSupportedForMode } from '@/src/lib/features/registry';
@@ -86,6 +88,8 @@ export default function UsScreen() {
   }, [mode, myFirstName, partnerFirstName, activeCouple?.couple?.name]);
 
   // Module counts (live from hooks)
+  const tasks = useTasks();
+  const reminders = useReminders();
   const notes = useLoveNotes();
   const checkIns = useCheckIns();
   const expenses = useExpenses();
@@ -271,9 +275,27 @@ export default function UsScreen() {
         meta: countLabel(timetables.timetables?.length, 'timetable', 'timetables'),
         accentKey: 'a2',
       },
+      {
+        id: 'tasks',
+        href: '/(tabs)/us/tasks',
+        label: 'Tasks',
+        icon: 'checkSquare',
+        meta: countLabel(tasks.allTasks?.length, 'task', 'tasks'),
+        accentKey: 'a1',
+      },
+      {
+        id: 'reminders',
+        href: '/(tabs)/us/reminders',
+        label: 'Reminders',
+        icon: 'repeat',
+        meta: countLabel(reminders.reminders?.length, 'reminder', 'reminders'),
+        accentKey: 'a2',
+      },
       ];
     },
     [
+      tasks.allTasks?.length,
+      reminders.reminders?.length,
       notes.notes?.length,
       checkIns.checkIns?.length,
       expenses.expenses?.length,

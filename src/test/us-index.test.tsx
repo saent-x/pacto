@@ -82,6 +82,14 @@ vi.mock('@/src/hooks/useSession', () => ({
   useSession: () => sessionState,
 }));
 
+vi.mock('@/src/hooks/useTasks', () => ({
+  useTasks: () => ({ allTasks: [], taskFeed: [] }),
+}));
+
+vi.mock('@/src/hooks/useReminders', () => ({
+  useReminders: () => ({ reminders: [] }),
+}));
+
 vi.mock('@/src/hooks/useLoveNotes', () => ({
   useLoveNotes: () => ({ notes: [] }),
 }));
