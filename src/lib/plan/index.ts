@@ -1,6 +1,8 @@
 import { QUOTA_FREE_BYTES, QUOTA_PRO_BYTES } from '@/src/lib/memories/quota';
+import type { Plan } from '@/src/lib/memories/quota';
 
-export type Plan = 'free' | 'pro';
+// Plan is defined in quota.ts (leaf utility). Re-export to preserve both import paths.
+export type { Plan };
 
 export type PlanCapability =
   | 'mediaQuotaBytes'

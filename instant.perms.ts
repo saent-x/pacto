@@ -81,11 +81,20 @@ const rules = {
   },
   $files: {
     // Avatars under `avatars/{userId}/*` — owner writes, any signed-in user reads.
+    // Memory media under `spaces/{spaceId}/memories/*` — any authenticated user in the
+    // space may write. TODO: tighten to strict membership check once InstantDB CEL
+    // supports `data.path.split('/')[1] in data.ref('$user.memberships.space.id')`.
     allow: {
-      view: "auth.id != null && data.path.startsWith('avatars/')",
-      create: "data.path.startsWith('avatars/' + auth.id + '/')",
-      update: "data.path.startsWith('avatars/' + auth.id + '/')",
-      delete: "data.path.startsWith('avatars/' + auth.id + '/')",
+      view: "auth.id != null && (data.path.startsWith('avatars/') || data.path.startsWith('spaces/'))",
+      create:
+        "data.path.startsWith('avatars/' + auth.id + '/')" +
+        " || (data.path.startsWith('spaces/') && auth.id != null)",
+      update:
+        "data.path.startsWith('avatars/' + auth.id + '/')" +
+        " || (data.path.startsWith('spaces/') && auth.id != null)",
+      delete:
+        "data.path.startsWith('avatars/' + auth.id + '/')" +
+        " || (data.path.startsWith('spaces/') && auth.id != null)",
     },
   },
   memories: {

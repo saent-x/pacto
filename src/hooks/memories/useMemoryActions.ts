@@ -4,8 +4,10 @@ import { db } from '@/src/lib/instant';
 import { useSession } from '@/src/hooks/useSession';
 
 export function useMemoryActions() {
-  const { user, activeCouple } = useSession() as any;
+  const session = useSession() as any;
+  const { user, activeCouple } = session;
   const spaceId = activeCouple?.couple?.id;
+  const mode = session?.mode ?? session?.space?.kind ?? null;
 
   const react = useCallback(async (memoryId: string, emoji: 'heart' = 'heart') => {
     if (!user?.id) return;
@@ -22,14 +24,14 @@ export function useMemoryActions() {
   }, []);
 
   const repost = useCallback(async (sourceMemoryId: string) => {
-    if (!user?.id || !spaceId) return;
+    if (!user?.id || !spaceId || mode === 'solo') return;
     const newId = id();
     await db.transact([
       db.tx.memories[newId]
         .update({ body: '', kind: 'repost', createdAt: Date.now() })
         .link({ space: spaceId, author: user.id, repostOf: sourceMemoryId }),
     ]);
-  }, [user?.id, spaceId]);
+  }, [user?.id, spaceId, mode]);
 
   const remove = useCallback(async (memoryId: string) => {
     await db.transact([db.tx.memories[memoryId].delete()]);

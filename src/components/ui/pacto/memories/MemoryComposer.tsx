@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { Icon } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
 import { Typography } from '@/src/constants/typography';
@@ -9,7 +9,7 @@ import { useSession } from '@/src/hooks/useSession';
 import { useMemoryComposer } from '@/src/hooks/memories/useMemoryComposer';
 import { useMediaUpload } from '@/src/hooks/memories/useMediaUpload';
 import { useMediaQuota } from '@/src/hooks/memories/useMediaQuota';
-import { polishDraft } from '@/src/lib/ai';
+// import { polishDraft } from '@/src/lib/ai'; // TODO: re-enable once polish.ts is real
 import { useAiQuota } from '@/src/hooks/useAiQuota';
 import { QuotaBadge } from './QuotaBadge';
 import { useMediaPicker } from './MediaPickerSheet';
@@ -27,15 +27,15 @@ export function MemoryComposer() {
   const aiQuota = useAiQuota(space?.id);
   const [submitting, setSubmitting] = useState(false);
 
-  // initialize mode/parent/quote from route (only if not already aligned to avoid loops)
-  if (draft.mode !== (params.mode as any || 'post') || draft.parentId !== params.parentId || draft.quoteId !== params.quoteId) {
-    setDraft({
-      ...draft,
+  // Sync mode/parent/quote from route params into draft state (effect avoids render-phase setState).
+  useEffect(() => {
+    setDraft((prev) => ({
+      ...prev,
       mode: (params.mode as any) ?? 'post',
       parentId: params.parentId,
       quoteId: params.quoteId,
-    });
-  }
+    }));
+  }, [params.mode, params.parentId, params.quoteId]);
 
   const onPickImage = async () => {
     if (!space?.id) return;
@@ -143,8 +143,10 @@ export function MemoryComposer() {
               router.push('/sheets/upgrade' as any);
               return;
             }
-            const polished = await polishDraft(draft.body);
-            setDraft({ ...draft, body: polished });
+            Alert.alert('AI Polish', 'Polishing coming soon. Sit tight.');
+            // TODO: uncomment once polish.ts is real:
+            // const polished = await polishDraft(draft.body);
+            // setDraft({ ...draft, body: polished });
           }}
           hitSlop={8}
           style={styles.toolBtn}
