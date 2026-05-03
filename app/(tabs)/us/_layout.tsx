@@ -190,6 +190,14 @@ export default function UsLayout() {
           ),
         }}
       />
+      <Stack.Screen
+        name="tasks"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="reminders"
+        options={{ headerShown: false }}
+      />
     </Stack>
   );
 }
