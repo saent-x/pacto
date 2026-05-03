@@ -16,6 +16,7 @@ export {
   getAiModelStorageStatus,
 } from './modelManager';
 export { AiAssistantProvider, useAiAssistant } from './provider';
+export { polishDraft } from './polish';
 export { AI_DOMAINS } from './types';
 export type {
   AiActionDraft,
