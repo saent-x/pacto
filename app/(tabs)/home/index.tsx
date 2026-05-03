@@ -30,7 +30,6 @@ function moodFor(key: string | null | undefined) {
 }
 
 type ArcSlot = { color: string | null; height: number };
-type ActivityWeeks = 6 | 12;
 
 // Bar heights tied to mood "intensity" so the arc reads as a chart, not a swatch.
 // Empty slots get a short stub.
@@ -133,6 +132,84 @@ function timelineDot(type: TimelineItem['type']): string {
     default:
       return '#A894C2';
   }
+}
+
+function timelineCoverVisual(type: TimelineItem['type']): {
+  icon: IconName;
+  bg: string;
+  ink: string;
+  pillBorder: string;
+  pillInk: string;
+} {
+  switch (type) {
+    case 'task':
+      return {
+        icon: 'checkSquare',
+        bg: '#F5DDD3',
+        ink: '#9F5A40',
+        pillBorder: '#D08B6F',
+        pillInk: '#8E4A34',
+      };
+    case 'event':
+      return {
+        icon: 'calendar',
+        bg: '#DDEAF3',
+        ink: '#58728C',
+        pillBorder: '#8BA7C9',
+        pillInk: '#405C75',
+      };
+    case 'plan':
+      return {
+        icon: 'flag',
+        bg: '#EEE4C8',
+        ink: '#A17E31',
+        pillBorder: '#D2BC85',
+        pillInk: '#765D25',
+      };
+    case 'ritual':
+      return {
+        icon: 'repeat',
+        bg: '#E7DFD0',
+        ink: '#7C6A4D',
+        pillBorder: '#B7AA91',
+        pillInk: '#65563F',
+      };
+    case 'memory':
+      return {
+        icon: 'heart',
+        bg: '#F0D4D2',
+        ink: '#B06B63',
+        pillBorder: '#D89B94',
+        pillInk: '#824840',
+      };
+    case 'reminder':
+    default:
+      return {
+        icon: 'bell',
+        bg: '#E3DCF2',
+        ink: '#7A67A1',
+        pillBorder: '#B8A8E8',
+        pillInk: '#5F4E83',
+      };
+  }
+}
+
+function timelineImageUri(item: TimelineItem): string | null {
+  const withMedia = item as TimelineItem & {
+    imageUrl?: string | null;
+    coverImageUrl?: string | null;
+    thumbnailUrl?: string | null;
+    mediaUrl?: string | null;
+    mediaUrls?: string[] | null;
+  };
+  return (
+    withMedia.coverImageUrl ??
+    withMedia.imageUrl ??
+    withMedia.thumbnailUrl ??
+    withMedia.mediaUrl ??
+    withMedia.mediaUrls?.[0] ??
+    null
+  );
 }
 
 function comingUpLabel(daysUntil: number): string {
@@ -292,7 +369,6 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { C } = useTheme();
   const { partner, mode, user, isFeatureEnabled } = useSession();
-  const [activityWeeks, setActivityWeeks] = useState<ActivityWeeks>(6);
   const home = useHomeTimeline({ previewDays: 30 });
   const weather = useWeatherStatus();
   const checkinsEnabled = isFeatureEnabled('checkins');
@@ -485,58 +561,29 @@ export default function HomeScreen() {
             <View style={[styles.activityPanel, { borderTopColor: C.lineColor }]}>
               <View style={styles.activityHeader}>
                 <View style={styles.activityTitleRow}>
-                  <Icon name="activity" size={13} color={C.accent2} />
+                  <Icon name="activity" size={13} color={C.accent3} />
                   <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
                     RECENT ACTIVITY
                   </Text>
                 </View>
-                <View
-                  style={[
-                    styles.activityRangeToggle,
-                    { backgroundColor: C.bgSoft, borderColor: C.lineColor },
-                  ]}
-                >
-                  {([6, 12] as ActivityWeeks[]).map((weeks) => {
-                    const selected = activityWeeks === weeks;
-                    return (
-                      <PressScale
-                        key={weeks}
-                        testID={`home-activity-range-${weeks}`}
-                        onPress={() => setActivityWeeks(weeks)}
-                        style={[
-                          styles.activityRangeOption,
-                          selected
-                            ? { backgroundColor: C.bgCard, borderColor: C.lineColor }
-                            : { borderColor: 'transparent' },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            Typography.eyebrowSm,
-                            {
-                              color: selected ? C.inkColor : C.ink3,
-                              fontSize: 9,
-                            },
-                          ]}
-                        >
-                          {weeks}W
-                        </Text>
-                      </PressScale>
-                    );
-                  })}
-                </View>
+                <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
+                  15 WEEKS
+                </Text>
               </View>
-              <ActivityHeatmap
-                weeks={activityWeeks}
-                seed={activitySeed}
-                color={C.accent2}
-                showLegend={false}
-                showDayAxis={false}
-                showWeekAxis={false}
-                cellGap={3}
-                cellRadius={3}
-                maxCellSize={18}
-              />
+              <View style={styles.activityHeatmapFrame}>
+                <ActivityHeatmap
+                  weeks={15}
+                  seed={activitySeed}
+                  palette={['#58606A', '#5F865D', '#74BA68', '#91E27A']}
+                  showLegend={false}
+                  showDayAxis={false}
+                  showWeekAxis={false}
+                  weekLabelMode="months"
+                  cellGap={3}
+                  cellRadius={1}
+                  maxCellSize={22}
+                />
+              </View>
             </View>
             <View style={[styles.togetherFooter, { borderTopColor: C.lineColor }]}>
               <View style={{ flex: 1 }}>
@@ -667,45 +714,66 @@ export default function HomeScreen() {
           </View>
           {hasComingUp ? (
             <View style={styles.comingRow}>
-              {routedComingTimeline ? (
-                <Card
-                  padded={false}
-                  elevated
-                  style={styles.comingPlanCard}
-                  onPress={() => {
-                    const route = routeForTimelineItem(routedComingTimeline, isFeatureEnabled);
-                    if (route) router.push(route as any);
-                  }}
-                >
-                  <View style={[styles.comingCover, { backgroundColor: '#CFE8D9' }]}>
-                    <View style={[styles.comingPill, { borderColor: '#7FB89B' }]}>
-                      <Text style={[Typography.eyebrowSm, { color: '#3F7A5C', letterSpacing: 1.4 }]}>
-                        {dateLabelForTimeline(routedComingTimeline.occursAt)}
+              {routedComingTimeline ? (() => {
+                const cover = timelineCoverVisual(routedComingTimeline.type);
+                const imageUri = timelineImageUri(routedComingTimeline);
+                return (
+                  <Card
+                    padded={false}
+                    elevated
+                    style={styles.comingPlanCard}
+                    onPress={() => {
+                      const route = routeForTimelineItem(routedComingTimeline, isFeatureEnabled);
+                      if (route) router.push(route as any);
+                    }}
+                  >
+                    <View style={[styles.comingCover, { backgroundColor: cover.bg }]}>
+                      {imageUri ? (
+                        <Image
+                          testID="home-coming-cover-image"
+                          source={{ uri: imageUri }}
+                          style={styles.comingCoverImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View testID="home-coming-cover-fallback" style={styles.comingCoverDefault}>
+                          <Icon
+                            name={cover.icon}
+                            size={62}
+                            color={cover.ink}
+                            style={styles.comingCoverDefaultIcon}
+                          />
+                        </View>
+                      )}
+                      <View style={[styles.comingPill, { borderColor: cover.pillBorder }]}>
+                        <Text style={[Typography.eyebrowSm, { color: cover.pillInk, letterSpacing: 1.4 }]}>
+                          {dateLabelForTimeline(routedComingTimeline.occursAt)}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.comingPlanMeta}>
+                      <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
+                        {routedComingTimeline.type.toUpperCase()}
+                      </Text>
+                      <Text
+                        style={{
+                          fontFamily: Typography.fallbackSerif,
+                          fontSize: 22,
+                          lineHeight: 26,
+                          color: C.inkColor,
+                          marginTop: 4,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {routedComingTimeline.title}
+                      </Text>
+                      <Text style={[Typography.caption, { color: C.ink3, marginTop: 8 }]} numberOfLines={2}>
+                        {routedComingTimeline.subtitle ?? timelineSourceLabel(routedComingTimeline.type)}
                       </Text>
                     </View>
-                  </View>
-                  <View style={styles.comingPlanMeta}>
-                    <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
-                      {routedComingTimeline.type.toUpperCase()}
-                    </Text>
-                    <Text
-                      style={{
-                        fontFamily: Typography.fallbackSerif,
-                        fontSize: 22,
-                        lineHeight: 26,
-                        color: C.inkColor,
-                        marginTop: 4,
-                      }}
-                      numberOfLines={1}
-                    >
-                      {routedComingTimeline.title}
-                    </Text>
-                    <Text style={[Typography.caption, { color: C.ink3, marginTop: 8 }]} numberOfLines={2}>
-                      {routedComingTimeline.subtitle ?? timelineSourceLabel(routedComingTimeline.type)}
-                    </Text>
-                  </View>
-                </Card>
-              ) : (
+                  </Card>
+                );
+              })() : (
                 <Card padded={false} elevated style={styles.comingPlanCard}>
                   <View style={[styles.comingCover, { backgroundColor: C.bgSoft }]}>
                     <View style={[styles.comingPill, { borderColor: C.lineColor }]}>
@@ -1031,21 +1099,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  activityRangeToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 999,
-    padding: 2,
-    gap: 2,
-  },
-  activityRangeOption: {
-    minWidth: 34,
-    height: 24,
-    borderRadius: 999,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  activityHeatmapFrame: {
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   todayRow: {
     flexDirection: 'row',
@@ -1166,9 +1223,24 @@ const styles = StyleSheet.create({
     height: 130,
     paddingHorizontal: 14,
     paddingTop: 14,
+    overflow: 'hidden',
+  },
+  comingCoverImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  comingCoverDefault: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  comingCoverDefaultIcon: {
+    opacity: 0.72,
   },
   comingPill: {
     alignSelf: 'flex-start',
+    zIndex: 1,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,

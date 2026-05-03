@@ -257,6 +257,10 @@ describe('HomeRoute', () => {
     sessionState.profile = { id: 'me', displayName: 'Mattia', avatarUrl: null };
     sessionState.isFeatureEnabled = vi.fn(() => true);
     homeState.timeline = [];
+    homeState.milestones = [];
+    homeState.memories = [];
+    homeState.memoryPreview = null;
+    homeState.presence = null;
     homeState.todaySummary = { plans: { done: 0, total: 0 }, focus: { done: 0, total: 0 } };
     homeState.isLoading = false;
     homeState.error = null;
@@ -343,23 +347,68 @@ describe('HomeRoute', () => {
     act(() => renderer.unmount());
   });
 
-  it('defaults recent activity to 6 weeks and can switch to 12 weeks', async () => {
+  it('renders recent activity as a compact multi-month heatmap', async () => {
     const renderer = await renderHome();
 
-    expect(findByTestID(renderer, 'activity-heatmap')[0].props.weeks).toBe(6);
-    expect(findByTestID(renderer, 'activity-heatmap')[0].props.maxCellSize).toBe(18);
-    expect(allText(renderer)).toContain('6W');
-    expect(allText(renderer)).toContain('12W');
-
-    await act(async () => {
-      findByTestID(renderer, 'home-activity-range-12')[0].props.onPress();
-      await flush();
-    });
-
-    expect(findByTestID(renderer, 'activity-heatmap')[0].props.weeks).toBe(12);
-    expect(findByTestID(renderer, 'activity-heatmap')[0].props.maxCellSize).toBe(18);
+    expect(findByTestID(renderer, 'activity-heatmap')[0].props.weeks).toBe(15);
+    expect(findByTestID(renderer, 'activity-heatmap')[0].props.maxCellSize).toBe(22);
+    expect(findByTestID(renderer, 'activity-heatmap')[0].props.cellRadius).toBe(1);
+    expect(findByTestID(renderer, 'activity-heatmap')[0].props.showWeekAxis).toBe(false);
+    expect(findByTestID(renderer, 'activity-heatmap')[0].props.weekLabelMode).toBe('months');
+    expect(allText(renderer)).toContain('15 WEEKS');
+    expect(allText(renderer)).not.toContain('8W');
+    expect(allText(renderer)).not.toContain('12W');
 
     act(() => renderer.unmount());
+  });
+
+  it('uses a default coming-up cover unless the timeline item provides an image', async () => {
+    homeState.timeline = [
+      {
+        id: 'task:default-cover',
+        type: 'task',
+        sourceId: 'default-cover',
+        sourceTable: 'tasks',
+        title: 'Task without image',
+        subtitle: null,
+        occursAt: localDayAt(2, 19),
+        priority: 0,
+        isPrivate: false,
+        isOverdue: false,
+      },
+    ];
+
+    const fallbackRenderer = await renderHome();
+
+    expect(findByTestID(fallbackRenderer, 'home-coming-cover-fallback')).toHaveLength(1);
+    expect(findByTestID(fallbackRenderer, 'home-coming-cover-image')).toHaveLength(0);
+
+    act(() => fallbackRenderer.unmount());
+
+    homeState.timeline = [
+      {
+        id: 'event:image-cover',
+        type: 'event',
+        sourceId: 'image-cover',
+        sourceTable: 'events',
+        title: 'Dinner booking',
+        subtitle: null,
+        occursAt: localDayAt(3, 20),
+        priority: 0,
+        isPrivate: false,
+        isOverdue: false,
+        coverImageUrl: 'https://example.com/dinner.jpg',
+      },
+    ];
+
+    const imageRenderer = await renderHome();
+
+    expect(findByTestID(imageRenderer, 'home-coming-cover-image')[0].props.source).toEqual({
+      uri: 'https://example.com/dinner.jpg',
+    });
+    expect(findByTestID(imageRenderer, 'home-coming-cover-fallback')).toHaveLength(0);
+
+    act(() => imageRenderer.unmount());
   });
 
   it('renders only current local date items under Today', async () => {
