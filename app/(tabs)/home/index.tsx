@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Image, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Location from 'expo-location';
 import { format } from 'date-fns';
 import {
   ActivityHeatmap,
@@ -197,13 +198,11 @@ function useWeatherStatus(): WeatherStatus & { request: () => void } {
   const [status, setStatus] = useState<WeatherStatus>({
     state: 'unavailable',
     title: 'Weather needs location',
-    detail: 'Tap to enable live local conditions.',
+    detail: 'Tap to allow local conditions.',
     icon: 'mapPin',
   });
 
-  const request = useCallback(() => {
-    const nav = (globalThis as any).navigator;
-    const geo = nav?.geolocation;
+  const request = useCallback(async () => {
     const fetcher = (globalThis as any).fetch;
 
     setStatus({
@@ -213,58 +212,59 @@ function useWeatherStatus(): WeatherStatus & { request: () => void } {
       icon: 'cloud',
     });
 
-    if (!geo?.getCurrentPosition || typeof fetcher !== 'function') {
+    if (typeof fetcher !== 'function') {
       setStatus({
         state: 'unavailable',
-        title: 'Weather needs location',
-        detail: 'Location is not available in this environment.',
+        title: 'Weather unavailable',
+        detail: 'Network access is not available here.',
         icon: 'mapPin',
       });
       return;
     }
 
-    geo.getCurrentPosition(
-      async (position: any) => {
-        try {
-          const { latitude, longitude } = position.coords ?? {};
-          if (typeof latitude !== 'number' || typeof longitude !== 'number') {
-            throw new Error('Missing coordinates');
-          }
-          const url =
-            `https://api.open-meteo.com/v1/forecast?latitude=${latitude.toFixed(3)}` +
-            `&longitude=${longitude.toFixed(3)}&current=temperature_2m,weather_code`;
-          const response = await fetcher(url);
-          if (!response?.ok) throw new Error('Weather request failed');
-          const data = await response.json();
-          const temp = data?.current?.temperature_2m;
-          const code = data?.current?.weather_code;
-          const meta = weatherMeta(typeof code === 'number' ? code : null);
-          const tempLabel = typeof temp === 'number' ? `${Math.round(temp)}°` : 'Live';
-          setStatus({
-            state: 'ready',
-            title: `${tempLabel} · ${meta.label}`,
-            detail: 'Live local weather for today.',
-            icon: meta.icon,
-          });
-        } catch {
-          setStatus({
-            state: 'unavailable',
-            title: 'Weather unavailable',
-            detail: 'Live conditions could not be loaded.',
-            icon: 'cloud',
-          });
-        }
-      },
-      () => {
+    try {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (!permission.granted) {
         setStatus({
           state: 'unavailable',
-          title: 'Weather needs location',
-          detail: 'Allow location to show live conditions here.',
+          title: 'Location not enabled',
+          detail: 'Allow location in Settings to show weather.',
           icon: 'mapPin',
         });
-      },
-      { enableHighAccuracy: false, timeout: 5000, maximumAge: 30 * 60 * 1000 },
-    );
+        return;
+      }
+
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const { latitude, longitude } = position.coords ?? {};
+      if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+        throw new Error('Missing coordinates');
+      }
+      const url =
+        `https://api.open-meteo.com/v1/forecast?latitude=${latitude.toFixed(3)}` +
+        `&longitude=${longitude.toFixed(3)}&current=temperature_2m,weather_code`;
+      const response = await fetcher(url);
+      if (!response?.ok) throw new Error('Weather request failed');
+      const data = await response.json();
+      const temp = data?.current?.temperature_2m;
+      const code = data?.current?.weather_code;
+      const meta = weatherMeta(typeof code === 'number' ? code : null);
+      const tempLabel = typeof temp === 'number' ? `${Math.round(temp)}°` : 'Live';
+      setStatus({
+        state: 'ready',
+        title: `${tempLabel} · ${meta.label}`,
+        detail: 'Live local weather for today.',
+        icon: meta.icon,
+      });
+    } catch {
+      setStatus({
+        state: 'unavailable',
+        title: 'Weather unavailable',
+        detail: 'Live conditions could not be loaded.',
+        icon: 'cloud',
+      });
+    }
   }, []);
 
   return { ...status, request };
@@ -482,9 +482,6 @@ export default function HomeScreen() {
               </Text>
               {' ITEMS AHEAD'}
             </Text>
-            <Text style={[Typography.caption, { color: C.ink3, marginTop: 6 }]}>
-              Tasks, goals, reminders, and memory dates due in the next 30 days.
-            </Text>
             <View style={[styles.activityPanel, { borderTopColor: C.lineColor }]}>
               <View style={styles.activityHeader}>
                 <View style={styles.activityTitleRow}>
@@ -538,6 +535,7 @@ export default function HomeScreen() {
                 showWeekAxis={false}
                 cellGap={3}
                 cellRadius={3}
+                maxCellSize={18}
               />
             </View>
             <View style={[styles.togetherFooter, { borderTopColor: C.lineColor }]}>
@@ -578,9 +576,13 @@ export default function HomeScreen() {
             </Text>
           </View>
           <Card padded={false} elevated style={styles.todayCard}>
-            <PressScale onPress={weather.request} style={styles.todayWeatherBand}>
+            <PressScale
+              testID="home-weather-card"
+              onPress={weather.request}
+              style={styles.todayWeatherBand}
+            >
               <View style={styles.todayWeatherIcon}>
-                <Icon name={weather.icon} size={20} color="#223241" />
+                <Icon name={weather.icon} size={18} color="#223241" />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={styles.todayWeatherTitle} numberOfLines={1}>
@@ -1063,32 +1065,32 @@ const styles = StyleSheet.create({
   todayWeatherBand: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    minHeight: 108,
-    paddingHorizontal: 22,
-    paddingVertical: 18,
+    gap: 12,
+    minHeight: 78,
+    paddingHorizontal: 18,
+    paddingVertical: 13,
     backgroundColor: '#DDEAF3',
   },
   todayWeatherIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 15,
+    width: 42,
+    height: 42,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.38)',
   },
   todayWeatherTitle: {
     fontFamily: Typography.geistSemiBoldFont,
-    fontSize: 21,
-    lineHeight: 26,
+    fontSize: 18,
+    lineHeight: 22,
     color: '#223241',
   },
   todayWeatherDetail: {
     fontFamily: Typography.geistMonoFont,
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 17,
     color: '#5F6D78',
-    marginTop: 4,
+    marginTop: 2,
   },
   emptyBlock: {
     paddingHorizontal: 22,

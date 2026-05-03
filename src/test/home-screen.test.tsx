@@ -9,6 +9,14 @@ const routerSpy = vi.hoisted(() => ({
   replace: vi.fn(),
 }));
 
+const locationMock = vi.hoisted(() => ({
+  requestForegroundPermissionsAsync: vi.fn(async () => ({ status: 'granted', granted: true })),
+  getCurrentPositionAsync: vi.fn(async () => ({
+    coords: { latitude: 40.7128, longitude: -74.006 },
+  })),
+  Accuracy: { Balanced: 3 },
+}));
+
 vi.mock('expo-router', () => ({
   router: routerSpy,
   useRouter: () => routerSpy,
@@ -52,6 +60,8 @@ vi.mock('expo-haptics', () => ({
   ImpactFeedbackStyle: { Light: 'light', Medium: 'medium' },
   NotificationFeedbackType: { Warning: 'warning', Success: 'success' },
 }));
+
+vi.mock('expo-location', () => locationMock);
 
 vi.mock('expo-audio', () => ({
   useAudioPlayer: () => ({
@@ -205,6 +215,11 @@ const allText = (renderer: any) =>
     .findAll((node: any) => typeof node.children?.[0] === 'string')
     .map((node: any) => node.children.join(''));
 
+const flattenStyle = (style: any) => {
+  const value = typeof style === 'function' ? style({ pressed: false }) : style;
+  return Array.isArray(value) ? value.flat(Infinity).filter(Boolean) : [value].filter(Boolean);
+};
+
 const localDayAt = (offsetDays: number, hour = 12) => {
   const date = new Date();
   date.setDate(date.getDate() + offsetDays);
@@ -219,6 +234,18 @@ describe('HomeRoute', () => {
     checkInsState.createOrUpdate.mockResolvedValue(undefined);
     checkInsState.refetch.mockReset();
     checkInsState.refetch.mockResolvedValue(undefined);
+    locationMock.requestForegroundPermissionsAsync.mockReset();
+    locationMock.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'granted', granted: true });
+    locationMock.getCurrentPositionAsync.mockReset();
+    locationMock.getCurrentPositionAsync.mockResolvedValue({
+      coords: { latitude: 40.7128, longitude: -74.006 },
+    });
+    (globalThis as any).fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        current: { temperature_2m: 18, weather_code: 2 },
+      }),
+    }));
     homeState.refetch.mockReset();
     homeState.refetch.mockResolvedValue(undefined);
     sessionState.activeCouple = null;
@@ -256,6 +283,26 @@ describe('HomeRoute', () => {
     act(() => renderer.unmount());
   });
 
+  it('keeps weather compact and requests Expo location when tapped', async () => {
+    const renderer = await renderHome();
+    const weatherCard = findByTestID(renderer, 'home-weather-card')[0];
+
+    expect(weatherCard).toBeDefined();
+    expect(flattenStyle(weatherCard.props.style)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ minHeight: 78 })]),
+    );
+
+    await act(async () => {
+      await weatherCard.props.onPress();
+      await flush();
+    });
+
+    expect(locationMock.requestForegroundPermissionsAsync).toHaveBeenCalledTimes(1);
+    expect(locationMock.getCurrentPositionAsync).toHaveBeenCalledWith({ accuracy: 3 });
+
+    act(() => renderer.unmount());
+  });
+
   it('labels milestone data as memory dates and renders the summary below activity', async () => {
     homeState.timeline = [
       {
@@ -288,7 +335,7 @@ describe('HomeRoute', () => {
 
     expect(text).toContain('MEMORY DATES');
     expect(text).toContain('MEMORY DATE');
-    expect(text).toContain('Tasks, goals, reminders, and memory dates due in the next 30 days.');
+    expect(text).not.toContain('Tasks, goals, reminders, and memory dates due in the next 30 days.');
     expect(text).not.toContain('MILESTONES');
     expect(texts.indexOf('RECENT ACTIVITY')).toBeGreaterThanOrEqual(0);
     expect(texts.indexOf('NEXT ITEM')).toBeGreaterThan(texts.indexOf('RECENT ACTIVITY'));
@@ -300,6 +347,7 @@ describe('HomeRoute', () => {
     const renderer = await renderHome();
 
     expect(findByTestID(renderer, 'activity-heatmap')[0].props.weeks).toBe(6);
+    expect(findByTestID(renderer, 'activity-heatmap')[0].props.maxCellSize).toBe(18);
     expect(allText(renderer)).toContain('6W');
     expect(allText(renderer)).toContain('12W');
 
@@ -309,6 +357,7 @@ describe('HomeRoute', () => {
     });
 
     expect(findByTestID(renderer, 'activity-heatmap')[0].props.weeks).toBe(12);
+    expect(findByTestID(renderer, 'activity-heatmap')[0].props.maxCellSize).toBe(18);
 
     act(() => renderer.unmount());
   });

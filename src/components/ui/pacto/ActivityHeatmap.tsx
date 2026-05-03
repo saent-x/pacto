@@ -21,6 +21,7 @@ type Props = {
   showWeekAxis?: boolean;
   cellGap?: number;
   cellRadius?: number;
+  maxCellSize?: number;
 };
 
 const DEFAULT_GAP = 4;
@@ -43,6 +44,7 @@ export function ActivityHeatmap({
   showWeekAxis = true,
   cellGap = DEFAULT_GAP,
   cellRadius = 3,
+  maxCellSize,
 }: Props) {
   const { C } = useTheme();
   const heatColor = color ?? categories?.[0]?.color ?? C.accent;
@@ -147,7 +149,10 @@ export function ActivityHeatmap({
   const cellW = gridWidth > 0
     ? Math.floor((gridWidth - cellGap * (weeks - 1)) / weeks)
     : 0;
-  const cellSize = cellW > 0 ? Math.max(8, cellW) : 0;
+  const fittedCellSize = cellW > 0 ? Math.max(8, cellW) : 0;
+  const cellSize = maxCellSize && fittedCellSize > 0
+    ? Math.min(fittedCellSize, maxCellSize)
+    : fittedCellSize;
 
   return (
     <View style={{ gap: 12 }} onTouchEnd={handleTouchEnd} {...panResponder.panHandlers}>

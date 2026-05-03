@@ -18,6 +18,7 @@
       "buildNumber": "1",
       "usesAppleSignIn": true,
       "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Pacto uses your location to show local weather on your Home screen.",
         "NSMicrophoneUsageDescription": "Pacto uses the microphone to transcribe your AI assistant requests on this device.",
         "NSUserNotificationsUsageDescription": "Pacto sends reminders and notifies you when your partner adds something to your shared space."
       }
@@ -32,6 +33,8 @@
         "monochromeImage": "./assets/images/adaptive-icon-monochrome.png"
       },
       "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
         "RECORD_AUDIO"
       ],
       "predictiveBackGestureEnabled": false
@@ -52,6 +55,12 @@
         }
       ],
       "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Pacto to show local weather on your Home screen."
+        }
+      ],
       "@react-native-community/datetimepicker",
       "expo-font",
       [
