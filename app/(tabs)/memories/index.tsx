@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { Avatar, AvatarPair, CrewStack } from '@/src/components/ui/pacto';
-import { Icon } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
 import { ComposerRail } from '@/src/components/ui/pacto/memories/ComposerRail';
 import { EmptyMemoriesState } from '@/src/components/ui/pacto/memories/EmptyMemoriesState';
 import { MemoriesHero } from '@/src/components/ui/pacto/memories/MemoriesHero';
+import { MemoriesIcon } from '@/src/components/ui/pacto/memories/MemoriesIcon';
 import { MemoryPost } from '@/src/components/ui/pacto/memories/MemoryPost';
 import { PactoMark } from '@/src/components/ui/pacto/memories/PactoMark';
 import { TopicChipStrip } from '@/src/components/ui/pacto/memories/TopicChipStrip';
@@ -95,14 +96,18 @@ export default function MemoriesScreen() {
       )}
       ListHeaderComponent={
         <View>
-          {/* Top brand row — menu / Pacto / search-style filter */}
+          {/* Top brand row — menu / Pacto / create */}
           <View style={styles.brandRow}>
             <PressScale hitSlop={12} onPress={() => undefined} style={styles.iconBtn}>
-              <Icon name="grid" size={20} color={C.inkColor} strokeWidth={1.8} />
+              <MemoriesIcon name="menu" size={20} color={C.inkColor} stroke={1.8} />
             </PressScale>
             <PactoMark size={28} />
-            <PressScale hitSlop={12} onPress={() => undefined} style={styles.iconBtn}>
-              <Icon name="filter" size={18} color={C.inkColor} strokeWidth={1.8} />
+            <PressScale
+              hitSlop={12}
+              onPress={() => router.push('/sheets/memory-composer' as any)}
+              style={styles.iconBtn}
+            >
+              <MemoriesIcon name="plus" size={22} color={C.inkColor} stroke={1.8} />
             </PressScale>
           </View>
 

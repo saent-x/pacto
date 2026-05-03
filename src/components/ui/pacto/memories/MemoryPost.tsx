@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { Avatar } from '@/src/components/ui/pacto/Avatar';
-import { Icon, IconName } from '@/src/components/ui/Icon';
+import { MemoriesIcon, type MemoriesIconName } from './MemoriesIcon';
 import { PressScale } from '@/src/components/ui/PressScale';
 import { Typography } from '@/src/constants/typography';
 import { useSession } from '@/src/hooks/useSession';
@@ -75,7 +75,7 @@ export function MemoryPost({ memory, variant, isLast }: Props) {
     return (
       <View style={[styles.repostWrap, !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.lineColor }]}>
         <View style={[styles.repostHeader, { paddingLeft: AVATAR_COL_W + 12 }]}>
-          <Icon name="repeat" size={12} color={C.ink3} />
+          <MemoriesIcon name="repost" size={12} color={C.ink3} />
           <Text style={[styles.repostHeaderText, { color: C.ink3 }]}>
             {reposter.toLowerCase()} reposted
           </Text>
@@ -176,7 +176,7 @@ export function MemoryPost({ memory, variant, isLast }: Props) {
             </Text>
           </View>
           <PressScale hitSlop={8} onPress={() => undefined} style={styles.dotsBtn}>
-            <Icon name="moreH" size={18} color={C.ink3} />
+            <MemoriesIcon name="dots" size={18} color={C.ink3} />
           </PressScale>
         </View>
 
@@ -211,7 +211,7 @@ export function MemoryPost({ memory, variant, isLast }: Props) {
             />
           ) : null}
           <ActionBtn
-            icon="messageCircle"
+            icon="reply"
             count={memory.replyCount ?? 0}
             idleColor={C.ink2}
             countColor={C.ink3}
@@ -219,7 +219,7 @@ export function MemoryPost({ memory, variant, isLast }: Props) {
           />
           {!isSolo ? (
             <ActionBtn
-              icon="repeat"
+              icon="repost"
               count={memory.repostCount ?? 0}
               idleColor={C.ink2}
               countColor={C.ink3}
@@ -395,7 +395,7 @@ function QuotePreview({ quoted, onPress }: { quoted: any; onPress: () => void })
 }
 
 interface ActionBtnProps {
-  icon: IconName;
+  icon: MemoriesIconName;
   count?: number;
   active?: boolean;
   activeColor?: string;
@@ -407,11 +407,12 @@ interface ActionBtnProps {
 function ActionBtn({ icon, count, active, activeColor, idleColor, countColor, onPress }: ActionBtnProps) {
   return (
     <PressScale onPress={onPress} hitSlop={8} style={styles.actionBtn}>
-      <Icon
+      <MemoriesIcon
         name={icon}
         size={18}
         color={active && activeColor ? activeColor : idleColor}
-        strokeWidth={active ? 2 : 1.6}
+        stroke={active ? 2 : 1.6}
+        filled={!!(active && icon === 'heart')}
       />
       {count != null && count > 0 ? (
         <Text style={[styles.actionCount, { color: countColor }]}>{count}</Text>
