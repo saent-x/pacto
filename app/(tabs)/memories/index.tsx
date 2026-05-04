@@ -80,7 +80,7 @@ export default function MemoriesScreen() {
   return (
     <FlatList
       style={[styles.root, { backgroundColor: C.bg }]}
-      contentContainerStyle={{ paddingTop: insets.top + 44, paddingBottom: insets.bottom + 100 }}
+      contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
       data={memories}
       keyExtractor={(m: any) => m.id}
       renderItem={({ item, index }) => (
