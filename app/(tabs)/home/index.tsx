@@ -684,7 +684,11 @@ export default function HomeScreen() {
           <View
             style={[
               styles.aheadFooterButtons,
-              { backgroundColor: C.bgCard },
+              {
+                backgroundColor: C.bgCard,
+                borderTopWidth: StyleSheet.hairlineWidth,
+                borderTopColor: aheadTicket.border,
+              },
             ]}
           >
             <Pressable
