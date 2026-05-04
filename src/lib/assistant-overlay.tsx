@@ -34,32 +34,67 @@ import { useTheme } from './theme';
  * stacked off-center gradients give the wash a slight "refraction" feel so
  * it doesn't look like one symmetric disc.
  *
- * Layers (back → front):
- *   1. cool wash    — mint/violet, off-center toward bottom-right, dim
- *   2. warm core    — white → peach → yellow → transparent, off-center top-left
+ * Variants pick a single hue family for halo / wash layers — those need to
+ * read as soft glows, not separate cores.
  */
-const TorchGlow = React.memo(function TorchGlow() {
+type GlowVariant = 'core' | 'warm' | 'cool' | 'violet';
+
+const TorchGlow = React.memo(function TorchGlow({
+  variant = 'core',
+  id,
+}: {
+  variant?: GlowVariant;
+  /** Unique id so multiple instances don't share the same gradient ref. */
+  id: string;
+}) {
+  const idA = `torch-${id}-a`;
+  const idB = `torch-${id}-b`;
   return (
     <Svg style={StyleSheet.absoluteFill as any} pointerEvents="none">
       <Defs>
-        {/* Cool mint→violet wash, larger and offset toward bottom-right */}
-        <RadialGradient id="torchCool" cx="62%" cy="60%" r="70%" fx="62%" fy="60%">
-          <Stop offset="0%" stopColor="#7FBFAF" stopOpacity={0.20} />
-          <Stop offset="40%" stopColor="#B8A8E8" stopOpacity={0.14} />
-          <Stop offset="75%" stopColor="#7FBFAF" stopOpacity={0.05} />
-          <Stop offset="100%" stopColor="#7FBFAF" stopOpacity={0} />
-        </RadialGradient>
-        {/* Warm core: hot white → peach → yellow, offset toward top-left */}
-        <RadialGradient id="torchWarm" cx="42%" cy="42%" r="58%" fx="42%" fy="42%">
-          <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.85} />
-          <Stop offset="18%" stopColor="#F5C7A5" stopOpacity={0.55} />
-          <Stop offset="40%" stopColor="#F2D86A" stopOpacity={0.28} />
-          <Stop offset="68%" stopColor="#D08B6F" stopOpacity={0.10} />
-          <Stop offset="100%" stopColor="#D08B6F" stopOpacity={0} />
-        </RadialGradient>
+        {variant === 'core' ? (
+          <>
+            <RadialGradient id={idA} cx="62%" cy="60%" r="70%" fx="62%" fy="60%">
+              <Stop offset="0%" stopColor="#7FBFAF" stopOpacity={0.18} />
+              <Stop offset="40%" stopColor="#B8A8E8" stopOpacity={0.12} />
+              <Stop offset="75%" stopColor="#7FBFAF" stopOpacity={0.04} />
+              <Stop offset="100%" stopColor="#7FBFAF" stopOpacity={0} />
+            </RadialGradient>
+            <RadialGradient id={idB} cx="42%" cy="42%" r="58%" fx="42%" fy="42%">
+              <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.85} />
+              <Stop offset="18%" stopColor="#F5C7A5" stopOpacity={0.55} />
+              <Stop offset="40%" stopColor="#F2D86A" stopOpacity={0.28} />
+              <Stop offset="68%" stopColor="#D08B6F" stopOpacity={0.10} />
+              <Stop offset="100%" stopColor="#D08B6F" stopOpacity={0} />
+            </RadialGradient>
+          </>
+        ) : variant === 'warm' ? (
+          <RadialGradient id={idA} cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+            <Stop offset="0%" stopColor="#D08B6F" stopOpacity={0.40} />
+            <Stop offset="45%" stopColor="#D08B6F" stopOpacity={0.18} />
+            <Stop offset="80%" stopColor="#D08B6F" stopOpacity={0.04} />
+            <Stop offset="100%" stopColor="#D08B6F" stopOpacity={0} />
+          </RadialGradient>
+        ) : variant === 'cool' ? (
+          <RadialGradient id={idA} cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+            <Stop offset="0%" stopColor="#7FBFAF" stopOpacity={0.30} />
+            <Stop offset="50%" stopColor="#7FBFAF" stopOpacity={0.12} />
+            <Stop offset="80%" stopColor="#7FBFAF" stopOpacity={0.03} />
+            <Stop offset="100%" stopColor="#7FBFAF" stopOpacity={0} />
+          </RadialGradient>
+        ) : (
+          <RadialGradient id={idA} cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+            <Stop offset="0%" stopColor="#B8A8E8" stopOpacity={0.30} />
+            <Stop offset="50%" stopColor="#F2D86A" stopOpacity={0.14} />
+            <Stop offset="80%" stopColor="#B8A8E8" stopOpacity={0.03} />
+            <Stop offset="100%" stopColor="#B8A8E8" stopOpacity={0} />
+          </RadialGradient>
+        )}
       </Defs>
-      <Rect x="0" y="0" width="100%" height="100%" fill="url(#torchCool)" />
-      <Rect x="0" y="0" width="100%" height="100%" fill="url(#torchWarm)" />
+      <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${idA})`} />
+      {variant === 'core' ? (
+        <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${idB})`} />
+      ) : null}
     </Svg>
   );
 });
@@ -470,6 +505,7 @@ function ListeningAura() {
 
       <Animated.View
         testID="pacto-ai-listening-ring"
+        pointerEvents="none"
         style={[
           styles.outerRing,
           {
@@ -478,12 +514,6 @@ function ListeningAura() {
               outputRange: [0.2, 0.46],
             }),
             transform: [
-              {
-                rotate: spin.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ['0deg', '360deg'],
-                }),
-              },
               {
                 scaleX: pulse.interpolate({
                   inputRange: [0, 1],
@@ -499,8 +529,11 @@ function ListeningAura() {
             ],
           },
         ]}
-      />
+      >
+        <TorchGlow variant="warm" id="ring" />
+      </Animated.View>
       <Animated.View
+        pointerEvents="none"
         style={[
           styles.gasCloudViolet,
           {
@@ -509,12 +542,6 @@ function ListeningAura() {
               outputRange: [0.16, 0.4],
             }),
             transform: [
-              {
-                rotate: spin.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ['28deg', '388deg'],
-                }),
-              },
               {
                 translateX: pulse.interpolate({
                   inputRange: [0, 1],
@@ -530,8 +557,11 @@ function ListeningAura() {
             ],
           },
         ]}
-      />
+      >
+        <TorchGlow variant="violet" id="violet" />
+      </Animated.View>
       <Animated.View
+        pointerEvents="none"
         style={[
           styles.gasCloudBlue,
           {
@@ -561,7 +591,9 @@ function ListeningAura() {
             ],
           },
         ]}
-      />
+      >
+        <TorchGlow variant="cool" id="cool" />
+      </Animated.View>
       <Animated.View
         pointerEvents="none"
         style={[
@@ -588,9 +620,10 @@ function ListeningAura() {
           },
         ]}
       >
-        <TorchGlow />
+        <TorchGlow variant="core" id="core" />
       </Animated.View>
       <Animated.View
+        pointerEvents="none"
         style={[
           styles.sideGlow,
           {
@@ -608,7 +641,9 @@ function ListeningAura() {
             ],
           },
         ]}
-      />
+      >
+        <TorchGlow variant="violet" id="side" />
+      </Animated.View>
     </View>
   );
 }
@@ -659,41 +694,35 @@ const styles = StyleSheet.create({
     borderRadius: 1,
     backgroundColor: '#F2D86A',
   },
+  // All disc layers are now frames for inner SVG TorchGlow gradients —
+  // no backgroundColor / borderRadius / boxShadow so nothing draws a
+  // hard edge against the scrim.
   outerRing: {
     position: 'absolute',
     left: '50%',
     top: '50%',
-    width: 440,
-    height: 224,
-    marginLeft: -220,
-    marginTop: -112,
-    borderRadius: 230,
-    backgroundColor: 'rgba(208, 139, 111, 0.06)',
-    boxShadow: '0 0 110px 72px rgba(208, 139, 111, 0.13)',
+    width: 540,
+    height: 320,
+    marginLeft: -270,
+    marginTop: -160,
   },
   gasCloudViolet: {
     position: 'absolute',
     left: '50%',
     top: '50%',
-    width: 360,
-    height: 186,
-    marginLeft: -180,
-    marginTop: -93,
-    borderRadius: 190,
-    backgroundColor: 'rgba(242, 216, 106, 0.07)',
-    boxShadow: '0 0 92px 58px rgba(242, 216, 106, 0.12)',
+    width: 420,
+    height: 280,
+    marginLeft: -210,
+    marginTop: -140,
   },
   gasCloudBlue: {
     position: 'absolute',
     left: '50%',
     top: '50%',
-    width: 310,
-    height: 176,
-    marginLeft: -155,
-    marginTop: -88,
-    borderRadius: 180,
-    backgroundColor: 'rgba(127, 191, 175, 0.08)',
-    boxShadow: '0 0 94px 58px rgba(127, 191, 175, 0.12)',
+    width: 380,
+    height: 260,
+    marginLeft: -190,
+    marginTop: -130,
   },
   innerGlow: {
     // Frame for the TorchGlow SVG. No backgroundColor / borderRadius /
@@ -711,13 +740,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: '50%',
     top: '50%',
-    width: 240,
-    height: 126,
-    marginLeft: -120,
-    marginTop: -63,
-    borderRadius: 130,
-    backgroundColor: 'rgba(184, 168, 232, 0.08)',
-    boxShadow: '0 0 86px 48px rgba(184, 168, 232, 0.11)',
+    width: 360,
+    height: 220,
+    marginLeft: -180,
+    marginTop: -110,
   },
   // Naked tap target — no pill, no border, no background. Label + meter
   // stack against the aura. Press just dims and scales slightly.
