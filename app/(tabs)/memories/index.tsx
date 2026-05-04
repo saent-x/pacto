@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar, AvatarPair, CrewStack } from '@/src/components/ui/pacto';
-import { ComposerRail } from '@/src/components/ui/pacto/memories/ComposerRail';
 import { EmptyMemoriesState } from '@/src/components/ui/pacto/memories/EmptyMemoriesState';
 import { MemoriesHero } from '@/src/components/ui/pacto/memories/MemoriesHero';
 import { MemoryPost } from '@/src/components/ui/pacto/memories/MemoryPost';
@@ -103,12 +102,6 @@ export default function MemoriesScreen() {
             topics={visibleTopics}
             selected={topic}
             onSelect={setTopic}
-          />
-
-          <ComposerRail
-            meDisplayName={me?.displayName ?? me?.email}
-            meAvatarUrl={me?.avatarUrl}
-            isSolo={isSolo}
           />
 
           <View style={[styles.divider, { backgroundColor: C.lineColor }]} />
