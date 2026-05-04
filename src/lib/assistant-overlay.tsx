@@ -29,32 +29,37 @@ import { useAiAssistant } from './ai';
 import { useTheme } from './theme';
 
 /**
- * Soft radial-gradient disc — bright center fading to fully transparent.
- * Used as the listening "core" so the aura looks like a torch beam on a
- * wall instead of a hard-edged ball. Sized to fill its parent.
+ * Soft radial-gradient torch — bright white center bleeds through warm peach,
+ * yellow, then cool mint/violet before fully fading to transparent. Two
+ * stacked off-center gradients give the wash a slight "refraction" feel so
+ * it doesn't look like one symmetric disc.
  *
- * Stops:
- *   r=0    → 75% white     (hottest center)
- *   r=35%  → 28% white     (mid wash)
- *   r=70%  → 8% white      (faint halo)
- *   r=100% → 0% white      (no edge — blends into bg)
+ * Layers (back → front):
+ *   1. cool wash    — mint/violet, off-center toward bottom-right, dim
+ *   2. warm core    — white → peach → yellow → transparent, off-center top-left
  */
-const TorchGlow = React.memo(function TorchGlow({
-  color = 'rgba(250, 248, 242, 1)',
-}: {
-  color?: string;
-}) {
+const TorchGlow = React.memo(function TorchGlow() {
   return (
     <Svg style={StyleSheet.absoluteFill as any} pointerEvents="none">
       <Defs>
-        <RadialGradient id="torchGrad" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-          <Stop offset="0%" stopColor={color} stopOpacity={0.75} />
-          <Stop offset="35%" stopColor={color} stopOpacity={0.28} />
-          <Stop offset="70%" stopColor={color} stopOpacity={0.08} />
-          <Stop offset="100%" stopColor={color} stopOpacity={0} />
+        {/* Cool mint→violet wash, larger and offset toward bottom-right */}
+        <RadialGradient id="torchCool" cx="62%" cy="60%" r="70%" fx="62%" fy="60%">
+          <Stop offset="0%" stopColor="#7FBFAF" stopOpacity={0.20} />
+          <Stop offset="40%" stopColor="#B8A8E8" stopOpacity={0.14} />
+          <Stop offset="75%" stopColor="#7FBFAF" stopOpacity={0.05} />
+          <Stop offset="100%" stopColor="#7FBFAF" stopOpacity={0} />
+        </RadialGradient>
+        {/* Warm core: hot white → peach → yellow, offset toward top-left */}
+        <RadialGradient id="torchWarm" cx="42%" cy="42%" r="58%" fx="42%" fy="42%">
+          <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.85} />
+          <Stop offset="18%" stopColor="#F5C7A5" stopOpacity={0.55} />
+          <Stop offset="40%" stopColor="#F2D86A" stopOpacity={0.28} />
+          <Stop offset="68%" stopColor="#D08B6F" stopOpacity={0.10} />
+          <Stop offset="100%" stopColor="#D08B6F" stopOpacity={0} />
         </RadialGradient>
       </Defs>
-      <Rect x="0" y="0" width="100%" height="100%" fill="url(#torchGrad)" />
+      <Rect x="0" y="0" width="100%" height="100%" fill="url(#torchCool)" />
+      <Rect x="0" y="0" width="100%" height="100%" fill="url(#torchWarm)" />
     </Svg>
   );
 });
