@@ -575,10 +575,6 @@ export default function HomeScreen() {
             {
               backgroundColor: aheadTicket.cardBg,
               borderColor: aheadTicket.border,
-              // Mirror the today-card: rely on shadow + bg fill for the card
-              // chrome, no enclosing stroke around left/right/bottom edges so
-              // the DATES/NEXT footer doesn't read as a fenced sub-rectangle.
-              borderWidth: 0,
             },
           ]}
         >
@@ -685,67 +681,65 @@ export default function HomeScreen() {
               />
             </View>
           </View>
-          <View
-            style={[
-              styles.aheadFooterButtons,
-              {
-                backgroundColor: C.bgCard,
-                borderTopWidth: StyleSheet.hairlineWidth,
-                borderTopColor: aheadTicket.border,
-              },
+        </Card>
+        {/*
+          Footer (DATES | NEXT ITEM) lives OUTSIDE the bordered Card so it has
+          no left / right / bottom enclosing stroke — only the existing
+          vertical divider in the middle and a small breathing gap above.
+          Mirrors the way Signal Arc sits below the bordered Current Signal
+          panel in the today-card.
+        */}
+        <View style={styles.aheadFooterStandalone}>
+          <Pressable
+            onPress={memoryDatesRoute ? () => {
+              Haptics.selectionAsync().catch(() => undefined);
+              router.push(memoryDatesRoute as any);
+            } : undefined}
+            disabled={!memoryDatesRoute}
+            accessibilityRole="button"
+            accessibilityLabel={`Open dates, ${home.milestones.length} saved`}
+            style={({ pressed }) => [
+              styles.aheadFooterButton,
+              pressed ? styles.aheadFooterButtonPressed : null,
+              !memoryDatesRoute ? { opacity: 0.55 } : null,
             ]}
           >
-            <Pressable
-              onPress={memoryDatesRoute ? () => {
-                Haptics.selectionAsync().catch(() => undefined);
-                router.push(memoryDatesRoute as any);
-              } : undefined}
-              disabled={!memoryDatesRoute}
-              accessibilityRole="button"
-              accessibilityLabel={`Open dates, ${home.milestones.length} saved`}
-              style={({ pressed }) => [
-                styles.aheadFooterButton,
-                pressed ? styles.aheadFooterButtonPressed : null,
-                !memoryDatesRoute ? { opacity: 0.55 } : null,
-              ]}
+            <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
+              DATES
+            </Text>
+            <Text
+              style={[Typography.captionMedium, { color: aheadTicket.ink, marginTop: 4 }]}
             >
-              <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
-                DATES
-              </Text>
-              <Text
-                style={[Typography.captionMedium, { color: aheadTicket.ink, marginTop: 4 }]}
-              >
-                {home.milestones.length}
-              </Text>
-            </Pressable>
-            <View style={[styles.aheadFooterDivider, { backgroundColor: aheadTicket.border }]} />
-            <Pressable
-              onPress={nextItemRoute ? () => {
-                Haptics.selectionAsync().catch(() => undefined);
-                router.push(nextItemRoute as any);
-              } : undefined}
-              disabled={!nextItemRoute}
-              accessibilityRole="button"
-              accessibilityLabel={`Open next item, ${nextItemTitle}`}
-              style={({ pressed }) => [
-                styles.aheadFooterButton,
-                styles.aheadFooterButtonRight,
-                pressed ? styles.aheadFooterButtonPressed : null,
-                !nextItemRoute ? { opacity: 0.55 } : null,
-              ]}
+              {home.milestones.length}
+            </Text>
+          </Pressable>
+          <View style={[styles.aheadFooterDivider, { backgroundColor: aheadTicket.border }]} />
+          <Pressable
+            onPress={nextItemRoute ? () => {
+              Haptics.selectionAsync().catch(() => undefined);
+              router.push(nextItemRoute as any);
+            } : undefined}
+            disabled={!nextItemRoute}
+            accessibilityRole="button"
+            accessibilityLabel={`Open next item, ${nextItemTitle}`}
+            style={({ pressed }) => [
+              styles.aheadFooterButton,
+              styles.aheadFooterButtonRight,
+              pressed ? styles.aheadFooterButtonPressed : null,
+              !nextItemRoute ? { opacity: 0.55 } : null,
+            ]}
+          >
+            <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
+              NEXT ITEM
+            </Text>
+            <Text
+              style={[Typography.captionMedium, { color: aheadTicket.ink, marginTop: 4 }]}
+              numberOfLines={1}
             >
-              <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
-                NEXT ITEM
-              </Text>
-              <Text
-                style={[Typography.captionMedium, { color: aheadTicket.ink, marginTop: 4 }]}
-                numberOfLines={1}
-              >
-                {nextItemTitle}
-              </Text>
-            </Pressable>
-          </View>
-        </Card>
+              {nextItemTitle}
+            </Text>
+          </Pressable>
+        </View>
       </View>
     );
   };
@@ -1486,6 +1480,14 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginHorizontal: -18,
     marginBottom: -18,
+  },
+  // Standalone footer — sibling to the Card. No outer borders; just a row
+  // with the existing middle vertical divider between the two pressables.
+  aheadFooterStandalone: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    paddingHorizontal: 4,
+    paddingVertical: 4,
   },
   aheadFooterButton: {
     flex: 1,
