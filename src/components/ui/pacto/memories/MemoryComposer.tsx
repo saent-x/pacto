@@ -224,7 +224,6 @@ export function MemoryComposer() {
               placeholder={placeholder}
               placeholderTextColor={C.ink3}
               multiline
-              autoFocus
               style={[Typography.body, styles.input, { color: C.inkColor }]}
             />
 
