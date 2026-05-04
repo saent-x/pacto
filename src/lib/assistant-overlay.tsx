@@ -29,72 +29,45 @@ import { useAiAssistant } from './ai';
 import { useTheme } from './theme';
 
 /**
- * Soft radial-gradient torch — bright white center bleeds through warm peach,
- * yellow, then cool mint/violet before fully fading to transparent. Two
- * stacked off-center gradients give the wash a slight "refraction" feel so
- * it doesn't look like one symmetric disc.
+ * White → violet radial torch. Bright white center bleeds into purple,
+ * fading fully transparent at the edge — no hard disc outline.
  *
- * Variants pick a single hue family for halo / wash layers — those need to
- * read as soft glows, not separate cores.
+ * Variants:
+ *   - 'core' : hot white core → violet, slightly off-center for refraction
+ *   - 'halo' : pure violet wash, no white center — used for outer glow rings
  */
-type GlowVariant = 'core' | 'warm' | 'cool' | 'violet';
+type GlowVariant = 'core' | 'halo';
 
 const TorchGlow = React.memo(function TorchGlow({
   variant = 'core',
   id,
 }: {
   variant?: GlowVariant;
-  /** Unique id so multiple instances don't share the same gradient ref. */
+  /** Unique id so multiple instances don't collide on the gradient ref. */
   id: string;
 }) {
-  const idA = `torch-${id}-a`;
-  const idB = `torch-${id}-b`;
+  const gradId = `torch-${id}`;
   return (
     <Svg style={StyleSheet.absoluteFill as any} pointerEvents="none">
       <Defs>
         {variant === 'core' ? (
-          <>
-            <RadialGradient id={idA} cx="62%" cy="60%" r="70%" fx="62%" fy="60%">
-              <Stop offset="0%" stopColor="#7FBFAF" stopOpacity={0.18} />
-              <Stop offset="40%" stopColor="#B8A8E8" stopOpacity={0.12} />
-              <Stop offset="75%" stopColor="#7FBFAF" stopOpacity={0.04} />
-              <Stop offset="100%" stopColor="#7FBFAF" stopOpacity={0} />
-            </RadialGradient>
-            <RadialGradient id={idB} cx="42%" cy="42%" r="58%" fx="42%" fy="42%">
-              <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.85} />
-              <Stop offset="18%" stopColor="#F5C7A5" stopOpacity={0.55} />
-              <Stop offset="40%" stopColor="#F2D86A" stopOpacity={0.28} />
-              <Stop offset="68%" stopColor="#D08B6F" stopOpacity={0.10} />
-              <Stop offset="100%" stopColor="#D08B6F" stopOpacity={0} />
-            </RadialGradient>
-          </>
-        ) : variant === 'warm' ? (
-          <RadialGradient id={idA} cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-            <Stop offset="0%" stopColor="#D08B6F" stopOpacity={0.40} />
-            <Stop offset="45%" stopColor="#D08B6F" stopOpacity={0.18} />
-            <Stop offset="80%" stopColor="#D08B6F" stopOpacity={0.04} />
-            <Stop offset="100%" stopColor="#D08B6F" stopOpacity={0} />
-          </RadialGradient>
-        ) : variant === 'cool' ? (
-          <RadialGradient id={idA} cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-            <Stop offset="0%" stopColor="#7FBFAF" stopOpacity={0.30} />
-            <Stop offset="50%" stopColor="#7FBFAF" stopOpacity={0.12} />
-            <Stop offset="80%" stopColor="#7FBFAF" stopOpacity={0.03} />
-            <Stop offset="100%" stopColor="#7FBFAF" stopOpacity={0} />
+          <RadialGradient id={gradId} cx="48%" cy="46%" r="55%" fx="48%" fy="46%">
+            <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.88} />
+            <Stop offset="22%" stopColor="#FFFFFF" stopOpacity={0.42} />
+            <Stop offset="48%" stopColor="#B8A8E8" stopOpacity={0.30} />
+            <Stop offset="75%" stopColor="#7B5CD9" stopOpacity={0.10} />
+            <Stop offset="100%" stopColor="#7B5CD9" stopOpacity={0} />
           </RadialGradient>
         ) : (
-          <RadialGradient id={idA} cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-            <Stop offset="0%" stopColor="#B8A8E8" stopOpacity={0.30} />
-            <Stop offset="50%" stopColor="#F2D86A" stopOpacity={0.14} />
-            <Stop offset="80%" stopColor="#B8A8E8" stopOpacity={0.03} />
-            <Stop offset="100%" stopColor="#B8A8E8" stopOpacity={0} />
+          <RadialGradient id={gradId} cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+            <Stop offset="0%" stopColor="#B8A8E8" stopOpacity={0.32} />
+            <Stop offset="45%" stopColor="#B8A8E8" stopOpacity={0.16} />
+            <Stop offset="80%" stopColor="#7B5CD9" stopOpacity={0.04} />
+            <Stop offset="100%" stopColor="#7B5CD9" stopOpacity={0} />
           </RadialGradient>
         )}
       </Defs>
-      <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${idA})`} />
-      {variant === 'core' ? (
-        <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${idB})`} />
-      ) : null}
+      <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${gradId})`} />
     </Svg>
   );
 });
@@ -530,7 +503,7 @@ function ListeningAura() {
           },
         ]}
       >
-        <TorchGlow variant="warm" id="ring" />
+        <TorchGlow variant="halo" id="ring" />
       </Animated.View>
       <Animated.View
         pointerEvents="none"
@@ -558,7 +531,7 @@ function ListeningAura() {
           },
         ]}
       >
-        <TorchGlow variant="violet" id="violet" />
+        <TorchGlow variant="halo" id="violet" />
       </Animated.View>
       <Animated.View
         pointerEvents="none"
@@ -592,7 +565,7 @@ function ListeningAura() {
           },
         ]}
       >
-        <TorchGlow variant="cool" id="cool" />
+        <TorchGlow variant="halo" id="cool" />
       </Animated.View>
       <Animated.View
         pointerEvents="none"
@@ -642,7 +615,7 @@ function ListeningAura() {
           },
         ]}
       >
-        <TorchGlow variant="violet" id="side" />
+        <TorchGlow variant="halo" id="side" />
       </Animated.View>
     </View>
   );
@@ -692,7 +665,7 @@ const styles = StyleSheet.create({
     width: 2,
     height: 2,
     borderRadius: 1,
-    backgroundColor: '#F2D86A',
+    backgroundColor: '#FFFFFF',
   },
   // All disc layers are now frames for inner SVG TorchGlow gradients —
   // no backgroundColor / borderRadius / boxShadow so nothing draws a
@@ -772,8 +745,8 @@ const styles = StyleSheet.create({
     width: 4,
     height: 22,
     borderRadius: 2,
-    backgroundColor: '#F2D86A',
-    boxShadow: '0 0 10px rgba(242, 216, 106, 0.55)',
+    backgroundColor: '#B8A8E8',
+    boxShadow: '0 0 10px rgba(184, 168, 232, 0.65)',
   },
   nonInteractive: {
     pointerEvents: 'none',
