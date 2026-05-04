@@ -33,52 +33,43 @@ function moodFor(key: string | null | undefined) {
   return getCheckInStateMeta(key);
 }
 
-type ArcSlot = { color: string | null; height: number };
+type ArcSlot = { color: string | null; height: number; count: number };
 
-// Bar heights tied to mood "intensity" so the arc reads as a chart, not a swatch.
-// Empty slots get a short stub.
-const MOOD_HEIGHT: Record<string, number> = {
-  soft: 22,
-  steady: 18,
-  low: 13,
-  rough: 30,
-};
+const EMPTY_HEIGHT = 6;
+const PER_CHECKIN_HEIGHT = 18;
 
-const EMPTY_HEIGHT = 8;
-
-function heightFor(mood: string | null | undefined, jitter = 0): number {
-  if (!mood) return EMPTY_HEIGHT;
-  const base = MOOD_HEIGHT[mood] ?? 16;
-  return Math.max(EMPTY_HEIGHT, base + jitter);
-}
-
+/**
+ * Honest sparse arc.
+ *
+ * 14 hourly buckets from 6am to 7pm. Each bucket renders a bar IFF a
+ * check-in actually landed in that hour. Bar height = number of check-ins
+ * in the bucket × PER_CHECKIN_HEIGHT (so multiple pings stack visibly).
+ * Bar color = mood of the LATEST check-in in that bucket. Empty buckets
+ * render a short stub. No carry-forward, no jitter.
+ */
 function buildArc(checkIns: CheckInRecord[], todayKey: string): ArcSlot[] {
   const today = checkIns
     .filter((c) => c.checkInDate === todayKey)
     .sort((a, b) => a.createdAt - b.createdAt);
-  const currentHour = new Date().getHours();
-  const total = Math.min(ARC_BUCKETS, Math.max(1, currentHour - ARC_START_HOUR + 1));
 
-  if (today.length === 0) {
-    return Array.from({ length: ARC_BUCKETS }, () => ({ color: null, height: EMPTY_HEIGHT }));
+  const slots: ArcSlot[] = Array.from({ length: ARC_BUCKETS }, () => ({
+    color: null,
+    height: EMPTY_HEIGHT,
+    count: 0,
+  }));
+
+  if (today.length === 0) return slots;
+
+  for (const ci of today) {
+    const hour = new Date(ci.createdAt).getHours();
+    const idx = hour - ARC_START_HOUR;
+    if (idx < 0 || idx >= ARC_BUCKETS) continue; // pre-6am or post-7pm — invisible by design
+    const slot = slots[idx];
+    slot.count += 1;
+    slot.color = getCheckInStateMeta(ci.mood).color;       // most recent wins (sorted asc)
+    slot.height = Math.min(36, EMPTY_HEIGHT + slot.count * PER_CHECKIN_HEIGHT);
   }
 
-  const slots: ArcSlot[] = [];
-  let carryMood: string | null = null;
-  for (let i = 0; i < total; i++) {
-    const hour = ARC_START_HOUR + i;
-    const before = today.filter((c) => new Date(c.createdAt).getHours() <= hour);
-    const latest = before[before.length - 1];
-    if (latest) carryMood = getCheckInStateMeta(latest.mood).id;
-    // Slight deterministic jitter per slot so the chart reads varied even when
-    // mood is constant.
-    const jitter = ((i * 7) % 5) - 2;
-    slots.push({
-      color: carryMood ? getCheckInStateMeta(carryMood).color : null,
-      height: heightFor(carryMood, jitter),
-    });
-  }
-  while (slots.length < ARC_BUCKETS) slots.push({ color: null, height: EMPTY_HEIGHT });
   return slots;
 }
 
@@ -224,7 +215,14 @@ function comingUpLabel(daysUntil: number): string {
 
 function ArcStrip({ slots }: { slots: ArcSlot[] }) {
   const { C } = useTheme();
-  const activeCount = slots.filter((slot) => slot.color).length;
+  const totalCheckIns = slots.reduce((s, x) => s + x.count, 0);
+  const activeBuckets = slots.filter((slot) => slot.count > 0).length;
+  const label =
+    totalCheckIns === 0
+      ? 'NO CHECK-IN YET'
+      : totalCheckIns === activeBuckets
+        ? `${totalCheckIns} TODAY`
+        : `${totalCheckIns} TODAY · ${activeBuckets} HRS`;
   return (
     <View style={[styles.arcStrip, { backgroundColor: C.bgCard }]}>
       <View style={styles.arcHead}>
@@ -236,7 +234,7 @@ function ArcStrip({ slots }: { slots: ArcSlot[] }) {
             { color: C.ink3, fontSize: 10, letterSpacing: 0.4 },
           ]}
         >
-          6a · noon · 6p · now
+          6a · noon · 6p
         </Text>
       </View>
       <View style={styles.arcRow}>
@@ -255,9 +253,7 @@ function ArcStrip({ slots }: { slots: ArcSlot[] }) {
         ))}
       </View>
       <View style={styles.arcFooter}>
-        <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
-          {activeCount ? `${activeCount} LIVE BLOCKS` : 'NO CHECK-IN YET'}
-        </Text>
+        <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>{label}</Text>
         <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>CHECK-IN READY</Text>
       </View>
     </View>
