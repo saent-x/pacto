@@ -575,6 +575,10 @@ export default function HomeScreen() {
             {
               backgroundColor: aheadTicket.cardBg,
               borderColor: aheadTicket.border,
+              // Mirror the today-card: rely on shadow + bg fill for the card
+              // chrome, no enclosing stroke around left/right/bottom edges so
+              // the DATES/NEXT footer doesn't read as a fenced sub-rectangle.
+              borderWidth: 0,
             },
           ]}
         >
