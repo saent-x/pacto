@@ -225,16 +225,24 @@ function AssistantVoiceOverlay({
               accessibilityRole="button"
               accessibilityLabel="Submit Pacto AI recording"
               onPress={submitRecording}
+              hitSlop={20}
               style={({ pressed }) => [
-                styles.listeningPill,
+                styles.listeningTarget,
                 {
-                  opacity: pressed ? 0.9 : 1,
+                  opacity: pressed ? 0.7 : 1,
                   transform: [{ scale: pressed ? 0.98 : 1 }],
-                  borderColor: recorderState.isRecording ? ASSISTANT_VISUAL.warm : 'rgba(250,248,242,0.72)',
                 },
               ]}
             >
-              <Text style={[styles.listeningText, { color: ASSISTANT_VISUAL.ink, fontFamily: F.geistMonoMedium }]}>
+              <Text
+                style={[
+                  styles.listeningText,
+                  {
+                    color: 'rgba(250,248,242,0.92)',
+                    fontFamily: F.geistMonoMedium,
+                  },
+                ]}
+              >
                 {labelForState(turn.state)}
               </Text>
               <VoiceMeter active={recorderState.isRecording} />
@@ -706,41 +714,35 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(184, 168, 232, 0.08)',
     boxShadow: '0 0 86px 48px rgba(184, 168, 232, 0.11)',
   },
-  listeningPill: {
-    minWidth: 164,
-    minHeight: 66,
-    borderRadius: 999,
-    borderWidth: 0,
+  // Naked tap target — no pill, no border, no background. Label + meter
+  // stack against the aura. Press just dims and scales slightly.
+  listeningTarget: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 26,
-    paddingVertical: 11,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(250, 248, 242, 0.82)',
-    boxShadow: '0 0 44px 22px rgba(250, 248, 242, 0.28)',
-    elevation: 12,
+    gap: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   listeningText: {
-    fontSize: 10,
-    lineHeight: 13,
-    letterSpacing: 2,
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 3,
     textTransform: 'uppercase',
   },
   listeningMeter: {
-    height: 18,
-    minWidth: 82,
+    height: 28,
+    minWidth: 100,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 5,
   },
   meterBar: {
     width: 4,
-    height: 12,
+    height: 22,
     borderRadius: 2,
-    backgroundColor: '#C7755A',
-    boxShadow: '0 0 8px rgba(199, 117, 90, 0.38)',
+    backgroundColor: '#F2D86A',
+    boxShadow: '0 0 10px rgba(242, 216, 106, 0.55)',
   },
   nonInteractive: {
     pointerEvents: 'none',
