@@ -8,6 +8,7 @@ import {
   buildMilestones,
   selectFeaturedSignal,
 } from '@/src/lib/home/builders';
+import { buildActivityHeatmapDays } from '@/src/lib/home/activity';
 import { getCuratedDailyVerse } from '@/src/lib/home/dailyVerse';
 import { buildTodayRingSummary, type TodayRingSummary } from '@/src/lib/home/todayRings';
 import { useSession } from '@/src/hooks/useSession';
@@ -32,11 +33,17 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
   const checkinsEnabled = isFeatureEnabled('checkins');
   const tasksEnabled = isFeatureEnabled('tasks');
   const memoriesEnabled = isFeatureEnabled('memories');
+  const memoryFeedEnabled = isFeatureEnabled('memoryFeed');
   const journalEnabled = isFeatureEnabled('journal');
+  const timetableEnabled = isFeatureEnabled('timetable');
+  const wishlistEnabled = isFeatureEnabled('wishlist');
 
   const query = useMemo(() => {
     if (!coupleId) return null;
     const spaceWhere = { $: { where: { 'couple.id': coupleId } } };
+    // The new `memories` entity uses link `space` (not `couple`), so it needs
+    // a separate where clause keyed on `space.id`.
+    const memoriesWhere = { $: { where: { 'space.id': coupleId } } };
     return {
       ...(calendarEnabled ? { events: spaceWhere } : {}),
       ...(goalsEnabled ? { plans: spaceWhere } : {}),
@@ -44,7 +51,11 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
       ...(checkinsEnabled ? { checkIns: spaceWhere } : {}),
       ...(tasksEnabled ? { tasks: spaceWhere } : {}),
       ...(memoriesEnabled ? { milestones: spaceWhere, loveNotes: spaceWhere } : {}),
+      ...((memoriesEnabled || memoryFeedEnabled) ? { memories: memoriesWhere } : {}),
       ...(journalEnabled ? { journalEntries: spaceWhere } : {}),
+      ...(timetableEnabled ? { timetableItems: spaceWhere } : {}),
+      ...(wishlistEnabled ? { wishlistItems: spaceWhere } : {}),
+      expenses: { $: { where: { 'couple.id': coupleId } }, paidBy: {} },
       dailyVerseCache: { $: { where: { dateKey: todayKey } } },
     };
   }, [
@@ -55,7 +66,10 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
     checkinsEnabled,
     tasksEnabled,
     memoriesEnabled,
+    memoryFeedEnabled,
     journalEnabled,
+    timetableEnabled,
+    wishlistEnabled,
     todayKey,
   ]);
 
@@ -110,6 +124,10 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
     const loveNotes = memoriesEnabled ? data?.loveNotes ?? [] : [];
     const checkIns = checkinsEnabled ? data?.checkIns ?? [] : [];
     const milestones = memoriesEnabled ? data?.milestones ?? [] : [];
+    const expenses = data?.expenses ?? [];
+    const wishlistItems = wishlistEnabled ? data?.wishlistItems ?? [] : [];
+    const timetableItems = timetableEnabled ? data?.timetableItems ?? [] : [];
+    const feedMemories = memoriesEnabled || memoryFeedEnabled ? data?.memories ?? [] : [];
 
     const memories = buildMemoryPreviews({
       journalEntries,
@@ -164,6 +182,24 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
       reminders,
     });
 
+    const activity = buildActivityHeatmapDays({
+      now,
+      weeks: 15,
+      events,
+      plans,
+      reminders,
+      tasks,
+      rituals,
+      checkIns,
+      milestones,
+      journalEntries,
+      loveNotes,
+      expenses,
+      wishlistItems,
+      timetableItems,
+      memories: feedMemories,
+    });
+
     return {
       hero,
       timeline,
@@ -172,6 +208,7 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
       memoryPreview,
       dailyVerse,
       todaySummary,
+      activity,
     };
   }, [
     data,
@@ -186,7 +223,10 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
     checkinsEnabled,
     tasksEnabled,
     memoriesEnabled,
+    memoryFeedEnabled,
     journalEnabled,
+    timetableEnabled,
+    wishlistEnabled,
   ]);
 
   return {
@@ -200,6 +240,7 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
     presence,
     dailyVerse: homeView.dailyVerse,
     todaySummary: homeView.todaySummary,
+    activity: homeView.activity,
     refetch: async () => {},
   };
 }
