@@ -575,6 +575,10 @@ export default function HomeScreen() {
             {
               backgroundColor: aheadTicket.cardBg,
               borderColor: aheadTicket.border,
+              // Square the bottom corners so the card meets the standalone
+              // DATES/NEXT footer below it as one continuous slab.
+              borderBottomLeftRadius: 0,
+              borderBottomRightRadius: 0,
             },
           ]}
         >
@@ -1483,11 +1487,28 @@ const styles = StyleSheet.create({
   },
   // Standalone footer — sibling to the Card. No outer borders; just a row
   // with the existing middle vertical divider between the two pressables.
+  // softShadow drops a downward-only halo (offset Y +5) so left, bottom, and
+  // right read as elevated while the top stays flush against the bordered
+  // card above it. Bottom corners rounded to match the rounded card edge
+  // visually as one continuous slab.
   aheadFooterStandalone: {
     flexDirection: 'row',
     alignItems: 'stretch',
     paddingHorizontal: 4,
     paddingVertical: 4,
+    backgroundColor: '#FFFDF7',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    ...Platform.select({
+      web: { boxShadow: '0px 5px 14px rgba(0, 0, 0, 0.06)' },
+      default: {
+        shadowColor: '#000',
+        shadowOpacity: 0.06,
+        shadowOffset: { width: 0, height: 5 },
+        shadowRadius: 14,
+        elevation: 1,
+      },
+    }),
   },
   aheadFooterButton: {
     flex: 1,
