@@ -681,16 +681,7 @@ export default function HomeScreen() {
               />
             </View>
           </View>
-          <View
-            style={[
-              styles.aheadFooterButtons,
-              styles.aheadSignalFooter,
-              {
-                backgroundColor: aheadTicket.cardBg,
-                borderColor: aheadTicket.border,
-              },
-            ]}
-          >
+          <View style={styles.aheadFooterButtons}>
             <Pressable
               onPress={memoryDatesRoute ? () => {
                 Haptics.selectionAsync().catch(() => undefined);
@@ -1476,7 +1467,6 @@ const styles = StyleSheet.create({
   aheadFooterButtons: {
     flexDirection: 'row',
     alignItems: 'stretch',
-    borderTopWidth: 1,
     borderBottomLeftRadius: 19,
     borderBottomRightRadius: 19,
     overflow: 'hidden',
