@@ -104,9 +104,11 @@ function EllipsisDots({
         fontFamily,
         fontSize,
         letterSpacing,
-        width: 22,
+        width: 36,
         textAlign: 'left',
+        flexShrink: 0,
       }}
+      numberOfLines={1}
     >
       {'.'.repeat(n)}
     </Text>
@@ -786,6 +788,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    flexWrap: 'nowrap',
   },
   listeningMeter: {
     height: 28,
