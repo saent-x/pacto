@@ -681,7 +681,12 @@ export default function HomeScreen() {
               />
             </View>
           </View>
-          <View style={styles.aheadFooterButtons}>
+          <View
+            style={[
+              styles.aheadFooterButtons,
+              { backgroundColor: C.bgCard },
+            ]}
+          >
             <Pressable
               onPress={memoryDatesRoute ? () => {
                 Haptics.selectionAsync().catch(() => undefined);
