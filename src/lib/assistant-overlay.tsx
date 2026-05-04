@@ -24,8 +24,40 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { useAiAssistant } from './ai';
 import { useTheme } from './theme';
+
+/**
+ * Soft radial-gradient disc — bright center fading to fully transparent.
+ * Used as the listening "core" so the aura looks like a torch beam on a
+ * wall instead of a hard-edged ball. Sized to fill its parent.
+ *
+ * Stops:
+ *   r=0    → 75% white     (hottest center)
+ *   r=35%  → 28% white     (mid wash)
+ *   r=70%  → 8% white      (faint halo)
+ *   r=100% → 0% white      (no edge — blends into bg)
+ */
+const TorchGlow = React.memo(function TorchGlow({
+  color = 'rgba(250, 248, 242, 1)',
+}: {
+  color?: string;
+}) {
+  return (
+    <Svg style={StyleSheet.absoluteFill as any} pointerEvents="none">
+      <Defs>
+        <RadialGradient id="torchGrad" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+          <Stop offset="0%" stopColor={color} stopOpacity={0.75} />
+          <Stop offset="35%" stopColor={color} stopOpacity={0.28} />
+          <Stop offset="70%" stopColor={color} stopOpacity={0.08} />
+          <Stop offset="100%" stopColor={color} stopOpacity={0} />
+        </RadialGradient>
+      </Defs>
+      <Rect x="0" y="0" width="100%" height="100%" fill="url(#torchGrad)" />
+    </Svg>
+  );
+});
 
 const LISTENING_DOTS = Array.from({ length: 231 }, (_, index) => {
   const columns = 21;
@@ -42,6 +74,16 @@ const LISTENING_DOTS = Array.from({ length: 231 }, (_, index) => {
     opacity: Math.max(0.08, 0.34 - distance * 0.025),
   };
 });
+
+// Assistant visuals are intentionally isolated in this file. Reverting this
+// file restores the previous overlay direction without touching AI behavior.
+const ASSISTANT_VISUAL = {
+  scrim: 'rgba(42, 36, 27, 0.68)',
+  ink: '#2A241B',
+  ink2: '#5C5345',
+  warm: '#D08B6F',
+  mint: '#7FBFAF',
+};
 
 type AssistantOverlayContextValue = {
   isVoiceOverlayOpen: boolean;
@@ -113,7 +155,7 @@ function AssistantVoiceOverlay({
   processAudioRecording: (audioUri: string) => Promise<void>;
   turn: ReturnType<typeof useAiAssistant>['turn'];
 }) {
-  const { F } = useTheme();
+  const { C, F } = useTheme();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
@@ -158,7 +200,7 @@ function AssistantVoiceOverlay({
         style={[
           styles.overlay,
           {
-            backgroundColor: 'rgba(10, 8, 7, 0.72)',
+            backgroundColor: ASSISTANT_VISUAL.scrim,
             paddingBottom: 0,
           },
         ]}
@@ -188,11 +230,11 @@ function AssistantVoiceOverlay({
                 {
                   opacity: pressed ? 0.9 : 1,
                   transform: [{ scale: pressed ? 0.98 : 1 }],
-                  borderColor: recorderState.isRecording ? 'rgba(236, 102, 255, 0.72)' : 'rgba(255,255,255,0.2)',
+                  borderColor: recorderState.isRecording ? ASSISTANT_VISUAL.warm : 'rgba(250,248,242,0.72)',
                 },
               ]}
             >
-              <Text style={[styles.listeningText, { color: '#FFF8FF', fontFamily: F.geistMonoMedium }]}>
+              <Text style={[styles.listeningText, { color: ASSISTANT_VISUAL.ink, fontFamily: F.geistMonoMedium }]}>
                 {labelForState(turn.state)}
               </Text>
               <VoiceMeter active={recorderState.isRecording} />
@@ -211,7 +253,7 @@ function AssistantVoiceOverlay({
                     isUser ? styles.userMessage : styles.assistantMessage,
                     {
                       borderColor: isUser ? 'rgba(127,191,175,0.62)' : 'rgba(255,255,255,0.32)',
-                      backgroundColor: isUser ? 'rgba(45, 88, 78, 0.82)' : 'rgba(48, 41, 35, 0.9)',
+                      backgroundColor: isUser ? 'rgba(220,237,231,0.96)' : 'rgba(250,248,242,0.97)',
                     },
                   ]}
                 >
@@ -219,14 +261,14 @@ function AssistantVoiceOverlay({
                     style={[
                       styles.messageLabel,
                       {
-                        color: isUser ? '#BEEBDD' : '#F1D3C3',
+                        color: isUser ? ASSISTANT_VISUAL.ink2 : ASSISTANT_VISUAL.warm,
                         fontFamily: F.geistMonoMedium,
                       },
                     ]}
                   >
                     {isUser ? 'You' : message.from === 'system' ? 'System' : 'Pacto AI'}
                   </Text>
-                  <Text style={[styles.messageBody, { color: '#FFF8ED', fontFamily: F.geistMedium }]}>
+                  <Text style={[styles.messageBody, { color: ASSISTANT_VISUAL.ink, fontFamily: F.geistMedium }]}>
                     {message.body}
                   </Text>
                 </View>
@@ -240,18 +282,18 @@ function AssistantVoiceOverlay({
                 style={[
                   styles.actionCard,
                   {
-                    borderColor: action.destructive ? 'rgba(255,143,112,0.58)' : 'rgba(255,255,255,0.32)',
-                    backgroundColor: 'rgba(250,248,242,0.13)',
+                    borderColor: action.destructive ? C.error : 'rgba(250,248,242,0.72)',
+                    backgroundColor: 'rgba(250,248,242,0.97)',
                   },
                 ]}
               >
-                <Text style={[styles.messageLabel, { color: '#F1D3C3', fontFamily: F.geistMonoMedium }]}>
+                <Text style={[styles.messageLabel, { color: action.destructive ? C.error : ASSISTANT_VISUAL.warm, fontFamily: F.geistMonoMedium }]}>
                   preview
                 </Text>
-                <Text style={[styles.actionTitle, { color: '#FFF8ED', fontFamily: F.geistMedium }]}>
+                <Text style={[styles.actionTitle, { color: ASSISTANT_VISUAL.ink, fontFamily: F.geistMedium }]}>
                   {action.title}
                 </Text>
-                <Text style={[styles.actionSummary, { color: 'rgba(255,248,237,0.84)', fontFamily: F.geistMedium }]}>
+                <Text style={[styles.actionSummary, { color: ASSISTANT_VISUAL.ink2, fontFamily: F.geistMedium }]}>
                   {action.summary}
                 </Text>
                 <View style={styles.actionRow}>
@@ -262,7 +304,7 @@ function AssistantVoiceOverlay({
                     onPress={onCancel}
                     style={[styles.actionButton, styles.secondaryAction]}
                   >
-                    <Text style={[styles.actionButtonText, { color: '#FFF8ED', fontFamily: F.geistMonoMedium }]}>
+                    <Text style={[styles.actionButtonText, { color: ASSISTANT_VISUAL.ink, fontFamily: F.geistMonoMedium }]}>
                       cancel
                     </Text>
                   </Pressable>
@@ -271,7 +313,7 @@ function AssistantVoiceOverlay({
                     accessibilityRole="button"
                     accessibilityLabel="Confirm Pacto AI action"
                     onPress={onConfirm}
-                    style={[styles.actionButton, { backgroundColor: '#7FBFAF' }]}
+                    style={[styles.actionButton, { backgroundColor: ASSISTANT_VISUAL.mint }]}
                   >
                     <Text style={[styles.actionButtonText, { color: '#10201D', fontFamily: F.geistMonoMedium }]}>
                       confirm
@@ -508,6 +550,7 @@ function ListeningAura() {
         ]}
       />
       <Animated.View
+        pointerEvents="none"
         style={[
           styles.innerGlow,
           {
@@ -531,7 +574,9 @@ function ListeningAura() {
             ],
           },
         ]}
-      />
+      >
+        <TorchGlow />
+      </Animated.View>
       <Animated.View
         style={[
           styles.sideGlow,
@@ -570,17 +615,17 @@ const styles = StyleSheet.create({
   },
   listeningSurface: {
     width: '100%',
-    height: 330,
+    height: 310,
     alignItems: 'center',
     justifyContent: 'flex-end',
-    paddingBottom: 18,
+    paddingBottom: 12,
     overflow: 'visible',
   },
   auraField: {
     position: 'absolute',
-    bottom: -76,
-    width: 440,
-    height: 260,
+    bottom: -96,
+    width: 520,
+    height: 320,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'visible',
@@ -589,90 +634,92 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 18,
     right: 18,
-    top: 24,
-    bottom: 24,
+    top: 30,
+    bottom: 34,
+    borderRadius: 180,
+    opacity: 0.34,
   },
   dot: {
     position: 'absolute',
     width: 2,
     height: 2,
     borderRadius: 1,
-    backgroundColor: '#D7BBFF',
+    backgroundColor: '#F2D86A',
   },
   outerRing: {
     position: 'absolute',
     left: '50%',
     top: '50%',
-    width: 380,
-    height: 180,
-    marginLeft: -190,
-    marginTop: -90,
-    borderRadius: 120,
-    backgroundColor: 'rgba(218, 62, 255, 0.11)',
-    boxShadow: '0 0 96px 64px rgba(213, 52, 255, 0.26)',
+    width: 440,
+    height: 224,
+    marginLeft: -220,
+    marginTop: -112,
+    borderRadius: 230,
+    backgroundColor: 'rgba(208, 139, 111, 0.06)',
+    boxShadow: '0 0 110px 72px rgba(208, 139, 111, 0.13)',
   },
   gasCloudViolet: {
     position: 'absolute',
     left: '50%',
     top: '50%',
-    width: 310,
-    height: 150,
-    marginLeft: -155,
-    marginTop: -75,
-    borderRadius: 110,
-    backgroundColor: 'rgba(147, 76, 255, 0.12)',
-    boxShadow: '0 0 86px 54px rgba(154, 83, 255, 0.24)',
+    width: 360,
+    height: 186,
+    marginLeft: -180,
+    marginTop: -93,
+    borderRadius: 190,
+    backgroundColor: 'rgba(242, 216, 106, 0.07)',
+    boxShadow: '0 0 92px 58px rgba(242, 216, 106, 0.12)',
   },
   gasCloudBlue: {
     position: 'absolute',
     left: '50%',
     top: '50%',
-    width: 250,
-    height: 150,
-    marginLeft: -125,
-    marginTop: -75,
-    borderRadius: 100,
-    backgroundColor: 'rgba(73, 174, 255, 0.09)',
-    boxShadow: '0 0 82px 48px rgba(79, 190, 255, 0.18)',
+    width: 310,
+    height: 176,
+    marginLeft: -155,
+    marginTop: -88,
+    borderRadius: 180,
+    backgroundColor: 'rgba(127, 191, 175, 0.08)',
+    boxShadow: '0 0 94px 58px rgba(127, 191, 175, 0.12)',
   },
   innerGlow: {
+    // Frame for the TorchGlow SVG. No backgroundColor / borderRadius /
+    // boxShadow — the SVG radial gradient handles all the falloff so the
+    // edge blends to transparent (no visible "ball").
     position: 'absolute',
     left: '50%',
     top: '50%',
-    width: 138,
-    height: 112,
-    marginLeft: -69,
-    marginTop: -56,
-    borderRadius: 70,
-    backgroundColor: 'rgba(238, 96, 255, 0.18)',
-    boxShadow: '0 0 72px 36px rgba(241, 78, 255, 0.36)',
+    width: 320,
+    height: 240,
+    marginLeft: -160,
+    marginTop: -120,
   },
   sideGlow: {
     position: 'absolute',
     left: '50%',
     top: '50%',
-    width: 180,
-    height: 98,
-    marginLeft: -90,
-    marginTop: -49,
-    borderRadius: 70,
-    backgroundColor: 'rgba(255, 79, 210, 0.1)',
-    boxShadow: '0 0 78px 40px rgba(226, 66, 255, 0.24)',
+    width: 240,
+    height: 126,
+    marginLeft: -120,
+    marginTop: -63,
+    borderRadius: 130,
+    backgroundColor: 'rgba(184, 168, 232, 0.08)',
+    boxShadow: '0 0 86px 48px rgba(184, 168, 232, 0.11)',
   },
   listeningPill: {
     minWidth: 164,
-    minHeight: 64,
-    borderRadius: 26,
-    borderWidth: 1,
+    minHeight: 66,
+    borderRadius: 999,
+    borderWidth: 0,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     paddingHorizontal: 26,
     paddingVertical: 11,
     overflow: 'hidden',
-    backgroundColor: 'rgba(20, 26, 38, 0.46)',
-    boxShadow: '0 14px 36px rgba(0,0,0,0.34)',
-    elevation: 18,
+    backgroundColor: 'rgba(250, 248, 242, 0.82)',
+    boxShadow: '0 0 44px 22px rgba(250, 248, 242, 0.28)',
+    elevation: 12,
   },
   listeningText: {
     fontSize: 10,
@@ -692,8 +739,8 @@ const styles = StyleSheet.create({
     width: 4,
     height: 12,
     borderRadius: 2,
-    backgroundColor: '#F4B8FF',
-    boxShadow: '0 0 10px rgba(241, 78, 255, 0.72)',
+    backgroundColor: '#C7755A',
+    boxShadow: '0 0 8px rgba(199, 117, 90, 0.38)',
   },
   nonInteractive: {
     pointerEvents: 'none',
@@ -709,8 +756,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 12,
     gap: 5,
-    boxShadow: '0 10px 18px rgba(0,0,0,0.22)',
-    elevation: 8,
+    boxShadow: '0 8px 18px rgba(42,36,27,0.14)',
+    elevation: 4,
   },
   assistantMessage: {
     alignSelf: 'flex-start',
@@ -736,8 +783,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 13,
     gap: 7,
-    boxShadow: '0 10px 18px rgba(0,0,0,0.22)',
-    elevation: 8,
+    boxShadow: '0 8px 18px rgba(42,36,27,0.14)',
+    elevation: 4,
   },
   actionTitle: {
     fontSize: 16,
@@ -763,8 +810,8 @@ const styles = StyleSheet.create({
   },
   secondaryAction: {
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.24)',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(42,36,27,0.18)',
+    backgroundColor: 'rgba(42,36,27,0.04)',
   },
   actionButtonText: {
     fontSize: 11,
