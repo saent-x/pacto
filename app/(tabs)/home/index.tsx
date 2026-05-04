@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Image, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import { format } from 'date-fns';
 import {
@@ -19,11 +20,14 @@ import { getCheckInStateMeta } from '@/src/constants/checkInStates';
 import { Typography } from '@/src/constants/typography';
 import { routeForMilestoneItem, routeForTimelineItem } from '@/src/lib/homeNavigation';
 import type { TimelineItem, MilestoneStripItem } from '@/src/lib/home/types';
+import { alphaColor } from '@/src/lib/color';
 import { useTheme } from '@/src/lib/theme';
 import type { FeatureId } from '@/src/lib/features/registry';
 
 const ARC_BUCKETS = 14;
 const ARC_START_HOUR = 6;
+
+type TodayVariant = 'band' | 'pocket' | 'ledger';
 
 function moodFor(key: string | null | undefined) {
   return getCheckInStateMeta(key);
@@ -220,10 +224,11 @@ function comingUpLabel(daysUntil: number): string {
 
 function ArcStrip({ slots }: { slots: ArcSlot[] }) {
   const { C } = useTheme();
+  const activeCount = slots.filter((slot) => slot.color).length;
   return (
-    <View style={styles.arcStrip}>
+    <View style={[styles.arcStrip, { backgroundColor: C.bgCard }]}>
       <View style={styles.arcHead}>
-        <Text style={[Typography.eyebrowSm, { color: C.ink2 }]}>TODAY&apos;S ARC</Text>
+        <Text style={[Typography.eyebrowSm, { color: C.ink2 }]}>SIGNAL ARC</Text>
         <Text
           style={[
             Typography.mono,
@@ -248,6 +253,12 @@ function ArcStrip({ slots }: { slots: ArcSlot[] }) {
             ]}
           />
         ))}
+      </View>
+      <View style={styles.arcFooter}>
+        <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
+          {activeCount ? `${activeCount} LIVE BLOCKS` : 'NO CHECK-IN YET'}
+        </Text>
+        <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>CHECK-IN READY</Text>
       </View>
     </View>
   );
@@ -352,7 +363,7 @@ function timelineSourceLabel(type: TimelineItem['type']): string {
     case 'task':
       return 'Task from Tasks';
     case 'plan':
-      return 'Goal from Goals';
+      return 'Target from Targets';
     case 'event':
       return 'Event from Calendar';
     case 'ritual':
@@ -367,8 +378,8 @@ function timelineSourceLabel(type: TimelineItem['type']): string {
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { C } = useTheme();
-  const { partner, mode, user, isFeatureEnabled } = useSession();
+  const { C, mode: themeMode } = useTheme();
+  const { partner, mode, isFeatureEnabled } = useSession();
   const home = useHomeTimeline({ previewDays: 30 });
   const weather = useWeatherStatus();
   const checkinsEnabled = isFeatureEnabled('checkins');
@@ -395,17 +406,12 @@ export default function HomeScreen() {
   );
   const hasComingUp = !!routedComingTimeline || !!comingMilestone;
   const scheduledItemCount = routedTimelineItems.length + home.milestones.length;
-  const activitySeed = useMemo(
-    () => hashString(`${user?.id ?? 'home'}:${scheduledItemCount}:${home.milestones.length}`),
-    [user?.id, scheduledItemCount, home.milestones.length],
-  );
   const enabledShortcuts = useMemo(
     () => SHORTCUTS.filter((s) => isFeatureEnabled(s.feature)),
     [isFeatureEnabled],
   );
 
   const partnerFirstName = partner?.displayName?.split(' ')[0] ?? null;
-
   const myMood = moodFor(todayCheckIn?.mood);
   const partnerMood = moodFor(partnerTodayCheckIn?.mood);
 
@@ -416,267 +422,457 @@ export default function HomeScreen() {
     if (checkinsEnabled) router.push('/sheets/new-checkin');
   };
 
-  return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingTop: insets.top + 56, paddingBottom: 120 }}
-        showsVerticalScrollIndicator={false}
+  const isDarkTheme = themeMode === 'dark';
+  const moodSignal = {
+    wrapBg: isDarkTheme ? C.bgCard : C.cardHi,
+    cardBg: isDarkTheme ? C.bgCard : C.cardHi,
+    border: C.lineColor,
+    pillBg: isDarkTheme ? C.bgSoft : C.bgSoft,
+    imageBg: isDarkTheme ? C.bgSoft : C.accentSoft,
+    ink: C.inkColor,
+    muted: C.ink2,
+  };
+  const aheadHeatmapPalette: [string, string, string, string] = isDarkTheme
+    ? [C.lineColor, C.accent2Soft, C.accent2, C.accent]
+    : [C.lineColor, C.accent2Soft, C.accent2, C.peach];
+  const aheadTicket = {
+    cardBg: isDarkTheme ? C.bgCard : C.cardHi,
+    border: C.lineColor,
+    notchBg: isDarkTheme ? C.accentSoft : C.peach,
+    notchInk: isDarkTheme ? C.accent : C.peachInk,
+    heatmapBg: 'transparent',
+    ink: C.inkColor,
+    muted: C.ink2,
+    heatmapPalette: aheadHeatmapPalette,
+  };
+
+  const renderSoloMoodCard = () => {
+    return (
+      <PressScale
+        onPress={onCheckIn}
+        accessibilityLabel="Update check-in"
+        accessibilityHint="Opens the check-in sheet"
+        style={[
+          styles.moodWrap,
+          styles.softShadow,
+          styles.soloMoodStampWrap,
+          { backgroundColor: moodSignal.wrapBg },
+        ]}
       >
-        {checkinsEnabled ? (
-          <View style={styles.section}>
-            {mode === 'solo' ? (
-              <View style={[styles.moodWrap, styles.softShadow]}>
-                <PressScale onPress={onCheckIn}>
-                  <View
-                    style={[
-                      styles.soloMood,
-                      { backgroundColor: myMood.color },
-                    ]}
-                  >
-                    <HeroPactoBadge style={styles.heroBadge} />
-                    <View style={styles.moodMetaRow}>
-                      <View style={styles.moodDatePill}>
-                        <Text style={[Typography.eyebrowSm, styles.tabularText, { color: '#5C4F3D' }]}>
-                          {dateLabel}
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={styles.soloMoodMain}>
-                      <View style={styles.soloMoodImageFrame}>
-                        <Image source={myMood.image} style={styles.soloMoodIcon} resizeMode="contain" />
-                      </View>
-                      <View style={{ marginLeft: 14, flex: 1 }}>
-                        <Text style={[Typography.eyebrow, { color: '#5C4F3D' }]}>
-                          Right now you're
-                        </Text>
-                        <Text
-                          style={[
-                            Typography.pixelHero,
-                            { color: '#2A241B', marginTop: 4 },
-                          ]}
-                        >
-                          {myMood.label}
-                        </Text>
-                      </View>
-                      <Icon name="chevronRight" size={18} color="#5C4F3D" />
-                    </View>
-                  </View>
-                </PressScale>
-                <ArcStrip slots={arcSlots} />
-              </View>
-            ) : (
-              <Card padded={false} elevated style={styles.moodCard}>
-                <HeroPactoBadge style={styles.heroBadge} />
-                <View style={styles.moodCardHeader}>
-                  <View style={styles.moodDatePill}>
-                    <Text style={[Typography.eyebrowSm, styles.tabularText, { color: '#5C4F3D' }]}>
-                      {dateLabel}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.moodPair}>
-                  <PressScale
-                    onPress={onCheckIn}
-                    style={[
-                      styles.moodHalf,
-                      { backgroundColor: myMood.color },
-                    ]}
-                  >
-                    <Text style={[Typography.eyebrowSm, { color: '#5C4F3D' }]}>
-                      You
-                    </Text>
-                    <View style={styles.moodInline}>
-                      <View style={styles.inlineMoodImageFrame}>
-                        <Image source={myMood.image} style={styles.inlineMoodIcon} resizeMode="contain" />
-                      </View>
-                      <Text
-                        style={[
-                          Typography.pixelHeroSm,
-                          { color: '#2A241B', marginLeft: 8 },
-                        ]}
-                      >
-                        {myMood.label}
-                      </Text>
-                    </View>
-                    <Text style={[Typography.small, { color: '#5C4F3D', marginTop: 4 }]}>
-                      tap to update
-                    </Text>
-                  </PressScale>
-                  <View
-                    style={[
-                      styles.moodHalf,
-                      { backgroundColor: partnerMood.color },
-                    ]}
-                  >
-                    <Text style={[Typography.eyebrowSm, { color: '#5C4F3D' }]}>
-                      {partnerFirstName ?? 'They'}
-                    </Text>
-                    <View style={styles.moodInline}>
-                      <View style={styles.inlineMoodImageFrame}>
-                        <Image source={partnerMood.image} style={styles.inlineMoodIcon} resizeMode="contain" />
-                      </View>
-                      <Text
-                        style={[
-                          Typography.pixelHeroSm,
-                          { color: '#2A241B', marginLeft: 8 },
-                        ]}
-                      >
-                        {partnerMood.label}
-                      </Text>
-                    </View>
-                    <Text style={[Typography.small, { color: '#5C4F3D', marginTop: 4 }]}>
-                      {partnerTodayCheckIn ? 'today' : 'no check-in today'}
-                    </Text>
-                  </View>
-                </View>
-                <ArcStrip slots={arcSlots} />
-              </Card>
-            )}
-          </View>
-        ) : null}
-
-        {/* When you're together — live-derived summary */}
-        <View style={styles.section}>
-          <View style={styles.togetherHeadRow}>
-            <Text style={[Typography.eyebrow, { color: C.ink3 }]}>
-              {mode === 'solo' ? "WHAT'S AHEAD" : "WHEN YOU'RE TOGETHER"}
-            </Text>
-            <Text
-              style={[Typography.eyebrow, styles.tabularText, { color: C.ink3 }]}
+        <HeroPactoBadge style={styles.heroBadge} />
+        <View
+          style={[
+            styles.soloMood,
+            styles.soloMoodStamp,
+            {
+              backgroundColor: moodSignal.cardBg,
+              borderColor: moodSignal.border,
+            },
+          ]}
+        >
+          <View style={styles.moodMetaRow}>
+            <View
+              style={[
+                styles.moodDatePill,
+                styles.moodDatePillDark,
+                {
+                  backgroundColor: moodSignal.pillBg,
+                  borderColor: moodSignal.border,
+                },
+              ]}
             >
-              NEXT 30 DAYS
-            </Text>
-          </View>
-          <Card elevated style={{ padding: 18 }}>
-            <Text
-              style={[Typography.pixelHeroSm, { color: C.inkColor }]}
-              numberOfLines={1}
-            >
-              <Text style={[Typography.pixelHeroSm, { color: C.accent }]}>
-                {scheduledItemCount}
+              <Text style={[Typography.eyebrowSm, styles.tabularText, { color: moodSignal.muted }]}>
+                {dateLabel}
               </Text>
-              {' ITEMS AHEAD'}
-            </Text>
-            <View style={[styles.activityPanel, { borderTopColor: C.lineColor }]}>
-              <View style={styles.activityHeader}>
-                <View style={styles.activityTitleRow}>
-                  <Icon name="activity" size={13} color={C.accent3} />
-                  <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
-                    RECENT ACTIVITY
-                  </Text>
-                </View>
-                <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
-                  15 WEEKS
-                </Text>
-              </View>
-              <View style={styles.activityHeatmapFrame}>
-                <ActivityHeatmap
-                  weeks={15}
-                  seed={activitySeed}
-                  palette={['#58606A', '#5F865D', '#74BA68', '#91E27A']}
-                  showLegend={false}
-                  showDayAxis={false}
-                  showWeekAxis={false}
-                  weekLabelMode="months"
-                  cellGap={3}
-                  cellRadius={1}
-                  maxCellSize={22}
-                />
-              </View>
             </View>
-            <View style={[styles.togetherFooter, { borderTopColor: C.lineColor }]}>
-              <View style={{ flex: 1 }}>
-                <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
-                  NEXT ITEM
-                </Text>
-                <Text
-                  style={[Typography.captionMedium, { color: C.inkColor, marginTop: 4 }]}
-                >
-                  {routedComingTimeline
-                    ? routedComingTimeline.title
-                    : comingMilestone
-                      ? comingMilestone.title
-                      : 'Nothing scheduled yet'}
-                </Text>
-              </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
-                  MEMORY DATES
-                </Text>
-                <Text
-                  style={[Typography.captionMedium, { color: C.inkColor, marginTop: 4 }]}
-                >
-                  {home.milestones.length}
-                </Text>
-              </View>
-            </View>
-          </Card>
-        </View>
-
-        {/* Today — live timeline rows */}
-        <View style={styles.section}>
-          <View style={styles.todayHeadRow}>
-            <Text style={[Typography.eyebrow, { color: C.ink3 }]}>TODAY</Text>
-            <Text style={[Typography.eyebrow, styles.tabularText, { color: C.ink3 }]}>
-              {format(today, 'MMM d').toUpperCase()}
-            </Text>
           </View>
-          <Card padded={false} elevated style={styles.todayCard}>
-            <PressScale
-              testID="home-weather-card"
-              onPress={weather.request}
-              style={styles.todayWeatherBand}
+          <View style={styles.soloMoodMain}>
+            <View
+              style={[
+                styles.soloMoodImageFrame,
+                styles.soloMoodImageStamp,
+                {
+                  backgroundColor: moodSignal.imageBg,
+                  borderColor: moodSignal.border,
+                },
+              ]}
             >
-              <View style={styles.todayWeatherIcon}>
-                <Icon name={weather.icon} size={18} color="#223241" />
-              </View>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.todayWeatherTitle} numberOfLines={1}>
-                  {weather.title}
+              <Image source={myMood.image} style={styles.soloMoodIcon} resizeMode="contain" />
+            </View>
+            <View style={{ marginLeft: 14, flex: 1 }}>
+              <Text style={[Typography.eyebrow, { color: moodSignal.muted }]}>
+                Current signal
+              </Text>
+              <Text
+                style={[
+                  Typography.pixelHero,
+                  { color: moodSignal.ink, marginTop: 4 },
+                ]}
+              >
+                {myMood.label}
+              </Text>
+            </View>
+          </View>
+          <View
+            style={[
+              styles.soloMoodChevron,
+              {
+                backgroundColor: moodSignal.pillBg,
+                borderColor: moodSignal.border,
+              },
+            ]}
+          >
+            <Icon name="chevronRight" size={18} color={moodSignal.muted} />
+          </View>
+        </View>
+        <ArcStrip slots={arcSlots} />
+      </PressScale>
+    );
+  };
+
+  const aheadTitle =
+    mode === 'solo' ? 'YOUR RHYTHM' : mode === 'crew' ? 'CREW RHYTHM' : 'OUR RHYTHM';
+  // Distinct days with any activity in the visible 15-week window.
+  // Source-of-truth = the same buildActivityHeatmapDays output the heatmap renders.
+  const liveDayCount = home.activity.filter((d) => d.count > 0).length;
+  // Current consecutive-active-days streak ending today. Walk backwards from
+  // the last cell (today) until we hit a day with no activity.
+  const activityStreak = (() => {
+    let n = 0;
+    for (let i = home.activity.length - 1; i >= 0; i--) {
+      if ((home.activity[i]?.count ?? 0) > 0) n += 1;
+      else break;
+    }
+    return n;
+  })();
+  const nextItemTitle = routedComingTimeline
+    ? routedComingTimeline.title
+    : comingMilestone
+      ? comingMilestone.title
+      : 'Nothing scheduled yet';
+
+  const renderAheadCard = () => {
+    const nextItemRoute = routedComingTimeline
+      ? routeForTimelineItem(routedComingTimeline, isFeatureEnabled)
+      : comingMilestone
+        ? routeForMilestoneItem(comingMilestone)
+        : null;
+    const memoryDatesRoute = isFeatureEnabled('memories') ? '/(tabs)/us/milestones' : null;
+
+    return (
+      <View>
+        <View style={styles.togetherHeadRow}>
+          <Text style={[Typography.eyebrow, { color: C.ink3 }]}>
+            {aheadTitle}
+          </Text>
+          <Text
+            style={[Typography.eyebrow, styles.tabularText, { color: C.accent2 }]}
+          >
+            PAST 15 WEEKS
+          </Text>
+        </View>
+        <Card
+          elevated
+          style={[
+            { padding: 18 },
+            styles.aheadTicketCard,
+            {
+              backgroundColor: aheadTicket.cardBg,
+              borderColor: aheadTicket.border,
+            },
+          ]}
+        >
+          <Pressable
+            onPress={() => {
+              if (!checkinsEnabled) return;
+              Haptics.selectionAsync().catch(() => undefined);
+              router.push('/sheets/new-checkin');
+            }}
+            disabled={!checkinsEnabled}
+            accessibilityRole="button"
+            accessibilityLabel={
+              activityStreak > 0
+                ? `Streak: ${activityStreak} day${activityStreak === 1 ? '' : 's'}. Tap to check in and keep it going.`
+                : 'No active streak. Tap to start one.'
+            }
+            style={({ pressed }) => [
+              styles.aheadTicketNotch,
+              {
+                backgroundColor: aheadTicket.notchBg,
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}
+          >
+            <Text style={[Typography.eyebrowSm, styles.tabularText, { color: aheadTicket.notchInk }]}>
+              {activityStreak > 0 ? 'STREAK' : 'BEGIN'}
+            </Text>
+            {activityStreak > 0 ? (
+              <Text
+                style={[
+                  Typography.eyebrowSm,
+                  styles.tabularText,
+                  { color: aheadTicket.notchInk, marginTop: 2, fontSize: 13, lineHeight: 14 },
+                ]}
+              >
+                {activityStreak}
+              </Text>
+            ) : null}
+          </Pressable>
+          <View style={styles.aheadHeroRow}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text
+                style={[Typography.pixelHeroSm, { color: aheadTicket.ink }]}
+                numberOfLines={1}
+              >
+                <Text style={[Typography.pixelHeroSm, { color: C.accent2 }]}>
+                  {liveDayCount}
                 </Text>
-                <Text style={styles.todayWeatherDetail} numberOfLines={1}>
-                  {weather.detail}
+                {liveDayCount === 1 ? ' LIVE DAY' : ' LIVE DAYS'}
+              </Text>
+              <Text
+                style={[
+                  Typography.captionMedium,
+                  {
+                    color: aheadTicket.muted,
+                    marginTop: 7,
+                  },
+                ]}
+                numberOfLines={2}
+              >
+                Days you showed up.
+              </Text>
+            </View>
+          </View>
+          <View
+            style={[
+              styles.activityPanel,
+              styles.aheadSignalPanel,
+              styles.aheadTicketPanel,
+              { borderTopColor: aheadTicket.border },
+            ]}
+          >
+            <View style={styles.activityHeader}>
+              <View style={styles.activityTitleRow}>
+                <Icon name="activity" size={13} color={C.accent2} />
+                <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
+                  RECENT ACTIVITY
                 </Text>
               </View>
-              <Icon name="chevronRight" size={18} color="#6B7782" />
-            </PressScale>
-            {routedTodayRows.length === 0 ? (
-              goalsEnabled ? (
+              <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
+                15 WEEKS
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.activityHeatmapFrame,
+                styles.aheadSignalHeatmap,
+                styles.aheadTicketHeatmap,
+                { backgroundColor: aheadTicket.heatmapBg },
+              ]}
+            >
+              <ActivityHeatmap
+                weeks={15}
+                days={home.activity}
+                palette={aheadTicket.heatmapPalette}
+                showLegend={false}
+                showDayAxis={false}
+                showWeekAxis={false}
+                weekLabelMode="months"
+                cellGap={3}
+                cellRadius={1}
+                maxCellSize={22}
+                todayColor={C.accent2}
+              />
+            </View>
+          </View>
+          <View
+            style={[
+              styles.aheadFooterButtons,
+              styles.aheadSignalFooter,
+              {
+                backgroundColor: aheadTicket.cardBg,
+                borderColor: aheadTicket.border,
+              },
+            ]}
+          >
+            <Pressable
+              onPress={memoryDatesRoute ? () => {
+                Haptics.selectionAsync().catch(() => undefined);
+                router.push(memoryDatesRoute as any);
+              } : undefined}
+              disabled={!memoryDatesRoute}
+              accessibilityRole="button"
+              accessibilityLabel={`Open dates, ${home.milestones.length} saved`}
+              style={({ pressed }) => [
+                styles.aheadFooterButton,
+                pressed ? styles.aheadFooterButtonPressed : null,
+                !memoryDatesRoute ? { opacity: 0.55 } : null,
+              ]}
+            >
+              <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
+                DATES
+              </Text>
+              <Text
+                style={[Typography.captionMedium, { color: aheadTicket.ink, marginTop: 4 }]}
+              >
+                {home.milestones.length}
+              </Text>
+            </Pressable>
+            <View style={[styles.aheadFooterDivider, { backgroundColor: aheadTicket.border }]} />
+            <Pressable
+              onPress={nextItemRoute ? () => {
+                Haptics.selectionAsync().catch(() => undefined);
+                router.push(nextItemRoute as any);
+              } : undefined}
+              disabled={!nextItemRoute}
+              accessibilityRole="button"
+              accessibilityLabel={`Open next item, ${nextItemTitle}`}
+              style={({ pressed }) => [
+                styles.aheadFooterButton,
+                styles.aheadFooterButtonRight,
+                pressed ? styles.aheadFooterButtonPressed : null,
+                !nextItemRoute ? { opacity: 0.55 } : null,
+              ]}
+            >
+              <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
+                NEXT ITEM
+              </Text>
+              <Text
+                style={[Typography.captionMedium, { color: aheadTicket.ink, marginTop: 4 }]}
+                numberOfLines={1}
+              >
+                {nextItemTitle}
+              </Text>
+            </Pressable>
+          </View>
+        </Card>
+      </View>
+    );
+  };
+
+  const renderTodayCard = (variant: TodayVariant) => {
+    const isPocket = variant === 'pocket';
+    const isLedger = variant === 'ledger';
+    const todaySurface = {
+      cardBg: isPocket ? C.bgSoft : C.bgCard,
+      cardBorder: isPocket ? C.line2 : C.lineColor,
+      weatherBg: isLedger
+        ? C.accent3Soft
+        : isPocket
+          ? C.bgCard
+          : isDarkTheme
+            ? C.accent2Soft
+            : C.sky,
+      weatherIconBg: isDarkTheme ? C.bgCard : alphaColor(C.skyInk, 0.1),
+      weatherInk: isDarkTheme ? C.inkColor : C.skyInk,
+      weatherMuted: isDarkTheme ? C.ink2 : alphaColor(C.skyInk, 0.7),
+      emptyBg: isLedger ? C.bgSoft : 'transparent',
+      emptyBorder: isLedger ? C.lineColor : 'transparent',
+    };
+
+    return (
+      <View>
+        <View style={styles.todayHeadRow}>
+          <Text style={[Typography.eyebrow, { color: C.ink3 }]}>TODAY</Text>
+          <Text style={[Typography.eyebrow, styles.tabularText, { color: C.ink3 }]}>
+            {format(today, 'MMM d').toUpperCase()}
+          </Text>
+        </View>
+        <Card
+          padded={false}
+          elevated
+          style={[
+            styles.todayCard,
+            isPocket ? styles.todayCardPocket : null,
+            isLedger ? styles.todayCardLedger : null,
+            {
+              backgroundColor: todaySurface.cardBg,
+              borderColor: todaySurface.cardBorder,
+            },
+          ]}
+        >
+          <PressScale
+            testID="home-weather-card"
+            onPress={weather.request}
+            style={[
+              styles.todayWeatherBand,
+              isPocket ? styles.todayWeatherPocket : null,
+              isLedger ? styles.todayWeatherLedger : null,
+              { backgroundColor: todaySurface.weatherBg },
+            ]}
+          >
+            <View style={[styles.todayWeatherIcon, { backgroundColor: todaySurface.weatherIconBg }]}>
+              <Icon name={weather.icon} size={18} color={todaySurface.weatherInk} />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text
+                style={[styles.todayWeatherTitle, { color: todaySurface.weatherInk }]}
+                numberOfLines={1}
+              >
+                {weather.title}
+              </Text>
+              <Text
+                style={[styles.todayWeatherDetail, { color: todaySurface.weatherMuted }]}
+                numberOfLines={1}
+              >
+                {weather.detail}
+              </Text>
+            </View>
+            <Icon name="chevronRight" size={18} color={todaySurface.weatherMuted} />
+          </PressScale>
+          {routedTodayRows.length === 0 ? (
+            goalsEnabled ? (
+              <PressScale
+                testID="home-timeline-empty"
+                onPress={() => router.push('/sheets/new-plan' as any)}
+                style={[
+                  styles.emptyBlock,
+                  isLedger ? styles.emptyBlockLedger : null,
+                  {
+                    backgroundColor: todaySurface.emptyBg,
+                    borderColor: todaySurface.emptyBorder,
+                  },
+                ]}
+              >
+                <Text style={[Typography.bodyMedium, { color: C.inkColor }]}>
+                  No items dated today
+                </Text>
+                <Text style={[Typography.captionMedium, { color: C.accent, marginTop: 4 }]}>
+                  Schedule a target
+                </Text>
+              </PressScale>
+            ) : (
+              <View
+                testID="home-timeline-empty"
+                style={[
+                  styles.emptyBlock,
+                  isLedger ? styles.emptyBlockLedger : null,
+                  {
+                    backgroundColor: todaySurface.emptyBg,
+                    borderColor: todaySurface.emptyBorder,
+                  },
+                ]}
+              >
+                <Text style={[Typography.bodyMedium, { color: C.inkColor }]}>
+                  No items dated today
+                </Text>
+                <Text style={[Typography.caption, { color: C.ink3, marginTop: 4 }]}>
+                  Nothing from enabled features is scheduled for today.
+                </Text>
+              </View>
+            )
+          ) : routedTodayRows.map((row, i) => {
+            const route = routeForTimelineItem(row, isFeatureEnabled);
+            return (
+              <View key={row.id}>
+                {i > 0 ? <View style={[styles.todayDivider, { backgroundColor: C.lineColor }]} /> : null}
                 <PressScale
-                  testID="home-timeline-empty"
-                  onPress={() => router.push('/sheets/new-plan' as any)}
-                  style={styles.emptyBlock}
+                  testID={`home-timeline-${row.type}-${row.sourceId}`}
+                  onPress={() => {
+                    if (route) router.push(route as any);
+                  }}
+                  style={styles.todayRow2}
                 >
-                  <Text style={[Typography.bodyMedium, { color: C.inkColor }]}>
-                    No items dated today
-                  </Text>
-                  <Text style={[Typography.captionMedium, { color: C.accent, marginTop: 4 }]}>
-                    Schedule a goal
-                  </Text>
-                </PressScale>
-              ) : (
-                <View testID="home-timeline-empty" style={styles.emptyBlock}>
-                  <Text style={[Typography.bodyMedium, { color: C.inkColor }]}>
-                    No items dated today
-                  </Text>
-                  <Text style={[Typography.caption, { color: C.ink3, marginTop: 4 }]}>
-                    Nothing from enabled features is scheduled for today.
-                  </Text>
-                </View>
-              )
-            ) : routedTodayRows.map((row, i) => {
-              const route = routeForTimelineItem(row, isFeatureEnabled);
-              return (
-                <View key={row.id}>
-                  {i > 0 ? <View style={[styles.todayDivider, { backgroundColor: C.lineColor }]} /> : null}
-                  <PressScale
-                    testID={`home-timeline-${row.type}-${row.sourceId}`}
-                    onPress={() => {
-                      if (route) router.push(route as any);
-                    }}
-                    style={styles.todayRow2}
-                  >
                   <Text style={[Typography.mono, styles.tabularText, styles.todayTime, { color: C.ink3 }]}>
                     {timeLabel(row.occursAt)}
                   </Text>
@@ -690,11 +886,123 @@ export default function HomeScreen() {
                     </Text>
                   </View>
                   <Icon name="chevronRight" size={16} color={C.ink3} />
-                  </PressScale>
+                </PressScale>
+              </View>
+            );
+          })}
+        </Card>
+      </View>
+    );
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingTop: insets.top + 56, paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {checkinsEnabled ? (
+          <View style={styles.section}>
+            {mode === 'solo' ? (
+              renderSoloMoodCard()
+            ) : (
+              <Card
+                padded={false}
+                elevated
+                style={[
+                  styles.moodCard,
+                  {
+                    backgroundColor: C.bgCard,
+                    borderColor: C.lineColor,
+                  },
+                ]}
+              >
+                <HeroPactoBadge style={styles.heroBadge} />
+                <View style={[styles.moodCardHeader, { backgroundColor: C.bgSoft }]}>
+                  <View
+                    style={[
+                      styles.moodDatePill,
+                      {
+                        backgroundColor: C.bgCard,
+                        borderColor: C.lineColor,
+                      },
+                    ]}
+                  >
+                    <Text style={[Typography.eyebrowSm, styles.tabularText, { color: C.ink2 }]}>
+                      {dateLabel}
+                    </Text>
+                  </View>
                 </View>
-              );
-            })}
-          </Card>
+                <View style={styles.moodPair}>
+                  <PressScale
+                    onPress={onCheckIn}
+                    style={[
+                      styles.moodHalf,
+                      { backgroundColor: myMood.color },
+                    ]}
+                  >
+                    <Text style={[Typography.eyebrowSm, { color: C.peachInk }]}>
+                      You
+                    </Text>
+                    <View style={styles.moodInline}>
+                      <View style={styles.inlineMoodImageFrame}>
+                        <Image source={myMood.image} style={styles.inlineMoodIcon} resizeMode="contain" />
+                      </View>
+                      <Text
+                        style={[
+                          Typography.pixelHeroSm,
+                          { color: C.peachInk, marginLeft: 8 },
+                        ]}
+                      >
+                        {myMood.label}
+                      </Text>
+                    </View>
+                    <Text style={[Typography.small, { color: C.peachInk, marginTop: 4 }]}>
+                      tap to update
+                    </Text>
+                  </PressScale>
+                  <View
+                    style={[
+                      styles.moodHalf,
+                      { backgroundColor: partnerMood.color },
+                    ]}
+                  >
+                    <Text style={[Typography.eyebrowSm, { color: C.peachInk }]}>
+                      {partnerFirstName ?? 'They'}
+                    </Text>
+                    <View style={styles.moodInline}>
+                      <View style={styles.inlineMoodImageFrame}>
+                        <Image source={partnerMood.image} style={styles.inlineMoodIcon} resizeMode="contain" />
+                      </View>
+                      <Text
+                        style={[
+                          Typography.pixelHeroSm,
+                          { color: C.peachInk, marginLeft: 8 },
+                        ]}
+                      >
+                        {partnerMood.label}
+                      </Text>
+                    </View>
+                    <Text style={[Typography.small, { color: C.peachInk, marginTop: 4 }]}>
+                      {partnerTodayCheckIn ? 'today' : 'no check-in today'}
+                    </Text>
+                  </View>
+                </View>
+                <ArcStrip slots={arcSlots} />
+              </Card>
+            )}
+          </View>
+        ) : null}
+
+        {/* When you're together — live-derived summary */}
+        <View style={styles.section}>
+          {renderAheadCard()}
+        </View>
+
+        {/* Today — live timeline rows */}
+        <View style={styles.section}>
+          {renderTodayCard('band')}
         </View>
 
         {/* Coming up */}
@@ -797,7 +1105,7 @@ export default function HomeScreen() {
                       Nothing scheduled
                     </Text>
                     <Text style={[Typography.caption, { color: C.ink3, marginTop: 8 }]} numberOfLines={2}>
-                      Add a dated task, reminder, event, or goal.
+                      Add a dated task, reminder, event, or target.
                     </Text>
                   </View>
                 </Card>
@@ -861,20 +1169,25 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Shortcuts */}
+        {/* Capture dock */}
         <View style={styles.section}>
-          <SectionHead>Shortcuts</SectionHead>
-          <View style={styles.shortcuts}>
+          <View style={styles.captureHeadRow}>
+            <SectionHead>Capture</SectionHead>
+            <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
+              FAST ADD
+            </Text>
+          </View>
+          <View style={styles.captureDock}>
             {enabledShortcuts.map((s) => (
               <PressScale
                 key={s.label}
                 onPress={() => router.push(s.route as any)}
                 style={[
-                  styles.shortcut,
+                  styles.captureAction,
                   { backgroundColor: C.bgSoft, borderColor: C.lineColor },
                 ]}
               >
-                <View style={[styles.shortcutIcon, { backgroundColor: C.accentSoft }]}>
+                <View style={[styles.captureIcon, { backgroundColor: C.accentSoft }]}>
                   <Icon name={s.icon} size={19} color={C.accent} />
                 </View>
                 <Text style={[Typography.captionMedium, { color: C.inkColor, marginTop: 6 }]}>
@@ -903,12 +1216,6 @@ function useCheckInSnapshot(enabled: boolean) {
     partnerTodayCheckIn: data.partnerTodayCheckIn ?? null,
     checkIns: data.checkIns,
   };
-}
-
-function hashString(input: string): number {
-  let h = 0;
-  for (let i = 0; i < input.length; i++) h = (h * 31 + input.charCodeAt(i)) >>> 0;
-  return (h % 1000) + 1;
 }
 
 const styles = StyleSheet.create({
@@ -949,6 +1256,12 @@ const styles = StyleSheet.create({
     gap: 4,
     minHeight: 32,
   },
+  arcFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
   arcSwatch: {
     flex: 1,
     borderRadius: 4,
@@ -969,6 +1282,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0, 0, 0, 0.1)',
     backgroundColor: 'rgba(255, 255, 255, 0.18)',
   },
+  moodDatePillDark: {
+    borderColor: '#4D4537',
+    backgroundColor: '#2A2620',
+  },
   soloMoodMain: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -982,6 +1299,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.22)',
+  },
+  soloMoodStampWrap: {
+    borderRadius: 20,
+    backgroundColor: '#39322B',
+  },
+  soloMoodStamp: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderWidth: 1,
+    borderColor: '#4D4537',
+  },
+  soloMoodImageStamp: {
+    backgroundColor: '#2A2620',
+    borderColor: '#4D4537',
+  },
+  soloMoodChevron: {
+    position: 'absolute',
+    right: 16,
+    top: 70,
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   moodCard: {
     borderRadius: 24,
@@ -1075,14 +1417,6 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     borderRadius: 6,
   },
-  togetherFooter: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    borderTopWidth: 1,
-    paddingTop: 12,
-    marginTop: 14,
-  },
   activityPanel: {
     borderTopWidth: 1,
     paddingTop: 14,
@@ -1104,6 +1438,74 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     paddingBottom: 0,
   },
+  aheadHeroRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  aheadTicketCard: {
+    borderRadius: 20,
+    backgroundColor: '#FFFDF7',
+    borderColor: '#E8E2D4',
+  },
+  aheadTicketNotch: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    paddingHorizontal: 12,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F4A68C',
+    borderBottomLeftRadius: 12,
+  },
+  aheadSignalPanel: {
+    borderTopColor: '#4D4537',
+  },
+  aheadTicketPanel: {
+    borderTopColor: '#E8E2D4',
+  },
+  aheadSignalHeatmap: {
+    padding: 10,
+    borderRadius: 0,
+    backgroundColor: 'transparent',
+  },
+  aheadTicketHeatmap: {
+    borderRadius: 0,
+    backgroundColor: 'transparent',
+  },
+  aheadSignalFooter: {
+    borderTopColor: '#4D4537',
+  },
+  aheadFooterButtons: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    borderTopWidth: 1,
+    borderBottomLeftRadius: 19,
+    borderBottomRightRadius: 19,
+    overflow: 'hidden',
+    marginTop: 16,
+    marginHorizontal: -18,
+    marginBottom: -18,
+  },
+  aheadFooterButton: {
+    flex: 1,
+    minHeight: 62,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    justifyContent: 'center',
+  },
+  aheadFooterButtonPressed: {
+    opacity: 0.82,
+    transform: [{ translateY: 2 }, { scale: 0.94 }],
+  },
+  aheadFooterButtonRight: {
+    alignItems: 'flex-end',
+  },
+  aheadFooterDivider: {
+    width: 1,
+    alignSelf: 'stretch',
+  },
   todayRow: {
     flexDirection: 'row',
     gap: 10,
@@ -1119,6 +1521,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: 24,
   },
+  todayCardPocket: {
+    padding: 8,
+    borderRadius: 22,
+  },
+  todayCardLedger: {
+    padding: 10,
+    borderRadius: 18,
+  },
   todayWeatherBand: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1127,6 +1537,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 13,
     backgroundColor: '#DDEAF3',
+  },
+  todayWeatherPocket: {
+    borderRadius: 16,
+  },
+  todayWeatherLedger: {
+    borderRadius: 12,
+    minHeight: 70,
   },
   todayWeatherIcon: {
     width: 42,
@@ -1152,6 +1569,11 @@ const styles = StyleSheet.create({
   emptyBlock: {
     paddingHorizontal: 22,
     paddingVertical: 20,
+  },
+  emptyBlockLedger: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderRadius: 12,
   },
   todayDivider: {
     height: 1,
@@ -1292,11 +1714,17 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 2,
   },
-  shortcuts: {
+  captureHeadRow: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
   },
-  shortcut: {
+  captureDock: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  captureAction: {
     flex: 1,
     paddingVertical: 11,
     borderRadius: 14,
@@ -1305,7 +1733,7 @@ const styles = StyleSheet.create({
     minHeight: 66,
     justifyContent: 'center',
   },
-  shortcutIcon: {
+  captureIcon: {
     width: 32,
     height: 32,
     borderRadius: 10,
