@@ -23,6 +23,10 @@ const queryState = vi.hoisted(() => ({
     journalEntries: [],
     loveNotes: [],
     dailyVerseCache: [],
+    expenses: [],
+    wishlistItems: [],
+    timetableItems: [],
+    memories: [],
   } as any,
 }));
 
@@ -85,6 +89,10 @@ describe('useHomeTimeline feature filtering', () => {
       journalEntries: [],
       loveNotes: [],
       dailyVerseCache: [],
+      expenses: [],
+      wishlistItems: [],
+      timetableItems: [],
+      memories: [],
     };
     dbMock.useQuery.mockClear();
     dbMock.getAuth.mockClear();
@@ -196,6 +204,39 @@ describe('useHomeTimeline feature filtering', () => {
     expect(latest.milestones).toEqual([]);
     expect(latest.hero?.kind).not.toBe('countdown');
     expect(latest.hero?.sourceId).not.toBe('milestone:milestone-1');
+
+    act(() => renderer.unmount());
+  });
+
+  it('builds activity from live dated records returned by the home query', async () => {
+    const today = todayDateKey();
+    queryState.data.tasks = [
+      {
+        id: 'task-1',
+        title: 'Finish setup',
+        dueDate: today,
+        completedAt: Date.now(),
+        createdAt: Date.now(),
+      },
+    ];
+    queryState.data.checkIns = [
+      {
+        id: 'checkin-1',
+        checkInDate: today,
+        createdAt: Date.now(),
+      },
+    ];
+
+    const { latest, renderer } = await renderHookValue();
+    const todayCell = latest.activity.find((day) => day.dateKey === today);
+
+    // task-1 + checkin-1 = 2 distinct entities touched today (dedup collapses
+    // task's dueDate + completedAt → 1, checkin's single checkInDate → 1).
+    expect(todayCell).toMatchObject({
+      dateKey: today,
+      weight: 2,
+    });
+    expect(todayCell?.count).toBe(2);
 
     act(() => renderer.unmount());
   });
