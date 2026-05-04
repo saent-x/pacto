@@ -72,6 +72,47 @@ const TorchGlow = React.memo(function TorchGlow({
   );
 });
 
+/**
+ * Animated trailing ellipsis. Cycles `' '`, `'.'`, `'..'`, `'...'` every
+ * `intervalMs`. Wrapped in a fixed-width Text so the label it sits next to
+ * doesn't jump position as the dot count changes.
+ */
+function EllipsisDots({
+  color,
+  intervalMs = 380,
+  fontFamily,
+  fontSize,
+  letterSpacing,
+}: {
+  color: string;
+  intervalMs?: number;
+  fontFamily?: string;
+  fontSize?: number;
+  letterSpacing?: number;
+}) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setN((v) => (v + 1) % 4), intervalMs);
+    return () => clearInterval(t);
+  }, [intervalMs]);
+  return (
+    <Text
+      accessibilityElementsHidden
+      importantForAccessibility="no"
+      style={{
+        color,
+        fontFamily,
+        fontSize,
+        letterSpacing,
+        width: 22,
+        textAlign: 'left',
+      }}
+    >
+      {'.'.repeat(n)}
+    </Text>
+  );
+}
+
 const LISTENING_DOTS = Array.from({ length: 231 }, (_, index) => {
   const columns = 21;
   const row = Math.floor(index / columns);
@@ -247,17 +288,25 @@ function AssistantVoiceOverlay({
                 },
               ]}
             >
-              <Text
-                style={[
-                  styles.listeningText,
-                  {
-                    color: 'rgba(250,248,242,0.92)',
-                    fontFamily: F.geistMonoMedium,
-                  },
-                ]}
-              >
-                {labelForState(turn.state)}
-              </Text>
+              <View style={styles.listeningLabelRow}>
+                <Text
+                  style={[
+                    styles.listeningText,
+                    {
+                      color: 'rgba(250,248,242,0.92)',
+                      fontFamily: F.geistMonoMedium,
+                    },
+                  ]}
+                >
+                  {labelForState(turn.state)}
+                </Text>
+                <EllipsisDots
+                  color="rgba(250,248,242,0.92)"
+                  fontFamily={F.geistMonoMedium}
+                  fontSize={11}
+                  letterSpacing={3}
+                />
+              </View>
               <VoiceMeter active={recorderState.isRecording} />
             </Pressable>
           </View>
@@ -732,6 +781,11 @@ const styles = StyleSheet.create({
     lineHeight: 14,
     letterSpacing: 3,
     textTransform: 'uppercase',
+  },
+  listeningLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   listeningMeter: {
     height: 28,
