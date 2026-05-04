@@ -367,8 +367,15 @@ export function MemoryComposer() {
             })}
           </View>
         ) : null}
+      </ScrollView>
 
-        {/* Primary CTA */}
+      {/* Sticky footer — primary CTA pinned to bottom */}
+      <View
+        style={[
+          styles.footer,
+          { borderTopColor: C.lineColor, backgroundColor: (C as any).coal ?? C.bg },
+        ]}
+      >
         <PressScale
           onPress={onPost}
           disabled={!canPost || submitting}
@@ -391,7 +398,7 @@ export function MemoryComposer() {
             {ctaLabel}
           </Text>
         </PressScale>
-      </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -550,10 +557,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   cta: {
-    marginTop: 18,
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  footer: {
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 18,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
 });
