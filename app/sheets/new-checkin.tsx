@@ -1,118 +1,125 @@
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
-import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
-import { Icon, IconName } from '@/src/components/ui/Icon';
-import { SheetShell } from '@/src/components/ui/SheetShell';
-import { useTheme } from '@/src/lib/theme';
+import { useMemo, useState } from 'react';
+import { Alert } from 'react-native';
+import { FeatureUnavailable } from '@/src/components/features/FeatureUnavailable';
+import { PrimaryButton } from '@/src/components/ui/atoms';
+import {
+  SheetIconLabelPicker,
+  SheetInfoCard,
+  SheetSection,
+  SheetSegment,
+  SheetShell,
+  SheetTitleField,
+  type IconLabelOption,
+  type SegmentOption,
+} from '@/src/components/ui/SheetShell';
+import {
+  CHECK_IN_STATES,
+  type CheckInStateId,
+} from '@/src/constants/checkInStates';
+import { useCheckIns } from '@/src/hooks/useCheckIns';
+import { useFeatureGate } from '@/src/hooks/useFeatureGate';
+import { useSession } from '@/src/hooks/useSession';
 
+// solo-mode: partner-aware info card hidden
 export default function NewCheckin() {
-  const { C, F } = useTheme();
-  const [mood, setMood] = useState(4);
-  const [one, setOne] = useState('');
+  const gate = useFeatureGate('checkins');
+  if (!gate.enabled) return gate.feature ? <FeatureUnavailable feature={gate.feature} /> : null;
+  return <NewCheckinInner />;
+}
 
-  const moods: { n: number; icon: IconName; color: string; label: string }[] = [
-    { n: 1, icon: 'cloudRain', color: C.sky, label: 'Rough' },
-    { n: 2, icon: 'drizzle', color: C.lavender, label: 'Low' },
-    { n: 3, icon: 'minus', color: C.butter, label: 'Okay' },
-    { n: 4, icon: 'cloud', color: C.mint, label: 'Good' },
-    { n: 5, icon: 'sun', color: C.peach, label: 'Great' },
-  ];
-  const active = moods.find((m) => m.n === mood)!;
+function NewCheckinInner() {
+  const { createOrUpdate, isSubmitting } = useCheckIns();
+  const { isSolo, partner } = useSession();
+  const [mood, setMood] = useState<CheckInStateId>('soft');
+  const [energy, setEnergy] = useState('3');
+  const [one, setOne] = useState('');
+  const [saving, setSaving] = useState(false);
+  const partnerName = partner?.displayName ?? 'Partner';
+
+  const active = CHECK_IN_STATES.find((state) => state.id === mood)!;
+  const moodOptions: IconLabelOption<CheckInStateId>[] = useMemo(() => CHECK_IN_STATES.map((m) => ({
+    key: m.id,
+    icon: m.icon,
+    image: m.image,
+    label: m.label,
+    color: m.color,
+  })), []);
+  const energyOptions: SegmentOption[] = useMemo(() => [1, 2, 3, 4, 5].map((level) => ({
+    key: String(level),
+    label: String(level),
+  })), []);
+  const busy = saving || isSubmitting;
+
+  const onSave = async () => {
+    if (busy) return;
+    setSaving(true);
+    try {
+      await createOrUpdate({
+        mood: active.id,
+        note: one.trim() || null,
+        energy: Number(energy),
+        isPrivate: false,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.back();
+    } catch (err) {
+      console.warn('[new-checkin] create failed', err);
+      Alert.alert('Save failed', 'Try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <SheetShell
       eyebrow="DAILY CHECK-IN"
       eyebrowColor={active.color}
       title="How are you?"
-      footer={<PrimaryButton icon="check" onPress={() => router.back()}>Log today</PrimaryButton>}
+      footer={
+        <PrimaryButton icon="check" onPress={onSave} disabled={busy}>
+          {busy ? 'Saving…' : 'Log today'}
+        </PrimaryButton>
+      }
     >
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8, marginTop: 4 }}>
-        {moods.map((m) => {
-          const sel = mood === m.n;
-          return (
-            <Pressable
-              key={m.n}
-              onPress={() => setMood(m.n)}
-              style={{
-                flex: 1,
-                paddingVertical: 16,
-                paddingHorizontal: 6,
-                borderRadius: 18,
-                backgroundColor: sel ? `${m.color}33` : C.card,
-                borderWidth: 1,
-                borderColor: sel ? m.color : C.line,
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              <View
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 19,
-                  backgroundColor: sel ? m.color : 'transparent',
-                  borderWidth: sel ? 0 : 1,
-                  borderColor: C.line,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Icon name={m.icon} size={18} color={sel ? C.ink : C.mist} />
-              </View>
-              <Text
-                style={{
-                  fontSize: 9,
-                  fontFamily: F.bodyBold,
-                  letterSpacing: 0.8,
-                  textTransform: 'uppercase',
-                  color: sel ? m.color : C.fog,
-                }}
-              >
-                {m.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <SheetSection title="Mood" first>
+        <SheetIconLabelPicker
+          options={moodOptions}
+          selected={mood}
+          onChange={setMood}
+          testIDPrefix="new-checkin-mood"
+          iconOnly
+        />
+      </SheetSection>
 
-      <View style={{ marginTop: 22 }}>
-        <Overline style={{ marginBottom: 8 }}>One thing</Overline>
-        <TextInput
+      <SheetSection title="Energy">
+        <SheetSegment
+          options={energyOptions}
+          selected={energy}
+          onChange={setEnergy}
+          accent={active.color}
+          testIDPrefix="new-checkin-energy"
+        />
+      </SheetSection>
+
+      <SheetSection title="One thing">
+        <SheetTitleField
+          testID="new-checkin-note-input"
           value={one}
           onChangeText={setOne}
-          placeholder="that made today what it was..."
-          placeholderTextColor={C.fog}
-          style={{
-            color: C.bone,
-            fontFamily: F.displayBold,
-            fontSize: 20,
-            paddingVertical: 6,
-            borderBottomWidth: 2,
-            borderBottomColor: one ? active.color : C.line,
-          }}
+          placeholder="What stood out today…"
+          accent={active.color}
         />
-      </View>
+      </SheetSection>
 
-      <View
-        style={{
-          marginTop: 20,
-          paddingVertical: 14,
-          paddingHorizontal: 16,
-          backgroundColor: C.card,
-          borderWidth: 1,
-          borderColor: C.line,
-          borderRadius: 14,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 12,
-        }}
-      >
-        <Icon name="eye" size={16} color={C.fog} />
-        <Text style={{ flex: 1, fontSize: 12, color: C.mist, lineHeight: 17 }}>
-          Sofia will see your mood — not the one-thing, unless you tap to share.
-        </Text>
-      </View>
+      {!isSolo && (
+        <SheetSection title="Privacy">
+          <SheetInfoCard icon="eye">
+            {partnerName} will see your mood — not the one-thing, unless you tap to share.
+          </SheetInfoCard>
+        </SheetSection>
+      )}
     </SheetShell>
   );
 }

@@ -1,15 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { db, id } from '@/src/lib/instant';
+import { notifySpaceMutation } from '@/src/lib/push';
 import { useSession } from './useSession';
 import { useEncryption } from './useEncryption';
+
+export type LoveNoteVibe = 'sweet' | 'funny' | 'thank' | 'sorry' | 'proud';
 
 type LoveNoteInput = {
   body: string;
   isPrivate?: boolean;
+  vibe?: LoveNoteVibe;
 };
 
 export function useLoveNotes() {
-  const { activeCouple, user } = useSession();
+  const { activeCouple, user, space } = useSession();
   const coupleId = activeCouple?.couple?.id ?? null;
   const { encrypt, decrypt, hasKey } = useEncryption();
 
@@ -59,13 +63,24 @@ export function useLoveNotes() {
           .update({
             body: await encrypt(input.body),
             isPrivate: input.isPrivate ?? false,
+            vibe: input.vibe ?? undefined,
             createdAt: now,
             updatedAt: now,
           })
           .link({ couple: coupleId, author: user.id }),
       );
+      if (!input.isPrivate) {
+        await notifySpaceMutation({
+          spaceId: coupleId,
+          spaceKind: space?.kind ?? null,
+          excludeUserId: user.id,
+          title: user.displayName ?? 'Someone',
+          body: 'left you a love note',
+          route: '/(tabs)/us/notes',
+        });
+      }
     },
-    [coupleId, user, encrypt],
+    [coupleId, user, space?.kind, encrypt],
   );
 
   const update = useCallback(
@@ -73,6 +88,7 @@ export function useLoveNotes() {
       const updates: Record<string, unknown> = { updatedAt: Date.now() };
       if (input.body !== undefined) updates.body = await encrypt(input.body);
       if (input.isPrivate !== undefined) updates.isPrivate = input.isPrivate;
+      if (input.vibe !== undefined) updates.vibe = input.vibe;
       await db.transact(db.tx.loveNotes[noteId].update(updates));
     },
     [encrypt],

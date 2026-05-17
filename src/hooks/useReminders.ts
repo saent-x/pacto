@@ -1,5 +1,10 @@
 import { useCallback, useMemo } from 'react';
 import { db, id } from '@/src/lib/instant';
+import {
+  cancelReminderNotification,
+  scheduleReminderNotification,
+} from '@/src/lib/notifications';
+import { notifySpaceMutation } from '@/src/lib/push';
 import { useSession } from './useSession';
 import type { Reminder } from '@/src/types/database';
 
@@ -34,11 +39,12 @@ function toReminderRow(reminder: any): Reminder {
 }
 
 export function useReminders() {
-  const { activeCouple, user } = useSession();
+  const { activeCouple, user, space } = useSession();
   const coupleId = activeCouple?.couple?.id ?? null;
   const userId = user?.id ?? null;
+  const actorName = user?.displayName ?? 'Someone';
 
-  const { data, isLoading: queryLoading } = db.useQuery(
+  const { data, isLoading: queryLoading, error } = db.useQuery(
     coupleId
       ? {
           reminders: {
@@ -80,8 +86,17 @@ export function useReminders() {
         txns.push(db.tx.reminders[reminderId].link({ assignedTo: input.assigned_to }));
       }
       await db.transact(txns);
+      await scheduleReminderNotification(reminderId, input.title, input.due_at);
+      await notifySpaceMutation({
+        spaceId: coupleId,
+        spaceKind: space?.kind ?? null,
+        excludeUserId: userId,
+        title: actorName,
+        body: `added a reminder: ${input.title}`,
+        route: '/(tabs)/us/reminders',
+      });
     },
-    [coupleId, userId],
+    [coupleId, userId, space?.kind, actorName],
   );
 
   const update = useCallback(
@@ -110,6 +125,7 @@ export function useReminders() {
   );
 
   const remove = useCallback(async (reminderId: string) => {
+    await cancelReminderNotification(reminderId);
     await db.transact(db.tx.reminders[reminderId].delete());
   }, []);
 
@@ -129,8 +145,27 @@ export function useReminders() {
         txns.push(db.tx.reminders[reminder.id].unlink({ completedBy: reminder.completed_by }));
       }
       await db.transact(txns);
+      if (isNowCompleted) {
+        await cancelReminderNotification(reminder.id);
+      } else {
+        await scheduleReminderNotification(reminder.id, reminder.title, reminder.due_at);
+      }
     },
     [userId],
+  );
+
+  const snooze = useCallback(
+    async (reminder: Reminder, minutes: number = 60) => {
+      const baseMs = Math.max(Date.now(), new Date(reminder.due_at).getTime());
+      const nextMs = baseMs + minutes * 60000;
+      const nextIso = new Date(nextMs).toISOString();
+      await db.transact(
+        db.tx.reminders[reminder.id].update({ dueAt: nextMs, updatedAt: Date.now() }),
+      );
+      await cancelReminderNotification(reminder.id);
+      await scheduleReminderNotification(reminder.id, reminder.title, nextIso);
+    },
+    [],
   );
 
   const upcoming = reminders.filter((r) => !r.is_completed);
@@ -141,10 +176,12 @@ export function useReminders() {
     upcoming,
     completed,
     isLoading: !!coupleId && queryLoading,
+    error: error ?? null,
     create,
     update,
     remove,
     toggleComplete,
+    snooze,
     refetch: async () => {},
   };
 }

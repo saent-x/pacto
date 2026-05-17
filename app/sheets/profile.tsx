@@ -1,39 +1,74 @@
+import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import { Alert, Pressable, Text, View } from 'react-native';
-import { BlockCard, CouplRings, IconTile, Overline } from '@/src/components/ui/atoms';
+import { Alert, StyleSheet, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { format, parseISO } from 'date-fns';
+import { Card } from '@/src/components/ui/pacto';
 import { Icon, IconName } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
 import { SheetShell } from '@/src/components/ui/SheetShell';
+import { Typography } from '@/src/constants/typography';
+import {
+  getSupportedFeatures,
+  sanitizeFeatureIds,
+} from '@/src/lib/features/registry';
 import { useTheme } from '@/src/lib/theme';
-import { useSession } from '@/src/lib/session';
+import { type SpaceMode, useSession } from '@/src/lib/session';
 import { db } from '@/src/lib/db';
 import {
   leaveSpace,
   regenerateInviteCode,
-  upgradeSoloToCouple,
 } from '@/src/lib/space-actions';
 
 export default function ProfileSheet() {
-  const { C, F, mode, setMode } = useTheme();
+  const { C, mode: themeMode, setMode } = useTheme();
   const navRouter = useRouter();
   const session = useSession();
+  const featureMode = normalizeProfileMode(session.space?.kind ?? session.mode);
 
-  async function onInvitePartner() {
-    if (!session.space || session.space.kind !== 'couple') return;
-    let code = session.space.inviteCode;
-    if (!code) {
-      code = await regenerateInviteCode({ spaceId: session.space.id });
+  useEffect(() => {
+    if (session.status === 'unauthed') {
+      navRouter.replace('/(auth)/sign-in' as any);
     }
-    navRouter.push({ pathname: '/(auth)/invite-code', params: { code } } as any);
-  }
+  }, [session.status, navRouter]);
 
-  async function onUpgrade() {
-    if (!session.space || session.space.kind !== 'solo') return;
-    const code = await upgradeSoloToCouple({ spaceId: session.space.id });
+  const me =
+    session.user?.displayName?.trim() ||
+    session.user?.email?.split('@')[0] ||
+    'You';
+  const partnerName = session.partner
+    ? session.partner.displayName?.trim() ||
+      session.partner.email?.split('@')[0] ||
+      'Partner'
+    : null;
+
+  const spaceMode = session.space?.kind ?? 'solo';
+  const isSolo = spaceMode === 'solo';
+  const isCrew = spaceMode === 'crew';
+  const isPair = spaceMode === 'pair';
+  const supportedFeatures =
+    session.status === 'ready' && session.space
+      ? getSupportedFeatures(featureMode)
+      : [];
+  const enabledFeatureCount = sanitizeFeatureIds(session.enabledFeatures, featureMode).length;
+
+  const anniversary = session.space?.anniversary
+    ? parseISO(session.space.anniversary)
+    : null;
+  const anniversaryLabel = anniversary
+    ? format(anniversary, 'MMM d, yyyy')
+    : 'Add date →';
+
+  const inviteCode = session.space?.inviteCode ?? null;
+
+  async function onGenerateCode() {
+    if (!session.space) return;
+    const code = inviteCode ?? (await regenerateInviteCode({ spaceId: session.space.id }));
     navRouter.push({ pathname: '/(auth)/invite-code', params: { code } } as any);
   }
 
   function onSignOut() {
-    Alert.alert('Sign out?', 'You\u2019ll need to sign in again to see your space.', [
+    Alert.alert('Sign out?', "You'll need to sign in again to see your pact.", [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Sign out',
@@ -49,9 +84,9 @@ export default function ProfileSheet() {
     if (!session.space || !session.membership) return;
     const isLast = !session.partner;
     const msg = isLast
-      ? 'This deletes your solo space and everything in it. Cannot be undone.'
-      : 'You will no longer see shared content. Your partner keeps the space.';
-    Alert.alert('Leave this space?', msg, [
+      ? 'This deletes your solo pact and everything in it. Cannot be undone.'
+      : 'You will no longer see shared content. The other member keeps the pact.';
+    Alert.alert('Leave this pact?', msg, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Leave',
@@ -67,243 +102,226 @@ export default function ProfileSheet() {
     ]);
   }
 
-  const rows: { icon: IconName; label: string; sub: string }[] = [
-    { icon: 'user', label: 'Your profile', sub: 'Mattia · mattia@coupl.app' },
-    { icon: 'heart', label: 'Partner', sub: 'Sofia · connected since Jun 2023' },
-    { icon: 'bell', label: 'Notifications', sub: 'Reminders · Check-ins · Love notes' },
-    { icon: 'lock', label: 'Privacy', sub: 'What Sofia can see' },
-    { icon: 'arrowDown', label: 'Export your data', sub: 'Download everything as JSON' },
-    { icon: 'helpCircle', label: 'Help & feedback', sub: 'hi@coupl.app' },
+  type SettingRow =
+    | {
+        kind: 'value';
+        label: string;
+        value: string;
+        icon: IconName;
+        muted?: boolean;
+        accent?: boolean;
+        testID?: string;
+        onPress?: () => void;
+      };
+
+  const rows: SettingRow[] = [
+    {
+      kind: 'value',
+      label: 'Account',
+      value: me,
+      icon: 'user',
+      onPress: () => navRouter.push('/sheets/account' as any),
+      testID: 'profile-row-account',
+    },
+    ...(isPair || isCrew
+      ? ([
+          {
+            kind: 'value',
+            label: 'Anniversary',
+            value: anniversaryLabel,
+            icon: 'heart',
+            testID: 'profile-row-anniversary',
+          },
+          {
+            kind: 'value',
+            label: 'Invite code',
+            value: session.partner ? '— paired —' : inviteCode ?? 'Generate →',
+            icon: 'sparkle',
+            muted: !!session.partner,
+            accent: !session.partner,
+            onPress: !session.partner ? onGenerateCode : undefined,
+            testID: 'profile-row-code',
+          },
+        ] as SettingRow[])
+      : ([
+          {
+            kind: 'value',
+            label: 'Invite a member',
+            value: 'Generate code →',
+            icon: 'users',
+            accent: true,
+            onPress: onGenerateCode,
+            testID: 'profile-row-invite',
+          },
+        ] as SettingRow[])),
+    ...(supportedFeatures.length > 0
+      ? ([
+          {
+            kind: 'value',
+            label: 'Features',
+            value: `${enabledFeatureCount}/${supportedFeatures.length} on →`,
+            icon: 'grid',
+            onPress: () => navRouter.push('/sheets/profile-features' as any),
+            testID: 'profile-row-features',
+          },
+        ] as SettingRow[])
+      : []),
   ];
 
   return (
-    <SheetShell
-      eyebrow="PROFILE & SETTINGS"
-      title="You & us."
-    >
-      <BlockCard bg={C.peach} ink={C.peachInk} style={{ padding: 20, marginBottom: 20 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-          <CouplRings size={56} a={C.peachInk} b={C.gold} />
-          <View style={{ flex: 1 }}>
-            <Text
-              style={{
-                fontSize: 10,
-                fontFamily: F.bodyBold,
-                letterSpacing: 1.2,
-                color: C.peachInk,
-                opacity: 0.6,
-              }}
-            >
-              847 DAYS TOGETHER · SINCE DEC 22, 2023
-            </Text>
-            <Text
-              style={{
-                fontFamily: F.displayBold,
-                fontSize: 22,
-                color: C.peachInk,
-                letterSpacing: -0.4,
-                lineHeight: 24,
-                marginTop: 2,
-              }}
-            >
-              Mattia & Sofia
-            </Text>
-            <Text
-              style={{
-                fontSize: 11,
-                color: C.peachInk,
-                opacity: 0.7,
-                fontFamily: F.body,
-                marginTop: 2,
-              }}
-            >
-              coupl code: BREAD-SILK-42
-            </Text>
-          </View>
-          <Pressable
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: 17,
-              backgroundColor: 'rgba(0,0,0,0.14)',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Icon name="copy" size={14} color={C.peachInk} />
-          </Pressable>
-        </View>
-        <View
-          style={{
-            marginTop: 16,
-            flexDirection: 'row',
-            justifyContent: 'space-around',
-            paddingTop: 16,
-            borderTopWidth: 1,
-            borderTopColor: 'rgba(58,31,20,0.18)',
-          }}
-        >
-          {[
-            { n: '847', l: 'DAYS' },
-            { n: '184', l: 'ENTRIES' },
-            { n: '12', l: 'MILESTONES' },
-          ].map((s) => (
-            <View key={s.l} style={{ alignItems: 'center' }}>
-              <Text style={{ fontFamily: F.displayBold, fontSize: 22, color: C.peachInk }}>
-                {s.n}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 9,
-                  color: C.peachInk,
-                  opacity: 0.65,
-                  fontFamily: F.bodyBold,
-                  letterSpacing: 0.8,
-                  marginTop: 2,
-                }}
-              >
-                {s.l}
-              </Text>
-            </View>
-          ))}
-        </View>
-      </BlockCard>
-
-      <Overline style={{ marginBottom: 10 }}>Theme</Overline>
-      <View style={{ flexDirection: 'row', gap: 10, marginBottom: 22 }}>
-        {(
-          [
-            { k: 'dark', label: 'Warm dusk', bg: '#1A0F0A', dot: C.gold },
-            { k: 'light', label: 'Dawn cream', bg: '#F5EEE3', dot: C.rose },
-          ] as const
-        ).map((t) => {
-          const sel = mode === t.k;
-          return (
-            <Pressable
-              key={t.k}
-              onPress={() => setMode(t.k)}
-              style={{
-                flex: 1,
-                paddingVertical: 14,
-                paddingHorizontal: 14,
-                borderRadius: 16,
-                backgroundColor: sel ? C.cardHi : C.card,
-                borderWidth: 1,
-                borderColor: sel ? C.gold : C.line,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 12,
-              }}
-            >
-              <View
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
-                  backgroundColor: t.bg,
-                  borderWidth: 1,
-                  borderColor: C.line,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: t.dot }} />
-              </View>
-              <View>
-                <Text style={{ fontSize: 13, fontFamily: F.bodyBold, color: C.bone }}>{t.label}</Text>
-                <Text
-                  style={{
-                    fontSize: 10,
-                    fontFamily: F.bodyBold,
-                    color: C.fog,
-                    letterSpacing: 0.4,
-                    marginTop: 2,
-                  }}
-                >
-                  {sel ? 'ACTIVE' : 'TAP TO TRY'}
-                </Text>
-              </View>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      <Overline style={{ marginBottom: 10 }}>Settings</Overline>
-      <View
-        style={{
-          backgroundColor: C.card,
-          borderWidth: 1,
-          borderColor: C.line,
-          borderRadius: 18,
-          overflow: 'hidden',
-        }}
-      >
+    <SheetShell eyebrow="PROFILE" title="profile">
+      {/* Settings card */}
+      <Card padded={false} style={{ marginBottom: 14 }}>
         {rows.map((r, i) => (
-          <Pressable
+          <PressScale
             key={r.label}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 14,
-              paddingVertical: 14,
-              paddingHorizontal: 16,
-              borderBottomWidth: i === rows.length - 1 ? 0 : 1,
-              borderBottomColor: C.line,
-            }}
+            onPress={r.onPress}
+            disabled={!r.onPress}
+            testID={r.testID}
+            style={[
+              styles.row,
+              i < rows.length - 1
+                ? { borderBottomWidth: 1, borderBottomColor: C.lineColor }
+                : null,
+            ]}
           >
-            <IconTile icon={r.icon} bg={C.cardHi} color={C.gold} size={36} radius={10} iconSize={15} />
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 14, fontFamily: F.bodyBold, color: C.bone }}>{r.label}</Text>
-              <Text
-                numberOfLines={1}
-                style={{ fontSize: 11, color: C.fog, marginTop: 2, fontFamily: F.body }}
-              >
-                {r.sub}
-              </Text>
-            </View>
-            <Icon name="chevronRight" size={14} color={C.fog} />
-          </Pressable>
+            <Icon
+              name={r.icon}
+              size={18}
+              color={r.accent ? C.accent : C.ink3}
+              strokeWidth={1.8}
+            />
+            <Text
+              style={[
+                Typography.body,
+                { flex: 1, color: r.accent ? C.accent : C.inkColor },
+              ]}
+            >
+              {r.label}
+            </Text>
+            <Text
+              style={[
+                Typography.body,
+                { color: r.muted ? C.ink3 : C.ink2 },
+              ]}
+              numberOfLines={1}
+            >
+              {r.value}
+            </Text>
+          </PressScale>
         ))}
-      </View>
+      </Card>
 
-      <View style={{ gap: 2, marginTop: 24 }}>
-        {session.isCouple && !session.partner && (
-          <Pressable onPress={onInvitePartner} style={rowStyle(C)}>
-            <Icon name="send" size={16} color={C.gold} />
-            <Text style={rowTextStyle(C, F)}>Invite partner</Text>
-          </Pressable>
-        )}
-        {session.isSolo && (
-          <Pressable onPress={onUpgrade} style={rowStyle(C)}>
-            <Icon name="users" size={16} color={C.gold} />
-            <Text style={rowTextStyle(C, F)}>Upgrade to couple</Text>
-          </Pressable>
-        )}
-        <Pressable onPress={onSignOut} style={rowStyle(C)}>
-          <Icon name="logOut" size={16} color={C.mist} />
-          <Text style={rowTextStyle(C, F)}>Sign out</Text>
-        </Pressable>
-        <Pressable onPress={onLeave} style={rowStyle(C)}>
-          <Icon name="trash" size={16} color={C.error} />
-          <Text style={[rowTextStyle(C, F), { color: C.error }]}>Leave space</Text>
-        </Pressable>
-      </View>
+      {/* Theme card */}
+      <Card padded={false} style={{ marginBottom: 22 }}>
+        <View style={styles.themeRow}>
+          <Icon name="sun" size={18} color={C.ink3} strokeWidth={1.8} />
+          <Text style={[Typography.body, { flex: 1, color: C.inkColor }]}>Theme</Text>
+          <View style={[styles.seg, { backgroundColor: C.bgSoft, borderColor: C.lineColor }]}>
+            {(['light', 'dark'] as const).map((m) => {
+              const sel = themeMode === m;
+              return (
+                <PressScale
+                  key={m}
+                  testID={`profile-theme-${m}`}
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => undefined);
+                    setMode(m);
+                  }}
+                  style={[
+                    styles.segItem,
+                    sel ? { backgroundColor: C.bgCard, borderColor: C.lineColor, borderWidth: 1 } : null,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      Typography.captionMedium,
+                      { color: sel ? C.inkColor : C.ink3 },
+                    ]}
+                  >
+                    {m === 'light' ? 'Light' : 'Dark'}
+                  </Text>
+                </PressScale>
+              );
+            })}
+          </View>
+        </View>
+      </Card>
+
+      <Text style={[Typography.eyebrowSm, { color: C.ink3, marginLeft: 4, marginBottom: 10 }]}>
+        Danger zone
+      </Text>
+      <Card padded={false} style={{ borderColor: `${C.error}55` }}>
+        <PressScale
+          testID={isSolo ? 'profile-signout' : 'profile-leave'}
+          onPress={isSolo ? onSignOut : onLeave}
+          haptic="warning"
+          style={styles.dangerRow}
+        >
+          <Icon name={isSolo ? 'logOut' : 'trash'} size={17} color={C.error} />
+          <Text style={[Typography.bodyMedium, { flex: 1, color: C.error }]}>
+            {isSolo ? 'Sign out' : 'Leave pact'}
+          </Text>
+        </PressScale>
+      </Card>
+
+      {!isSolo ? (
+        <PressScale
+          testID="profile-signout"
+          onPress={onSignOut}
+          haptic="warning"
+          style={{ alignItems: 'center', paddingVertical: 14, marginTop: 4 }}
+        >
+          <Text style={[Typography.captionMedium, { color: C.ink3 }]}>Sign out</Text>
+        </PressScale>
+      ) : null}
     </SheetShell>
   );
 }
 
-function rowStyle(C: any) {
-  return {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+const styles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 14,
-    backgroundColor: C.card,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+  },
+  themeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+  },
+  seg: {
+    flexDirection: 'row',
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 3,
+    gap: 2,
+  },
+  segItem: {
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 7,
+  },
+  bottomBtn: {
+    paddingVertical: 14,
     borderRadius: 14,
-  };
-}
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  dangerRow: {
+    minHeight: 54,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+  },
+});
 
-function rowTextStyle(C: any, F: any) {
-  return { color: C.bone, fontFamily: F.body, fontSize: 15 };
+function normalizeProfileMode(mode: SpaceMode | 'couple'): SpaceMode {
+  return mode === 'couple' ? 'pair' : mode;
 }

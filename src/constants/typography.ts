@@ -1,192 +1,312 @@
 import { TextStyle, Platform } from 'react-native';
 
-// Display: Newsreader italic serif — the signature look for headings
-const serifFamily = 'Newsreader_300Light_Italic';
-const serifRegular = 'Newsreader_400Regular';
-const serifSemiBoldItalic = 'Newsreader_600SemiBold_Italic';
+// ─── Pacto type system ─────────────────────────────────────────────
+// Display: Pixelify Sans (bit-like / 8-bit pixel face) — hero titles, brand wordmark, big counters
+// Body: Geist — UI rows, paragraphs, buttons, dialogue
+// Mono: Geist Mono — eyebrow tags, metadata, codes, timestamps
+//
+// Design source: /tmp/pacto-design/coupl-design-ii/project/index.html (see :root tokens)
+// "Maya & Jordan"-style hero title uses the pixel display family across every top-level screen.
 
-// Body: DM Sans — clean, modern, with full italic + bold-italic support
-const sansFamily = 'DMSans_400Regular';
-const sansMedium = 'DMSans_500Medium';
-const sansSemiBold = 'DMSans_600SemiBold';
+// Display family: Geist Pixel (Square variant) — Vercel's pixel display
+// face. Loaded as a local font asset; only one weight is shipped, so all
+// three tokens point at the same family. https://github.com/vercel/geist-pixel-font
+const pixelRegular = 'GeistPixel-Square';
+const pixelMedium = 'GeistPixel-Square';
+const pixelBold = 'GeistPixel-Square';
 
-// Warm Block display: Bricolage Grotesque — chunky, geometric, confident
-const displayFamily = 'BricolageGrotesque_800ExtraBold';
-const displaySemiBold = 'BricolageGrotesque_600SemiBold';
-const displayBold = 'BricolageGrotesque_700Bold';
+const geistLight = 'Geist_300Light';
+const geistRegular = 'Geist_400Regular';
+const geistMedium = 'Geist_500Medium';
+const geistSemiBold = 'Geist_600SemiBold';
+const geistBold = 'Geist_700Bold';
 
-// Fallbacks for before fonts load
-const serifFallback = Platform.select({ ios: 'Georgia', android: 'serif', default: 'Georgia' });
+const geistMonoRegular = 'GeistMono_400Regular';
+const geistMonoMedium = 'GeistMono_500Medium';
+
+// Legacy families — kept as fallbacks for screens not yet rebuilt against the new system.
+// Once Phase 6+7+8+10 are done, these can be removed alongside the legacy expo-google-fonts packages.
+const legacyDisplay = 'BricolageGrotesque_800ExtraBold';
+const legacyDisplayBold = 'BricolageGrotesque_700Bold';
+
 const sansFallback = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
+const monoFallback = Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' });
 
 export const Typography = {
-  // Editorial styles — reserved for very selective accent moments
-  editorial: {
-    fontFamily: serifFamily,
-    fontSize: 24,
+  // ─── Hero / display (pixel font) ─────────────────────────────────
+  // PixelHero pattern: eyebrow (mono uppercase) + display title (pixel).
+  pixelHero: {
+    fontFamily: pixelBold,
+    fontSize: 30,
     lineHeight: 32,
-    letterSpacing: -0.6,
-    fontStyle: 'italic' as const,
+    letterSpacing: -0.5,
   } as TextStyle,
-  editorialLargeTitle: {
-    fontFamily: serifFamily,
-    fontSize: 34,
-    lineHeight: 40,
-    letterSpacing: -0.3,
-    fontStyle: 'italic' as const,
-  } as TextStyle,
-  editorialLargeTitleBold: {
-    fontFamily: serifSemiBoldItalic,
-    fontSize: 34,
-    lineHeight: 40,
-    letterSpacing: -0.3,
-    fontStyle: 'italic' as const,
-  } as TextStyle,
-
-  // Standard display styles — Warm Block redesign uses Bricolage (chunky sans)
-  // as the default display face. Serif remains available via `editorial*` styles
-  // for the journal verse / pull-quote moments only.
-  display: {
-    fontFamily: displayFamily,
-    fontSize: 48,
-    lineHeight: 48,
-    letterSpacing: -1.4,
-  } as TextStyle,
-  largeTitle: {
-    fontFamily: displayFamily,
-    fontSize: 34,
-    lineHeight: 38,
-    letterSpacing: -1,
-  } as TextStyle,
-  title: {
-    fontFamily: displayFamily,
-    fontSize: 30,
-    lineHeight: 34,
-    letterSpacing: -0.9,
-  } as TextStyle,
-  heading: {
-    fontFamily: displayFamily,
-    fontSize: 24,
-    lineHeight: 28,
-    letterSpacing: -0.6,
-  } as TextStyle,
-  headingRegular: {
-    fontFamily: displaySemiBold,
-    fontSize: 18,
-    lineHeight: 24,
-    letterSpacing: -0.3,
-  } as TextStyle,
-
-  // Sans body styles — DM Sans, clean and functional
-  subheading: {
-    fontFamily: sansSemiBold,
-    fontSize: 17,
-    lineHeight: 24,
-    letterSpacing: 0,
-  } as TextStyle,
-  body: {
-    fontFamily: sansFamily,
-    fontSize: 16,
-    lineHeight: 24,
-    letterSpacing: 0.15,
-  } as TextStyle,
-  bodyMedium: {
-    fontFamily: sansMedium,
-    fontSize: 16,
-    lineHeight: 24,
-    letterSpacing: 0.15,
-  } as TextStyle,
-  caption: {
-    fontFamily: sansFamily,
-    fontSize: 14,
-    lineHeight: 20,
-    letterSpacing: 0.2,
-  } as TextStyle,
-  captionMedium: {
-    fontFamily: sansMedium,
-    fontSize: 14,
-    lineHeight: 20,
-    letterSpacing: 0.2,
-  } as TextStyle,
-  small: {
-    fontFamily: sansFamily,
-    fontSize: 12,
-    lineHeight: 16,
-    letterSpacing: 0.3,
-  } as TextStyle,
-  overline: {
-    fontFamily: sansSemiBold,
-    fontSize: 10,
-    lineHeight: 14,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase' as const,
-  } as TextStyle,
-  pillLabel: {
-    fontFamily: sansSemiBold,
-    fontSize: 12,
-    lineHeight: 14,
-    letterSpacing: 0.3,
-    textTransform: 'uppercase' as const,
-  } as TextStyle,
-
-  // Logo
-  logo: {
-    fontFamily: serifFamily,
-    fontSize: 30,
-    lineHeight: 36,
-    letterSpacing: -0.75,
-    fontStyle: 'italic' as const,
-  } as TextStyle,
-
-  // Mono — for codes, numbers, data
-  mono: {
-    fontFamily: Platform.select({ ios: 'Courier New', android: 'monospace', default: 'Courier New' }),
-    fontSize: 16,
-    lineHeight: 24,
-    letterSpacing: 2,
-  } as TextStyle,
-
-  // Warm Block display styles — chunky, high-impact moments (hero labels, big stats)
-  displayChunky: {
-    fontFamily: displayFamily,
+  pixelHeroLg: {
+    fontFamily: pixelBold,
     fontSize: 38,
     lineHeight: 40,
-    letterSpacing: -1,
-  } as TextStyle,
-  displayChunkyLg: {
-    fontFamily: displayFamily,
-    fontSize: 48,
-    lineHeight: 48,
-    letterSpacing: -1.4,
-  } as TextStyle,
-  displayChunkyXl: {
-    fontFamily: displayFamily,
-    fontSize: 64,
-    lineHeight: 60,
-    letterSpacing: -2,
-  } as TextStyle,
-  displayChunkySm: {
-    fontFamily: displayFamily,
-    fontSize: 28,
-    lineHeight: 30,
-    letterSpacing: -0.8,
-  } as TextStyle,
-  displayChunkyBold: {
-    fontFamily: displayBold,
-    fontSize: 24,
-    lineHeight: 26,
     letterSpacing: -0.6,
   } as TextStyle,
+  pixelHeroSm: {
+    fontFamily: pixelBold,
+    fontSize: 24,
+    lineHeight: 26,
+    letterSpacing: -0.4,
+  } as TextStyle,
+  pixelCounter: {
+    fontFamily: pixelBold,
+    fontSize: 48,
+    lineHeight: 50,
+    letterSpacing: -1,
+  } as TextStyle,
+  pixelLabel: {
+    fontFamily: pixelMedium,
+    fontSize: 14,
+    lineHeight: 18,
+    letterSpacing: 0,
+  } as TextStyle,
 
-  // Font family references for direct use
-  sans: sansFamily,
-  sansMedium,
-  sansSemiBold,
-  displayFont: displayFamily,
-  displaySemiBoldFont: displaySemiBold,
-  displayBoldFont: displayBold,
+  // ─── Eyebrow (Geist Mono uppercase) ──────────────────────────────
+  // Above PixelHero titles, on cards, section headers.
+  eyebrow: {
+    fontFamily: geistMonoMedium,
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase' as const,
+  } as TextStyle,
+  eyebrowSm: {
+    fontFamily: geistMonoMedium,
+    fontSize: 10,
+    lineHeight: 12,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase' as const,
+  } as TextStyle,
 
-  // Fallbacks
-  fallbackSerif: serifFallback,
+  // ─── Body (Geist) ────────────────────────────────────────────────
+  body: {
+    fontFamily: geistRegular,
+    fontSize: 15,
+    lineHeight: 22,
+    letterSpacing: -0.05,
+  } as TextStyle,
+  bodyMedium: {
+    fontFamily: geistMedium,
+    fontSize: 15,
+    lineHeight: 22,
+    letterSpacing: -0.05,
+  } as TextStyle,
+  bodyLg: {
+    fontFamily: geistRegular,
+    fontSize: 17,
+    lineHeight: 24,
+    letterSpacing: -0.1,
+  } as TextStyle,
+  subheading: {
+    fontFamily: geistSemiBold,
+    fontSize: 16,
+    lineHeight: 22,
+    letterSpacing: -0.05,
+  } as TextStyle,
+  caption: {
+    fontFamily: geistRegular,
+    fontSize: 13,
+    lineHeight: 18,
+    letterSpacing: 0,
+  } as TextStyle,
+  captionMedium: {
+    fontFamily: geistMedium,
+    fontSize: 13,
+    lineHeight: 18,
+    letterSpacing: 0,
+  } as TextStyle,
+  small: {
+    fontFamily: geistRegular,
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 0,
+  } as TextStyle,
+  smallMedium: {
+    fontFamily: geistMedium,
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 0,
+  } as TextStyle,
+  buttonLabel: {
+    fontFamily: geistSemiBold,
+    fontSize: 14,
+    lineHeight: 18,
+    letterSpacing: -0.05,
+  } as TextStyle,
+  pillLabel: {
+    fontFamily: geistMedium,
+    fontSize: 12,
+    lineHeight: 14,
+    letterSpacing: 0,
+  } as TextStyle,
+
+  // ─── Mono ────────────────────────────────────────────────────────
+  mono: {
+    fontFamily: geistMonoRegular,
+    fontSize: 13,
+    lineHeight: 18,
+    letterSpacing: 0,
+  } as TextStyle,
+  monoMedium: {
+    fontFamily: geistMonoMedium,
+    fontSize: 13,
+    lineHeight: 18,
+    letterSpacing: 0,
+  } as TextStyle,
+  monoLg: {
+    fontFamily: geistMonoRegular,
+    fontSize: 18,
+    lineHeight: 22,
+    letterSpacing: 2,
+  } as TextStyle,
+  monoXl: {
+    // Invite-code 6-char input style
+    fontFamily: geistMonoMedium,
+    fontSize: 28,
+    lineHeight: 32,
+    letterSpacing: 4,
+  } as TextStyle,
+
+  // ─── Logo (pacto wordmark) ───────────────────────────────────────
+  logo: {
+    fontFamily: pixelBold,
+    fontSize: 28,
+    lineHeight: 32,
+    letterSpacing: 0,
+    textTransform: 'lowercase' as const,
+  } as TextStyle,
+  logoSm: {
+    fontFamily: pixelMedium,
+    fontSize: 18,
+    lineHeight: 22,
+    letterSpacing: 0,
+    textTransform: 'lowercase' as const,
+  } as TextStyle,
+
+  // ─── Legacy aliases ──────────────────────────────────────────────
+  // Existing screens reference these. Pointed at the new pixel display so the rebrand
+  // visually lands immediately; will be removed as Phase 6+7+8+10 replace consumers.
+  display: {
+    fontFamily: pixelBold,
+    fontSize: 38,
+    lineHeight: 40,
+    letterSpacing: -0.6,
+  } as TextStyle,
+  largeTitle: {
+    fontFamily: pixelBold,
+    fontSize: 30,
+    lineHeight: 34,
+    letterSpacing: -0.5,
+  } as TextStyle,
+  title: {
+    fontFamily: pixelBold,
+    fontSize: 26,
+    lineHeight: 30,
+    letterSpacing: -0.4,
+  } as TextStyle,
+  heading: {
+    fontFamily: pixelMedium,
+    fontSize: 22,
+    lineHeight: 26,
+    letterSpacing: -0.3,
+  } as TextStyle,
+  headingRegular: {
+    fontFamily: geistSemiBold,
+    fontSize: 18,
+    lineHeight: 24,
+    letterSpacing: -0.1,
+  } as TextStyle,
+  overline: {
+    fontFamily: geistMonoMedium,
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase' as const,
+  } as TextStyle,
+
+  // Legacy editorial/serif keys — kept neutral to avoid layout pops in pre-rebuild screens.
+  editorial: {
+    fontFamily: geistRegular,
+    fontSize: 22,
+    lineHeight: 30,
+    letterSpacing: -0.2,
+  } as TextStyle,
+  editorialLargeTitle: {
+    fontFamily: pixelBold,
+    fontSize: 32,
+    lineHeight: 36,
+    letterSpacing: -0.5,
+  } as TextStyle,
+  editorialLargeTitleBold: {
+    fontFamily: pixelBold,
+    fontSize: 32,
+    lineHeight: 36,
+    letterSpacing: -0.5,
+  } as TextStyle,
+
+  // Legacy chunky keys — re-pointed at pixel
+  displayChunky: {
+    fontFamily: pixelBold,
+    fontSize: 38,
+    lineHeight: 40,
+    letterSpacing: -0.6,
+  } as TextStyle,
+  displayChunkyLg: {
+    fontFamily: pixelBold,
+    fontSize: 48,
+    lineHeight: 50,
+    letterSpacing: -1,
+  } as TextStyle,
+  displayChunkyXl: {
+    fontFamily: pixelBold,
+    fontSize: 64,
+    lineHeight: 60,
+    letterSpacing: -1.5,
+  } as TextStyle,
+  displayChunkySm: {
+    fontFamily: pixelBold,
+    fontSize: 26,
+    lineHeight: 30,
+    letterSpacing: -0.4,
+  } as TextStyle,
+  displayChunkyBold: {
+    fontFamily: pixelBold,
+    fontSize: 22,
+    lineHeight: 26,
+    letterSpacing: -0.3,
+  } as TextStyle,
+
+  // ─── Family references ───────────────────────────────────────────
+  pixelFont: pixelBold,
+  pixelMediumFont: pixelMedium,
+  pixelRegularFont: pixelRegular,
+  geistFont: geistRegular,
+  geistMediumFont: geistMedium,
+  geistSemiBoldFont: geistSemiBold,
+  geistBoldFont: geistBold,
+  geistLightFont: geistLight,
+  geistMonoFont: geistMonoRegular,
+  geistMonoMediumFont: geistMonoMedium,
+
+  // Legacy family aliases (pointed at new system)
+  sans: geistRegular,
+  sansMedium: geistMedium,
+  sansSemiBold: geistSemiBold,
+  displayFont: pixelBold,
+  displaySemiBoldFont: pixelMedium,
+  displayBoldFont: pixelBold,
+
+  // Truly legacy fallbacks — only used by screens that haven't migrated
+  legacyDisplayFont: legacyDisplay,
+  legacyDisplayBoldFont: legacyDisplayBold,
+
+  // System fallbacks
   fallbackSans: sansFallback,
+  fallbackMono: monoFallback,
+  fallbackSerif: sansFallback,
 } as const;

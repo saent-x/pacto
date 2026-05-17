@@ -1,14 +1,15 @@
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
-import { CouplRings, Display, Overline, PrimaryButton } from '@/src/components/ui/atoms';
-import { GoldRule } from '@/src/components/ui/WarmBlock';
+import { Share, StyleSheet, Text, View } from 'react-native';
+import { HeaderBrand, PactoMark } from '@/src/components/ui/pacto';
 import { Icon } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
+import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
 
 export default function InviteCodeScreen() {
-  const { C, F } = useTheme();
+  const { C } = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams<{ code?: string }>();
   const code = params.code ?? '';
@@ -22,27 +23,52 @@ export default function InviteCodeScreen() {
 
   async function onShare() {
     await Share.share({
-      message: `Join me on Coupl. Here's the code: ${code}`,
+      message: `Join me on Pacto. Here's the code: ${code}`,
     });
   }
 
   return (
-    <View style={[styles.root, { backgroundColor: C.ink }]}>
-      <CouplRings size={48} a={C.peach} b={C.lavender} />
-      <Display size={36} style={{ marginTop: 18 }}>
-        Share the code<Text style={{ color: C.gold }}>.</Text>
-      </Display>
-      <GoldRule width={32} />
-      <Text style={{ fontFamily: F.serif, fontStyle: 'italic', color: C.mist, fontSize: 15, marginTop: 14, maxWidth: 300 }}>
-        Send this to your partner. Six characters — case doesn\u2019t matter.
-      </Text>
+    <View style={[styles.root, { backgroundColor: C.bg }]}>
+      <View style={styles.hero}>
+        <PactoMark size={48} />
+        <View style={{ height: 14 }} />
+        <HeaderBrand eyebrow="INVITE" title="share the code" size={28} />
+        <Text
+          style={[
+            Typography.body,
+            { color: C.ink2, marginTop: 12, textAlign: 'center', maxWidth: 300 },
+          ]}
+        >
+          Send this to whoever's joining your pact. Six characters — case
+          doesn't matter.
+        </Text>
+      </View>
 
-      <View style={{ marginTop: 40 }}>
-        <Overline style={{ marginBottom: 14, textAlign: 'center' }}>Your code</Overline>
-        <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center' }}>
+      <View style={styles.codeWrap}>
+        <Text
+          style={[
+            Typography.eyebrow,
+            { color: C.ink3, marginBottom: 14, textAlign: 'center' },
+          ]}
+        >
+          Your code
+        </Text>
+        <View style={styles.slotRow}>
           {code.split('').map((ch, i) => (
-            <View key={i} style={[styles.slot, { borderColor: C.gold, backgroundColor: C.card }]}>
-              <Text style={{ color: C.bone, fontFamily: F.display, fontSize: 24, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
+            <View
+              key={i}
+              style={[
+                styles.slot,
+                { borderColor: C.accent, backgroundColor: C.bgCard },
+              ]}
+            >
+              <Text
+                style={{
+                  color: C.inkColor,
+                  fontFamily: Typography.pixelFont,
+                  fontSize: 26,
+                }}
+              >
                 {ch}
               </Text>
             </View>
@@ -50,31 +76,46 @@ export default function InviteCodeScreen() {
         </View>
       </View>
 
-      <View style={{ flexDirection: 'row', gap: 10, marginTop: 28, justifyContent: 'center' }}>
-        <Pressable onPress={onCopy} style={[styles.btn, { borderColor: C.line }]}>
-          <Icon name="copy" size={14} color={copied ? C.gold : C.mist} />
-          <Text style={{ color: copied ? C.gold : C.mist, fontFamily: F.bodyBold, fontSize: 12 }}>
+      <View style={styles.actions}>
+        <PressScale
+          onPress={onCopy}
+          style={[styles.btn, { borderColor: C.lineColor, backgroundColor: C.bgCard }]}
+        >
+          <Icon
+            name="copy"
+            size={14}
+            color={copied ? C.accent : C.ink2}
+          />
+          <Text
+            style={[
+              Typography.eyebrowSm,
+              { color: copied ? C.accent : C.ink2 },
+            ]}
+          >
             {copied ? 'COPIED' : 'COPY'}
           </Text>
-        </Pressable>
-        <Pressable onPress={onShare} style={[styles.btn, { borderColor: C.line }]}>
-          <Icon name="send" size={14} color={C.mist} />
-          <Text style={{ color: C.mist, fontFamily: F.bodyBold, fontSize: 12 }}>SHARE</Text>
-        </Pressable>
+        </PressScale>
+        <PressScale
+          onPress={onShare}
+          style={[styles.btn, { borderColor: C.lineColor, backgroundColor: C.bgCard }]}
+        >
+          <Icon name="send" size={14} color={C.ink2} />
+          <Text style={[Typography.eyebrowSm, { color: C.ink2 }]}>SHARE</Text>
+        </PressScale>
       </View>
 
-      <View style={{ marginTop: 'auto', gap: 10 }}>
-        <PrimaryButton
+      <View style={styles.footer}>
+        <PressScale
           onPress={() => {
-            // Pop this screen. From profile-sheet upgrade path → back to profile.
-            // From onboarding couple-create path → back to onboarding, where
-            // SessionGate immediately redirects to home because status is now ready.
             if (router.canGoBack()) router.back();
             else router.replace('/(tabs)/home' as any);
           }}
+          style={[styles.primary, { backgroundColor: C.inkColor }]}
         >
-          I&apos;ll do this later
-        </PrimaryButton>
+          <Text style={[Typography.buttonLabel, { color: C.bg }]}>
+            I'll do this later
+          </Text>
+        </PressScale>
       </View>
     </View>
   );
@@ -82,12 +123,40 @@ export default function InviteCodeScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, padding: 24, paddingTop: 60, paddingBottom: 40 },
+  hero: { alignItems: 'center', marginBottom: 36 },
+  codeWrap: { marginBottom: 28 },
+  slotRow: {
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'center',
+  },
   slot: {
-    width: 48, height: 56, borderWidth: 1, borderRadius: 12,
-    alignItems: 'center', justifyContent: 'center',
+    width: 48,
+    height: 56,
+    borderWidth: 1.5,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'center',
   },
   btn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingVertical: 10, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  footer: { marginTop: 'auto', gap: 10 },
+  primary: {
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

@@ -2,12 +2,19 @@ import { useCallback, useMemo } from 'react';
 import { db, id } from '@/src/lib/instant';
 import { useSession } from './useSession';
 
+export type WishScope = 'mine' | 'partner' | 'shared';
+
+export function sanitizeWishScope(scope: unknown): WishScope {
+  return scope === 'partner' || scope === 'shared' || scope === 'mine' ? scope : 'mine';
+}
+
 type WishlistItemInput = {
   title: string;
   description?: string | null;
   url?: string | null;
   price?: number | null;
   priority?: number;
+  scope?: WishScope;
 };
 
 export function useWishlists() {
@@ -59,6 +66,112 @@ export function useWishlists() {
   };
 }
 
+export type QuickAddWishInput = {
+  title: string;
+  price?: number | null;
+  currency?: string;
+  tag?: string | null;
+  url?: string | null;
+  scope?: WishScope;
+};
+
+export function useQuickAddWishItem() {
+  const { activeCouple, user } = useSession();
+  const coupleId = activeCouple?.couple?.id ?? null;
+
+  const { data } = db.useQuery(
+    coupleId ? { wishlists: { $: { where: { 'couple.id': coupleId } } } } : null,
+  );
+  const existingId = (data?.wishlists ?? [])[0]?.id as string | undefined;
+
+  const add = useCallback(
+    async (input: QuickAddWishInput) => {
+      if (!coupleId || !user) return;
+      let wlId = existingId;
+      if (!wlId) {
+        wlId = id();
+        await db.transact(
+          db.tx.wishlists[wlId]
+            .update({ name: 'Our wishes', createdAt: Date.now() })
+            .link({ couple: coupleId, createdBy: user.id }),
+        );
+      }
+      const itId = id();
+      await db.transact(
+        db.tx.wishlistItems[itId]
+          .update({
+            title: input.title,
+            price: input.price ?? undefined,
+            currency: input.currency ?? 'EUR',
+            tag: input.tag ?? undefined,
+            url: input.url ?? undefined,
+            scope: sanitizeWishScope(input.scope),
+            isPurchased: false,
+            priority: 0,
+            sortOrder: 0,
+            createdAt: Date.now(),
+          })
+          .link({ wishlist: wlId, couple: coupleId, addedBy: user.id }),
+      );
+    },
+    [coupleId, user, existingId],
+  );
+
+  const update = useCallback(
+    async (itemId: string, input: Partial<QuickAddWishInput>) => {
+      const updates: Record<string, unknown> = {};
+      if (input.title !== undefined) updates.title = input.title;
+      if (input.price !== undefined) updates.price = input.price ?? null;
+      if (input.currency !== undefined) updates.currency = input.currency;
+      if (input.tag !== undefined) updates.tag = input.tag ?? null;
+      if (input.url !== undefined) updates.url = input.url ?? null;
+      if (input.scope !== undefined) updates.scope = sanitizeWishScope(input.scope);
+      await db.transact(db.tx.wishlistItems[itemId].update(updates));
+    },
+    [],
+  );
+
+  const remove = useCallback(async (itemId: string) => {
+    await db.transact(db.tx.wishlistItems[itemId].delete());
+  }, []);
+
+  return { add, update, remove };
+}
+
+export function useAllWishlistItems() {
+  const { activeCouple } = useSession();
+  const coupleId = activeCouple?.couple?.id ?? null;
+
+  const { data, isLoading: queryLoading } = db.useQuery(
+    coupleId
+      ? {
+          wishlistItems: {
+            $: { where: { 'couple.id': coupleId } },
+            addedBy: {},
+            wishlist: {},
+          },
+        }
+      : null,
+  );
+
+  const items = useMemo(
+    () =>
+      (data?.wishlistItems ?? []).map((i) => ({
+        ...i,
+        addedBy: (i.addedBy as any)?.[0]?.id ?? (i.addedBy as any)?.id ?? '',
+        wishlistId: (i.wishlist as any)?.[0]?.id ?? (i.wishlist as any)?.id ?? '',
+        wishlistName: (i.wishlist as any)?.[0]?.name ?? (i.wishlist as any)?.name ?? null,
+        scope: sanitizeWishScope(i.scope),
+      })),
+    [data?.wishlistItems],
+  );
+
+  return {
+    items,
+    isLoading: !!coupleId && queryLoading,
+  };
+}
+
 export function useWishlistItems(wishlistId: string | null) {
   const { activeCouple, user } = useSession();
   const coupleId = activeCouple?.couple?.id ?? null;
@@ -69,7 +182,14 @@ export function useWishlistItems(wishlistId: string | null) {
       : null,
   );
 
-  const items = useMemo(() => data?.wishlistItems ?? [], [data?.wishlistItems]);
+  const items = useMemo(
+    () =>
+      (data?.wishlistItems ?? []).map((i) => ({
+        ...i,
+        scope: sanitizeWishScope(i.scope),
+      })),
+    [data?.wishlistItems],
+  );
 
   const add = useCallback(
     async (input: WishlistItemInput) => {
@@ -82,6 +202,7 @@ export function useWishlistItems(wishlistId: string | null) {
             description: input.description ?? undefined,
             url: input.url ?? undefined,
             price: input.price ?? undefined,
+            scope: sanitizeWishScope(input.scope),
             isPurchased: false,
             priority: input.priority ?? 0,
             sortOrder: items.length,
@@ -101,6 +222,7 @@ export function useWishlistItems(wishlistId: string | null) {
       if (input.url !== undefined) updates.url = input.url ?? null;
       if (input.price !== undefined) updates.price = input.price ?? null;
       if (input.priority !== undefined) updates.priority = input.priority;
+      if (input.scope !== undefined) updates.scope = sanitizeWishScope(input.scope);
       await db.transact(db.tx.wishlistItems[itemId].update(updates));
     },
     [],

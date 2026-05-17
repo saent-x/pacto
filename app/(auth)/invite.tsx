@@ -1,9 +1,10 @@
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { CouplRings, Display, Overline, PrimaryButton } from '@/src/components/ui/atoms';
-import { GoldRule } from '@/src/components/ui/WarmBlock';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { HeaderBrand, PactoMark } from '@/src/components/ui/pacto';
 import { Icon } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
+import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
 import { useSession } from '@/src/lib/session';
 import { ensureUserRow, joinSpaceByCode } from '@/src/lib/space-actions';
@@ -12,8 +13,8 @@ import { isValidInviteCode } from '@/src/lib/invite-code';
 const SLOTS = 6;
 
 export default function Invite() {
+  const { C } = useTheme();
   const router = useRouter();
-  const { C, F } = useTheme();
   const { user } = useSession();
   const [code, setCode] = useState<string[]>(Array(SLOTS).fill(''));
   const [busy, setBusy] = useState(false);
@@ -21,11 +22,24 @@ export default function Invite() {
   const refs = useRef<Array<TextInput | null>>([]);
 
   const setSlot = (i: number, v: string) => {
+    const cleaned = v.replace(/[^a-z0-9]/gi, '').toUpperCase();
     const next = [...code];
-    next[i] = v.slice(-1).toUpperCase();
+    if (cleaned.length > 1) {
+      cleaned
+        .slice(0, SLOTS - i)
+        .split('')
+        .forEach((char, offset) => {
+          next[i + offset] = char;
+        });
+      setCode(next);
+      setError(null);
+      refs.current[Math.min(i + cleaned.length, SLOTS - 1)]?.focus();
+      return;
+    }
+    next[i] = cleaned;
     setCode(next);
     setError(null);
-    if (v && i < SLOTS - 1) refs.current[i + 1]?.focus();
+    if (cleaned && i < SLOTS - 1) refs.current[i + 1]?.focus();
   };
 
   const joined = code.join('');
@@ -41,9 +55,7 @@ export default function Invite() {
     try {
       await ensureUserRow({ userId: user.id, email: user.email });
       await joinSpaceByCode({ userId: user.id, code: joined });
-      // SessionGate → /(tabs)/home
     } catch (e: any) {
-      // Atomic transact failed — most likely code no longer valid
       setError('Code no longer valid');
     } finally {
       setBusy(false);
@@ -51,62 +63,124 @@ export default function Invite() {
   }
 
   return (
-    <View style={[styles.root, { backgroundColor: C.ink }]}>
-      <Pressable onPress={() => router.back()} style={{ marginBottom: 40 }}>
-        <Icon name="chevronLeft" size={22} color={C.mist} />
-      </Pressable>
+    <View style={[styles.root, { backgroundColor: C.bg }]}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerShadowVisible: false,
+          headerBackground: () => null,
+          headerStyle: { backgroundColor: 'transparent' },
+          headerTintColor: C.inkColor,
+          title: '',
+          headerLeft: () => (
+            <PressScale
+              onPress={() => router.back()}
+              hitSlop={12}
+              style={{ padding: 4 }}
+            >
+              <Icon name="chevronLeft" size={22} color={C.inkColor} strokeWidth={2.2} />
+            </PressScale>
+          ),
+        }}
+      />
 
-      <CouplRings size={48} a={C.peach} b={C.lavender} />
-      <Display size={36} style={{ marginTop: 18 }}>
-        Enter your code<Text style={{ color: C.gold }}>.</Text>
-      </Display>
-      <GoldRule width={32} />
-      <Text style={{ fontFamily: F.serif, fontStyle: 'italic', color: C.mist, fontSize: 15, marginTop: 14, maxWidth: 300 }}>
-        Six characters \u2014 case doesn\u2019t matter.
-      </Text>
+      <View style={styles.hero}>
+        <PactoMark size={48} />
+        <View style={{ height: 14 }} />
+        <HeaderBrand eyebrow="JOIN A PACT" title="enter your code" size={28} />
+        <Text
+          style={[
+            Typography.body,
+            { color: C.ink2, marginTop: 12, textAlign: 'center', maxWidth: 300 },
+          ]}
+        >
+          Six characters — case doesn't matter.
+        </Text>
+      </View>
 
-      <View style={{ marginTop: 48 }}>
-        <Overline style={{ marginBottom: 14 }}>Invite code</Overline>
-        <View style={{ flexDirection: 'row', gap: 10 }}>
+      <View style={styles.codeWrap}>
+        <Text style={[Typography.eyebrowSm, { color: C.ink3, marginBottom: 14, textAlign: 'center' }]}>
+          Invite code
+        </Text>
+        <View style={styles.slotRow}>
           {code.map((ch, i) => (
             <TextInput
               key={i}
-              ref={(r) => { refs.current[i] = r; }}
+              ref={(r) => {
+                refs.current[i] = r;
+              }}
               value={ch}
               onChangeText={(v) => setSlot(i, v)}
-              maxLength={1}
               autoCapitalize="characters"
+              autoCorrect={false}
               style={[
                 styles.slot,
                 {
-                  borderColor: error ? C.error : ch ? C.gold : C.line,
-                  color: C.bone,
-                  fontFamily: F.display,
-                  backgroundColor: C.card,
+                  borderColor: error ? C.error : ch ? C.accent : C.line2,
+                  color: C.inkColor,
+                  fontFamily: Typography.pixelFont,
+                  backgroundColor: ch ? C.bgCard : C.bg,
                 },
               ]}
             />
           ))}
         </View>
-        {error && (
-          <Text style={{ color: C.error, marginTop: 12, fontFamily: F.body, fontSize: 13 }}>{error}</Text>
-        )}
+        {error ? (
+          <Text style={[Typography.caption, { color: C.error, marginTop: 12 }]}>
+            {error}
+          </Text>
+        ) : null}
       </View>
 
-      <View style={{ marginTop: 'auto' }}>
-        <PrimaryButton onPress={submit} disabled={!filled || busy}>
-          {busy ? 'Joining…' : 'Continue'}
-        </PrimaryButton>
+      <View style={styles.footer}>
+        <PressScale
+          onPress={submit}
+          disabled={!filled || busy}
+          style={[
+            styles.primary,
+            {
+              backgroundColor: !filled || busy ? C.ink3 : C.inkColor,
+              opacity: !filled || busy ? 0.6 : 1,
+            },
+          ]}
+        >
+          <Text style={[Typography.buttonLabel, { color: C.bg }]}>
+            {busy ? 'Joining…' : 'Continue'}
+          </Text>
+        </PressScale>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, padding: 24, paddingTop: 60, paddingBottom: 40 },
+  root: { flex: 1, padding: 24, paddingTop: 24, paddingBottom: 40 },
+  hero: { alignItems: 'center', marginTop: 44, marginBottom: 38 },
+  codeWrap: {
+    width: '100%',
+    alignSelf: 'center',
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  slotRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    width: '100%',
+  },
   slot: {
-    width: 48, height: 56, borderWidth: 1, borderRadius: 12,
-    textAlign: 'center', fontSize: 24, fontWeight: '700',
-    fontVariant: ['tabular-nums'],
+    width: 44,
+    height: 56,
+    borderWidth: 1.5,
+    borderRadius: 8,
+    textAlign: 'center',
+    fontSize: 24,
+  },
+  footer: { marginTop: 'auto' },
+  primary: {
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

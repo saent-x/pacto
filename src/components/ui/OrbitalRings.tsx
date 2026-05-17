@@ -1,6 +1,6 @@
 // src/components/ui/OrbitalRings.tsx
 import { useEffect } from 'react';
-import { StyleSheet, Platform } from 'react-native';
+import { StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -73,18 +73,7 @@ export function OrbitalRings({ variant }: OrbitalRingsProps) {
     };
   });
 
-  const shadowStyle = Platform.select({
-    ios: {
-      shadowColor: C.gold,
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-    },
-    android: {
-      elevation: 4,
-    },
-    default: {},
-  });
+  const shadowStyle = { boxShadow: `0 0 8px ${C.gold}4D` };
 
   return (
     <Animated.View entering={FadeIn.duration(800)} style={styles.container}>

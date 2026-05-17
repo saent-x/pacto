@@ -15,9 +15,15 @@ export function NavAddBtn({
     <PressScale
       onPress={() => router.push(href as any)}
       hitSlop={12}
-      style={{ padding: 4 }}
+      style={{
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
     >
-      <Icon name={icon} size={22} color={C.bone} strokeWidth={2.4} />
+      <Icon name={icon} size={22} color={C.inkColor} strokeWidth={2.4} />
     </PressScale>
   );
 }

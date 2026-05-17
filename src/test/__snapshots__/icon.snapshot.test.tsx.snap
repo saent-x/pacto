@@ -1,0 +1,1578 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Icon snapshots > bell — color=#ff0 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "20px",
+      "width": "20px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/bell.png")",
+        "filter": "url(#tint-2)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/bell.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-2"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#ff0"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;
+
+exports[`Icon snapshots > bell — default 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "20px",
+      "width": "20px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/bell.png")",
+        "filter": "url(#tint-0)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/bell.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-0"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#fff"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;
+
+exports[`Icon snapshots > bell — strokeWidth=3 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "20px",
+      "width": "20px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/bell.png")",
+        "filter": "url(#tint-4)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/bell.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-4"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#fff"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;
+
+exports[`Icon snapshots > check — color=#ff0 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "20px",
+      "width": "20px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/check.png")",
+        "filter": "url(#tint-14)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/check.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-14"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#ff0"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;
+
+exports[`Icon snapshots > check — default 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "20px",
+      "width": "20px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/check.png")",
+        "filter": "url(#tint-12)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/check.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-12"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#fff"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;
+
+exports[`Icon snapshots > check — strokeWidth=3 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "20px",
+      "width": "20px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/check.png")",
+        "filter": "url(#tint-16)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/check.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-16"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#fff"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;
+
+exports[`Icon snapshots > chevronRight — color=#ff0 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "20px",
+      "width": "20px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/chevronRight.png")",
+        "filter": "url(#tint-20)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/chevronRight.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-20"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#ff0"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;
+
+exports[`Icon snapshots > chevronRight — default 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "20px",
+      "width": "20px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/chevronRight.png")",
+        "filter": "url(#tint-18)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/chevronRight.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-18"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#fff"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;
+
+exports[`Icon snapshots > chevronRight — strokeWidth=3 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "20px",
+      "width": "20px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/chevronRight.png")",
+        "filter": "url(#tint-22)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/chevronRight.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-22"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#fff"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;
+
+exports[`Icon snapshots > heart — color=#ff0 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "20px",
+      "width": "20px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/heart.png")",
+        "filter": "url(#tint-8)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/heart.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-8"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#ff0"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;
+
+exports[`Icon snapshots > heart — default 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "20px",
+      "width": "20px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/heart.png")",
+        "filter": "url(#tint-6)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/heart.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-6"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#fff"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;
+
+exports[`Icon snapshots > heart — strokeWidth=3 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "20px",
+      "width": "20px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/heart.png")",
+        "filter": "url(#tint-10)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/heart.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-10"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#fff"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;
+
+exports[`Icon snapshots > home — color=#ff0 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "20px",
+      "width": "20px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/home.png")",
+        "filter": "url(#tint-38)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/home.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-38"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#ff0"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;
+
+exports[`Icon snapshots > home — default 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "20px",
+      "width": "20px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/home.png")",
+        "filter": "url(#tint-36)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/home.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-36"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#fff"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;
+
+exports[`Icon snapshots > home — strokeWidth=3 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "20px",
+      "width": "20px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/home.png")",
+        "filter": "url(#tint-40)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/home.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-40"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#fff"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;
+
+exports[`Icon snapshots > plus — color=#ff0 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "20px",
+      "width": "20px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/plus.png")",
+        "filter": "url(#tint-32)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/plus.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-32"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#ff0"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;
+
+exports[`Icon snapshots > plus — default 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "20px",
+      "width": "20px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/plus.png")",
+        "filter": "url(#tint-30)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/plus.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-30"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#fff"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;
+
+exports[`Icon snapshots > plus — strokeWidth=3 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "20px",
+      "width": "20px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/plus.png")",
+        "filter": "url(#tint-34)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/plus.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-34"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#fff"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;
+
+exports[`Icon snapshots > renders null for unknown name gracefully (type-bypass) 1`] = `null`;
+
+exports[`Icon snapshots > respects size prop 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "48px",
+      "width": "48px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/bell.png")",
+        "filter": "url(#tint-48)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/bell.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-48"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#fff"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;
+
+exports[`Icon snapshots > user — color=#ff0 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "20px",
+      "width": "20px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/user.png")",
+        "filter": "url(#tint-44)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/user.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-44"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#ff0"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;
+
+exports[`Icon snapshots > user — default 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "20px",
+      "width": "20px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/user.png")",
+        "filter": "url(#tint-42)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/user.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-42"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#fff"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;
+
+exports[`Icon snapshots > user — strokeWidth=3 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "20px",
+      "width": "20px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/user.png")",
+        "filter": "url(#tint-46)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/user.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-46"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#fff"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;
+
+exports[`Icon snapshots > x — color=#ff0 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "20px",
+      "width": "20px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/x.png")",
+        "filter": "url(#tint-26)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/x.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-26"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#ff0"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;
+
+exports[`Icon snapshots > x — default 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "20px",
+      "width": "20px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/x.png")",
+        "filter": "url(#tint-24)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/x.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-24"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#fff"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;
+
+exports[`Icon snapshots > x — strokeWidth=3 1`] = `
+<div
+  className="css-view-g5y9jx r-flexBasis-1mlwlqe r-overflow-1udh08x r-zIndex-417010"
+  dir={null}
+  ref={[Function]}
+  style={
+    {
+      "height": "20px",
+      "width": "20px",
+    }
+  }
+>
+  <div
+    className="css-view-g5y9jx r-backgroundColor-1niwhzg r-backgroundPosition-vvn4in r-backgroundRepeat-u6sd8q r-bottom-1p0dtai r-height-1pi2tsx r-left-1d2f490 r-position-u8s1d r-right-zchlnj r-top-ipm5af r-width-13qz1uu r-zIndex-1wyyakw r-backgroundSize-ehq7j7"
+    dir={null}
+    ref={[Function]}
+    style={
+      {
+        "backgroundImage": "url("/Users/tor/Documents/projects/coupl/assets/images/icons/x.png")",
+        "filter": "url(#tint-28)",
+      }
+    }
+    suppressHydrationWarning={true}
+  />
+  <img
+    alt=""
+    className="css-accessibilityImage-9pa8cd"
+    draggable={false}
+    ref={
+      {
+        "current": null,
+      }
+    }
+    src="/Users/tor/Documents/projects/coupl/assets/images/icons/x.png"
+  />
+  <svg
+    style={
+      {
+        "height": 0,
+        "position": "absolute",
+        "visibility": "hidden",
+        "width": 0,
+      }
+    }
+  >
+    <defs>
+      <filter
+        id="tint-28"
+        suppressHydrationWarning={true}
+      >
+        <feFlood
+          floodColor="#fff"
+        />
+        <feComposite
+          in2="SourceAlpha"
+          operator="in"
+        />
+      </filter>
+    </defs>
+  </svg>
+</div>
+`;

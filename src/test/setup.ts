@@ -1,9 +1,67 @@
 import { vi } from 'vitest';
 
+const expoGlobal = globalThis as typeof globalThis & {
+  __DEV__?: boolean;
+  expo?: {
+    EventEmitter: new () => {
+      addListener: () => { remove: () => void };
+    };
+  };
+};
+
+expoGlobal.__DEV__ = true;
+process.env.EXPO_OS ??= 'ios';
+expoGlobal.expo ??= {
+  EventEmitter: class {
+    addListener() {
+      return { remove: () => undefined };
+    }
+  },
+};
+
 // react-native-get-random-values is a CJS polyfill that uses require(),
 // which fails in Vitest's ESM environment. jsdom already provides
 // crypto.getRandomValues, so mock it as a no-op.
 vi.mock('react-native-get-random-values', () => ({}));
+
+// expo-haptics pulls in expo-modules-core which references __DEV__ at
+// module scope. Provide a global mock so components importing haptics
+// (Pill, BlockCard, etc.) don't crash test loading.
+vi.mock('expo-haptics', () => ({
+  selectionAsync: vi.fn(async () => undefined),
+  impactAsync: vi.fn(async () => undefined),
+  notificationAsync: vi.fn(async () => undefined),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
+  NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
+}));
+
+vi.mock('expo-audio', () => ({
+  useAudioPlayer: () => ({
+    play: vi.fn(),
+    pause: vi.fn(),
+    seekTo: vi.fn(),
+  }),
+}));
+
+vi.mock('@react-native-async-storage/async-storage', () => {
+  const store = new Map<string, string>();
+
+  return {
+    __esModule: true,
+    default: {
+      getItem: vi.fn(async (key: string) => store.get(key) ?? null),
+      setItem: vi.fn(async (key: string, value: string) => {
+        store.set(key, value);
+      }),
+      removeItem: vi.fn(async (key: string) => {
+        store.delete(key);
+      }),
+      clear: vi.fn(async () => {
+        store.clear();
+      }),
+    },
+  };
+});
 
 // @instantdb/react-native transitively imports react-native-get-random-values
 // (CJS) which cannot be loaded in Vitest's ESM context. Mock the SDK.
@@ -41,6 +99,91 @@ vi.mock('@instantdb/react-native', () => {
       auth: { signOut: vi.fn() },
     }),
     id: () => 'mock-id',
+  };
+});
+
+// react-native-svg ships a web build whose module entry pulls in syntax
+// (legacy `typeof` import expressions in css/web subpaths) that Node's ESM
+// loader cannot parse. Stub it with passthrough components so snapshots still
+// capture which SVG primitives render and with what props.
+vi.mock('react-native-svg', () => {
+  const React = require('react') as typeof import('react');
+  const passthrough = (displayName: string) =>
+    Object.assign(
+      (props: Record<string, unknown>) =>
+        React.createElement(displayName, props, (props as { children?: React.ReactNode }).children),
+      { displayName },
+    );
+  const Svg = passthrough('Svg');
+  return {
+    __esModule: true,
+    default: Svg,
+    Svg,
+    Circle: passthrough('Circle'),
+    Defs: passthrough('Defs'),
+    G: passthrough('G'),
+    LinearGradient: passthrough('LinearGradient'),
+    RadialGradient: passthrough('RadialGradient'),
+    Line: passthrough('Line'),
+    Path: passthrough('Path'),
+    Polygon: passthrough('Polygon'),
+    Polyline: passthrough('Polyline'),
+    Rect: passthrough('Rect'),
+    Stop: passthrough('Stop'),
+  };
+});
+
+// SheetShell imports DateTimePicker at module scope. Its web build uses
+// Flow-style type imports that Vitest's parser can't handle. Stub it.
+vi.mock('@react-native-community/datetimepicker', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
+vi.mock('react-native-gesture-handler/ReanimatedSwipeable', () => ({
+  __esModule: true,
+  default: (props: any) => props.children,
+}));
+
+// SheetShell + atoms use reanimated for ToggleRow, Pill scale, etc. Tests
+// that don't already mock reanimated would hit native bindings. Provide a
+// passthrough mock matching the shape used across the suite.
+vi.mock('react-native-reanimated', () => {
+  const Reactx = require('react');
+  const MockView = (props: any) => Reactx.createElement('AnimatedView', props, props.children);
+  const MockScrollView = (props: any) => Reactx.createElement('AnimatedScrollView', props, props.children);
+  const MockText = (props: any) => Reactx.createElement('AnimatedText', props, props.children);
+  const chainable: any = {
+    duration: () => chainable,
+    delay: () => chainable,
+    springify: () => chainable,
+    damping: () => chainable,
+    stiffness: () => chainable,
+  };
+  return {
+    __esModule: true,
+    default: { View: MockView, ScrollView: MockScrollView, Text: MockText, createAnimatedComponent: (C: any) => C },
+    View: MockView,
+    ScrollView: MockScrollView,
+    Text: MockText,
+    createAnimatedComponent: (C: any) => C,
+    FadeIn: chainable,
+    FadeInDown: chainable,
+    LinearTransition: chainable,
+    ZoomIn: chainable,
+    Easing: { inOut: () => 0, out: (fn: any) => fn ?? 0, cubic: (v: any) => v, bezier: () => 0, ease: 0 },
+    useSharedValue: (v: any) => ({ value: v }),
+    useAnimatedStyle: (fn: any) => fn(),
+    withTiming: (v: any) => v,
+    withDelay: (_d: any, v: any) => v,
+    withSequence: (...args: any[]) => args[args.length - 1],
+    withRepeat: (v: any) => v,
+    useReducedMotion: () => false,
+    useAnimatedProps: (fn: any) => fn(),
+    interpolate: () => 0,
+    interpolateColor: () => '#000000',
+    withSpring: (v: any) => v,
+    runOnJS: (fn: any) => fn,
   };
 });
 

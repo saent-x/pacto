@@ -1,193 +1,504 @@
-import { router } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
-import { AddBtn } from '@/src/components/ui/AddBtn';
-import { Icon, IconName } from '@/src/components/ui/Icon';
-import { Screen } from '@/src/components/ui/Screen';
-import { SubHeader } from '@/src/components/ui/SubHeader';
+import { router, Stack } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  addDays,
+  format,
+  startOfDay,
+  startOfWeek,
+  subDays,
+} from 'date-fns';
+import {
+  ActionEmptyState,
+  Bucket,
+  BucketedList,
+  HeaderBrand,
+  Pill,
+  StatBar,
+  SwipeableRow,
+} from '@/src/components/ui/pacto';
+import { Icon } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
+import {
+  useCheckIns,
+  getLocalDateKey,
+  type CheckInRecord,
+} from '@/src/hooks/useCheckIns';
+import { useSession } from '@/src/hooks/useSession';
+import { getCheckInStateMeta } from '@/src/constants/checkInStates';
+import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
 
-export default function Checkins() {
-  const { C, F } = useTheme();
-  const moods: IconName[] = ['sun', 'cloud', 'minus', 'cloudRain', 'zap'];
-  const week: { day: string; me: number | null; them: number | null }[] = [
-    { day: 'MON', me: 0, them: 1 },
-    { day: 'TUE', me: 1, them: 0 },
-    { day: 'WED', me: 1, them: 1 },
-    { day: 'THU', me: 0, them: 1 },
-    { day: 'FRI', me: null, them: null },
-    { day: 'SAT', me: null, them: null },
-    { day: 'SUN', me: null, them: null },
-  ];
+const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-  return (
-    <Screen>
-      <View style={{ backgroundColor: C.butter, borderRadius: 24, padding: 22, marginBottom: 18 }}>
-        <Text
-          style={{
-            fontSize: 10,
-            color: C.butterInk,
-            fontFamily: F.bodyBold,
-            letterSpacing: 1.2,
-            opacity: 0.55,
-            marginBottom: 6,
-          }}
-        >
-          THIS WEEK · IN SYNC
-        </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 10, marginBottom: 10 }}>
-          <Text
-            style={{
-              fontFamily: F.displayBold,
-              fontSize: 54,
-              color: C.butterInk,
-              lineHeight: 50,
-              letterSpacing: -2,
-            }}
-          >
-            86<Text style={{ fontSize: 28 }}>%</Text>
-          </Text>
-          <Text
-            style={{
-              flex: 1,
-              marginBottom: 8,
-              fontSize: 12,
-              color: C.butterInk,
-              opacity: 0.6,
-              fontFamily: F.bodyBold,
-            }}
-          >
-            4 of 4 days you've both checked in — a streak.
-          </Text>
-        </View>
-        <View
-          style={{
-            height: 6,
-            backgroundColor: 'rgba(0,0,0,0.12)',
-            borderRadius: 3,
-            overflow: 'hidden',
-          }}
-        >
-          <View style={{ width: '86%', height: '100%', backgroundColor: C.butterInk }} />
-        </View>
-      </View>
+type FilterKey = 'all' | 'mine' | 'theirs';
 
-      <Text
-        style={{
-          fontSize: 11,
-          color: C.fog,
-          fontFamily: F.bodyBold,
-          letterSpacing: 1.4,
-          paddingLeft: 4,
-          marginBottom: 12,
-        }}
-      >
-        THIS WEEK
-      </Text>
-
-      <View
-        style={{
-          backgroundColor: C.card,
-          borderWidth: 1,
-          borderColor: C.line,
-          borderRadius: 22,
-          padding: 18,
-          marginBottom: 22,
-        }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-          <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: C.peach }} />
-          <Text style={{ fontSize: 10, color: C.fog, fontFamily: F.bodyBold, letterSpacing: 1 }}>YOU</Text>
-          <View
-            style={{
-              width: 14,
-              height: 14,
-              borderRadius: 7,
-              backgroundColor: C.lavender,
-              marginLeft: 8,
-            }}
-          />
-          <Text style={{ fontSize: 10, color: C.fog, fontFamily: F.bodyBold, letterSpacing: 1 }}>SOFIA</Text>
-        </View>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          {week.map((d) => (
-            <View key={d.day} style={{ alignItems: 'center', gap: 4 }}>
-              <Text
-                style={{
-                  fontSize: 9,
-                  color: C.fog,
-                  fontFamily: F.bodyBold,
-                  letterSpacing: 0.8,
-                  marginBottom: 4,
-                }}
-              >
-                {d.day}
-              </Text>
-              <Cell value={d.me} color={C.peach} ink={C.peachInk} moods={moods} />
-              <Cell value={d.them} color={C.lavender} ink={C.lavenderInk} moods={moods} />
-            </View>
-          ))}
-        </View>
-      </View>
-
-      <Text
-        style={{
-          fontSize: 11,
-          color: C.fog,
-          fontFamily: F.bodyBold,
-          letterSpacing: 1.4,
-          paddingLeft: 4,
-          marginBottom: 10,
-        }}
-      >
-        TODAY · NOT CHECKED IN YET
-      </Text>
-      <Pressable
-        style={{
-          backgroundColor: C.gold,
-          borderRadius: 18,
-          paddingVertical: 16,
-          paddingHorizontal: 18,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <Text style={{ color: C.peachInk, fontFamily: F.displayBold, fontSize: 15 }}>
-          Share how today feels
-        </Text>
-        <Icon name="arrowRight" size={18} color={C.peachInk} strokeWidth={2.5} />
-      </Pressable>
-    </Screen>
-  );
-}
-
-function Cell({
-  value,
-  color,
-  ink,
-  moods,
-}: {
-  value: number | null;
-  color: string;
-  ink: string;
-  moods: IconName[];
-}) {
+export default function CheckinsScreen() {
   const { C } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { user, partner, mode, members } = useSession();
+  const { checkIns, remove } = useCheckIns();
+
+  const [filter, setFilter] = useState<FilterKey>('all');
+
+  const userId = user?.id ?? '';
+  const myName = (user?.displayName ?? user?.email?.split('@')[0] ?? 'You').split(' ')[0];
+  const myInitial = myName.charAt(0).toUpperCase();
+  const partnerName = partner?.displayName ?? null;
+  const partnerInitial = (partnerName ?? 'P').charAt(0).toUpperCase();
+
+  const eyebrowLabel =
+    mode === 'solo'
+      ? 'ME'
+      : mode === 'crew'
+      ? 'CREW'
+      : 'US';
+
+  // Week strip — last Mon→Sun, mood color per day per member
+  const week = useMemo(() => {
+    const now = new Date();
+    const monday = startOfWeek(now, { weekStartsOn: 1 });
+    const todayKey = getLocalDateKey(now);
+    return DAY_LABELS.map((label, i) => {
+      const date = addDays(monday, i);
+      const dateKey = getLocalDateKey(date);
+      const past = dateKey <= todayKey;
+      const mineRec = checkIns.find(
+        (c) => c.authorId === userId && c.checkInDate === dateKey
+      );
+      const theirsRec = checkIns.find(
+        (c) => c.authorId !== userId && c.checkInDate === dateKey
+      );
+      return {
+        label,
+        dateKey,
+        past,
+        isToday: dateKey === todayKey,
+        mineColor: mineRec ? getCheckInStateMeta(mineRec.mood).color : null,
+        theirsColor: theirsRec ? getCheckInStateMeta(theirsRec.mood).color : null,
+      };
+    });
+  }, [checkIns, userId]);
+
+  const stats = useMemo(() => {
+    const possibleDays = week.filter((d) => d.past).length;
+    const myDays = week.filter((d) => d.past && d.mineColor).length;
+    const sharedDays = week.filter(
+      (d) => d.past && d.mineColor && d.theirsColor
+    ).length;
+    return { possibleDays, myDays, sharedDays };
+  }, [week]);
+
+  // Consecutive-days streak walking back from today (own check-ins).
+  const streak = useMemo(() => {
+    const myKeys = new Set(
+      checkIns
+        .filter((c) => c.authorId === userId)
+        .map((c) => c.checkInDate)
+    );
+    let count = 0;
+    let cursor = new Date();
+    while (myKeys.has(getLocalDateKey(cursor))) {
+      count += 1;
+      cursor = subDays(cursor, 1);
+    }
+    return count;
+  }, [checkIns, userId]);
+
+  const visible = useMemo(() => {
+    return checkIns.filter((c) => {
+      if (filter === 'mine') return c.authorId === userId;
+      if (filter === 'theirs') return c.authorId !== userId;
+      return true;
+    });
+  }, [checkIns, filter, userId]);
+
+  const buckets = useMemo<Bucket<CheckInRecord>[]>(() => {
+    const today = startOfDay(new Date()).getTime();
+    const yesterday = startOfDay(subDays(new Date(), 1)).getTime();
+    const week = startOfDay(subDays(new Date(), 7)).getTime();
+
+    const groups: Record<string, CheckInRecord[]> = {
+      Today: [],
+      Yesterday: [],
+      'This week': [],
+      Earlier: [],
+    };
+    for (const c of visible) {
+      const ts = c.createdAt;
+      if (ts >= today) groups.Today.push(c);
+      else if (ts >= yesterday) groups.Yesterday.push(c);
+      else if (ts >= week) groups['This week'].push(c);
+      else groups.Earlier.push(c);
+    }
+
+    const order = ['Today', 'Yesterday', 'This week', 'Earlier'];
+    const dotMap: Record<string, string> = {
+      Today: C.accent,
+      Yesterday: C.accent2,
+      'This week': C.ink2,
+      Earlier: C.ink3,
+    };
+    return order
+      .filter((k) => groups[k].length > 0)
+      .map((k) => ({
+        label: k,
+        dotColor: dotMap[k],
+        rows: groups[k].slice().sort((a, b) => b.createdAt - a.createdAt),
+      }));
+  }, [visible, C.accent, C.accent2, C.ink2, C.ink3]);
+
+  const filterOptions: { key: FilterKey; label: string }[] =
+    mode === 'solo'
+      ? [{ key: 'all', label: 'All' }]
+      : [
+          { key: 'all', label: 'All' },
+          { key: 'mine', label: 'Mine' },
+          { key: 'theirs', label: 'Theirs' },
+        ];
+
   return (
-    <View
-      style={{
-        width: 26,
-        height: 26,
-        borderRadius: 13,
-        backgroundColor: value !== null ? color : 'transparent',
-        borderWidth: value === null ? 1.5 : 0,
-        borderStyle: 'dashed',
-        borderColor: C.line,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      {value !== null && <Icon name={moods[value]} size={12} color={ink} strokeWidth={2.5} />}
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerTransparent: true,
+          headerShadowVisible: false,
+          headerBackground: () => null,
+          headerTintColor: C.inkColor,
+          title: '',
+          headerTitleAlign: 'center',
+          headerTitle: () => (
+            <HeaderBrand eyebrow={eyebrowLabel} title="check-ins" />
+          ),
+          headerLeft: () => (
+            <PressScale
+              onPress={() => router.back()}
+              hitSlop={12}
+              haptic="impact"
+              pressedScale={0.96}
+              style={{ padding: 4 }}
+            >
+              <Icon name="chevronLeft" size={22} color={C.inkColor} strokeWidth={2.2} />
+            </PressScale>
+          ),
+          headerRight: () => (
+            <PressScale
+              onPress={() => router.push('/sheets/new-checkin' as any)}
+              hitSlop={12}
+              haptic="impact"
+              pressedScale={0.96}
+              style={{ padding: 4 }}
+            >
+              <Icon name="plus" size={22} color={C.inkColor} strokeWidth={2.2} />
+            </PressScale>
+          ),
+        }}
+      />
+
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingTop: insets.top + 60, paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Hero — shared stat header */}
+        <View style={styles.heroWrap}>
+          <StatBar
+            accent={C.accent2}
+            eyebrow="THIS WEEK"
+            meta={`STREAK · ${streak} ${streak === 1 ? 'DAY' : 'DAYS'}`}
+            primary={
+              <>
+                <View style={styles.heroNumberRow}>
+                  <Text style={[styles.heroNumber, { color: C.inkColor }]}>
+                    {mode === 'solo' ? stats.myDays : stats.sharedDays}
+                  </Text>
+                  <Text
+                    style={[
+                      Typography.bodyMedium,
+                      { color: C.ink2, marginLeft: 8 },
+                    ]}
+                  >
+                    of {stats.possibleDays} {mode === 'solo' ? 'logged' : 'in sync'}
+                  </Text>
+                </View>
+                {mode !== 'solo' ? (
+                  <Text
+                    style={[
+                      Typography.caption,
+                      { color: C.ink2, flexBasis: '100%', marginTop: 4 },
+                    ]}
+                  >
+                    {stats.myDays} from you · {stats.possibleDays - stats.myDays > 0
+                      ? `${stats.possibleDays - stats.myDays} missed`
+                      : 'all caught up'}
+                  </Text>
+                ) : null}
+              </>
+            }
+            microVis={
+              <View style={styles.weekPanel}>
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={[
+                      Typography.eyebrowSm,
+                      { color: C.ink3, marginBottom: 8 },
+                    ]}
+                  >
+                    LAST 7 DAYS
+                  </Text>
+                  <View style={styles.weekStrip}>
+                    {week.map((d, i) => (
+                      <View key={i} style={styles.weekCell}>
+                        <View style={styles.weekSquares}>
+                          <View
+                            style={[
+                              styles.weekSquare,
+                              {
+                                backgroundColor:
+                                  d.mineColor ?? C.bgSoft,
+                                borderWidth: d.isToday ? 1.2 : 0,
+                                borderColor: C.inkColor,
+                              },
+                            ]}
+                          />
+                          {mode !== 'solo' ? (
+                            <View
+                              style={[
+                                styles.weekSquare,
+                                {
+                                  backgroundColor:
+                                    d.theirsColor ?? C.bgSoft,
+                                  marginTop: 2,
+                                  borderWidth: d.isToday ? 1.2 : 0,
+                                  borderColor: C.inkColor,
+                                },
+                              ]}
+                            />
+                          ) : null}
+                        </View>
+                        <Text
+                          style={[
+                            Typography.eyebrowSm,
+                            { color: C.ink2, fontSize: 9, marginTop: 4 },
+                          ]}
+                        >
+                          {d.label}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              </View>
+            }
+          />
+        </View>
+
+        {/* Filter pills */}
+        {filterOptions.length > 1 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterRow}
+          >
+            {filterOptions.map((f) => (
+              <Pill
+                key={f.key}
+                size="md"
+                active={filter === f.key}
+                onPress={() => setFilter(f.key)}
+                color={C.inkColor}
+              >
+                {f.key === 'theirs' && partnerName
+                  ? `${partnerName.split(' ')[0]}'s`
+                  : f.label}
+              </Pill>
+            ))}
+          </ScrollView>
+        ) : (
+          <View style={{ height: 14 }} />
+        )}
+
+        {/* Bucketed entries */}
+        <View style={styles.listWrap}>
+          {buckets.length === 0 ? (
+            <ActionEmptyState
+              icon="feather"
+              title="No check-ins yet"
+              body={mode === 'solo' ? 'Log your first mood.' : 'Log the first mood for this pact.'}
+              actionLabel="Check in"
+              accent={C.accent2}
+              onAction={() => router.push('/sheets/new-checkin' as any)}
+            />
+          ) : (
+            <BucketedList
+              buckets={buckets}
+              rowKey={(c) => c.id}
+              renderRow={(c) => {
+                const mood = getCheckInStateMeta(c.mood);
+                const isMine = c.authorId === userId;
+                const authorName = isMine
+                  ? myName
+                  : members.find((m) => m.id === c.authorId)?.displayName?.split(' ')[0] ??
+                    'Member';
+                const authorColor = isMine ? C.accent : C.accent2;
+                return (
+                  <SwipeableRow
+                    deleteTitle="Delete check-in?"
+                    deleteMessage="This entry will be removed."
+                    onEdit={
+                      isMine
+                        ? () =>
+                            router.push(
+                              `/sheets/new-checkin?id=${c.id}` as any
+                            )
+                        : undefined
+                    }
+                    onDelete={() => remove(c.id)}
+                  >
+                    <View style={styles.row}>
+                      <View
+                        style={[
+                          styles.moodTile,
+                          { backgroundColor: mood.color },
+                        ]}
+                      >
+                        <Image source={mood.image} style={styles.moodImage} resizeMode="contain" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <View style={styles.headRow}>
+                          <Text
+                            style={[
+                              {
+                                fontFamily: Typography.geistSemiBoldFont,
+                                fontSize: 14,
+                                color: C.inkColor,
+                                textTransform: 'capitalize',
+                              },
+                            ]}
+                          >
+                            {mood.label}
+                          </Text>
+                          <Text
+                            style={[Typography.eyebrowSm, { color: authorColor, fontSize: 9.5 }]}
+                          >
+                            {authorName.toUpperCase()}
+                          </Text>
+                        </View>
+                        {c.note ? (
+                          <Text
+                            style={[
+                              Typography.caption,
+                              { color: C.ink2, marginTop: 2 },
+                            ]}
+                            numberOfLines={3}
+                          >
+                            {c.note}
+                          </Text>
+                        ) : null}
+                        <Text
+                          style={[
+                            Typography.mono,
+                            { color: C.ink3, fontSize: 11, marginTop: 4 },
+                          ]}
+                        >
+                          {format(new Date(c.createdAt), 'EEE · h:mm a')}
+                        </Text>
+                      </View>
+                    </View>
+                  </SwipeableRow>
+                );
+              }}
+            />
+          )}
+        </View>
+      </ScrollView>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  heroWrap: {
+    paddingHorizontal: 18,
+    paddingTop: 8,
+    paddingBottom: 6,
+  },
+  heroNumberRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
+  heroNumber: {
+    fontFamily: Typography.pixelFont,
+    fontSize: 48,
+    lineHeight: 48,
+    paddingLeft: 8,
+  },
+  weekPanel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  weekStrip: {
+    flexDirection: 'row',
+    gap: 5,
+  },
+  weekCell: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  weekSquares: {
+    width: '100%',
+    alignItems: 'stretch',
+  },
+  weekSquare: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 2,
+  },
+  filterRow: {
+    paddingHorizontal: 18,
+    paddingTop: 4,
+    paddingBottom: 14,
+    gap: 6,
+  },
+  listWrap: {
+    paddingHorizontal: 18,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  moodTile: {
+    width: 38,
+    height: 38,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moodImage: {
+    width: 32,
+    height: 32,
+  },
+  headRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  empty: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyAdd: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 999,
+    marginTop: 14,
+  },
+});

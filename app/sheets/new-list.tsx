@@ -1,100 +1,124 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
-import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
-import { Icon, IconName } from '@/src/components/ui/Icon';
-import { SheetShell } from '@/src/components/ui/SheetShell';
+import * as Haptics from 'expo-haptics';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { Alert } from 'react-native';
+import { FeatureUnavailable } from '@/src/components/features/FeatureUnavailable';
+import { PrimaryButton } from '@/src/components/ui/atoms';
+import { IconName } from '@/src/components/ui/Icon';
+import {
+  SheetColorGrid,
+  SheetIconGrid,
+  SheetSection,
+  SheetShell,
+  SheetTitleField,
+} from '@/src/components/ui/SheetShell';
 import { useTheme } from '@/src/lib/theme';
+import { useFeatureGate } from '@/src/hooks/useFeatureGate';
+import { useTaskLists, type PastelKey } from '@/src/hooks/useTaskLists';
 
-const ICONS: IconName[] = [
-  'shoppingBag',
-  'home',
-  'heart',
-  'briefcase',
-  'book',
-  'gift',
-  'mapPin',
-  'coffee',
-  'music',
-  'camera',
+const ICONS: { key: IconName; icon: IconName }[] = [
+  { key: 'shoppingBag', icon: 'shoppingBag' },
+  { key: 'home', icon: 'home' },
+  { key: 'heart', icon: 'heart' },
+  { key: 'briefcase', icon: 'briefcase' },
+  { key: 'book', icon: 'book' },
+  { key: 'gift', icon: 'gift' },
+  { key: 'mapPin', icon: 'mapPin' },
+  { key: 'coffee', icon: 'coffee' },
+  { key: 'music', icon: 'music' },
+  { key: 'camera', icon: 'camera' },
 ];
 
+const COLOR_KEYS: PastelKey[] = ['peach', 'lavender', 'butter', 'mint', 'rose', 'sky', 'gold', 'journal'];
+
 export default function NewList() {
-  const { C, F } = useTheme();
-  const colors = [C.peach, C.lavender, C.butter, C.mint, C.rose, C.sky, C.gold, C.journal];
-  const [name, setName] = useState('');
-  const [icon, setIcon] = useState<IconName>('shoppingBag');
-  const [color, setColor] = useState<string>(C.peach);
+  const gate = useFeatureGate('tasks');
+  if (!gate.enabled) return gate.feature ? <FeatureUnavailable feature={gate.feature} /> : null;
+  return <NewListInner />;
+}
+
+function NewListInner() {
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const isEdit = Boolean(id);
+  const { C } = useTheme();
+  const { create, update, lists } = useTaskLists();
+  const existing = useMemo(
+    () => (isEdit && id ? lists.find((l) => l.id === id) : undefined),
+    [isEdit, id, lists],
+  );
+
+  const [name, setName] = useState(existing?.name ?? '');
+  const [icon, setIcon] = useState<IconName>((existing?.icon as IconName) ?? 'shoppingBag');
+  const [colorKey, setColorKey] = useState<PastelKey>(
+    (existing?.colorKey as PastelKey) ?? 'peach',
+  );
+  const [saving, setSaving] = useState(false);
+
+  const color = (C as any)[colorKey] as string;
+  const colorOptions = useMemo(
+    () => COLOR_KEYS.map((k) => ({ key: k, value: (C as any)[k] as string })),
+    [C],
+  );
+
+  const handleSave = async () => {
+    const trimmed = name.trim();
+    if (!trimmed || saving) return;
+    setSaving(true);
+    try {
+      if (isEdit && id) {
+        await update(id, { name: trimmed, icon, colorKey });
+      } else {
+        await create({ name: trimmed, icon, colorKey });
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.back();
+    } catch (err) {
+      console.warn('[new-list] save failed', err);
+      Alert.alert('Save failed', 'Try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <SheetShell
-      eyebrow="NEW LIST"
+      eyebrow={isEdit ? 'EDIT LIST' : 'NEW LIST'}
       eyebrowColor={color}
-      title="Make a list."
-      footer={<PrimaryButton icon="plus" onPress={() => router.back()}>Create list</PrimaryButton>}
+      title={isEdit ? 'Edit list.' : 'Make a list.'}
+      footer={
+        <PrimaryButton icon={isEdit ? 'check' : 'plus'} onPress={handleSave} disabled={!name.trim() || saving}>
+          {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create list'}
+        </PrimaryButton>
+      }
     >
-      <Overline style={{ marginBottom: 8 }}>Name</Overline>
-      <TextInput
-        value={name}
-        onChangeText={setName}
-        placeholder="Anniversary plans..."
-        placeholderTextColor={C.fog}
-        style={{
-          color: C.bone,
-          fontFamily: F.displayBold,
-          fontSize: 22,
-          paddingVertical: 6,
-          borderBottomWidth: 2,
-          borderBottomColor: name ? color : C.line,
-        }}
-      />
+      <SheetSection title="Name" first>
+        <SheetTitleField
+          testID="new-list-name-input"
+          value={name}
+          onChangeText={setName}
+          placeholder="Name your list…"
+          accent={color}
+        />
+      </SheetSection>
 
-      <View style={{ marginTop: 22 }}>
-        <Overline style={{ marginBottom: 10 }}>Icon</Overline>
-        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-          {ICONS.map((i) => {
-            const active = icon === i;
-            return (
-              <Pressable
-                key={i}
-                onPress={() => setIcon(i)}
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 14,
-                  backgroundColor: active ? `${color}33` : C.card,
-                  borderWidth: 1,
-                  borderColor: active ? color : C.line,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Icon name={i} size={18} color={active ? color : C.mist} />
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
+      <SheetSection title="Icon">
+        <SheetIconGrid
+          options={ICONS}
+          selected={icon}
+          onChange={setIcon}
+          accent={color}
+          testIDPrefix="new-list-icon"
+        />
+      </SheetSection>
 
-      <View style={{ marginTop: 22 }}>
-        <Overline style={{ marginBottom: 10 }}>Color</Overline>
-        <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
-          {colors.map((c) => (
-            <Pressable
-              key={c}
-              onPress={() => setColor(c)}
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 17,
-                backgroundColor: c,
-                borderWidth: 3,
-                borderColor: color === c ? 'rgba(255,255,255,0.3)' : 'transparent',
-              }}
-            />
-          ))}
-        </View>
-      </View>
+      <SheetSection title="Color">
+        <SheetColorGrid
+          colors={colorOptions}
+          selected={colorKey}
+          onChange={setColorKey}
+          testIDPrefix="new-list-color"
+        />
+      </SheetSection>
     </SheetShell>
   );
 }

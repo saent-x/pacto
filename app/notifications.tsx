@@ -1,93 +1,221 @@
-import { Text, View } from 'react-native';
-import { IconTile, Overline } from '@/src/components/ui/atoms';
-import { Icon, IconName } from '@/src/components/ui/Icon';
-import { Screen } from '@/src/components/ui/Screen';
+import { useEffect, useMemo, useState } from 'react';
+import { router } from 'expo-router';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
+import {
+  ActionEmptyState,
+  Bucket,
+  BucketedList,
+  PixelHero,
+} from '@/src/components/ui/pacto';
+import { Icon } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
+import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
+import {
+  useNotifications,
+  type NotificationItem,
+} from '@/src/hooks/useNotifications';
 
-type Item = {
-  id: number;
-  icon: IconName;
-  color: string;
-  title: string;
-  sub: string;
-  time: string;
-  unread?: boolean;
-};
+export default function NotificationsScreen() {
+  const insets = useSafeAreaInsets();
+  const { C } = useTheme();
+  const { buckets: rawBuckets, isLoading, markAllRead } = useNotifications();
 
-export default function Notifications() {
-  const { C, F } = useTheme();
-  const today: Item[] = [
-    { id: 1, icon: 'heart', color: C.rose, title: 'Sofia sent you a note', sub: '"Coffee\'s on, your socks are in the dryer."', time: '7:14 AM', unread: true },
-    { id: 2, icon: 'sun', color: C.butter, title: 'Check-in · 4-day streak', sub: 'Sofia just checked in — bright', time: '8:32 AM', unread: true },
-    { id: 3, icon: 'bell', color: C.lavender, title: 'Reminder · Call mom', sub: 'Due today at 6:00 PM', time: '6h', unread: false },
-  ];
-  const earlier: Item[] = [
-    { id: 4, icon: 'dollarSign', color: C.mint, title: 'Sofia added €42 expense', sub: 'Airbnb deposit · Venice', time: 'Wed' },
-    { id: 5, icon: 'flag', color: C.peach, title: '3 years · in 1 day', sub: "Don't forget the reservation.", time: 'Tue' },
-    { id: 6, icon: 'calendar', color: C.peach, title: 'Timetable updated', sub: 'Sofia added Pizza night · Friday 8pm', time: 'Mon' },
-  ];
+  // Mark all as read when leaving the screen.
+  useEffect(() => {
+    return () => {
+      markAllRead().catch(() => undefined);
+    };
+  }, [markAllRead]);
 
-  return (
-    <Screen>
-      <Overline style={{ marginBottom: 12, paddingLeft: 4 }}>Today</Overline>
-      <View style={{ gap: 10 }}>
-        {today.map((n) => (
-          <Row key={n.id} n={n} />
-        ))}
-      </View>
-      <Overline style={{ marginTop: 24, marginBottom: 12, paddingLeft: 4 }}>Earlier</Overline>
-      <View style={{ gap: 10 }}>
-        {earlier.map((n) => (
-          <Row key={n.id} n={n} />
-        ))}
-      </View>
-    </Screen>
+  const totalUnread = useMemo(
+    () =>
+      rawBuckets.reduce(
+        (acc, b) => acc + b.items.filter((i) => i.unread).length,
+        0
+      ),
+    [rawBuckets]
   );
-}
 
-function Row({ n }: { n: Item }) {
-  const { C, F } = useTheme();
+  const total = useMemo(
+    () => rawBuckets.reduce((acc, b) => acc + b.items.length, 0),
+    [rawBuckets]
+  );
+
+  const bucketsForList = useMemo<Bucket<NotificationItem>[]>(
+    () =>
+      rawBuckets.map((b) => ({
+        label: b.label,
+        dotColor:
+          b.label === 'Today'
+            ? C.accent
+            : b.label === 'Yesterday'
+            ? C.accent2
+            : C.ink2,
+        rows: b.items,
+      })),
+    [rawBuckets, C.accent, C.accent2, C.ink2]
+  );
+
   return (
-    <View
-      style={{
-        flexDirection: 'row',
-        gap: 12,
-        padding: 14,
-        borderRadius: 18,
-        backgroundColor: C.card,
-        borderWidth: 1,
-        borderColor: C.line,
-        alignItems: 'flex-start',
-      }}
-    >
-      <IconTile icon={n.icon} bg={`${n.color}22`} color={n.color} size={38} iconSize={17} />
-      <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Text
-            style={{ flex: 1, fontSize: 14, color: C.bone, fontFamily: F.bodyBold }}
-            numberOfLines={1}
-          >
-            {n.title}
-          </Text>
-          {n.unread && (
-            <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: C.gold }} />
-          )}
-        </View>
-        <Text style={{ fontSize: 12, color: C.mist, marginTop: 2, fontFamily: F.body }}>
-          {n.sub}
-        </Text>
-        <Text
-          style={{
-            fontSize: 10,
-            color: C.fog,
-            marginTop: 4,
-            fontFamily: F.bodyBold,
-            letterSpacing: 0.6,
-          }}
-        >
-          {n.time}
-        </Text>
-      </View>
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: C.bg }}
+        contentContainerStyle={{ paddingTop: insets.top + 60, paddingBottom: 80 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <PixelHero
+          eyebrow={
+            isLoading
+              ? 'LOADING'
+              : totalUnread > 0
+              ? `${totalUnread} NEW · ${total} TOTAL`
+              : 'ALL CAUGHT UP'
+          }
+          title="Notifications"
+          caption={
+            isLoading
+              ? 'Catching up…'
+              : total === 0
+              ? "Nothing new — you'll see memories, check-ins, and reminders here."
+              : 'Tap to mark read.'
+          }
+          size="md"
+        />
+
+        {isLoading ? null : total === 0 ? (
+          <View style={styles.listWrap}>
+            <ActionEmptyState
+              icon="bell"
+              title="Quiet right now"
+              body="Your next memory, check-in, or reminder will land here."
+              accent={C.accent}
+            />
+          </View>
+        ) : (
+          <View style={styles.listWrap}>
+            <BucketedList
+              buckets={bucketsForList}
+              rowKey={(n) => n.id}
+              renderRow={(n) => <NotificationRow notification={n} />}
+            />
+          </View>
+        )}
+      </ScrollView>
     </View>
   );
 }
+
+function NotificationRow({
+  notification,
+}: {
+  notification: NotificationItem;
+}) {
+  const { C } = useTheme();
+  const [locallyRead, setLocallyRead] = useState(false);
+  const showDot = notification.unread && !locallyRead;
+
+  const handlePress = () => {
+    if (notification.unread && !locallyRead) {
+      Haptics.selectionAsync().catch(() => undefined);
+      setLocallyRead(true);
+    }
+    if (notification.route) {
+      router.push(notification.route as any);
+    }
+  };
+
+  return (
+    <PressScale
+      onPress={handlePress}
+      testID={`notification-row-${notification.id}`}
+      style={styles.row}
+    >
+      <View
+        style={[
+          styles.iconTile,
+          { backgroundColor: `${notification.color}22` },
+        ]}
+      >
+        <Icon
+          name={notification.icon}
+          size={17}
+          color={notification.color}
+          strokeWidth={1.8}
+        />
+      </View>
+      <View style={{ flex: 1 }}>
+        <View style={styles.titleRow}>
+          <Text
+            style={[
+              Typography.bodyMedium,
+              { flex: 1, color: C.inkColor },
+            ]}
+            numberOfLines={1}
+          >
+            {notification.title}
+          </Text>
+          {showDot ? (
+            <View
+              testID="notification-unread-dot"
+              style={[
+                styles.unreadDot,
+                { backgroundColor: C.accent },
+              ]}
+            />
+          ) : null}
+        </View>
+        <Text
+          style={[Typography.caption, { color: C.ink2, marginTop: 2 }]}
+          numberOfLines={2}
+        >
+          {notification.sub}
+        </Text>
+        <Text
+          style={[
+            Typography.eyebrowSm,
+            { color: C.ink3, marginTop: 4, fontSize: 10 },
+          ]}
+        >
+          {notification.time}
+        </Text>
+      </View>
+    </PressScale>
+  );
+}
+
+const styles = StyleSheet.create({
+  empty: {
+    alignItems: 'center',
+    paddingVertical: 80,
+  },
+  listWrap: {
+    paddingHorizontal: 18,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  iconTile: {
+    width: 38,
+    height: 38,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  unreadDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+});

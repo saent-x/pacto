@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { db, id } from '@/src/lib/instant';
+import { notifySpaceMutation } from '@/src/lib/push';
 import { useEncryption } from './useEncryption';
 import { useSession } from './useSession';
 
@@ -9,24 +10,31 @@ export type CheckInRecord = {
   authorId: string;
   mood: string | null;
   note: string | null;
+  energy: number | null;
   isPrivate: boolean;
   checkInDate: string;
   createdAt: number;
 };
 
+function toEnergy(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isInteger(value)) return null;
+  return value >= 1 && value <= 5 ? value : null;
+}
+
 export function getLocalDateKey(date: Date = new Date()) {
   return format(date, 'yyyy-MM-dd');
 }
 
-export function useCheckIns() {
-  const { activeCouple, user } = useSession();
+export function useCheckIns(options?: { enabled?: boolean }) {
+  const enabled = options?.enabled ?? true;
+  const { activeCouple, user, space } = useSession();
   const coupleId = activeCouple?.couple?.id ?? null;
   const userId = user?.id ?? null;
   const { encrypt, decrypt, hasKey } = useEncryption();
   const today = getLocalDateKey();
 
-  const { data, isLoading: queryLoading } = db.useQuery(
-    coupleId
+  const { data, isLoading: queryLoading } = (db as any).useQuery(
+    coupleId && enabled
       ? {
           checkIns: {
             $: { where: { 'couple.id': coupleId } },
@@ -37,11 +45,12 @@ export function useCheckIns() {
   );
 
   const rawCheckIns = useMemo<CheckInRecord[]>(() => {
-    return (data?.checkIns ?? []).map((c) => ({
+    return (data?.checkIns ?? []).map((c: any) => ({
       id: c.id,
       authorId: (c.author as any)?.[0]?.id ?? (c.author as any)?.id ?? '',
       mood: c.mood ?? null,
       note: c.note ?? null,
+      energy: toEnergy(c.energy),
       isPrivate: c.isPrivate,
       checkInDate: c.checkInDate,
       createdAt: c.createdAt,
@@ -77,10 +86,11 @@ export function useCheckIns() {
     async (input: {
       mood: string | null;
       note: string | null;
+      energy?: number | null;
       isPrivate: boolean;
       checkInDate?: string;
     }) => {
-      if (!coupleId || !userId || submittingRef.current) return;
+      if (!enabled || !coupleId || !userId || submittingRef.current) return;
       submittingRef.current = true;
       setIsSubmitting(true);
       try {
@@ -90,41 +100,58 @@ export function useCheckIns() {
           (c) => c.authorId === userId && c.checkInDate === dateKey,
         );
         const now = Date.now();
+        const hasEnergy = Object.prototype.hasOwnProperty.call(input, 'energy');
+        const energy = toEnergy(input.energy);
         if (existing) {
+          const updatePayload = {
+            mood: input.mood ?? null,
+            note: input.note ? await encrypt(input.note) : null,
+            ...(hasEnergy ? { energy } : {}),
+            isPrivate: input.isPrivate,
+            updatedAt: now,
+          };
           await db.transact(
-            db.tx.checkIns[existing.id].update({
-              mood: input.mood ?? null,
-              note: input.note ? await encrypt(input.note) : null,
-              isPrivate: input.isPrivate,
-              updatedAt: now,
-            }),
+            (db.tx as any).checkIns[existing.id].update(updatePayload),
           );
         } else {
           const checkInId = id();
+          const createPayload = {
+            mood: input.mood ?? undefined,
+            note: input.note ? await encrypt(input.note) : undefined,
+            ...(hasEnergy && energy !== null ? { energy } : {}),
+            checkInDate: dateKey,
+            isPrivate: input.isPrivate,
+            createdAt: now,
+            updatedAt: now,
+          };
           await db.transact(
-            db.tx.checkIns[checkInId]
-              .update({
-                mood: input.mood ?? undefined,
-                note: input.note ? await encrypt(input.note) : undefined,
-                checkInDate: dateKey,
-                isPrivate: input.isPrivate,
-                createdAt: now,
-                updatedAt: now,
-              })
+            (db.tx as any).checkIns[checkInId]
+              .update(createPayload)
               .link({ couple: coupleId, author: userId }),
           );
+          if (!input.isPrivate) {
+            await notifySpaceMutation({
+              spaceId: coupleId,
+              spaceKind: space?.kind ?? null,
+              excludeUserId: userId,
+              title: user?.displayName ?? 'Someone',
+              body: input.mood ? `checked in: ${input.mood}` : 'checked in today',
+              route: '/(tabs)/us/checkins',
+            });
+          }
         }
       } finally {
         submittingRef.current = false;
         setIsSubmitting(false);
       }
     },
-    [coupleId, userId, encrypt, today, checkIns],
+    [enabled, coupleId, userId, encrypt, today, checkIns, space?.kind, user?.displayName],
   );
 
   const remove = useCallback(async (checkInId: string) => {
-    await db.transact(db.tx.checkIns[checkInId].delete());
-  }, []);
+    if (!enabled) return;
+    await db.transact((db.tx as any).checkIns[checkInId].delete());
+  }, [enabled]);
 
   const myTodayCheckIn = useMemo(
     () =>
@@ -149,7 +176,7 @@ export function useCheckIns() {
     todayCheckIns: checkIns.filter((record) => record.checkInDate === today),
     myTodayCheckIn,
     partnerTodayCheckIn,
-    isLoading: !!coupleId && queryLoading,
+    isLoading: enabled && !!coupleId && queryLoading,
     isSubmitting,
     createOrUpdate,
     remove,

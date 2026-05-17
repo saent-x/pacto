@@ -1,248 +1,509 @@
-import { router } from 'expo-router';
-import { useMemo } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { router, Stack } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { differenceInCalendarDays, format, parseISO } from 'date-fns';
+import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import {
-  BlockCard,
-  DateSectioned,
-  Display,
-  IconTile,
-  Overline,
-} from '@/src/components/ui/atoms';
-import { Icon, IconName } from '@/src/components/ui/Icon';
-import { Screen } from '@/src/components/ui/Screen';
-import { SubHeader } from '@/src/components/ui/SubHeader';
+  ActionEmptyState,
+  Bucket,
+  BucketedList,
+  HeaderBrand,
+  PulsingDot,
+  SegmentedTabs,
+  PriorityDot,
+  StatBar,
+  SwipeableRow,
+} from '@/src/components/ui/pacto';
+import { Icon, type IconName } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
+import { usePlans } from '@/src/hooks/usePlans';
+import { useSession } from '@/src/hooks/useSession';
+import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
 
-type Plan = {
-  t: string;
-  sub: string;
-  color: string;
-  ink: string;
-  prog: number;
-  tag: string;
-  items: string;
-  bucket: 'This month' | 'Ongoing' | 'Later this year' | 'Someday';
+type PlanStatus = 'active' | 'planning' | 'done' | 'paused';
+
+type PlanRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string | null;
+  targetDate: string | null;
+  budget: number | null;
+  status: PlanStatus;
+  priority: number;
   icon: IconName;
+  daysUntil: number | null;
 };
 
+type FilterKey = 'all' | 'active' | 'planning' | 'done';
+
+const VALID_ICON_NAMES: ReadonlySet<IconName> = new Set<IconName>([
+  'compass',
+  'mapPin',
+  'flag',
+  'gift',
+  'heart',
+  'star',
+  'home',
+  'coffee',
+  'briefcase',
+  'camera',
+  'music',
+  'book',
+  'feather',
+  'sparkle',
+  'sun',
+  'moon',
+]);
+
+function resolvePlanIcon(value: string | null | undefined): IconName {
+  if (value && VALID_ICON_NAMES.has(value as IconName)) return value as IconName;
+  return 'compass';
+}
+
+function statusOf(raw: string | null | undefined): PlanStatus {
+  if (raw === 'planning' || raw === 'done' || raw === 'paused') return raw;
+  return 'active';
+}
+
 export default function PlansScreen() {
-  const { C, F } = useTheme();
-
-  const plans: Plan[] = [
-    { t: 'Venice weekend', sub: '3 days · this Fri', color: C.sky, ink: C.skyInk, prog: 0.8, tag: 'SOON', items: '12 tasks · 8 done', bucket: 'This month', icon: 'mapPin' },
-    { t: 'Summer road trip', sub: 'Aug · Amalfi → Sicily', color: C.peach, ink: C.peachInk, prog: 0.35, tag: 'AUG', items: '18 tasks · 6 done', bucket: 'This month', icon: 'compass' },
-    { t: 'Learn to make fresh pasta', sub: 'weekends', color: C.butter, ink: C.butterInk, prog: 0.5, tag: 'ONGOING', items: '6 tasks · 3 done', bucket: 'Ongoing', icon: 'coffee' },
-    { t: "Sofia's birthday surprise", sub: 'Sep 14', color: C.rose, ink: C.roseInk, prog: 0.15, tag: 'SEP', items: '9 tasks · 1 done', bucket: 'Later this year', icon: 'gift' },
-    { t: 'Buy the apartment', sub: 'target: late 2026', color: C.mint, ink: C.mintInk, prog: 0.25, tag: '8 MONTHS', items: '23 tasks · 5 done', bucket: 'Later this year', icon: 'home' },
-    { t: 'Vow renewal · 5 yrs', sub: 'April 2028', color: C.lavender, ink: C.lavenderInk, prog: 0.05, tag: 'DREAMY', items: '0 tasks · 0 done', bucket: 'Someday', icon: 'star' },
-    { t: 'Year-long sabbatical', sub: '2029', color: C.sky, ink: C.skyInk, prog: 0.02, tag: 'BIG', items: 'Idea stage', bucket: 'Someday', icon: 'compass' },
-  ];
-
-  const totalTasks = plans.reduce((a, p) => {
-    const m = /(\d+) tasks/.exec(p.items);
-    return a + (m ? parseInt(m[1], 10) : 0);
-  }, 0);
-  const totalDone = plans.reduce((a, p) => {
-    const m = /(\d+) done/.exec(p.items);
-    return a + (m ? parseInt(m[1], 10) : 0);
-  }, 0);
-  const avgProg = plans.reduce((a, p) => a + p.prog, 0) / plans.length;
-
-  const bucketColor: Record<Plan['bucket'], string> = useMemo(
-    () => ({
-      'This month': C.peach,
-      Ongoing: C.butter,
-      'Later this year': C.mint,
-      Someday: C.lavender,
-    }),
-    [C]
-  );
-  const bucketOrder: Plan['bucket'][] = ['This month', 'Ongoing', 'Later this year', 'Someday'];
-  const sections = bucketOrder
-    .map((b) => ({
-      label: b.toUpperCase(),
-      color: bucketColor[b],
-      items: plans.filter((p) => p.bucket === b),
-    }))
-    .filter((s) => s.items.length);
-
-  const renderPlan = (p: Plan) => (
-    <View
-      key={p.t}
-      style={{
-        backgroundColor: p.color,
-        borderRadius: 24,
-        padding: 22,
-      }}
-    >
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: 16,
-        }}
-      >
-        <View style={{ flex: 1 }}>
-          <Text
-            style={{
-              fontSize: 9,
-              color: p.ink,
-              fontFamily: F.bodyBold,
-              letterSpacing: 1.4,
-              opacity: 0.55,
-              marginBottom: 4,
-            }}
-          >
-            {p.tag}
-          </Text>
-          <Text
-            style={{
-              fontFamily: F.displayBold,
-              fontSize: 22,
-              color: p.ink,
-              letterSpacing: -0.6,
-              lineHeight: 24,
-            }}
-          >
-            {p.t}
-          </Text>
-          <Text
-            style={{
-              fontSize: 11,
-              color: p.ink,
-              opacity: 0.65,
-              fontFamily: F.body,
-              marginTop: 3,
-            }}
-          >
-            {p.sub}
-          </Text>
-        </View>
-        <View
-          style={{
-            width: 38,
-            height: 38,
-            borderRadius: 12,
-            backgroundColor: 'rgba(0,0,0,0.12)',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Icon name={p.icon} size={18} color={p.ink} strokeWidth={2} />
-        </View>
-      </View>
-      <View
-        style={{
-          height: 5,
-          backgroundColor: 'rgba(0,0,0,0.12)',
-          borderRadius: 3,
-          overflow: 'hidden',
-        }}
-      >
-        <View style={{ width: `${p.prog * 100}%`, height: '100%', backgroundColor: p.ink }} />
-      </View>
-      <View
-        style={{
-          marginTop: 8,
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-        }}
-      >
-        <Text
-          style={{
-            fontSize: 10,
-            color: p.ink,
-            fontFamily: F.bodyBold,
-            letterSpacing: 0.6,
-            opacity: 0.65,
-          }}
-        >
-          {p.items}
-        </Text>
-        <Text
-          style={{
-            fontSize: 10,
-            color: p.ink,
-            fontFamily: F.bodyBold,
-            letterSpacing: 0.6,
-            opacity: 0.65,
-          }}
-        >
-          {Math.round(p.prog * 100)}%
-        </Text>
-      </View>
-    </View>
-  );
-
   return (
-    <Screen>
-      <BlockCard bg={C.sky} ink={C.skyInk} style={{ padding: 22, marginBottom: 16 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <View style={{ flex: 1 }}>
-            <Overline color="rgba(14,34,48,0.7)">Things we're building</Overline>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginTop: 8 }}>
-              <Display size={54} color={C.skyInk}>{`${plans.length}`}</Display>
-              <Text
-                style={{
-                  fontSize: 14,
-                  color: 'rgba(14,34,48,0.6)',
-                  fontFamily: F.bodyBold,
-                  marginBottom: 8,
-                }}
-              >
-                plans
-              </Text>
-            </View>
-            <Text
-              style={{
-                fontSize: 12,
-                color: 'rgba(14,34,48,0.7)',
-                marginTop: 6,
-                fontFamily: F.body,
-              }}
-            >
-              {totalDone} of {totalTasks} tasks done · {Math.round(avgProg * 100)}% avg progress
-            </Text>
-          </View>
-          <IconTile
-            icon="compass"
-            bg="rgba(14,34,48,0.15)"
-            color={C.skyInk}
-            size={44}
-            radius={14}
-            iconSize={20}
-          />
-        </View>
-        <View
-          style={{
-            marginTop: 16,
-            height: 6,
-            backgroundColor: 'rgba(14,34,48,0.15)',
-            borderRadius: 3,
-            overflow: 'hidden',
-          }}
-        >
-          <View style={{ width: `${avgProg * 100}%`, height: '100%', backgroundColor: C.skyInk }} />
-        </View>
-        <View style={{ marginTop: 8, flexDirection: 'row', justifyContent: 'space-between' }}>
-          {['SOON 2', 'ONGOING 1', 'LATER 2', 'SOMEDAY 2'].map((t) => (
-            <Text
-              key={t}
-              style={{
-                fontSize: 10,
-                fontFamily: F.bodyBold,
-                letterSpacing: 0.5,
-                color: 'rgba(14,34,48,0.75)',
-              }}
-            >
-              {t}
-            </Text>
-          ))}
-        </View>
-      </BlockCard>
-
-      <DateSectioned sections={sections} maxOpen={3} renderItem={renderPlan} />
-    </Screen>
+    <FeatureRouteGuard featureId="goals">
+      <PlansScreenInner />
+    </FeatureRouteGuard>
   );
 }
+
+function PlansScreenInner() {
+  const { C } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { mode } = useSession();
+  const { plans, remove } = usePlans();
+
+  const [filter, setFilter] = useState<FilterKey>('all');
+
+  const eyebrowLabel =
+    mode === 'solo' ? 'ME' : mode === 'crew' ? 'CREW' : 'US';
+
+  const rows = useMemo<PlanRow[]>(() => {
+    const today = new Date();
+    return plans.map((p: any): PlanRow => {
+      const targetDate = (p.targetDate as string | null) ?? null;
+      let daysUntil: number | null = null;
+      if (targetDate) {
+        try {
+          daysUntil = differenceInCalendarDays(parseISO(targetDate), today);
+        } catch {
+          daysUntil = null;
+        }
+      }
+      return {
+        id: String(p.id),
+        title: String(p.title ?? ''),
+        description: (p.description as string | null) ?? null,
+        category: (p.category as string | null) ?? null,
+        targetDate,
+        budget: typeof p.budget === 'number' ? p.budget : null,
+        status: statusOf(p.status),
+        priority: Number(p.priority ?? 0),
+        icon: resolvePlanIcon(p.icon),
+        daysUntil,
+      };
+    });
+  }, [plans]);
+
+  const stats = useMemo(() => {
+    const active = rows.filter((r) => r.status === 'active').length;
+    const planning = rows.filter((r) => r.status === 'planning').length;
+    const done = rows.filter((r) => r.status === 'done').length;
+    const featured = rows
+      .filter(
+        (r) =>
+          (r.status === 'active' || r.status === 'planning') &&
+          r.daysUntil != null &&
+          r.daysUntil >= 0
+      )
+      .slice()
+      .sort((a, b) => (a.daysUntil ?? 0) - (b.daysUntil ?? 0))[0];
+    return { active, planning, done, total: rows.length, featured };
+  }, [rows]);
+
+  const visible = useMemo(() => {
+    return rows.filter((r) => {
+      if (filter === 'active') return r.status === 'active';
+      if (filter === 'planning') return r.status === 'planning';
+      if (filter === 'done') return r.status === 'done';
+      return true;
+    });
+  }, [rows, filter]);
+
+  const buckets = useMemo<Bucket<PlanRow>[]>(() => {
+    const groups: Record<string, PlanRow[]> = {
+      Active: [],
+      Planning: [],
+      Done: [],
+      Paused: [],
+    };
+    for (const r of visible) {
+      const label =
+        r.status === 'active'
+          ? 'Active'
+          : r.status === 'planning'
+          ? 'Planning'
+          : r.status === 'done'
+          ? 'Done'
+          : 'Paused';
+      groups[label].push(r);
+    }
+    const order = ['Active', 'Planning', 'Paused', 'Done'];
+    const dotMap: Record<string, string> = {
+      Active: C.accent,
+      Planning: C.accent2,
+      Paused: C.ink2,
+      Done: C.ink3,
+    };
+    return order
+      .filter((k) => groups[k]?.length)
+      .map((k) => ({
+        label: k,
+        dotColor: dotMap[k],
+        rows: groups[k]
+          .slice()
+          .sort((a, b) => {
+            // Upcoming targets first, then by priority desc
+            const ad = a.daysUntil ?? Infinity;
+            const bd = b.daysUntil ?? Infinity;
+            if (ad !== bd) return ad - bd;
+            return b.priority - a.priority;
+          }),
+      }));
+  }, [visible, C.accent, C.accent2, C.ink2, C.ink3]);
+
+  const filterOptions: { key: FilterKey; label: string }[] = [
+    { key: 'all', label: 'All' },
+    { key: 'active', label: 'Active' },
+    { key: 'planning', label: 'Planning' },
+    { key: 'done', label: 'Done' },
+  ];
+
+  const priorityLevel = (p: number): 'none' | 'low' | 'med' | 'high' =>
+    p >= 3 ? 'high' : p === 2 ? 'med' : p === 1 ? 'low' : 'none';
+
+  const heroEyebrow = stats.featured?.daysUntil != null
+    ? stats.featured.daysUntil === 0
+      ? 'NEXT · TODAY'
+      : stats.featured.daysUntil === 1
+      ? 'NEXT · TOMORROW'
+      : `NEXT · IN ${stats.featured.daysUntil} DAYS`
+    : stats.active > 0
+    ? `${stats.active} ACTIVE`
+    : 'DREAM SOMETHING UP';
+  const heroTitle = stats.featured?.title ?? 'Targets';
+
+  return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerTransparent: true,
+          headerShadowVisible: false,
+          headerBackground: () => null,
+          headerTintColor: C.inkColor,
+          title: '',
+          headerTitleAlign: 'center',
+          headerTitle: () => (
+            <HeaderBrand eyebrow={eyebrowLabel} title="targets" />
+          ),
+          headerLeft: () => (
+            <PressScale
+              onPress={() => router.back()}
+              hitSlop={12}
+              haptic="impact"
+              pressedScale={0.96}
+              style={{ padding: 4 }}
+            >
+              <Icon name="chevronLeft" size={22} color={C.inkColor} strokeWidth={2.2} />
+            </PressScale>
+          ),
+          headerRight: () => (
+            <PressScale
+              onPress={() => router.push('/sheets/new-plan' as any)}
+              hitSlop={12}
+              haptic="impact"
+              pressedScale={0.96}
+              style={{ padding: 4 }}
+            >
+              <Icon name="plus" size={22} color={C.inkColor} strokeWidth={2.2} />
+            </PressScale>
+          ),
+        }}
+      />
+
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingTop: insets.top + 60, paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Hero — slim status row + pipeline ribbon */}
+        <View style={styles.heroWrap}>
+          <StatBar
+            accent={C.plans}
+            eyebrow={heroEyebrow}
+            meta={
+              stats.featured
+                ? `${stats.featured.targetDate ? format(parseISO(stats.featured.targetDate), 'MMM d') : 'NO DATE'}${stats.featured.category ? ` · ${stats.featured.category.toUpperCase()}` : ''}`
+                : undefined
+            }
+            primary={
+              <>
+                <Text
+                  style={[Typography.pixelHeroSm, { color: C.inkColor }]}
+                  numberOfLines={1}
+                >
+                  {heroTitle}
+                </Text>
+                {stats.featured ? <PulsingDot color={C.accent2} /> : null}
+                <Text
+                  style={[Typography.mono, { color: C.ink3, marginLeft: 'auto', fontSize: 11 }]}
+                  numberOfLines={1}
+                >
+                  {stats.active} active · {stats.planning} planning · {stats.done} done
+                </Text>
+              </>
+            }
+            microVis={
+              <View style={styles.pipelineBar}>
+                {(() => {
+                  const total = Math.max(1, stats.active + stats.planning + stats.done);
+                  const seg = (n: number) => Math.max(4, Math.round((n / total) * 100));
+                  return (
+                    <>
+                      <View
+                        style={{
+                          flex: seg(stats.active),
+                          backgroundColor: C.inkColor,
+                          borderRadius: 4,
+                          height: 6,
+                        }}
+                      />
+                      <View
+                        style={{
+                          flex: seg(stats.planning),
+                          backgroundColor: C.ink3,
+                          borderRadius: 4,
+                          height: 6,
+                        }}
+                      />
+                      <View
+                        style={{
+                          flex: seg(stats.done),
+                          backgroundColor: C.lineColor,
+                          borderRadius: 4,
+                          height: 6,
+                        }}
+                      />
+                    </>
+                  );
+                })()}
+              </View>
+            }
+          />
+        </View>
+
+        {/* Filter pills */}
+        <View style={styles.filterRow}>
+          <SegmentedTabs<FilterKey>
+            value={filter}
+            onChange={setFilter}
+            options={filterOptions.map((f) => ({ key: f.key, label: f.label }))}
+          />
+        </View>
+
+        {/* Bucketed list */}
+        <View style={styles.listWrap}>
+          {buckets.length === 0 ? (
+            <ActionEmptyState
+              icon="compass"
+              title="No targets yet"
+              body="Set a trip, project, habit, or shared priority worth tracking."
+              actionLabel="New target"
+              accent={C.plans}
+              onAction={() => router.push('/sheets/new-plan' as any)}
+            />
+          ) : (
+            <BucketedList
+              buckets={buckets}
+              rowKey={(p) => p.id}
+              renderRow={(p) => (
+                <SwipeableRow
+                  deleteTitle="Delete target?"
+                  deleteMessage={`"${p.title}" will be removed.`}
+                  onEdit={() =>
+                    router.push(`/sheets/new-plan?id=${p.id}` as any)
+                  }
+                  onDelete={() => remove(p.id)}
+                >
+                  <View
+                    style={[
+                      styles.row,
+                      p.status === 'done' ? { opacity: 0.7 } : null,
+                    ]}
+                  >
+                    <View style={[styles.iconTile, { backgroundColor: C.accent2Soft }]}>
+                      <Icon
+                        name={p.icon}
+                        size={16}
+                        color={C.accent2}
+                        strokeWidth={2.2}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.headRow}>
+                        <Text
+                          style={[
+                            Typography.bodyMedium,
+                            {
+                              color: p.status === 'done' ? C.ink3 : C.inkColor,
+                              flex: 1,
+                              textDecorationLine:
+                                p.status === 'done' ? 'line-through' : 'none',
+                            },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {p.title}
+                        </Text>
+                        {p.status !== 'done' ? (
+                          <View
+                            style={[
+                              styles.statusMark,
+                              {
+                                backgroundColor:
+                                  p.status === 'active'
+                                    ? C.accent
+                                    : p.status === 'planning'
+                                    ? C.accent2
+                                    : C.ink3,
+                                borderColor:
+                                  p.status === 'active'
+                                    ? C.accent
+                                    : p.status === 'planning'
+                                    ? C.accent2
+                                    : C.lineColor,
+                              },
+                            ]}
+                            accessibilityLabel={`${p.status} target`}
+                          />
+                        ) : null}
+                        <PriorityDot level={priorityLevel(p.priority)} />
+                      </View>
+                      {p.description ? (
+                        <Text
+                          style={[Typography.caption, { color: C.ink2, marginTop: 2 }]}
+                          numberOfLines={2}
+                        >
+                          {p.description}
+                        </Text>
+                      ) : null}
+                      <View style={styles.metaRow}>
+                        {p.targetDate ? (
+                          <Text
+                            style={[Typography.mono, { color: C.ink3, fontSize: 11 }]}
+                          >
+                            {format(parseISO(p.targetDate), 'MMM d, yyyy')}
+                          </Text>
+                        ) : null}
+                        {p.daysUntil != null && p.status !== 'done' ? (
+                          <Text
+                            style={[
+                              Typography.eyebrowSm,
+                              {
+                                color: p.daysUntil < 0 ? C.error : C.accent,
+                                fontSize: 9.5,
+                              },
+                            ]}
+                          >
+                            {p.daysUntil < 0
+                              ? `${Math.abs(p.daysUntil)}D OVERDUE`
+                              : p.daysUntil === 0
+                              ? 'TODAY'
+                              : `IN ${p.daysUntil}D`}
+                          </Text>
+                        ) : null}
+                        {p.category ? (
+                          <Text
+                            style={[
+                              Typography.eyebrowSm,
+                              { color: C.ink3, fontSize: 9.5 },
+                            ]}
+                          >
+                            · {p.category.toUpperCase()}
+                          </Text>
+                        ) : null}
+                      </View>
+                    </View>
+                  </View>
+                </SwipeableRow>
+              )}
+            />
+          )}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  heroWrap: {
+    paddingHorizontal: 18,
+    paddingTop: 8,
+    paddingBottom: 6,
+  },
+  pipelineBar: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  statusMark: {
+    width: 13,
+    height: 13,
+    borderRadius: 999,
+    borderWidth: 3,
+  },
+  filterRow: {
+    paddingHorizontal: 18,
+    paddingTop: 4,
+    paddingBottom: 14,
+    gap: 6,
+  },
+  listWrap: {
+    paddingHorizontal: 18,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  iconTile: {
+    width: 38,
+    height: 38,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+    flexWrap: 'wrap',
+  },
+});

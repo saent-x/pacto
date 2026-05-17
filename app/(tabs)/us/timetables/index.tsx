@@ -1,321 +1,438 @@
-import { router } from 'expo-router';
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import { Icon } from '@/src/components/ui/Icon';
-import { Screen } from '@/src/components/ui/Screen';
-import { useTheme } from '@/src/lib/theme';
+import { router, Stack } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { format } from 'date-fns';
+import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import {
-  DEMO_TIMETABLES,
-  TEMPLATES,
-  shareBadge,
-  tmplByKey,
-  type Timetable,
-} from '@/src/lib/timetables-data';
+  ActionEmptyState,
+  Bucket,
+  BucketedList,
+  HeaderBrand,
+  PulsingDot,
+  SegmentedTabs,
+  StatBar,
+  SwipeableRow,
+} from '@/src/components/ui/pacto';
+import { Icon } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
+import { useTimetables, type TimetableRow } from '@/src/hooks/useTimetables';
+import { useSession } from '@/src/hooks/useSession';
+import { Typography } from '@/src/constants/typography';
+import { useTheme } from '@/src/lib/theme';
 
-export default function TimetablesHub() {
-  const { C, F } = useTheme();
-  const tables = DEMO_TIMETABLES;
+type FilterKey = 'all' | 'solo' | 'shared';
 
+function withAlpha(hex: string, a: number): string {
+  const h = hex.replace('#', '');
+  if (h.length !== 6) return hex;
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${Math.max(0, Math.min(1, a))})`;
+}
+
+const TEMPLATE_LABEL: Record<string, string> = {
+  custom: 'Custom',
+  weekly: 'Weekly',
+  fitness: 'Fitness',
+  study: 'Study',
+  routine: 'Routine',
+};
+
+export default function TimetablesIndex() {
   return (
-    <Screen>
-      {/* Rhythm of the week */}
-      <View
-        style={{
-          backgroundColor: C.card,
-          borderWidth: 1,
-          borderColor: C.line,
-          borderRadius: 26,
-          padding: 22,
-          marginBottom: 18,
-          overflow: 'hidden',
-          position: 'relative',
-        }}
-      >
-        <View
-          style={{
-            position: 'absolute',
-            right: 12,
-            top: 14,
-            flexDirection: 'row',
-            gap: 4,
-            opacity: 0.35,
-          }}
-        >
-          {[0.3, 0.6, 0.4, 0.8, 0.5, 0.9, 0.6].map((h, i) => (
-            <View
-              key={i}
-              style={{ width: 5, height: 44 * h, backgroundColor: C.gold, borderRadius: 3 }}
-            />
-          ))}
-        </View>
-        <Text
-          style={{
-            fontSize: 10,
-            color: C.fog,
-            fontFamily: F.bodyBold,
-            letterSpacing: 1.4,
-          }}
-        >
-          THIS WEEK
-        </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
-          <Text
-            style={{
-              fontFamily: F.displayBold,
-              fontSize: 40,
-              color: C.bone,
-              letterSpacing: -1.2,
-              lineHeight: 40,
-            }}
-          >
-            56
-          </Text>
-          <Text style={{ fontSize: 12, color: C.mist, fontFamily: F.body }}>items scheduled</Text>
-        </View>
-        <View style={{ marginTop: 14, flexDirection: 'row', gap: 20 }}>
-          {[
-            { n: '4', l: 'TIMETABLES' },
-            { n: '2', l: 'SHARED' },
-            { n: '12h', l: 'TOGETHER' },
-          ].map((s) => (
-            <View key={s.l}>
-              <Text
-                style={{
-                  fontFamily: F.displayBold,
-                  fontSize: 18,
-                  color: C.bone,
-                  lineHeight: 18,
-                }}
-              >
-                {s.n}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 9,
-                  color: C.fog,
-                  fontFamily: F.bodyBold,
-                  letterSpacing: 1,
-                  marginTop: 3,
-                }}
-              >
-                {s.l}
-              </Text>
-            </View>
-          ))}
-        </View>
-      </View>
-
-      {/* Your rhythms list */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 10,
-          paddingHorizontal: 4,
-        }}
-      >
-        <Text
-          style={{
-            fontSize: 10,
-            color: C.fog,
-            fontFamily: F.bodyBold,
-            letterSpacing: 1.4,
-          }}
-        >
-          YOUR RHYTHMS · {tables.length}
-        </Text>
-        <Pressable
-          onPress={() => router.push('/sheets/new-timetable' as any)}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 6,
-            paddingVertical: 6,
-            paddingHorizontal: 12,
-            borderRadius: 999,
-            backgroundColor: C.goldSoft,
-          }}
-        >
-          <Icon name="plus" size={12} color={C.gold} strokeWidth={2.5} />
-          <Text
-            style={{
-              color: C.gold,
-              fontSize: 11,
-              fontFamily: F.bodyBold,
-              letterSpacing: 0.6,
-            }}
-          >
-            NEW
-          </Text>
-        </Pressable>
-      </View>
-
-      <View style={{ gap: 10 }}>
-        {tables.map((t) => (
-          <TimetableCard key={t.id} t={t} onPress={() => router.push(`/us/timetables/${t.id}` as any)} />
-        ))}
-      </View>
-
-      {/* Templates horizontal strip */}
-      <View style={{ marginTop: 28 }}>
-        <Text
-          style={{
-            fontSize: 10,
-            color: C.fog,
-            fontFamily: F.bodyBold,
-            letterSpacing: 1.4,
-            marginBottom: 10,
-            paddingHorizontal: 4,
-          }}
-        >
-          START FROM A TEMPLATE
-        </Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={{ flexDirection: 'row', gap: 10, paddingRight: 12 }}>
-            {TEMPLATES.slice(0, 5).map((t) => (
-              <Pressable
-                key={t.key}
-                onPress={() => router.push('/sheets/new-timetable' as any)}
-                style={{
-                  width: 132,
-                  backgroundColor: t.color,
-                  borderRadius: 20,
-                  paddingHorizontal: 14,
-                  paddingTop: 16,
-                  paddingBottom: 14,
-                }}
-              >
-                <View
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 10,
-                    backgroundColor: `${t.ink}22`,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginBottom: 10,
-                  }}
-                >
-                  <Icon name={t.icon} size={16} color={t.ink} strokeWidth={2.2} />
-                </View>
-                <Text
-                  style={{
-                    fontFamily: F.displayBold,
-                    fontSize: 14,
-                    color: t.ink,
-                    letterSpacing: -0.2,
-                    marginBottom: 3,
-                  }}
-                >
-                  {t.label}
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 10,
-                    color: t.ink,
-                    opacity: 0.7,
-                    fontFamily: F.body,
-                    lineHeight: 14,
-                  }}
-                >
-                  {t.sample}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </ScrollView>
-      </View>
-    </Screen>
+    <FeatureRouteGuard featureId="timetable">
+      <TimetablesIndexInner />
+    </FeatureRouteGuard>
   );
 }
 
-function TimetableCard({ t, onPress }: { t: Timetable; onPress: () => void }) {
-  const { C, F } = useTheme();
-  const tmpl = tmplByKey(t.template);
-  const badge = shareBadge(t.share);
+function TimetablesIndexInner() {
+  const { C } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { mode } = useSession();
+  const { timetables, remove } = useTimetables();
+
+  const [filter, setFilter] = useState<FilterKey>('all');
+
+  const eyebrowLabel =
+    mode === 'solo' ? 'ME' : mode === 'crew' ? 'CREW' : 'US';
+
+  const stats = useMemo(() => {
+    const total = timetables.length;
+    const solo = timetables.filter((t) => t.share === 'solo').length;
+    const shared = total - solo;
+    const totalItems = timetables.reduce((s, t) => s + t.itemsCount, 0);
+    // Aggregate items-per-day across all timetables (Monday first).
+    const dayCounts = [0, 0, 0, 0, 0, 0, 0];
+    for (const t of timetables) {
+      for (let i = 0; i < 7; i++) dayCounts[i] += t.dayCounts[i] ?? 0;
+    }
+    const peak = Math.max(1, ...dayCounts);
+    return { total, solo, shared, totalItems, dayCounts, peak };
+  }, [timetables]);
+
+  const featured = useMemo(() => timetables[0] ?? null, [timetables]);
+
+  const visible = useMemo(() => {
+    return timetables.filter((t) => {
+      if (filter === 'solo') return t.share === 'solo';
+      if (filter === 'shared') return t.share !== 'solo';
+      return true;
+    });
+  }, [timetables, filter]);
+
+  const buckets = useMemo<Bucket<TimetableRow>[]>(() => {
+    if (mode === 'solo') {
+      return visible.length
+        ? [{ label: 'Timetable', dotColor: C.accent, rows: visible }]
+        : [];
+    }
+    const groups: Record<string, TimetableRow[]> = {
+      Shared: [],
+      Solo: [],
+    };
+    for (const t of visible) {
+      if (t.share === 'solo') groups.Solo.push(t);
+      else groups.Shared.push(t);
+    }
+    const order = ['Shared', 'Solo'];
+    const dotMap: Record<string, string> = {
+      Shared: C.accent,
+      Solo: C.ink2,
+    };
+    return order
+      .filter((k) => groups[k]?.length)
+      .map((k) => ({
+        label: k,
+        dotColor: dotMap[k],
+        rows: groups[k],
+      }));
+  }, [visible, mode, C.accent, C.ink2]);
+
+  const filterOptions: { key: FilterKey; label: string }[] =
+    mode === 'solo'
+      ? [{ key: 'all', label: 'All' }]
+      : [
+          { key: 'all', label: 'All' },
+          { key: 'shared', label: 'Shared' },
+          { key: 'solo', label: 'Solo' },
+        ];
+
+  const heroEyebrow =
+    stats.total === 0
+      ? 'NO TIMETABLES YET'
+      : `${stats.total} ${stats.total === 1 ? 'TIMETABLE' : 'TIMETABLES'} · ${stats.totalItems} ${stats.totalItems === 1 ? 'ITEM' : 'ITEMS'}`;
+  const heroTitle = featured?.title ?? 'Build a timetable';
+
   return (
-    <Pressable
-      onPress={onPress}
-      style={{
-        backgroundColor: C.card,
-        borderWidth: 1,
-        borderColor: C.line,
-        borderRadius: 20,
-        padding: 14,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 14,
-      }}
-    >
-      <View
-        style={{
-          width: 48,
-          height: 48,
-          borderRadius: 14,
-          backgroundColor: tmpl.color,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Icon name={tmpl.icon} size={22} color={tmpl.ink} strokeWidth={2} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-          <View
-            style={{
-              paddingHorizontal: 6,
-              paddingVertical: 2,
-              borderRadius: 4,
-              backgroundColor: badge.bg,
-            }}
-          >
-            <Text
-              style={{
-                color: badge.color,
-                fontSize: 8.5,
-                fontFamily: F.bodyBold,
-                letterSpacing: 1,
-              }}
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerTransparent: true,
+          headerShadowVisible: false,
+          headerBackground: () => null,
+          headerTintColor: C.inkColor,
+          title: '',
+          headerTitleAlign: 'center',
+          headerTitle: () => (
+            <HeaderBrand eyebrow={eyebrowLabel} title="timetable" />
+          ),
+          headerLeft: () => (
+            <PressScale
+              onPress={() => router.back()}
+              hitSlop={12}
+              style={{ padding: 4 }}
             >
-              {badge.label}
-            </Text>
+              <Icon name="chevronLeft" size={22} color={C.inkColor} strokeWidth={2.2} />
+            </PressScale>
+          ),
+          headerRight: () => (
+            <PressScale
+              onPress={() => router.push('/sheets/new-timetable' as any)}
+              hitSlop={12}
+              style={{ padding: 4 }}
+            >
+              <Icon name="plus" size={22} color={C.inkColor} strokeWidth={2.2} />
+            </PressScale>
+          ),
+        }}
+      />
+
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingTop: insets.top + 60, paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Hero — slim status row + 7-day timetable strip */}
+        <View style={styles.heroWrap}>
+          <StatBar
+            accent={C.accent2}
+            eyebrow={heroEyebrow}
+            meta={
+              featured
+                ? `${(TEMPLATE_LABEL[featured.template] ?? 'Custom').toUpperCase()} · ${featured.share === 'solo' ? 'SOLO' : 'SHARED'}${featured.updatedAt ? ` · ${format(new Date(featured.updatedAt), 'MMM d').toUpperCase()}` : ''}`
+                : undefined
+            }
+            primary={
+              <>
+                <Text
+                  style={[Typography.pixelHeroSm, { color: C.inkColor }]}
+                  numberOfLines={1}
+                >
+                  {heroTitle}
+                </Text>
+                {featured ? <PulsingDot color={C.accent2} /> : null}
+              </>
+            }
+            microVis={
+              <View style={styles.weekGrid}>
+                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => {
+                  const count = stats.dayCounts[i] ?? 0;
+                  const slots = Math.max(0, Math.min(3, count));
+                  const intensities: number[] = [];
+                  for (let s = 0; s < 3; s++) {
+                    if (s < slots) {
+                      const norm = count / stats.peak;
+                      intensities.push(0.35 + norm * 0.55);
+                    } else {
+                      intensities.push(0);
+                    }
+                  }
+                  const colors = [C.accent2, C.accent3, C.accent];
+                  return (
+                    <View key={i} style={styles.weekCell}>
+                      <Text style={[Typography.eyebrowSm, { color: C.ink3, fontSize: 9 }]}>
+                        {d}
+                      </Text>
+                      <View style={[styles.weekBlocks, { backgroundColor: C.bgSoft }]}>
+                        {[0, 1, 2].map((s) => (
+                          <View
+                            key={s}
+                            style={[
+                              styles.weekBlock,
+                              {
+                                backgroundColor:
+                                  intensities[s] > 0
+                                    ? withAlpha(colors[s], intensities[s])
+                                    : 'transparent',
+                              },
+                            ]}
+                          />
+                        ))}
+                      </View>
+                      <Text
+                        style={[
+                          Typography.mono,
+                          { color: count > 0 ? C.ink2 : C.ink3, fontSize: 9, marginTop: 2 },
+                        ]}
+                      >
+                        {count > 0 ? count : '·'}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            }
+          />
+        </View>
+
+        {/* Filter pills */}
+        {filterOptions.length > 1 ? (
+          <View style={styles.filterRow}>
+            <SegmentedTabs<FilterKey>
+              value={filter}
+              onChange={setFilter}
+              options={filterOptions.map((f) => ({ key: f.key, label: f.label }))}
+            />
           </View>
-          <Text
-            style={{
-              fontSize: 9,
-              color: C.ash,
-              fontFamily: F.bodyBold,
-              letterSpacing: 0.6,
-              textTransform: 'uppercase',
-            }}
-          >
-            {t.updated}
-          </Text>
+        ) : (
+          <View style={{ height: 14 }} />
+        )}
+
+        {/* Bucketed list */}
+        <View style={styles.listWrap}>
+          {buckets.length === 0 ? (
+            <ActionEmptyState
+              icon="grid"
+              title="No timetables yet"
+              body="Build a weekly timetable for workouts, meals, study blocks, or any repeating routine."
+              actionLabel="New timetable"
+              accent={C.accent2}
+              onAction={() => router.push('/sheets/new-timetable' as any)}
+            />
+          ) : (
+            <BucketedList
+              buckets={buckets}
+              rowKey={(t) => t.id}
+              renderRow={(t) => (
+                <SwipeableRow
+                  deleteTitle="Delete timetable?"
+                  deleteMessage={`"${t.title}" and all its items will be removed.`}
+                  onEdit={() =>
+                    router.push(
+                      `/sheets/new-timetable?id=${t.id}` as any
+                    )
+                  }
+                  onDelete={() => remove(t.id)}
+                >
+                  <PressScale
+                    onPress={() =>
+                      router.push(`/(tabs)/us/timetables/${t.id}` as any)
+                    }
+                    accessibilityLabel={`${t.title}, ${t.itemsCount} ${t.itemsCount === 1 ? 'item' : 'items'}, ${t.share === 'solo' ? 'solo' : 'shared'}`}
+                    accessibilityHint="Open this timetable"
+                    style={[
+                      styles.row,
+                      {
+                        backgroundColor: C.bgCard,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[styles.iconTile, { backgroundColor: C.accent2Soft }]}
+                    >
+                      <Icon
+                        name="grid"
+                        size={16}
+                        color={C.accent2}
+                        strokeWidth={2.2}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.headRow}>
+                        <Text
+                          style={[
+                            Typography.bodyMedium,
+                            { color: C.inkColor, flex: 1 },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {t.title}
+                        </Text>
+                        <Text
+                          style={[
+                            Typography.eyebrowSm,
+                            { color: C.ink3, fontSize: 9.5 },
+                          ]}
+                        >
+                          {t.itemsCount}{' '}
+                          {t.itemsCount === 1 ? 'ITEM' : 'ITEMS'}
+                        </Text>
+                      </View>
+                      <View style={styles.metaRow}>
+                        <Text
+                          style={[
+                            Typography.eyebrowSm,
+                            { color: C.accent2, fontSize: 9.5 },
+                          ]}
+                        >
+                          {(TEMPLATE_LABEL[t.template] ?? 'CUSTOM').toUpperCase()}
+                        </Text>
+                        <Text
+                          style={[
+                            Typography.eyebrowSm,
+                            {
+                              color:
+                                t.share === 'solo' ? C.ink3 : C.accent,
+                              fontSize: 9.5,
+                            },
+                          ]}
+                        >
+                          · {t.share === 'solo' ? 'SOLO' : 'SHARED'}
+                        </Text>
+                        {t.updatedAt ? (
+                          <Text
+                            style={[
+                              Typography.mono,
+                              { color: C.ink3, fontSize: 11 },
+                            ]}
+                          >
+                            · {format(new Date(t.updatedAt), 'MMM d')}
+                          </Text>
+                        ) : null}
+                      </View>
+                    </View>
+                    <Icon
+                      name="chevronRight"
+                      size={14}
+                      color={C.ink3}
+                      strokeWidth={2.2}
+                    />
+                  </PressScale>
+                </SwipeableRow>
+              )}
+            />
+          )}
         </View>
-        <Text
-          numberOfLines={1}
-          style={{
-            fontFamily: F.displayBold,
-            fontSize: 15,
-            color: C.bone,
-            letterSpacing: -0.2,
-          }}
-        >
-          {t.title}
-        </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
-          <Icon name="clock" size={11} color={C.fog} />
-          <Text numberOfLines={1} style={{ fontSize: 11, color: C.mist, fontFamily: F.body }}>
-            {t.next}
-          </Text>
-        </View>
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-        <Text style={{ fontFamily: F.displayBold, fontSize: 18, color: C.gold, lineHeight: 18 }}>
-          {t.items}
-        </Text>
-        <Icon name="chevronRight" size={14} color={C.fog} />
-      </View>
-    </Pressable>
+      </ScrollView>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  heroWrap: {
+    paddingHorizontal: 18,
+    paddingTop: 8,
+    paddingBottom: 6,
+  },
+  weekGrid: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  weekCell: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 5,
+  },
+  weekBlocks: {
+    width: '100%',
+    aspectRatio: 0.45,
+    borderRadius: 4,
+    padding: 3,
+    gap: 2,
+    justifyContent: 'flex-start',
+  },
+  weekBlock: {
+    width: '100%',
+    height: 6,
+    borderRadius: 1.5,
+  },
+  filterRow: {
+    paddingHorizontal: 18,
+    paddingTop: 4,
+    paddingBottom: 14,
+    gap: 6,
+  },
+  listWrap: {
+    paddingHorizontal: 18,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  iconTile: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+    flexWrap: 'wrap',
+  },
+});

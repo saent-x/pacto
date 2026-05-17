@@ -1,9 +1,11 @@
 import type { DailyVerse } from './dailyVerse';
+import type { ActivityHeatmapDay } from './activity';
 
 export type TimelineItem = {
   id: string;
   type: 'event' | 'plan' | 'reminder' | 'task' | 'ritual' | 'memory';
   sourceId: string;
+  sourceParentId?: string | null;
   sourceTable: string;
   title: string;
   subtitle: string | null;
@@ -11,6 +13,7 @@ export type TimelineItem = {
   priority: number;
   isPrivate: boolean;
   isOverdue: boolean;
+  isCompleted?: boolean;
 };
 
 export type FeaturedSignal = {
@@ -58,6 +61,7 @@ export type HomeView = {
   memoryPreview: MemoryPreview | null;
   presence: PresenceInfo | null;
   dailyVerse: DailyVerse;
+  activity: ActivityHeatmapDay[];
 };
 
 export type CalendarDay = {

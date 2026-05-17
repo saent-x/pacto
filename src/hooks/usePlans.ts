@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { db, id } from '@/src/lib/instant';
+import { notifySpaceMutation } from '@/src/lib/push';
 import { useSession } from './useSession';
 
 export type PlanInput = {
@@ -11,10 +12,13 @@ export type PlanInput = {
   status?: string;
   priority?: number;
   isPrivate?: boolean;
+  icon?: string;
+  color?: string;
+  bucket?: string;
 };
 
 export function usePlans(statuses?: string[]) {
-  const { activeCouple, user } = useSession();
+  const { activeCouple, user, space } = useSession();
   const coupleId = activeCouple?.couple?.id ?? null;
 
   const { data, isLoading: queryLoading } = db.useQuery(
@@ -26,7 +30,7 @@ export function usePlans(statuses?: string[]) {
   const plans = useMemo(() => {
     const raw = data?.plans ?? [];
     if (!statuses || statuses.length === 0) return raw;
-    return raw.filter((p) => statuses.includes(p.status));
+    return raw.filter((p) => p.status != null && statuses.includes(p.status));
   }, [data?.plans, statuses]);
 
   const create = useCallback(
@@ -45,13 +49,24 @@ export function usePlans(statuses?: string[]) {
             status: input.status ?? 'active',
             priority: input.priority ?? 0,
             isPrivate: input.isPrivate ?? false,
+            icon: input.icon ?? undefined,
+            color: input.color ?? undefined,
+            bucket: input.bucket ?? undefined,
             createdAt: now,
             updatedAt: now,
           })
           .link({ couple: coupleId, createdBy: user.id }),
       );
+      await notifySpaceMutation({
+        spaceId: coupleId,
+        spaceKind: space?.kind ?? null,
+        excludeUserId: user.id,
+        title: user.displayName ?? 'Someone',
+        body: `added a plan: ${input.title}`,
+        route: '/(tabs)/us/plans',
+      });
     },
-    [coupleId, user],
+    [coupleId, user, space?.kind],
   );
 
   const update = useCallback(
@@ -65,6 +80,9 @@ export function usePlans(statuses?: string[]) {
       if (input.status !== undefined) updates.status = input.status;
       if (input.priority !== undefined) updates.priority = input.priority;
       if (input.isPrivate !== undefined) updates.isPrivate = input.isPrivate;
+      if (input.icon !== undefined) updates.icon = input.icon;
+      if (input.color !== undefined) updates.color = input.color;
+      if (input.bucket !== undefined) updates.bucket = input.bucket;
       await db.transact(db.tx.plans[planId].update(updates));
     },
     [],

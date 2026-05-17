@@ -1,35 +1,101 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
-import { Overline, PrimaryButton } from '@/src/components/ui/atoms';
-import { Icon } from '@/src/components/ui/Icon';
-import { SheetShell } from '@/src/components/ui/SheetShell';
+import * as Haptics from 'expo-haptics';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { Alert, Text, View } from 'react-native';
+import { FeatureUnavailable } from '@/src/components/features/FeatureUnavailable';
+import { PrimaryButton } from '@/src/components/ui/atoms';
+import { Icon, IconName } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
+import {
+  SheetIconLabelPicker,
+  SheetPreviewCard,
+  SheetSection,
+  SheetShell,
+  SheetTitleField,
+  type IconLabelOption,
+} from '@/src/components/ui/SheetShell';
+import { useFeatureGate } from '@/src/hooks/useFeatureGate';
+import { useSession } from '@/src/hooks/useSession';
+import { useTimetables } from '@/src/hooks/useTimetables';
 import { useTheme } from '@/src/lib/theme';
 import { TEMPLATES, type TemplateKey } from '@/src/lib/timetables-data';
 
 type Share = 'solo' | 'partner' | 'shared';
 
+// solo-mode: share-with hidden — defaults to solo
 export default function NewTimetable() {
+  const gate = useFeatureGate('timetable');
+  if (!gate.enabled) return gate.feature ? <FeatureUnavailable feature={gate.feature} /> : null;
+  return <NewTimetableInner />;
+}
+
+function NewTimetableInner() {
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const isEdit = Boolean(id);
   const { C, F } = useTheme();
-  const [title, setTitle] = useState('');
-  const [tmplKey, setTmplKey] = useState<TemplateKey>('meals');
-  const [share, setShare] = useState<Share>('shared');
+  const { create, update, timetables } = useTimetables();
+  const { isSolo, partner } = useSession();
+  const partnerName = partner?.displayName ?? 'Partner';
+  const existing = useMemo(
+    () => (isEdit && id ? timetables.find((t) => t.id === id) : undefined),
+    [isEdit, id, timetables],
+  );
+  const [title, setTitle] = useState(existing?.title ?? '');
+  const [tmplKey, setTmplKey] = useState<TemplateKey>(
+    (existing?.template as TemplateKey) ?? 'meals',
+  );
+  const [share, setShare] = useState<Share>(
+    (existing?.share as Share) ?? (isSolo ? 'solo' : 'shared'),
+  );
+  const [saving, setSaving] = useState(false);
   const tmpl = TEMPLATES.find((t) => t.key === tmplKey) ?? TEMPLATES[0];
+
+  const shareOptions: IconLabelOption<Share>[] = useMemo(
+    () => [
+      { key: 'solo', icon: 'user', label: 'Just me', color: C.sky },
+      { key: 'partner', icon: 'heart', label: `${partnerName}'s`, color: C.lavender },
+      { key: 'shared', icon: 'users', label: 'Together', color: C.gold },
+    ],
+    [C, partnerName],
+  );
+
+  const canSave = title.trim().length > 0 && !saving;
+
+  const onSave = async () => {
+    if (!canSave) return;
+    setSaving(true);
+    try {
+      const payload = {
+        title: title.trim(),
+        template: tmplKey,
+        share: isSolo ? ('solo' as Share) : share,
+      };
+      if (isEdit && id) {
+        await update(id, payload);
+      } else {
+        await create(payload);
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.back();
+    } catch (err) {
+      console.warn('[new-timetable] save failed', err);
+      Alert.alert('Save failed', 'Try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <SheetShell
-      eyebrow="NEW TIMETABLE"
-      title="Shape the week."
-      footer={<PrimaryButton icon="plus" onPress={() => router.back()}>Create timetable</PrimaryButton>}
+      eyebrow={isEdit ? 'EDIT TIMETABLE' : 'NEW TIMETABLE'}
+      title={isEdit ? 'Edit timetable' : 'New timetable'}
+      footer={
+        <PrimaryButton icon={isEdit ? 'check' : 'plus'} onPress={onSave} disabled={!canSave}>
+          {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create timetable'}
+        </PrimaryButton>
+      }
     >
-      <View
-        style={{
-          backgroundColor: tmpl.color,
-          borderRadius: 22,
-          padding: 18,
-          marginBottom: 22,
-        }}
-      >
+      <SheetPreviewCard bg={tmpl.color} ink={tmpl.ink}>
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
           <View style={{ flex: 1 }}>
             <Text
@@ -41,7 +107,11 @@ export default function NewTimetable() {
                 color: tmpl.ink,
               }}
             >
-              {share === 'shared' ? 'SHARED' : share === 'partner' ? "SOFIA'S" : 'SOLO'} ·{' '}
+              {share === 'shared'
+                ? 'SHARED'
+                : share === 'partner'
+                  ? `${partnerName.toUpperCase()}'S`
+                  : 'SOLO'}{' '}·{' '}
               {tmpl.label.toUpperCase()}
             </Text>
             <Text
@@ -49,23 +119,12 @@ export default function NewTimetable() {
                 fontFamily: F.displayBold,
                 fontSize: 22,
                 color: tmpl.ink,
-                letterSpacing: -0.4,
+                letterSpacing: 0,
                 lineHeight: 24,
                 marginTop: 6,
               }}
             >
-              {title || `${tmpl.label} — our week`}
-            </Text>
-            <Text
-              style={{
-                fontSize: 11,
-                opacity: 0.65,
-                color: tmpl.ink,
-                fontFamily: F.body,
-                marginTop: 4,
-              }}
-            >
-              {tmpl.sample}
+              {title || `${tmpl.label} — your week`}
             </Text>
           </View>
           <View
@@ -81,40 +140,38 @@ export default function NewTimetable() {
             <Icon name={tmpl.icon} size={20} color={tmpl.ink} strokeWidth={2.2} />
           </View>
         </View>
-      </View>
+      </SheetPreviewCard>
 
-      <Overline style={{ marginBottom: 8 }}>Title</Overline>
-      <TextInput
-        value={title}
-        onChangeText={setTitle}
-        placeholder="Our meals this week..."
-        placeholderTextColor={C.fog}
-        style={{
-          color: C.bone,
-          fontFamily: F.displayBold,
-          fontSize: 22,
-          paddingVertical: 6,
-          borderBottomWidth: 2,
-          borderBottomColor: title ? C.gold : C.line,
-        }}
-      />
+      <SheetSection title="Title" first>
+        <SheetTitleField
+          testID="new-timetable-title-input"
+          value={title}
+          onChangeText={setTitle}
+          placeholder="Name this timetable…"
+          accent={C.gold}
+        />
+      </SheetSection>
 
-      <View style={{ marginTop: 22 }}>
-        <Overline style={{ marginBottom: 10 }}>Template</Overline>
+      <SheetSection title="Template">
+        {/* EXCEPTION: free-form template labels — icon-only grid would lose the user-facing name */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {TEMPLATES.map((t) => {
             const sel = tmplKey === t.key;
             return (
-              <Pressable
+              <PressScale
                 key={t.key}
-                onPress={() => setTmplKey(t.key)}
+                testID={`new-timetable-tmpl-${t.key}`}
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => undefined);
+                  setTmplKey(t.key);
+                }}
                 style={{
                   width: '48%',
                   padding: 12,
                   borderRadius: 14,
-                  backgroundColor: sel ? t.color : C.card,
+                  backgroundColor: sel ? t.color : C.bgCard,
                   borderWidth: 1,
-                  borderColor: sel ? t.color : C.line,
+                  borderColor: sel ? t.color : C.lineColor,
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 10,
@@ -130,88 +187,34 @@ export default function NewTimetable() {
                     justifyContent: 'center',
                   }}
                 >
-                  <Icon name={t.icon} size={15} color={t.ink} strokeWidth={2.2} />
+                  <Icon name={t.icon as IconName} size={15} color={t.ink} strokeWidth={2.2} />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      fontFamily: F.bodyBold,
-                      color: sel ? t.ink : C.bone,
-                    }}
-                  >
-                    {t.label}
-                  </Text>
-                  <Text
-                    numberOfLines={1}
-                    style={{
-                      fontSize: 9,
-                      color: sel ? t.ink : C.fog,
-                      opacity: sel ? 0.6 : 1,
-                      fontFamily: F.body,
-                      marginTop: 2,
-                    }}
-                  >
-                    {t.sample}
-                  </Text>
-                </View>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
-
-      <View style={{ marginTop: 22 }}>
-        <Overline style={{ marginBottom: 10 }}>Share with</Overline>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          {(
-            [
-              { k: 'solo', l: 'Just me', s: 'private', color: '#9FC4DC', icon: 'user' as const },
-              { k: 'partner', l: "Sofia's", s: 'for her', color: '#B8A8E8', icon: 'heart' as const },
-              { k: 'shared', l: 'Together', s: 'both edit', color: C.gold, icon: 'users' as const },
-            ] as { k: Share; l: string; s: string; color: string; icon: any }[]
-          ).map((o) => {
-            const sel = share === o.k;
-            return (
-              <Pressable
-                key={o.k}
-                onPress={() => setShare(o.k)}
-                style={{
-                  flex: 1,
-                  paddingVertical: 12,
-                  paddingHorizontal: 8,
-                  borderRadius: 14,
-                  backgroundColor: sel ? `${o.color}1F` : C.card,
-                  borderWidth: 1,
-                  borderColor: sel ? o.color : C.line,
-                  alignItems: 'center',
-                  gap: 6,
-                }}
-              >
-                <Icon name={o.icon} size={16} color={sel ? o.color : C.mist} />
                 <Text
                   style={{
-                    fontSize: 11,
+                    fontSize: 12,
                     fontFamily: F.bodyBold,
-                    color: sel ? o.color : C.bone,
+                    color: sel ? t.ink : C.inkColor,
+                    flex: 1,
                   }}
                 >
-                  {o.l}
+                  {t.label}
                 </Text>
-                <Text
-                  style={{
-                    fontSize: 9,
-                    fontFamily: F.body,
-                    color: C.fog,
-                  }}
-                >
-                  {o.s}
-                </Text>
-              </Pressable>
+              </PressScale>
             );
           })}
         </View>
-      </View>
+      </SheetSection>
+
+      {!isSolo && (
+        <SheetSection title="Share with">
+          <SheetIconLabelPicker
+            options={shareOptions}
+            selected={share}
+            onChange={setShare}
+            testIDPrefix="new-timetable-share"
+          />
+        </SheetSection>
+      )}
     </SheetShell>
   );
 }

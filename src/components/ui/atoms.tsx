@@ -1,16 +1,48 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
+  LayoutAnimation,
+  Platform,
   Pressable,
   StyleProp,
   Text,
   TextStyle,
+  UIManager,
   View,
   ViewStyle,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
+import Animated, {
+  Easing,
+  useAnimatedProps,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from 'react-native-reanimated';
 import { useTheme } from '@/src/lib/theme';
 import { Icon, IconName } from './Icon';
 import { PressScale } from './PressScale';
+import { PulsingDot } from './pacto/PulsingDot';
+
+if (
+  Platform.OS === 'android' &&
+  !(globalThis as any).nativeFabricUIManager &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+const tapHaptic = () => {
+  Haptics.selectionAsync().catch(() => undefined);
+};
+const impactHaptic = () => {
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+};
+
+const AnimatedCircle =
+  (Animated as any)?.createAnimatedComponent?.(Circle) ?? Circle;
 
 // ───────── Avatar ─────────
 export function Avatar({
@@ -125,18 +157,27 @@ export function BlockCard({
   children,
   style,
   onPress,
+  testID,
 }: {
   bg?: string;
   ink?: string;
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   onPress?: () => void;
+  testID?: string;
 }) {
   const { C } = useTheme();
   const Wrapper: any = onPress ? PressScale : View;
+  const handlePress = onPress
+    ? () => {
+        tapHaptic();
+        onPress();
+      }
+    : undefined;
   return (
     <Wrapper
-      onPress={onPress}
+      onPress={handlePress}
+      testID={testID}
       style={[
         {
           backgroundColor: bg ?? C.peach,
@@ -167,9 +208,15 @@ export function DarkCard({
 }) {
   const { C } = useTheme();
   const Wrapper: any = onPress ? PressScale : View;
+  const handlePress = onPress
+    ? () => {
+        tapHaptic();
+        onPress();
+      }
+    : undefined;
   return (
     <Wrapper
-      onPress={onPress}
+      onPress={handlePress}
       style={[
         {
           backgroundColor: C.card,
@@ -197,6 +244,7 @@ export function Pill({
   onPress,
   size = 'md',
   style,
+  testID,
 }: {
   children: React.ReactNode;
   bg?: string;
@@ -207,40 +255,65 @@ export function Pill({
   onPress?: () => void;
   size?: 'sm' | 'md';
   style?: StyleProp<ViewStyle>;
+  testID?: string;
 }) {
   const { C, F } = useTheme();
   const padV = size === 'sm' ? 6 : 8;
   const padH = size === 'sm' ? 12 : 14;
   const fs = size === 'sm' ? 11 : 12;
+  const reduced = useReducedMotion();
+  const scale = useSharedValue(active ? 1.04 : 1);
+  useEffect(() => {
+    if (reduced) {
+      scale.value = 1;
+      return;
+    }
+    scale.value = withTiming(active ? 1.04 : 1, {
+      duration: 200,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [active, reduced, scale]);
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+  const handlePress = onPress
+    ? () => {
+        tapHaptic();
+        onPress();
+      }
+    : undefined;
   return (
-    <PressScale
-      onPress={onPress}
-      hitSlop={8}
-      style={[
-        {
-          backgroundColor: active ? activeBg ?? bg ?? C.goldSoft : 'transparent',
-          borderWidth: active ? 0 : 1,
-          borderColor: C.line,
-          borderRadius: 999,
-          paddingVertical: padV,
-          paddingHorizontal: padH,
-          alignSelf: 'flex-start',
-        },
-        style,
-      ]}
-    >
-      <Text
-        style={{
-          color: active ? activeColor ?? color ?? C.gold : C.mist,
-          fontFamily: F.bodyBold,
-          fontSize: fs,
-          letterSpacing: 0.3,
-          textTransform: 'uppercase',
-        }}
+    <Animated.View style={[{ alignSelf: 'flex-start' }, animStyle]}>
+      <PressScale
+        onPress={handlePress}
+        hitSlop={8}
+        testID={testID}
+        style={[
+          {
+            backgroundColor: active ? activeBg ?? bg ?? C.goldSoft : 'transparent',
+            borderWidth: active ? 0 : 1,
+            borderColor: C.line,
+            borderRadius: 999,
+            paddingVertical: padV,
+            paddingHorizontal: padH,
+            alignSelf: 'flex-start',
+          },
+          style,
+        ]}
       >
-        {children}
-      </Text>
-    </PressScale>
+        <Text
+          style={{
+            color: active ? activeColor ?? color ?? C.gold : C.mist,
+            fontFamily: F.bodyBold,
+            fontSize: fs,
+            letterSpacing: 0.3,
+            textTransform: 'uppercase',
+          }}
+        >
+          {children}
+        </Text>
+      </PressScale>
+    </Animated.View>
   );
 }
 
@@ -335,9 +408,15 @@ export function PrimaryButton({
   style?: StyleProp<ViewStyle>;
 }) {
   const { C, F } = useTheme();
+  const handlePress = onPress
+    ? () => {
+        impactHaptic();
+        onPress();
+      }
+    : undefined;
   return (
     <PressScale
-      onPress={onPress}
+      onPress={handlePress}
       disabled={disabled}
       style={[
         {
@@ -392,9 +471,15 @@ export function RoundBtn({
   const borderColor = border === null ? null : border ?? C.line;
   // Extend hit area to 40×40 minimum
   const hitPad = Math.max(0, (40 - size) / 2);
+  const handlePress = onPress
+    ? () => {
+        tapHaptic();
+        onPress();
+      }
+    : undefined;
   return (
     <PressScale
-      onPress={onPress}
+      onPress={handlePress}
       hitSlop={hitPad}
       style={[
         {
@@ -437,7 +522,22 @@ export function ProgressRing({
   const cs = colors ?? [C.peach, C.butter, C.lavender];
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
-  const id = `rg-${size}-${value}`;
+  const id = `rg-${size}`;
+  const reduced = useReducedMotion();
+  const progress = useSharedValue(reduced ? value : 0);
+  useEffect(() => {
+    if (reduced) {
+      progress.value = value;
+      return;
+    }
+    progress.value = withTiming(value, {
+      duration: 900,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [value, reduced, progress]);
+  const animProps = useAnimatedProps(() => ({
+    strokeDashoffset: c * (1 - progress.value),
+  }));
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
@@ -449,7 +549,7 @@ export function ProgressRing({
           </LinearGradient>
         </Defs>
         <Circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={bg} strokeWidth={stroke} />
-        <Circle
+        <AnimatedCircle
           cx={size / 2}
           cy={size / 2}
           r={r}
@@ -457,7 +557,7 @@ export function ProgressRing({
           stroke={`url(#${id})`}
           strokeWidth={stroke}
           strokeDasharray={`${c} ${c}`}
-          strokeDashoffset={c * (1 - value)}
+          animatedProps={animProps}
           strokeLinecap="round"
         />
       </Svg>
@@ -520,6 +620,104 @@ export function TripleRing({
           </React.Fragment>
         );
       })}
+    </Svg>
+  );
+}
+
+// ───────── AnimatedTripleRing (mount-stagger fill) ─────────
+export function AnimatedTripleRing({
+  size = 36,
+  stroke = 3.5,
+  gap = 1.5,
+  values = [0, 0, 0] as [number, number, number],
+  colors,
+  bg = 'rgba(255,255,255,0.08)',
+  delay = 0,
+  duration = 500,
+  enabled = true,
+}: {
+  size?: number;
+  stroke?: number;
+  gap?: number;
+  values: [number, number, number];
+  colors?: [string, string, string];
+  bg?: string;
+  delay?: number;
+  duration?: number;
+  enabled?: boolean;
+}) {
+  const { C } = useTheme();
+  const cs = colors ?? [C.peach, C.gold, C.lavender];
+  const reduced = useReducedMotion();
+  const s = stroke;
+  const g = gap;
+  const r0 = (size - s) / 2;
+  const r1 = r0 - (s + g);
+  const r2 = r1 - (s + g);
+  const c0 = 2 * Math.PI * r0;
+  const c1 = 2 * Math.PI * r1;
+  const c2 = 2 * Math.PI * r2;
+
+  const p0 = useSharedValue(0);
+  const p1 = useSharedValue(0);
+  const p2 = useSharedValue(0);
+
+  useEffect(() => {
+    const ease = Easing.bezier(0.2, 0.8, 0.2, 1);
+    const apply = (sv: ReturnType<typeof useSharedValue<number>>, v: number, ringDelay: number) => {
+      if (!enabled || reduced) {
+        sv.value = v;
+      } else {
+        sv.value = withDelay(delay + ringDelay, withTiming(v, { duration, easing: ease }));
+      }
+    };
+    apply(p0, values[0], 0);
+    apply(p1, values[1], 40);
+    apply(p2, values[2], 80);
+  }, [values, delay, duration, enabled, reduced, p0, p1, p2]);
+
+  const a0 = useAnimatedProps(() => ({ strokeDashoffset: c0 * (1 - p0.value) }));
+  const a1 = useAnimatedProps(() => ({ strokeDashoffset: c1 * (1 - p1.value) }));
+  const a2 = useAnimatedProps(() => ({ strokeDashoffset: c2 * (1 - p2.value) }));
+
+  return (
+    <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
+      <Circle cx={size / 2} cy={size / 2} r={r0} fill="none" stroke={bg} strokeWidth={s} />
+      <AnimatedCircle
+        cx={size / 2}
+        cy={size / 2}
+        r={r0}
+        fill="none"
+        stroke={cs[0]}
+        strokeWidth={s}
+        strokeDasharray={`${c0} ${c0}`}
+        strokeLinecap="round"
+        animatedProps={a0}
+      />
+      <Circle cx={size / 2} cy={size / 2} r={r1} fill="none" stroke={bg} strokeWidth={s} />
+      <AnimatedCircle
+        cx={size / 2}
+        cy={size / 2}
+        r={r1}
+        fill="none"
+        stroke={cs[1]}
+        strokeWidth={s}
+        strokeDasharray={`${c1} ${c1}`}
+        strokeLinecap="round"
+        animatedProps={a1}
+      />
+      <Circle cx={size / 2} cy={size / 2} r={r2} fill="none" stroke={bg} strokeWidth={s} />
+      <AnimatedCircle
+        cx={size / 2}
+        cy={size / 2}
+        r={r2}
+        fill="none"
+        stroke={cs[2]}
+        strokeWidth={s}
+        strokeDasharray={`${c2} ${c2}`}
+        strokeLinecap="round"
+        animatedProps={a2}
+      />
     </Svg>
   );
 }
@@ -607,7 +805,7 @@ export function ScreenHeader({
             }}
           >
             {title}
-            <Text style={{ color: ac }}>.</Text>
+            <PulsingDot color={ac} />
           </Text>
         </View>
         {action}
@@ -650,9 +848,15 @@ export function StickyDate({
 }) {
   const { C, F } = useTheme();
   const Wrapper: any = collapsible ? Pressable : View;
+  const handlePress = collapsible && onToggle
+    ? () => {
+        tapHaptic();
+        onToggle();
+      }
+    : undefined;
   return (
     <Wrapper
-      onPress={onToggle}
+      onPress={handlePress}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -712,7 +916,12 @@ export function DateSectioned<T>({
       {sections.map((s, i) => {
         const collapsible = i >= maxOpen;
         const open = !collapsible || expanded[s.label];
-        const toggle = () => setExpanded((e) => ({ ...e, [s.label]: !e[s.label] }));
+        const toggle = () => {
+          LayoutAnimation.configureNext(
+            LayoutAnimation.create(260, 'easeInEaseOut', 'opacity'),
+          );
+          setExpanded((e) => ({ ...e, [s.label]: !e[s.label] }));
+        };
         return (
           <View key={s.label} style={{ marginBottom: 18 }}>
             <StickyDate

@@ -30,17 +30,32 @@ describe("homeNavigation", () => {
       "/(tabs)/calendar",
     );
     expect(routeForTimelineItem(makeTimelineItem({ type: "plan" }))).toBe(
-      "/(tabs)/together/plans",
+      "/(tabs)/us/plans",
     );
     expect(routeForTimelineItem(makeTimelineItem({ type: "reminder" }))).toBe(
-      "/(tabs)/reminders",
+      "/(tabs)/us/reminders?reminderId=source-1",
     );
     expect(routeForTimelineItem(makeTimelineItem({ type: "task" }))).toBe(
-      "/(tabs)/tasks",
+      "/(tabs)/us/tasks",
     );
+    expect(
+      routeForTimelineItem(
+        makeTimelineItem({ type: "task", sourceParentId: "list-1" }),
+      ),
+    ).toBe("/(tabs)/us/tasks/list-1?taskId=source-1");
     expect(routeForTimelineItem(makeTimelineItem({ type: "ritual" }))).toBe(
       "/(tabs)/calendar",
     );
+    expect(
+      routeForTimelineItem(
+        makeTimelineItem({ type: "memory", sourceTable: "journalEntries" }),
+      ),
+    ).toBe("/(tabs)/us/journal");
+    expect(
+      routeForTimelineItem(
+        makeTimelineItem({ type: "memory", sourceTable: "loveNotes" }),
+      ),
+    ).toBe("/(tabs)/us/notes");
   });
 
   it("returns a milestones route for countdown cards", () => {
@@ -54,7 +69,7 @@ describe("homeNavigation", () => {
     };
 
     expect(routeForMilestoneItem(milestone)).toBe(
-      "/(tabs)/together/milestones",
+      "/(tabs)/us/milestones",
     );
   });
 });

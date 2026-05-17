@@ -129,6 +129,7 @@ export function buildTimelineItems({
       priority: reminder.priority ?? 0,
       isPrivate: false,
       isOverdue: dueAt < now,
+      isCompleted: !!reminder.isCompleted,
     });
   }
 
@@ -140,6 +141,7 @@ export function buildTimelineItems({
       id: `task:${task.id}`,
       type: 'task',
       sourceId: task.id,
+      sourceParentId: task.list?.[0]?.id ?? null,
       sourceTable: 'tasks',
       title: task.title ?? 'Task',
       subtitle: task.notes ?? null,
@@ -147,6 +149,7 @@ export function buildTimelineItems({
       priority: task.priority ?? 0,
       isPrivate: false,
       isOverdue: dueDate < today,
+      isCompleted: !!task.isCompleted,
     });
   }
 

@@ -31,7 +31,6 @@ export default defineConfig({
       "src/test/**/*.test.tsx",
       "src/hooks/**/*.test.ts",
       "src/hooks/**/*.test.tsx",
-      "convex/**/*.test.ts",
     ],
   },
 });

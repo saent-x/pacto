@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
+import { format } from 'date-fns';
 import { db } from '@/src/lib/instant';
 import type { PresenceInfo } from '@/src/lib/home/types';
 import {
@@ -7,39 +8,78 @@ import {
   buildMilestones,
   selectFeaturedSignal,
 } from '@/src/lib/home/builders';
+import { buildActivityHeatmapDays } from '@/src/lib/home/activity';
 import { getCuratedDailyVerse } from '@/src/lib/home/dailyVerse';
+import { buildTodayRingSummary, type TodayRingSummary } from '@/src/lib/home/todayRings';
 import { useSession } from '@/src/hooks/useSession';
+
+export type TodaySummary = TodayRingSummary;
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? '';
 
+function getLocalDateKey(date: Date = new Date()) {
+  return format(date, 'yyyy-MM-dd');
+}
+
 export function useHomeTimeline(options?: { previewDays?: number }) {
-  const { activeCouple, profile } = useSession();
+  const { activeCouple, profile, isFeatureEnabled } = useSession();
   const coupleId = activeCouple?.couple?.id ?? null;
   const previewDays = options?.previewDays ?? 7;
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = getLocalDateKey();
   const warmedDateRef = useRef<string | null>(null);
+  const calendarEnabled = isFeatureEnabled('calendar');
+  const goalsEnabled = isFeatureEnabled('goals');
+  const recurringEnabled = isFeatureEnabled('recurring');
+  const checkinsEnabled = isFeatureEnabled('checkins');
+  const tasksEnabled = isFeatureEnabled('tasks');
+  const memoriesEnabled = isFeatureEnabled('memories');
+  const memoryFeedEnabled = isFeatureEnabled('memoryFeed');
+  const journalEnabled = isFeatureEnabled('journal');
+  const timetableEnabled = isFeatureEnabled('timetable');
+  const wishlistEnabled = isFeatureEnabled('wishlist');
 
-  const { data, isLoading: queryLoading } = db.useQuery(
-    coupleId
-      ? {
-          events: { $: { where: { 'couple.id': coupleId } } },
-          plans: { $: { where: { 'couple.id': coupleId } } },
-          rituals: { $: { where: { 'couple.id': coupleId } } },
-          checkIns: { $: { where: { 'couple.id': coupleId } } },
-          reminders: { $: { where: { 'couple.id': coupleId } } },
-          tasks: { $: { where: { 'couple.id': coupleId } } },
-          milestones: { $: { where: { 'couple.id': coupleId } } },
-          journalEntries: { $: { where: { 'couple.id': coupleId } } },
-          loveNotes: { $: { where: { 'couple.id': coupleId } } },
-          dailyVerseCache: { $: { where: { dateKey: todayKey } } },
-        }
-      : null,
-  );
+  const query = useMemo(() => {
+    if (!coupleId) return null;
+    const spaceWhere = { $: { where: { 'couple.id': coupleId } } };
+    // The new `memories` entity uses link `space` (not `couple`), so it needs
+    // a separate where clause keyed on `space.id`.
+    const memoriesWhere = { $: { where: { 'space.id': coupleId } } };
+    return {
+      ...(calendarEnabled ? { events: spaceWhere } : {}),
+      ...(goalsEnabled ? { plans: spaceWhere } : {}),
+      ...(recurringEnabled ? { rituals: spaceWhere, reminders: spaceWhere } : {}),
+      ...(checkinsEnabled ? { checkIns: spaceWhere } : {}),
+      ...(tasksEnabled ? { tasks: { ...spaceWhere, list: {} } } : {}),
+      ...(memoriesEnabled ? { milestones: spaceWhere, loveNotes: spaceWhere } : {}),
+      ...((memoriesEnabled || memoryFeedEnabled) ? { memories: memoriesWhere } : {}),
+      ...(journalEnabled ? { journalEntries: spaceWhere } : {}),
+      ...(timetableEnabled ? { timetableItems: spaceWhere } : {}),
+      ...(wishlistEnabled ? { wishlistItems: spaceWhere } : {}),
+      dailyVerseCache: { $: { where: { dateKey: todayKey } } },
+    };
+  }, [
+    coupleId,
+    calendarEnabled,
+    goalsEnabled,
+    recurringEnabled,
+    checkinsEnabled,
+    tasksEnabled,
+    memoriesEnabled,
+    memoryFeedEnabled,
+    journalEnabled,
+    timetableEnabled,
+    wishlistEnabled,
+    todayKey,
+  ]);
+
+  const { data, isLoading: queryLoading, error: queryError } = (
+    db as any
+  ).useQuery(query);
 
   useEffect(() => {
     if (warmedDateRef.current === todayKey || !activeCouple) return;
     warmedDateRef.current = todayKey;
-    db.getAuth().then((auth) => {
+    (db as any).getAuth().then((auth: any) => {
       const token = auth?.refresh_token ?? null;
       if (!token) return;
       fetch(`${API_BASE}/api/daily-verse`, {
@@ -53,12 +93,12 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
     if (!activeCouple || !profile) return null;
     return {
       coupleId: activeCouple.couple.id,
-      coupleName: activeCouple.couple.name,
+      coupleName: activeCouple.couple.name ?? '',
       memberCount: activeCouple.memberCount,
       relationshipState: activeCouple.partner ? 'paired' : 'waiting',
       self: {
         userId: profile.id,
-        displayName: profile.displayName,
+        displayName: profile.displayName ?? '',
         avatarUrl: profile.avatarUrl,
       },
       partner: activeCouple.partner
@@ -74,10 +114,22 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
 
   const homeView = useMemo(() => {
     const now = Date.now();
+    const events = calendarEnabled ? data?.events ?? [] : [];
+    const plans = goalsEnabled ? data?.plans ?? [] : [];
+    const reminders = recurringEnabled ? data?.reminders ?? [] : [];
+    const rituals = recurringEnabled ? data?.rituals ?? [] : [];
+    const tasks = tasksEnabled ? data?.tasks ?? [] : [];
+    const journalEntries = journalEnabled ? data?.journalEntries ?? [] : [];
+    const loveNotes = memoriesEnabled ? data?.loveNotes ?? [] : [];
+    const checkIns = checkinsEnabled ? data?.checkIns ?? [] : [];
+    const milestones = memoriesEnabled ? data?.milestones ?? [] : [];
+    const wishlistItems = wishlistEnabled ? data?.wishlistItems ?? [] : [];
+    const timetableItems = timetableEnabled ? data?.timetableItems ?? [] : [];
+    const feedMemories = memoriesEnabled || memoryFeedEnabled ? data?.memories ?? [] : [];
 
     const memories = buildMemoryPreviews({
-      journalEntries: data?.journalEntries ?? [],
-      loveNotes: data?.loveNotes ?? [],
+      journalEntries,
+      loveNotes,
     });
     const memoryPreview = memories[0] ?? null;
 
@@ -85,19 +137,19 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
       now,
       couple: {
         id: coupleId ?? '',
-        anniversary: activeCouple?.couple?.anniversary ?? null,
+        anniversary: memoriesEnabled ? activeCouple?.couple?.anniversary ?? null : null,
       },
-      milestones: data?.milestones ?? [],
+      milestones,
     });
 
     const timeline = buildTimelineItems({
       now,
       previewDays,
-      events: data?.events ?? [],
-      plans: data?.plans ?? [],
-      reminders: data?.reminders ?? [],
-      tasks: data?.tasks ?? [],
-      rituals: data?.rituals ?? [],
+      events,
+      plans,
+      reminders,
+      tasks,
+      rituals,
       memories: memoryPreview ? [memoryPreview] : [],
     });
 
@@ -106,7 +158,7 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
       presence,
       milestones: milestoneStrip,
       memoryPreview,
-      checkIns: data?.checkIns ?? [],
+      checkIns,
     });
 
     const verseRecord = (data?.dailyVerseCache ?? [])[0];
@@ -120,11 +172,63 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
         }
       : getCuratedDailyVerse(todayKey);
 
-    return { hero, timeline, milestones: milestoneStrip, memories, memoryPreview, dailyVerse };
-  }, [data, previewDays, coupleId, activeCouple?.couple?.anniversary, presence, todayKey]);
+    const todaySummary = buildTodayRingSummary({
+      now,
+      plans,
+      events,
+      tasks,
+      reminders,
+    });
+
+    const activity = buildActivityHeatmapDays({
+      now,
+      weeks: 15,
+      events,
+      plans,
+      reminders,
+      tasks,
+      rituals,
+      checkIns,
+      milestones,
+      journalEntries,
+      loveNotes,
+      wishlistItems,
+      timetableItems,
+      memories: feedMemories,
+    });
+
+    return {
+      hero,
+      timeline,
+      milestones: milestoneStrip,
+      memories,
+      memoryPreview,
+      dailyVerse,
+      todaySummary,
+      activity,
+    };
+  }, [
+    data,
+    previewDays,
+    coupleId,
+    activeCouple?.couple?.anniversary,
+    presence,
+    todayKey,
+    calendarEnabled,
+    goalsEnabled,
+    recurringEnabled,
+    checkinsEnabled,
+    tasksEnabled,
+    memoriesEnabled,
+    memoryFeedEnabled,
+    journalEnabled,
+    timetableEnabled,
+    wishlistEnabled,
+  ]);
 
   return {
     isLoading: queryLoading,
+    error: queryError ?? null,
     hero: homeView.hero,
     timeline: homeView.timeline,
     milestones: homeView.milestones,
@@ -132,6 +236,8 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
     memoryPreview: homeView.memoryPreview,
     presence,
     dailyVerse: homeView.dailyVerse,
+    todaySummary: homeView.todaySummary,
+    activity: homeView.activity,
     refetch: async () => {},
   };
 }

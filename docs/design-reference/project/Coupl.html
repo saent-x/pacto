@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coupl — Redesign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Space+Grotesk:wght@400;500;600;700&family=Archivo:wght@400;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: #0A0807;
+    font-family: "Space Grotesk", -apple-system, system-ui, sans-serif;
+    color: #F5EEE3; min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+  button { font-family: inherit; }
+  input, textarea { font-family: inherit; }
+  .stage {
+    min-height: 100vh; padding: 40px 20px;
+    background:
+      radial-gradient(ellipse at 10% 10%, rgba(228,178,74,0.05), transparent 40%),
+      radial-gradient(ellipse at 90% 90%, rgba(216,155,168,0.05), transparent 40%),
+      #0A0807;
+  }
+  .frames {
+    display: flex; gap: 28px; flex-wrap: wrap;
+    justify-content: center; align-items: flex-start;
+  }
+  .frame-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .frame-label {
+    font-family: "Space Grotesk", sans-serif; font-size: 11px;
+    color: #80746A; font-weight: 600; letter-spacing: 1.6px;
+    text-transform: uppercase;
+  }
+  .frame {
+    width: 390px; height: 800px; border-radius: 48px; overflow: hidden;
+    position: relative; background: #000;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,0,0,0.5), inset 0 0 0 2px rgba(255,255,255,0.04);
+  }
+  .island {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 34px; border-radius: 24px; background: #000; z-index: 50;
+  }
+  .statusbar {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+    display: flex; justify-content: space-between;
+    padding: 16px 32px 0; font-family: -apple-system, system-ui;
+    font-weight: 590; font-size: 15px; color: #fff;
+  }
+  .home-ind {
+    position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    width: 128px; height: 4px; border-radius: 4px; background: rgba(255,255,255,0.5); z-index: 70;
+  }
+  .app-root {
+    width: 100%; height: 100%; overflow: hidden; position: relative;
+    background: #0E0B0A;
+  }
+  .chip-btn {
+    background: #1D1815; border: 1px solid #2B241E; color: #B3A89A;
+    border-radius: 999px; padding: 6px 14px; font-size: 11px;
+    font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+    cursor: pointer;
+  }
+  .chip-btn.active { background: rgba(228,178,74,0.14); color: #E4B24A; border-color: rgba(228,178,74,0.3); }
+</style>
+<!-- tweakable defaults -->
+<script>
+  window.TWEAKS = /*EDITMODE-BEGIN*/{
+    "hero": "lavender",
+    "font": "Space Grotesk",
+    "greeting": "bold",
+    "accent": "gold",
+    "theme": "dark",
+    "remindersPlacement": "us-child",
+    "usVariant": "editorial",
+    "nativeHeader": true
+  }/*EDITMODE-END*/;
+</script>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="src/tokens.jsx"></script>
+<script type="text/babel" src="src/atoms.jsx"></script>
+<script type="text/babel" src="src/native-header.jsx"></script>
+<script type="text/babel" src="src/screen-home.jsx"></script>
+<script type="text/babel" src="src/screens.jsx"></script>
+<script type="text/babel" src="src/screens-aux.jsx"></script>
+<script type="text/babel" src="src/screens-together.jsx"></script>
+<script type="text/babel" src="src/screens-us-redesigns.jsx"></script>
+<script type="text/babel" src="src/sheets-us.jsx"></script>
+<script type="text/babel" src="src/screens-timetables.jsx"></script>
+<script type="text/babel" src="src/screens-timetable-detail.jsx"></script>
+<script type="text/babel" src="src/sheets-timetables.jsx"></script>
+
+<script type="text/babel" data-presets="react">
+const { coupl: C, fonts: F, Icon } = window;
+
+// TweaksPanel (inline, to avoid scope collisions across babel scripts)
+function TweaksPanel({ open, tweaks, setTweaks, onClose }) {
+  if (!open) return null;
+  return (
+    <div style={{
+      position: 'fixed', bottom: 20, right: 20, width: 280,
+      background: '#18140F', border: `1px solid ${C.line}`,
+      borderRadius: 18, padding: 16, zIndex: 200,
+      boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+      fontFamily: F.body, color: C.bone,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 16, color: C.bone }}>Tweaks</div>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.fog }}>
+          <Icon name="x" size={16} color={C.fog}/>
+        </button>
+      </div>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 10, color: C.fog, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>HERO CARD</div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {['peach', 'lavender', 'butter', 'mint', 'rose', 'sky'].map(c => (
+            <button key={c} onClick={() => setTweaks({...tweaks, hero: c})} style={{
+              width: 30, height: 30, borderRadius: 8, background: C[c],
+              border: tweaks.hero === c ? `2px solid ${C.gold}` : '2px solid transparent',
+              cursor: 'pointer',
+            }}/>
+          ))}
+        </div>
+      </div>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 10, color: C.fog, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>THEME</div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {['dark', 'light'].map(tm => (
+            <button key={tm} onClick={() => setTweaks({...tweaks, theme: tm})} style={{
+              flex: 1, padding: '8px 10px', borderRadius: 10, fontSize: 11, fontWeight: 700, letterSpacing: 0.8,
+              background: tweaks.theme === tm ? 'rgba(228,178,74,0.14)' : 'transparent',
+              color: tweaks.theme === tm ? C.gold : C.mist,
+              border: `1px solid ${tweaks.theme === tm ? C.gold : C.line}`,
+              cursor: 'pointer', textTransform: 'uppercase',
+            }}>{tm}</button>
+          ))}
+        </div>
+      </div>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 10, color: C.fog, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>US TAB · LAYOUT</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {[
+            { k: 'editorial', t: 'Editorial', d: 'Magazine cover · asymmetric grid' },
+            { k: 'poetic',    t: 'Poetic',    d: 'Typographic list · gold rules' },
+            { k: 'scrapbook', t: 'Scrapbook', d: 'Polaroid · tape · collage' },
+          ].map(opt => (
+            <button key={opt.k} onClick={() => setTweaks({...tweaks, usVariant: opt.k})} style={{
+              textAlign: 'left', padding: '8px 10px', borderRadius: 10, cursor: 'pointer',
+              background: tweaks.usVariant === opt.k ? 'rgba(228,178,74,0.12)' : 'transparent',
+              border: `1px solid ${tweaks.usVariant === opt.k ? C.gold : C.line}`,
+            }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: tweaks.usVariant === opt.k ? C.gold : C.bone }}>{opt.t}</div>
+              <div style={{ fontSize: 10, color: C.fog, marginTop: 1 }}>{opt.d}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 10, color: C.fog, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>REMINDERS LIVE IN</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {[
+            { k: 'tasks-filter', t: 'Tasks tab · as a filter', d: 'Inside Tasks screen' },
+            { k: 'home-child', t: 'Home · inline card', d: 'Surface on Home' },
+            { k: 'us-child', t: 'Us tab · shared space', d: 'With couple modules' },
+          ].map(opt => (
+            <button key={opt.k} onClick={() => setTweaks({...tweaks, remindersPlacement: opt.k})} style={{
+              textAlign: 'left', padding: '8px 10px', borderRadius: 10, cursor: 'pointer',
+              background: tweaks.remindersPlacement === opt.k ? 'rgba(228,178,74,0.12)' : 'transparent',
+              border: `1px solid ${tweaks.remindersPlacement === opt.k ? C.gold : C.line}`,
+            }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: tweaks.remindersPlacement === opt.k ? C.gold : C.bone }}>{opt.t}</div>
+              <div style={{ fontSize: 10, color: C.fog, marginTop: 1 }}>{opt.d}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 10, color: C.fog, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>HEADERS</div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {[{k:false,t:'DISPLAY'},{k:true,t:'NATIVE'}].map(opt => (
+            <button key={String(opt.k)} onClick={() => setTweaks({...tweaks, nativeHeader: opt.k})} style={{
+              flex: 1, padding: '8px 10px', borderRadius: 10, fontSize: 11, fontWeight: 700, letterSpacing: 0.8,
+              background: tweaks.nativeHeader === opt.k ? 'rgba(228,178,74,0.14)' : 'transparent',
+              color: tweaks.nativeHeader === opt.k ? C.gold : C.mist,
+              border: `1px solid ${tweaks.nativeHeader === opt.k ? C.gold : C.line}`,
+              cursor: 'pointer',
+            }}>{opt.t}</button>
+          ))}
+        </div>
+        <div style={{ fontSize: 10, color: C.fog, marginTop: 4, lineHeight: 1.4 }}>
+          Native: iOS-style large titles on every screen. Display: editorial wordmark headers.
+        </div>
+      </div>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 10, color: C.fog, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>DISPLAY FONT</div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {['Bricolage Grotesque', 'Archivo', 'Fraunces', 'Space Grotesk'].map(fn => (
+            <button key={fn} onClick={() => setTweaks({...tweaks, font: fn})} style={{
+              padding: '6px 10px', borderRadius: 999, fontSize: 11,
+              background: tweaks.font === fn ? 'rgba(228,178,74,0.14)' : 'transparent',
+              color: tweaks.font === fn ? C.gold : C.mist,
+              border: `1px solid ${tweaks.font === fn ? C.gold : C.line}`,
+              cursor: 'pointer', fontFamily: fn,
+            }}>{fn.split(' ')[0]}</button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Frame({ label, children, initialRoute }) {
+  const iref = React.useRef(null);
+  // we'll pass initialRoute via postMessage after mount. Simpler: use a direct prop.
+  return (
+    <div className="frame-wrap">
+      <div className="frame-label">{label}</div>
+      <div className="frame">
+        <div className="island"/>
+        <div className="statusbar">
+          <span>9:41</span>
+          <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <svg width="18" height="10" viewBox="0 0 18 10">
+              <rect x="0" y="6" width="3" height="4" rx="0.5" fill="#fff"/>
+              <rect x="4.5" y="4" width="3" height="6" rx="0.5" fill="#fff"/>
+              <rect x="9" y="2" width="3" height="8" rx="0.5" fill="#fff"/>
+              <rect x="13.5" y="0" width="3" height="10" rx="0.5" fill="#fff"/>
+            </svg>
+            <svg width="24" height="11" viewBox="0 0 24 11">
+              <rect x="0.5" y="0.5" width="20" height="10" rx="2.5" stroke="#fff" strokeOpacity="0.5" fill="none"/>
+              <rect x="2" y="2" width="17" height="7" rx="1" fill="#fff"/>
+            </svg>
+          </span>
+        </div>
+        <div className="app-root">{children}</div>
+        <div className="home-ind"/>
+      </div>
+    </div>
+  );
+}
+
+// Standalone screen (no app shell state) for the auth flow frames
+function StandaloneScreen({ which }) {
+  if (which === 'signIn') return <window.SignInScreen onSignIn={()=>{}} onSignUp={()=>{}}/>;
+  if (which === 'onboard') return <window.OnboardingChoose onCreate={()=>{}} onJoin={()=>{}}/>;
+  if (which === 'invite') return <window.InviteCodeScreen onContinue={()=>{}}/>;
+  return null;
+}
+
+// Interactive main app — single instance w/ navigation + tweaks
+// For showcase frames — mount pre-routed versions
+function PresetFrame({ label, tab, tweaks }) {
+  // We'll use a wrapper that forces initial tab via effect
+  return (
+    <Frame label={label}>
+      <PresetApp initial={tab} tweaks={tweaks}/>
+    </Frame>
+  );
+}
+
+function PresetApp({ initial, tweaks }) {
+  // Just render the proper screen directly — self-contained subset of CouplApp
+  const [mood, setMood] = React.useState(initial === 'home' ? 'good' : null);
+  const [day, setDay] = React.useState(17);
+  const [sheet, setSheet] = React.useState(null);
+  const [theme, setTheme] = React.useState(tweaks.theme || 'dark');
+  React.useEffect(() => setTheme(tweaks.theme || 'dark'), [tweaks.theme]);
+  const [route, setRoute] = React.useState(initial);
+  const [listDetail, setListDetail] = React.useState(null);
+  const [togetherSub, setTogetherSub] = React.useState(null);
+  const [ttDetail, setTtDetail] = React.useState(null);
+
+  // Map sub-screen key to the appropriate create sheet
+  const subSheetMap = {
+    notes: 'loveNote',
+    checkins: 'checkin',
+    expenses: 'expense',
+    wishlists: 'wishlist',
+    milestones: 'milestone',
+    plans: 'plan',
+    reminders: 'reminder',
+    timetables: 'timetable',
+  };
+
+  let screen;
+  if (route === 'auth-signin') screen = <window.SignInScreen onSignIn={()=>{}} onSignUp={()=>{}}/>;
+  else if (route === 'auth-onboard') screen = <window.OnboardingChoose onCreate={()=>{}} onJoin={()=>{}}/>;
+  else if (route === 'auth-invite') screen = <window.InviteCodeScreen onContinue={()=>{}}/>;
+  else if (route === 'tasksDetail') screen = <window.TaskListDetail list={listDetail} onBack={() => setRoute('tasks')}/>;
+  else if (route === 'home') screen = <window.HomeScreen mood={mood} setMood={setMood} selectedDay={day} setSelectedDay={setDay} partnerMood="GOOD" onOpenProfile={() => setSheet('profile')} remindersPlacement={tweaks.remindersPlacement} onOpenReminders={() => setRoute('reminders')} nativeHeader={tweaks.nativeHeader}/>;
+  else if (route === 'reminders') screen = <window.RemindersScreen onCreate={() => setSheet('reminder')} onBack={() => setRoute(tweaks.remindersPlacement === 'home-child' ? 'home' : tweaks.remindersPlacement === 'us-child' ? 'together' : 'tasks')} nativeHeader={tweaks.nativeHeader}/>;
+  else if (route === 'tasks') screen = <window.TasksScreen onCreate={() => setSheet('list')} onOpenList={l => { setListDetail(l); setRoute('tasksDetail'); }} remindersPlacement={tweaks.remindersPlacement} onOpenReminders={() => setRoute('reminders')} nativeHeader={tweaks.nativeHeader}/>;
+  else if (route === 'journal') screen = <window.JournalScreen onCreate={() => setSheet('entry')} nativeHeader={tweaks.nativeHeader}/>;
+  else if (route === 'more') screen = <window.MoreScreen theme={theme} setTheme={(t) => { setTheme(t); window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { theme: t } }, '*'); }} nativeHeader={tweaks.nativeHeader}/>;
+  else if (route === 'calendar') screen = <window.CalendarScreen onCreate={() => {}} nativeHeader={tweaks.nativeHeader}/>;
+  else if (route === 'together') screen = <window.TogetherScreenVariants variant={tweaks.usVariant} remindersPlacement={tweaks.remindersPlacement} onOpenSub={(k) => { setTogetherSub(k); setRoute('togetherSub'); }} nativeHeader={tweaks.nativeHeader}/>;
+  else if (route === 'togetherSub') {
+    const subMap = { notes: window.LoveNotesScreen, checkins: window.CheckinsScreen, expenses: window.ExpensesScreen, wishlists: window.WishlistsScreen, milestones: window.MilestonesScreen, plans: window.PlansScreen, reminders: window.RemindersScreen, timetables: window.TimetablesScreen };
+    const Sub = subMap[togetherSub] || window.TogetherScreen;
+    // Timetables hub passes onOpen for drilldown instead of the global FAB
+    if (togetherSub === 'timetables') {
+      screen = (
+        <Sub
+          onBack={() => setRoute('together')}
+          onCreate={() => setSheet('timetable')}
+          onOpen={(t) => { setTtDetail(t); setRoute('timetableDetail'); }}
+        />
+      );
+    } else {
+      screen = (
+        <div style={{ position: 'relative', height: '100%' }}>
+          <Sub onBack={() => setRoute('together')} onCreate={() => setSheet(subSheetMap[togetherSub])}/>
+          <button onClick={() => setSheet(subSheetMap[togetherSub])} style={{
+            position: 'absolute', right: 20, bottom: 28, width: 56, height: 56, borderRadius: 28,
+            background: C.gold, border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 10px 24px rgba(228,178,74,0.35)', zIndex: 20,
+          }}>
+            <Icon name="plus" size={22} color={C.ink} strokeWidth={2.5}/>
+          </button>
+        </div>
+      );
+    }
+  }
+  else if (route === 'timetableDetail') {
+    screen = <window.TimetableDetailScreen
+      timetable={ttDetail}
+      onBack={() => setRoute('togetherSub')}
+      onAddItem={() => setSheet('ttItem')}
+      onOpenItem={() => setSheet('ttItem')}
+      layout={tweaks.timetableLayout}
+    />;
+  }
+
+  const displayFont = tweaks.font || 'Bricolage Grotesque';
+  const style = `.coupl-app-mini [style*='${F.display}'] { font-family: "${displayFont}", system-ui, sans-serif !important; }`;
+  const showTabs = route !== 'tasksDetail' && route !== 'togetherSub' && route !== 'timetableDetail' && !route.startsWith('auth-') && route !== 'reminders';
+
+  return (
+    <div className="coupl-app coupl-app-mini" style={{ position: 'relative', height: '100%', overflow: 'hidden', background: C.ink }}>
+      <style>{style}</style>
+      <div style={{ height: '100%', overflow: 'auto' }}>{screen}</div>
+      {showTabs && <MiniTabs active={route === 'tasksDetail' ? 'tasks' : route} setActive={setRoute}/>}
+      <window.CreateReminderSheet open={sheet === 'reminder'} onClose={() => setSheet(null)} onSave={() => setSheet(null)}/>
+      <window.CreateEntrySheet open={sheet === 'entry'} onClose={() => setSheet(null)} onSave={() => setSheet(null)}/>
+      <window.CreateListSheet open={sheet === 'list'} onClose={() => setSheet(null)} onSave={() => setSheet(null)}/>
+      <window.LoveNoteSheet open={sheet === 'loveNote'} onClose={() => setSheet(null)} onSave={() => setSheet(null)}/>
+      <window.CheckinSheet open={sheet === 'checkin'} onClose={() => setSheet(null)} onSave={() => setSheet(null)}/>
+      <window.ExpenseSheet open={sheet === 'expense'} onClose={() => setSheet(null)} onSave={() => setSheet(null)}/>
+      <window.WishlistSheet open={sheet === 'wishlist'} onClose={() => setSheet(null)} onSave={() => setSheet(null)}/>
+      <window.MilestoneSheet open={sheet === 'milestone'} onClose={() => setSheet(null)} onSave={() => setSheet(null)}/>
+      <window.PlanSheet open={sheet === 'plan'} onClose={() => setSheet(null)} onSave={() => setSheet(null)}/>
+      <window.CreateTimetableSheet open={sheet === 'timetable'} onClose={() => setSheet(null)} onSave={() => setSheet(null)}/>
+      <window.AddTimetableItemSheet open={sheet === 'ttItem'} onClose={() => setSheet(null)} onSave={() => setSheet(null)} onOpenTimePicker={() => setSheet('ttTime')}/>
+      <window.TimePickerSheet open={sheet === 'ttTime'} onClose={() => setSheet('ttItem')} onSave={() => setSheet('ttItem')}/>
+      <window.ProfileSheet open={sheet === 'profile'} onClose={() => setSheet(null)} theme={theme} setTheme={(t) => { setTheme(t); window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { theme: t } }, '*'); }}/>
+    </div>
+  );
+}
+
+function MiniTabs({ active, setActive }) {
+  const tabs = [
+    { key: 'home', icon: 'home' },
+    { key: 'together', icon: 'heart' },
+    { key: 'tasks', icon: 'checkSquare' },
+    { key: 'journal', icon: 'feather' },
+    { key: 'calendar', icon: 'calendar' },
+  ];
+  return (
+    <div style={{
+      position: 'absolute', bottom: 0, left: 0, right: 0,
+      background: C.coal, borderTop: `1px solid ${C.line}`,
+      padding: '10px 8px 30px', display: 'flex',
+      justifyContent: 'space-around', zIndex: 10,
+    }}>
+      {tabs.map(t => {
+        const isActive = active === t.key;
+        return (
+          <button key={t.key} onClick={() => setActive(t.key)} style={{
+            flex: 1, background: 'transparent', border: 'none', cursor: 'pointer',
+            padding: '6px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, position: 'relative',
+          }}>
+            {isActive && <div style={{ position: 'absolute', top: -10, width: 20, height: 3, borderRadius: 2, background: C.gold }}/>}
+            <div style={{ width: 34, height: 30, borderRadius: 15, background: isActive ? `${C.gold}20` : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name={t.icon} size={17} color={isActive ? C.gold : C.fog} strokeWidth={isActive ? 2.5 : 2}/>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Root
+// ─────────────────────────────────────────────
+function App() {
+  const [tweaks, setTweaks] = React.useState(window.TWEAKS);
+  const [tweaksOpen, setTweaksOpen] = React.useState(false);
+  const [, forceRerender] = React.useReducer(x => x + 1, 0);
+
+  // Apply theme globally whenever tweaks.theme changes
+  React.useEffect(() => {
+    window.setCouplTheme(tweaks.theme || 'dark');
+    forceRerender();
+  }, [tweaks.theme]);
+
+  // Apply header style globally
+  window.__nativeHeader = !!tweaks.nativeHeader;
+
+  React.useEffect(() => {
+    const handler = (e) => {
+      if (e.data?.type === '__activate_edit_mode') setTweaksOpen(true);
+      if (e.data?.type === '__deactivate_edit_mode') setTweaksOpen(false);
+    };
+    window.addEventListener('message', handler);
+    // announce availability
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
+  const updateTweaks = (t) => {
+    setTweaks(t);
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits: t }, '*');
+  };
+
+  return (
+    <div className="stage" data-screen-label="01 Coupl Redesign">
+      <div style={{ textAlign: 'center', marginBottom: 36 }}>
+        <div style={{ fontSize: 11, letterSpacing: 2.4, textTransform: 'uppercase', color: '#80746A', fontWeight: 700, marginBottom: 10 }}>
+          Hi-fi redesign · Full app
+        </div>
+        <div style={{ fontFamily: `"${tweaks.font || 'Bricolage Grotesque'}"`, fontSize: 56, fontWeight: 700, color: '#F5EEE3', letterSpacing: -1.5, lineHeight: 1 }}>
+          coupl<span style={{ color: '#E4B24A' }}>.</span>
+        </div>
+        <div style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: 16, color: '#B3A89A', marginTop: 12 }}>
+          bold pastel blocks on warm dusk · your quiet place, together
+        </div>
+      </div>
+
+      <div className="frames">
+        <PresetFrame label="01 · Sign in" tab="auth-signin" tweaks={tweaks}/>
+        <PresetFrame label="02 · Onboarding" tab="auth-onboard" tweaks={tweaks}/>
+        <PresetFrame label="03 · Invite code" tab="auth-invite" tweaks={tweaks}/>
+      </div>
+
+      <div style={{ height: 56 }}/>
+      <div style={{ textAlign: 'center', marginBottom: 20 }}>
+        <div style={{ fontSize: 11, letterSpacing: 2.4, textTransform: 'uppercase', color: '#80746A', fontWeight: 700 }}>
+          Main screens · 5-tab app
+        </div>
+      </div>
+
+      <div className="frames">
+        <PresetFrame label="04 · Home" tab="home" tweaks={tweaks}/>
+        <PresetFrame label="05 · Us · hub" tab="together" tweaks={tweaks}/>
+        <PresetFrame label="06 · Tasks" tab="tasks" tweaks={tweaks}/>
+      </div>
+
+      <div style={{ height: 32 }}/>
+      <div className="frames">
+        <PresetFrame label="07 · Journal" tab="journal" tweaks={tweaks}/>
+        <PresetFrame label="08 · Calendar" tab="calendar" tweaks={tweaks}/>
+        <PresetFrame label={`09 · Reminders · ${tweaks.remindersPlacement === 'home-child' ? 'on Home' : tweaks.remindersPlacement === 'us-child' ? 'in Us' : 'in Tasks'}`} tab="reminders" tweaks={tweaks}/>
+      </div>
+
+      <div style={{ height: 32 }}/>
+      <div className="frames">
+        <PresetFrame label="10 · Task list detail" tab="tasksDetail" tweaks={tweaks}/>
+        <PresetFrame label="11 · Profile · full" tab="more" tweaks={tweaks}/>
+        <Frame label="12 · Tab bar · 5 tabs"><TabBarShowcase/></Frame>
+      </div>
+
+      <div style={{ height: 64 }}/>
+      <div style={{ textAlign: 'center', marginBottom: 20 }}>
+        <div style={{ fontSize: 11, letterSpacing: 2.4, textTransform: 'uppercase', color: '#80746A', fontWeight: 700, marginBottom: 10 }}>
+          Us tab · Three directions
+        </div>
+        <div style={{ fontFamily: `"${tweaks.font || 'Bricolage Grotesque'}"`, fontSize: 36, fontWeight: 700, color: '#F5EEE3', letterSpacing: -0.8 }}>
+          Same content, three voices<span style={{ color: '#E4B24A' }}>.</span>
+        </div>
+        <div style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: 14, color: '#B3A89A', marginTop: 8, maxWidth: 520, margin: '8px auto 0', lineHeight: 1.5 }}>
+          Three takes on the Us hub. All keep every shared space, the "US." wordmark, gold dot, and couple-first voice — but reframe the rhythm.
+        </div>
+      </div>
+      <div className="frames">
+        <UsVariantFrame label="US-A · Editorial" variant="editorial" tweaks={tweaks}/>
+        <UsVariantFrame label="US-B · Poetic" variant="poetic" tweaks={tweaks}/>
+        <UsVariantFrame label="US-C · Scrapbook" variant="scrapbook" tweaks={tweaks}/>
+      </div>
+
+      <div style={{ height: 64 }}/>
+      <div style={{ textAlign: 'center', marginBottom: 20 }}>
+      </div>
+      <div className="frames">
+        <Frame label="13 · Love notes"><SubScreenFrame which="notes"/></Frame>
+        <Frame label="14 · Check-ins"><SubScreenFrame which="checkins"/></Frame>
+        <Frame label="15 · Expenses"><SubScreenFrame which="expenses"/></Frame>
+      </div>
+      <div style={{ height: 32 }}/>
+      <div className="frames">
+        <Frame label="16 · Wishlists"><SubScreenFrame which="wishlists"/></Frame>
+        <Frame label="17 · Milestones"><SubScreenFrame which="milestones"/></Frame>
+        <Frame label="18 · Plans"><SubScreenFrame which="plans"/></Frame>
+      </div>
+
+      <div style={{ height: 64 }}/>
+      <div style={{ textAlign: 'center', marginBottom: 20 }}>
+        <div style={{ fontSize: 11, letterSpacing: 2.4, textTransform: 'uppercase', color: '#80746A', fontWeight: 700 }}>
+          Create flows · Bottom sheets
+        </div>
+      </div>
+      <div className="frames">
+        <SheetFrame label="19 · New reminder" kind="reminder"/>
+        <SheetFrame label="20 · New journal entry" kind="entry"/>
+        <SheetFrame label="21 · New task list" kind="list"/>
+      </div>
+      <div style={{ height: 32 }}/>
+      <div className="frames">
+        <SheetFrame label="22 · Love note" kind="loveNote"/>
+        <SheetFrame label="23 · Check-in" kind="checkin"/>
+        <SheetFrame label="24 · Expense" kind="expense"/>
+      </div>
+      <div style={{ height: 32 }}/>
+      <div className="frames">
+        <SheetFrame label="25 · Wishlist item" kind="wishlist"/>
+        <SheetFrame label="26 · Milestone" kind="milestone"/>
+        <SheetFrame label="27 · Plan" kind="plan"/>
+      </div>
+      <div style={{ height: 32 }}/>
+      <div className="frames">
+        <SheetFrame label="28 · Profile & settings" kind="profile"/>
+      </div>
+
+      {/* Timetables — new feature */}
+      <div style={{ height: 44 }}/>
+      <div style={{ textAlign: 'center', marginBottom: 30 }}>
+        <div style={{ fontSize: 11, letterSpacing: 2.4, textTransform: 'uppercase', color: '#80746A', fontWeight: 700, marginBottom: 10 }}>
+          Timetables · new feature
+        </div>
+        <div style={{ fontFamily: `"${tweaks.font || 'Bricolage Grotesque'}"`, fontSize: 36, fontWeight: 700, color: '#F5EEE3', letterSpacing: -0.8 }}>
+          Weekly rhythms<span style={{ color: '#E4B24A' }}>.</span>
+        </div>
+        <div style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: 14, color: '#B3A89A', marginTop: 8, maxWidth: 520, margin: '8px auto 0', lineHeight: 1.5 }}>
+          Shared planners for meals, workouts, study — anything that repeats. Sits inside Us as another shared space. Three week-view layouts, pastel templates, couple-aware items.
+        </div>
+      </div>
+      <div className="frames">
+        <Frame label="29 · Timetables · hub"><SubScreenFrame which="timetables"/></Frame>
+        <TimetableFrame label="30 · Empty state" variant="empty"/>
+        <TimetableFrame label="31 · Detail · Grid" variant="detail" layout="grid"/>
+      </div>
+      <div style={{ height: 32 }}/>
+      <div className="frames">
+        <TimetableFrame label="32 · Detail · List" variant="detail" layout="list"/>
+        <TimetableFrame label="33 · Detail · Timeline" variant="detail" layout="timeline"/>
+        <SheetFrame label="34 · New timetable" kind="timetable"/>
+      </div>
+      <div style={{ height: 32 }}/>
+      <div className="frames">
+        <SheetFrame label="35 · New item" kind="ttItem"/>
+        <SheetFrame label="36 · Time picker" kind="ttTime"/>
+      </div>
+
+      <div style={{ height: 80 }}/>
+      <div style={{ maxWidth: 920, margin: '0 auto', padding: 28, background: '#151110', borderRadius: 24, border: '1px solid #2B241E' }}>
+        <div style={{ fontSize: 11, letterSpacing: 2.4, textTransform: 'uppercase', color: '#80746A', fontWeight: 700, marginBottom: 10 }}>
+          Design notes
+        </div>
+        <div style={{ fontFamily: `"${tweaks.font || 'Bricolage Grotesque'}"`, fontSize: 22, fontWeight: 700, color: '#F5EEE3', marginBottom: 14, lineHeight: 1.2 }}>
+          Warm Block — a remix of Intimate Dusk with reference-style pastel slabs.
+        </div>
+        <div style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: 14, color: '#B3A89A', lineHeight: 1.6 }}>
+          The original brand stays: warm-shifted black, gold horizontal rules, wavy underlines, Georgia italic for quotes & verses. The remix adds chunky Bricolage display type, bold pastel block-cards (peach, lavender, butter, mint, rose, sky), and triple-ring "couple rings" that scale from the 3-stat fitness ring pattern to Connect / Shared / Present — replacing generic productivity language with couple-first semantics. Tap any tab in the frames to explore.
+        </div>
+      </div>
+
+      <div style={{ height: 60 }}/>
+      <TweaksPanel open={tweaksOpen} tweaks={tweaks} setTweaks={updateTweaks} onClose={() => { setTweaksOpen(false); window.parent.postMessage({ type: '__deactivate_edit_mode_manual' }, '*'); }}/>
+    </div>
+  );
+}
+
+// Us variant showcase frame — renders a specific Us variant without tab bar
+function UsVariantFrame({ label, variant, tweaks }) {
+  return (
+    <Frame label={label}>
+      <div className="coupl-app-mini" style={{ position: 'relative', height: '100%', overflow: 'hidden', background: C.ink }}>
+        <div style={{ height: '100%', overflow: 'auto' }}>
+          <window.TogetherScreenVariants variant={variant} remindersPlacement={tweaks.remindersPlacement} onOpenSub={() => {}}/>
+        </div>
+      </div>
+    </Frame>
+  );
+}
+
+// Sub-screen preview (Us hub children)
+function SubScreenFrame({ which }) {
+  const map = { notes: window.LoveNotesScreen, checkins: window.CheckinsScreen, expenses: window.ExpensesScreen, wishlists: window.WishlistsScreen, milestones: window.MilestonesScreen, plans: window.PlansScreen, timetables: window.TimetablesScreen };
+  const Sub = map[which];
+  return (
+    <div className="coupl-app-mini" style={{ position: 'relative', height: '100%', overflow: 'hidden', background: C.ink }}>
+      <div style={{ height: '100%', overflow: 'auto' }}><Sub onBack={() => {}} onOpen={() => {}} onCreate={() => {}}/></div>
+    </div>
+  );
+}
+
+// Timetable showcase frame — standalone (no shell) for detail / empty variants
+function TimetableFrame({ label, variant, layout }) {
+  return (
+    <Frame label={label}>
+      <TimetableFrameInner variant={variant} layout={layout}/>
+    </Frame>
+  );
+}
+function TimetableFrameInner({ variant, layout }) {
+  // Force "empty" state by clicking the eye toggle on mount
+  const containerRef = React.useRef(null);
+  React.useEffect(() => {
+    if (variant === 'empty' && containerRef.current) {
+      const eye = containerRef.current.querySelector('[title="Toggle empty state"]');
+      if (eye) eye.click();
+    }
+  }, [variant]);
+
+  if (variant === 'detail') {
+    return (
+      <div className="coupl-app-mini" style={{ position: 'relative', height: '100%', overflow: 'hidden', background: C.ink }}>
+        <window.TimetableDetailScreen onBack={() => {}} onAddItem={() => {}} onOpenItem={() => {}} layout={layout}/>
+      </div>
+    );
+  }
+  return (
+    <div ref={containerRef} className="coupl-app-mini" style={{ position: 'relative', height: '100%', overflow: 'hidden', background: C.ink }}>
+      <div style={{ height: '100%', overflow: 'auto' }}>
+        <window.TimetablesScreen onBack={() => {}} onOpen={() => {}} onCreate={() => {}}/>
+      </div>
+    </div>
+  );
+}
+
+function TabBarShowcase() {
+  const [active, setActive] = React.useState('together');
+  return (
+    <div style={{ position: 'relative', height: '100%', background: C.ink, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px 20px' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontFamily: F.display, fontSize: 34, fontWeight: 700, color: C.bone, letterSpacing: -0.8, lineHeight: 1 }}>Seven tabs<span style={{ color: C.gold }}>.</span></div>
+        <div style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: 13, color: C.mist, marginTop: 12, maxWidth: 280, lineHeight: 1.5 }}>
+          Home → Us → Calendar → Tasks → Reminders → Journal → More. Icons-only at 44px — the warm dusk underneath shows through.
+        </div>
+        <div style={{ marginTop: 28, display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+          {['home','heart','calendar','checkSquare','bell','feather','grid'].map((ic, i) => (
+            <div key={i} style={{ width: 40, height: 40, borderRadius: 12, background: i === 1 ? C.gold + '22' : C.card, border: `1px solid ${i === 1 ? C.gold : C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name={ic} size={16} color={i === 1 ? C.gold : C.fog}/>
+            </div>
+          ))}
+        </div>
+      </div>
+      <MiniTabs active={active} setActive={setActive}/>
+    </div>
+  );
+}
+
+// Sheet preview frame — shows sheet open on top of underlying screen
+function SheetFrame({ label, kind }) {
+  return (
+    <Frame label={label}>
+      <SheetPreview kind={kind}/>
+    </Frame>
+  );
+}
+
+function SheetPreview({ kind }) {
+  const [open, setOpen] = React.useState(true);
+  const bgMap = {
+    reminder: window.RemindersScreen,
+    entry: window.JournalScreen,
+    list: window.TasksScreen,
+    loveNote: window.LoveNotesScreen,
+    checkin: window.CheckinsScreen,
+    expense: window.ExpensesScreen,
+    wishlist: window.WishlistsScreen,
+    milestone: window.MilestonesScreen,
+    plan: window.PlansScreen,
+    timetable: window.TimetablesScreen,
+    ttItem: window.TimetableDetailScreen,
+    ttTime: window.TimetableDetailScreen,
+    profile: window.HomeScreen,
+  };
+  const sheetMap = {
+    reminder: window.CreateReminderSheet,
+    entry: window.CreateEntrySheet,
+    list: window.CreateListSheet,
+    loveNote: window.LoveNoteSheet,
+    checkin: window.CheckinSheet,
+    expense: window.ExpenseSheet,
+    wishlist: window.WishlistSheet,
+    milestone: window.MilestoneSheet,
+    plan: window.PlanSheet,
+    timetable: window.CreateTimetableSheet,
+    ttItem: window.AddTimetableItemSheet,
+    ttTime: window.TimePickerSheet,
+    profile: window.ProfileSheet,
+  };
+  const Background = bgMap[kind] || window.TasksScreen;
+  const Sheet = sheetMap[kind];
+
+  return (
+    <div style={{ position: 'relative', height: '100%', overflow: 'hidden', background: C.ink }}>
+      <div style={{ height: '100%', overflow: 'hidden' }}>
+        <Background onCreate={() => {}} onOpenList={() => {}} mood="good" setMood={() => {}} selectedDay={17} setSelectedDay={() => {}} partnerMood="GOOD"/>
+      </div>
+      {Sheet && <Sheet open={open} onClose={() => setOpen(o => !o)} onSave={() => setOpen(false)} theme="dark" setTheme={() => {}}/>}
+    </div>
+  );
+}
+
+// Boot
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App/>);
+</script>
+</body>
+</html>

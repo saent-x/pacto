@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { format } from 'date-fns';
 import { db, id } from '@/src/lib/instant';
+import { notifySpaceMutation } from '@/src/lib/push';
 import { useSession } from './useSession';
 
 type MilestoneInput = {
@@ -8,10 +9,13 @@ type MilestoneInput = {
   date: string;
   description?: string | null;
   icon?: string;
+  color?: string;
+  repeatYearly?: boolean;
+  quote?: string;
 };
 
 export function useMilestones() {
-  const { activeCouple, user } = useSession();
+  const { activeCouple, user, space } = useSession();
   const coupleId = activeCouple?.couple?.id ?? null;
 
   const { data, isLoading: queryLoading } = db.useQuery(
@@ -49,12 +53,23 @@ export function useMilestones() {
             date: input.date,
             description: input.description ?? undefined,
             icon: input.icon ?? '🎉',
+            color: input.color ?? undefined,
+            repeatYearly: input.repeatYearly ?? undefined,
+            quote: input.quote ?? undefined,
             createdAt: Date.now(),
           })
           .link({ couple: coupleId, createdBy: user.id }),
       );
+      await notifySpaceMutation({
+        spaceId: coupleId,
+        spaceKind: space?.kind ?? null,
+        excludeUserId: user.id,
+        title: user.displayName ?? 'Someone',
+        body: `added a milestone: ${input.title}`,
+        route: '/(tabs)/us/milestones',
+      });
     },
-    [coupleId, user],
+    [coupleId, user, space?.kind],
   );
 
   const update = useCallback(
@@ -64,6 +79,9 @@ export function useMilestones() {
       if (input.date !== undefined) updates.date = input.date;
       if (input.description !== undefined) updates.description = input.description ?? null;
       if (input.icon !== undefined) updates.icon = input.icon;
+      if (input.color !== undefined) updates.color = input.color;
+      if (input.repeatYearly !== undefined) updates.repeatYearly = input.repeatYearly;
+      if (input.quote !== undefined) updates.quote = input.quote;
       await db.transact(db.tx.milestones[milestoneId].update(updates));
     },
     [],

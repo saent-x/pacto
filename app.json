@@ -1,61 +1,113 @@
 {
   "expo": {
-    "name": "Coupl",
-    "slug": "coupl",
+    "name": "Pacto",
+    "slug": "pacto",
     "version": "1.0.0",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "coupl",
+    "scheme": "pacto",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/images/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0F0D0B"
-    },
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.coupl.app",
-      "buildNumber": "1"
+      "supportsTablet": false,
+      "bundleIdentifier": "com.stbrnstudios.pacto",
+      "buildNumber": "1",
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Pacto uses your location to show local weather on your Home screen.",
+        "NSMicrophoneUsageDescription": "Pacto uses the microphone to transcribe your AI assistant requests on this device.",
+        "NSUserNotificationsUsageDescription": "Pacto sends reminders and notifies you when your partner adds something to your shared space.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
-      "package": "com.coupl.app",
+      "package": "com.pacto.app",
       "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#F5EEE3",
+        "foregroundImage": "./assets/images/adaptive-icon-foreground.png",
+        "backgroundImage": "./assets/images/adaptive-icon-background.png",
+        "monochromeImage": "./assets/images/adaptive-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA"
+      ],
+      "predictiveBackGestureEnabled": true
     },
     "web": {
       "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "output": "single",
+      "favicon": "./assets/images/icon.png",
+      "backgroundColor": "#FAF8F2",
+      "themeColor": "#FAF8F2"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0F0D0B",
+          "backgroundColor": "#FAF8F2",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200
+          "imageWidth": 200,
+          "dark": {
+            "backgroundColor": "#0F0D0B",
+            "image": "./assets/images/splash-icon.png",
+            "imageWidth": 200
+          }
         }
       ],
       "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Pacto to show local weather on your Home screen."
+        }
+      ],
       "@react-native-community/datetimepicker",
       "expo-font",
       [
         "expo-camera",
         {
-          "cameraPermission": "Coupl needs camera access to scan your partner's encryption key QR code."
+          "cameraPermission": "Pacto needs camera access to scan an invite QR code."
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-apple-authentication",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#FAF8F2",
+          "defaultChannel": "default"
+        }
+      ],
+      [
+        "llama.rn",
+        {
+          "enableEntitlements": false,
+          "entitlementsProfile": "production",
+          "forceCxx20": true,
+          "enableOpenCLAndHexagon": true
+        }
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "378cd223-a0f0-4361-b5ea-57889e30a0a0"
+      }
+    },
+    "owner": "stbrn-studios"
   }
 }

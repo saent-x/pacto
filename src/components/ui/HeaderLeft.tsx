@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
-import { Pressable } from 'react-native';
 import { useTheme } from '@/src/lib/theme';
 import { Icon, IconName } from './Icon';
+import { PressScale } from './PressScale';
 
 type Mode = 'home' | 'back';
 
@@ -23,8 +23,18 @@ export function HeaderLeft({ mode }: { mode: Mode }) {
   }
 
   return (
-    <Pressable onPress={onPress} hitSlop={12} style={{ padding: 4 }}>
-      <Icon name={icon} size={22} color={C.bone} strokeWidth={2.4} />
-    </Pressable>
+    <PressScale
+      onPress={onPress}
+      hitSlop={12}
+      style={{
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Icon name={icon} size={22} color={C.inkColor} strokeWidth={2.4} />
+    </PressScale>
   );
 }

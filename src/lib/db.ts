@@ -1,7 +1,9 @@
 import { init } from '@instantdb/react-native';
 import schema from '../../instant.schema';
 
-const appId = process.env.EXPO_PUBLIC_INSTANT_APP_ID;
+const appId =
+  process.env.EXPO_PUBLIC_INSTANT_APP_ID ??
+  (process.env.NODE_ENV === 'test' || process.env.VITEST ? 'test-instant-app-id' : undefined);
 
 if (!appId) {
   throw new Error(
@@ -9,4 +11,8 @@ if (!appId) {
   );
 }
 
-export const db = init({ appId, schema });
+export const db = init({
+  appId,
+  schema,
+  devtool: process.env.EXPO_PUBLIC_ENABLE_INSTANT_DEVTOOLS === '1',
+});
