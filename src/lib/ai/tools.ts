@@ -74,17 +74,6 @@ const checkInSchema = z.object({
   checkInDate: dateKeySchema,
 });
 
-const expenseSchema = z.object({
-  title: z.string().min(1),
-  amount: z.number().finite().positive(),
-  currency: optionalText,
-  splitType: optionalText,
-  splitAmount: optionalNumber,
-  category: optionalText,
-  date: dateKeySchema,
-  isSettled: optionalBoolean,
-});
-
 const wishlistSchema = z.object({
   name: z.string().min(1),
   icon: optionalText,
@@ -233,19 +222,6 @@ const DOMAIN_CONFIGS: Record<AiDomain, DomainConfig> = {
     creatorLink: 'author',
     defaults: (_input, ctx) => ({ createdAt: ctx.now, updatedAt: ctx.now }),
   },
-  expenses: {
-    domain: 'expenses',
-    entity: 'expenses',
-    singular: 'expense',
-    createSchema: expenseSchema,
-    creatorLink: 'paidBy',
-    defaults: (input, ctx) => ({
-      currency: input.currency ?? 'GBP',
-      isSettled: input.isSettled ?? false,
-      createdAt: ctx.now,
-      updatedAt: ctx.now,
-    }),
-  },
   wishlists: {
     domain: 'wishlists',
     entity: 'wishlists',
@@ -280,7 +256,7 @@ const DOMAIN_CONFIGS: Record<AiDomain, DomainConfig> = {
   plans: {
     domain: 'plans',
     entity: 'plans',
-    singular: 'plan',
+    singular: 'target',
     createSchema: planSchema,
     creatorLink: 'createdBy',
     defaults: (_input, ctx) => ({ status: 'active', priority: 0, createdAt: ctx.now, updatedAt: ctx.now }),

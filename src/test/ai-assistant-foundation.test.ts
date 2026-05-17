@@ -8,11 +8,17 @@ import {
   buildMutationPlan,
   confirmAiActionDrafts,
   createInitialAiTurn,
+  filterToolCallsForAllowedDomains,
   parseAiToolCall,
+  polishDraft,
   processAiAudioTurn,
   reduceAiTurn,
   runReadTool,
 } from '@/src/lib/ai';
+import {
+  buildAiSessionQuery,
+  buildAiSessionRecords,
+} from '@/src/lib/ai/sessionProvider';
 
 describe('Pacto AI assistant foundation', () => {
   it('declares local model packs for Whisper and Qwen with download metadata', () => {
@@ -46,7 +52,6 @@ describe('Pacto AI assistant foundation', () => {
       'events',
       'loveNotes',
       'checkIns',
-      'expenses',
       'wishlists',
       'wishlistItems',
       'milestones',
@@ -94,11 +99,11 @@ describe('Pacto AI assistant foundation', () => {
 
     expect(() =>
       parseAiToolCall({
-        domain: 'expenses',
+        domain: 'plans',
         operation: 'create',
-        input: { title: 'Dinner' },
+        input: { title: 'Dinner', budget: 'not-a-number' },
       }),
-    ).toThrow(/amount/);
+    ).toThrow(/budget/);
   });
 
   it('builds deterministic InstantDB mutation plans only from confirmed drafts', () => {
@@ -218,32 +223,58 @@ describe('Pacto AI assistant foundation', () => {
       today: '2026-04-30',
       timezone: 'Europe/London',
       records: {
-        expenses: [
-          { id: 'expense-1', title: 'Dinner', isSettled: false, createdAt: 10 },
-          { id: 'expense-2', title: 'Coffee', isSettled: true, createdAt: 20 },
+        tasks: [
+          { id: 'task-1', title: 'Dinner plan', isCompleted: false, createdAt: 10 },
+          { id: 'task-2', title: 'Coffee refill', isCompleted: true, createdAt: 20 },
         ],
       },
     });
     expect(context).toContain('today: 2026-04-30');
     expect(context).toContain('partner: Sam');
-    expect(context).toContain('expense-2 "Coffee"; expense-1 "Dinner"');
+    expect(context).toContain('task-2 "Coffee refill"; task-1 "Dinner plan"');
 
     const readCall = parseAiToolCall({
-      id: 'read-expenses',
-      domain: 'expenses',
+      id: 'read-tasks',
+      domain: 'tasks',
       operation: 'read',
       input: { query: 'dinner', limit: 5 },
     });
 
     expect(
       runReadTool(readCall, [
-        { id: 'expense-1', title: 'Dinner' },
-        { id: 'expense-2', title: 'Coffee' },
+        { id: 'task-1', title: 'Dinner plan' },
+        { id: 'task-2', title: 'Coffee refill' },
       ]),
     ).toMatchObject({
-      callId: 'read-expenses',
+      callId: 'read-tasks',
       ok: true,
-      records: [{ id: 'expense-1', title: 'Dinner' }],
+      records: [{ id: 'task-1', title: 'Dinner plan' }],
+    });
+  });
+
+  it('limits assistant session queries and prompt records to enabled features', () => {
+    const enabled = (featureId: string) => ['tasks', 'calendar'].includes(featureId);
+    const query = buildAiSessionQuery('space-1', enabled as any) as Record<string, any>;
+
+    expect(Object.keys(query).sort()).toEqual(['events', 'taskLists', 'tasks']);
+    expect(query.tasks.$.where).toEqual({ 'couple.id': 'space-1' });
+    expect(query.events.$.where).toEqual({ 'couple.id': 'space-1' });
+    expect(query.reminders).toBeUndefined();
+    expect(query.loveNotes).toBeUndefined();
+
+    const records = buildAiSessionRecords(
+      {
+        tasks: [{ id: 'task-1' }],
+        events: [{ id: 'event-1' }],
+        reminders: [{ id: 'reminder-1' }],
+      } as any,
+      enabled as any,
+    );
+
+    expect(records).toEqual({
+      tasks: [{ id: 'task-1' }],
+      taskLists: [],
+      events: [{ id: 'event-1' }],
     });
   });
 
@@ -252,7 +283,7 @@ describe('Pacto AI assistant foundation', () => {
       audioUri: 'file:///dictation.m4a',
       contextPrompt: 'today: 2026-04-30',
       records: {
-        expenses: [{ id: 'expense-1', title: 'Dinner', isSettled: false }],
+        tasks: [{ id: 'task-1', title: 'Dinner plan', isCompleted: false }],
       },
       transcriptionAdapter: {
         transcribeFile: async (audioUri) => `transcribed ${audioUri}`,
@@ -263,8 +294,8 @@ describe('Pacto AI assistant foundation', () => {
           expect(messages[1].content).toBe('transcribed file:///dictation.m4a');
           return [
             {
-              id: 'read-expenses',
-              domain: 'expenses',
+              id: 'read-tasks',
+              domain: 'tasks',
               operation: 'read',
               input: { query: 'dinner' },
             },
@@ -290,6 +321,63 @@ describe('Pacto AI assistant foundation', () => {
       },
     ]);
     expect(result.assistantMessage).toContain('review');
+  });
+
+  it('filters planner tool calls to enabled assistant domains before reads and mutations', async () => {
+    const result = await processAiAudioTurn({
+      audioUri: 'file:///dictation.m4a',
+      contextPrompt: 'today: 2026-04-30',
+      allowedDomains: ['tasks'],
+      records: {
+        tasks: [{ id: 'task-1', title: 'Dinner plan' }],
+        reminders: [{ id: 'reminder-1', title: 'Disabled reminder' }],
+      },
+      transcriptionAdapter: {
+        transcribeFile: async () => 'find dinner and remind me',
+      },
+      planningAdapter: {
+        plan: async () => [
+          {
+            id: 'read-tasks',
+            domain: 'tasks',
+            operation: 'read',
+            input: { query: 'dinner' },
+          },
+          {
+            id: 'create-reminder',
+            domain: 'reminders',
+            operation: 'create',
+            input: { title: 'Disabled reminder', dueAt: 1777572000000 },
+          },
+        ],
+      },
+    });
+
+    expect(result.toolCalls.map((call) => call.domain)).toEqual(['tasks']);
+    expect(result.readResults).toHaveLength(1);
+    expect(result.actionDrafts).toHaveLength(0);
+    expect(result.assistantMessage).toContain('Found 1 tasks record');
+  });
+
+  it('drops disabled domains before creating assistant action drafts', () => {
+    const calls = [
+      parseAiToolCall({
+        id: 'create-task',
+        domain: 'tasks',
+        operation: 'create',
+        input: { title: 'Buy flowers' },
+      }),
+      parseAiToolCall({
+        id: 'create-reminder',
+        domain: 'reminders',
+        operation: 'create',
+        input: { title: 'Disabled reminder', dueAt: 1777572000000 },
+      }),
+    ];
+
+    expect(filterToolCallsForAllowedDomains(calls, ['tasks']).map((call) => call.id)).toEqual([
+      'create-task',
+    ]);
   });
 
   it('applies confirmed action drafts through a mutation adapter', async () => {
@@ -337,5 +425,35 @@ describe('Pacto AI assistant foundation', () => {
       ],
     });
     expect(applied).toEqual(result.plans);
+  });
+
+  it('polishes memory drafts through an explicit local completion adapter', async () => {
+    const seenMessages: unknown[] = [];
+    let disposed = false;
+
+    const result = await polishDraft('  we made soup and talked for ages  ', {
+      complete: async (messages) => {
+        seenMessages.push(...messages);
+        return '"We made soup, stayed at the table, and kept talking."';
+      },
+      dispose: async () => {
+        disposed = true;
+      },
+    });
+
+    expect(result).toBe('We made soup, stayed at the table, and kept talking.');
+    expect(seenMessages).toMatchObject([
+      { role: 'system' },
+      { role: 'user', content: 'we made soup and talked for ages' },
+    ]);
+    expect(disposed).toBe(false);
+  });
+
+  it('keeps the original memory draft when polish returns empty output', async () => {
+    await expect(
+      polishDraft('Original text', {
+        complete: async () => '   ',
+      }),
+    ).resolves.toBe('Original text');
   });
 });

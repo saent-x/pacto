@@ -1,40 +1,87 @@
-// Pacto design tokens — WARM CALM palette
+// Pacto design tokens — brand-spec palette
 // Synced with src/constants/colors.ts. This file is read by useTheme() / theme.tsx.
 
-// ─── New WARM CALM tokens (light) ────────────────────────────────
-const L_BG = '#FAF8F2';
-const L_BG_SOFT = '#F4F0E5';
-const L_BG_CARD = '#FFFFFF';
-const L_INK = '#2A241B';
-const L_INK_2 = '#5C5345';
-const L_INK_3 = '#918875';
-const L_LINE = '#E8E2D4';
-const L_LINE_2 = '#DBD3C0';
-const L_ACCENT = '#C7755A';
-const L_ACCENT_2 = '#6FB3A2';
-const L_ACCENT_3 = '#C8AE73';
-const L_ACCENT_SOFT = '#F5DDD3';
-const L_ACCENT_2_SOFT = '#DCEDE7';
-const L_ACCENT_3_SOFT = '#EEE4C8';
+// Hex values are OKLCH-authored and converted for React Native style support.
+// Light reads as warm cream paper. Dark reads as deep navy ink.
 
-// ─── New WARM CALM tokens (dark) ─────────────────────────────────
-const D_BG = '#2A2620';
-const D_BG_SOFT = '#322D26';
-const D_BG_CARD = '#39322B';
-const D_INK = '#F2EEE5';
-const D_INK_2 = '#C2BAA9';
-const D_INK_3 = '#847A6A';
-const D_LINE = '#4D4537';
-const D_LINE_2 = '#5B5141';
-const D_ACCENT = '#D08B6F';
-const D_ACCENT_2 = '#7FBFAF';
-const D_ACCENT_3 = '#D2BC85';
-const D_ACCENT_SOFT = '#4D352B';
-const D_ACCENT_2_SOFT = '#2C443D';
-const D_ACCENT_3_SOFT = '#4A4128';
+// ─── Full palette tokens (light) ─────────────────────────────────
+const L_BG = '#F8F2E7';
+const L_BG_SOFT = '#EFE5D5';
+const L_BG_CARD = '#FFFDF8';
+const L_INK = '#292D3D';
+const L_INK_2 = '#666C7A';
+const L_INK_3 = '#94909A';
+const L_LINE = '#E3D8C9';
+const L_LINE_2 = '#D4C7B5';
+const L_ACCENT = '#E06F55';
+const L_ACCENT_2 = '#76A99B';
+const L_ACCENT_3 = '#D5B55B';
+const L_ACCENT_SOFT = '#F5D7CE';
+const L_ACCENT_2_SOFT = '#DCEBE5';
+const L_ACCENT_3_SOFT = '#F1E0AB';
+
+// ─── Full palette tokens (dark) ──────────────────────────────────
+const D_BG = '#171B2A';
+const D_BG_SOFT = '#222738';
+const D_BG_CARD = '#282E42';
+const D_INK = '#F7F1E8';
+const D_INK_2 = '#C9C3BB';
+const D_INK_3 = '#A29B92';
+const D_LINE = '#3A415A';
+const D_LINE_2 = '#4A526B';
+const D_ACCENT = '#E28568';
+const D_ACCENT_2 = '#86BAAA';
+const D_ACCENT_3 = '#E0BE66';
+const D_ACCENT_SOFT = '#55333A';
+const D_ACCENT_2_SOFT = '#2E4A49';
+const D_ACCENT_3_SOFT = '#55482C';
+
+const lightPalette = {
+  peach: '#F0A081',
+  peachInk: '#3B1D12',
+  lavender: '#C3A4D8',
+  lavenderInk: '#211735',
+  butter: '#E8C95E',
+  butterInk: '#3A2B07',
+  mint: '#94CFAE',
+  mintInk: '#102C1C',
+  rose: '#D6909D',
+  roseInk: '#3A1420',
+  sky: '#A9CBE3',
+  skyInk: '#0F2634',
+  reminders: '#9A7CC8',
+  tasks: '#5F9B7B',
+  journal: '#B7785D',
+  wish: '#C99135',
+  plans: '#789D57',
+  error: '#BD5948',
+  success: '#6D965A',
+};
+
+const darkPalette = {
+  peach: '#D07A62',
+  peachInk: '#FAE5D8',
+  lavender: '#B698D7',
+  lavenderInk: '#F0EAFE',
+  butter: '#C9A94E',
+  butterInk: '#FFF0BE',
+  mint: '#72AB8E',
+  mintInk: '#DDF3E5',
+  rose: '#B87586',
+  roseInk: '#F9DFE6',
+  sky: '#8EB4CE',
+  skyInk: '#E0F0F8',
+  reminders: '#B89BE0',
+  tasks: '#7CBC9A',
+  journal: '#D08F70',
+  wish: '#D8A64C',
+  plans: '#95BC74',
+  error: '#E27B68',
+  success: '#91C477',
+};
 
 const darkTokens = {
-  // ─── Pacto WARM CALM tokens ─────────────────────────────────
+  // ─── Pacto FULL PALETTE tokens ──────────────────────────────
   bg: D_BG,
   bgSoft: D_BG_SOFT,
   bgCard: D_BG_CARD,
@@ -54,20 +101,20 @@ const darkTokens = {
   ink: D_BG,
   coal: D_BG_SOFT,
   card: D_BG_CARD,
-  cardHi: '#3F3830',
+  cardHi: '#323A51',
   line: D_LINE,
   lineHi: D_LINE_2,
   bone: D_INK,
   mist: D_INK_2,
   fog: D_INK_3,
-  ash: '#6E6555',
+  ash: '#777F92',
   gold: D_ACCENT,
-  goldDim: '#A3654C',
-  goldSoft: 'rgba(208,139,111,0.16)',
+  goldDim: '#B96650',
+  goldSoft: '#4E3138',
 };
 
 const lightTokens = {
-  // ─── Pacto WARM CALM tokens ─────────────────────────────────
+  // ─── Pacto FULL PALETTE tokens ──────────────────────────────
   bg: L_BG,
   bgSoft: L_BG_SOFT,
   bgCard: L_BG_CARD,
@@ -87,45 +134,49 @@ const lightTokens = {
   ink: L_BG,
   coal: L_BG_SOFT,
   card: L_BG_CARD,
-  cardHi: '#FFFDF7',
+  cardHi: '#FFFFFF',
   line: L_LINE,
   lineHi: L_LINE_2,
   bone: L_INK,
   mist: L_INK_2,
   fog: L_INK_3,
-  ash: '#A89E89',
+  ash: '#B1A798',
   gold: L_ACCENT,
-  goldDim: '#9F5A40',
-  goldSoft: 'rgba(199,117,90,0.14)',
+  goldDim: '#B85D45',
+  goldSoft: '#F2D8C8',
 };
 
 export const pastels = {
-  peach: '#F4A68C',
+  peach: '#F0A081',
   peachInk: '#3A1F14',
-  lavender: '#B8A8E8',
+  lavender: '#AFA1DF',
   lavenderInk: '#1F1635',
-  butter: '#F2D86A',
+  butter: '#E8C95E',
   butterInk: '#3A2E08',
-  mint: '#A8D8B9',
+  mint: '#94CFAE',
   mintInk: '#0F2C1A',
-  rose: '#D89BA8',
+  rose: '#D6909D',
   roseInk: '#3A1520',
-  sky: '#9FC4DC',
+  sky: '#91BDD7',
   skyInk: '#0E2230',
-  reminders: '#9B8EC4',
-  tasks: '#7BA08A',
-  journal: '#C4977A',
-  wish: '#D4A054',
-  plans: '#8AAF7B',
-  error: '#E07A68',
-  success: '#9CC58B',
+  reminders: '#8B78C0',
+  tasks: '#5F9B7B',
+  journal: '#B7785D',
+  wish: '#C99135',
+  plans: '#789D57',
+  error: '#BD5948',
+  success: '#6D965A',
 };
 
 export type ThemeMode = 'light' | 'dark';
 export type Tokens = typeof darkTokens & typeof pastels;
 
 export function getTokens(mode: ThemeMode): Tokens {
-  return { ...(mode === 'light' ? lightTokens : darkTokens), ...pastels };
+  return {
+    ...(mode === 'light' ? lightTokens : darkTokens),
+    ...pastels,
+    ...(mode === 'light' ? lightPalette : darkPalette),
+  };
 }
 
 // Pacto type system — Bitcount Prop Single (display, pixel), Geist (body), Geist Mono (data)

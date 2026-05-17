@@ -37,7 +37,6 @@ export function BrushUnderline({
             height={brushHeight}
             viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
             preserveAspectRatio="none"
-            pointerEvents="none"
             style={styles.stroke}
           >
             <Path
@@ -69,5 +68,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: -3,
     bottom: -1,
+    pointerEvents: 'none',
   },
 });

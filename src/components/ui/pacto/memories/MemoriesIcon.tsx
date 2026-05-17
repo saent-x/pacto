@@ -34,7 +34,7 @@ interface Props {
 export function MemoriesIcon({
   name,
   size = 18,
-  color = '#000',
+  color = '#2C2118',
   stroke = 1.6,
   filled = false,
   style,

@@ -10,6 +10,7 @@ const routerSpy = vi.hoisted(() => ({
 }));
 
 const locationMock = vi.hoisted(() => ({
+  getForegroundPermissionsAsync: vi.fn(async () => ({ status: 'undetermined', granted: false })),
   requestForegroundPermissionsAsync: vi.fn(async () => ({ status: 'granted', granted: true })),
   getCurrentPositionAsync: vi.fn(async () => ({
     coords: { latitude: 40.7128, longitude: -74.006 },
@@ -46,6 +47,20 @@ vi.mock('@/src/components/ui/pacto', () => {
     ActivityHeatmap: (props: any) => Reactx.createElement('MockView', { ...props, testID: 'activity-heatmap' }),
     HeroPactoBadge: (props: any) => Reactx.createElement('MockView', props),
     SectionHead: ({ children }: any) => Reactx.createElement('MockText', null, children),
+    Avatar: (props: any) => Reactx.createElement('MockView', props),
+    CardHalo: ({ children, style }: any) => Reactx.createElement('MockView', { style }, children),
+    ColorTile: ({ children, onPress, testID, style }: any) =>
+      onPress
+        ? Reactx.createElement('MockPressable', { onPress, testID, style }, children)
+        : Reactx.createElement('MockView', { testID, style }, children),
+    MonthlyHeatmap: (props: any) => Reactx.createElement('MockView', { ...props, testID: 'monthly-heatmap' }),
+  };
+});
+
+vi.mock('@/src/components/ui/pacto/rhythm-variants', () => {
+  const Reactx = require('react');
+  return {
+    RhythmHybrid: (props: any) => Reactx.createElement('MockView', { ...props, testID: 'rhythm-hybrid' }),
   };
 });
 
@@ -118,8 +133,10 @@ vi.mock('react-native-reanimated', () => {
     createAnimatedComponent: (Component: any) => Component,
     FadeInDown: fadeInDown,
     FadeIn: fadeInDown,
+    Extrapolation: { CLAMP: 'clamp' },
     Easing: { inOut: () => 0, out: (fn: any) => fn ?? 0, cubic: (v: any) => v, bezier: () => 0, ease: 0 },
     useSharedValue: (v: any) => ({ value: v }),
+    useAnimatedScrollHandler: (handlers: any) => handlers,
     useAnimatedStyle: (fn: any) => fn(),
     withRepeat: (v: any) => v,
     withTiming: (v: any) => v,
@@ -161,6 +178,7 @@ const homeState = vi.hoisted(() => ({
   milestones: [],
   memories: [],
   memoryPreview: null,
+  activity: [] as any[],
   presence: null,
   isLoading: false,
   error: null,
@@ -169,6 +187,24 @@ const homeState = vi.hoisted(() => ({
 
 vi.mock('@/src/hooks/useHomeTimeline', () => ({
   useHomeTimeline: () => homeState,
+}));
+
+const taskHookState = vi.hoisted(() => ({
+  allTasks: [] as any[],
+  toggleTask: vi.fn(async () => undefined),
+}));
+
+vi.mock('@/src/hooks/useTasks', () => ({
+  useTasks: () => taskHookState,
+}));
+
+const reminderHookState = vi.hoisted(() => ({
+  reminders: [] as any[],
+  toggleComplete: vi.fn(async () => undefined),
+}));
+
+vi.mock('@/src/hooks/useReminders', () => ({
+  useReminders: () => reminderHookState,
 }));
 
 const checkInsState = vi.hoisted(() => ({
@@ -215,6 +251,17 @@ const allText = (renderer: any) =>
     .findAll((node: any) => typeof node.children?.[0] === 'string')
     .map((node: any) => node.children.join(''));
 
+const activateNode = async (node: any) => {
+  if (typeof node.props?.onPress === 'function') {
+    await node.props.onPress();
+    return;
+  }
+  if (typeof node.props?.onResponderRelease === 'function') {
+    node.props.onStartShouldSetResponder?.();
+    await node.props.onResponderRelease();
+  }
+};
+
 const flattenStyle = (style: any) => {
   const value = typeof style === 'function' ? style({ pressed: false }) : style;
   return Array.isArray(value) ? value.flat(Infinity).filter(Boolean) : [value].filter(Boolean);
@@ -234,6 +281,8 @@ describe('HomeRoute', () => {
     checkInsState.createOrUpdate.mockResolvedValue(undefined);
     checkInsState.refetch.mockReset();
     checkInsState.refetch.mockResolvedValue(undefined);
+    locationMock.getForegroundPermissionsAsync.mockReset();
+    locationMock.getForegroundPermissionsAsync.mockResolvedValue({ status: 'undetermined', granted: false });
     locationMock.requestForegroundPermissionsAsync.mockReset();
     locationMock.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'granted', granted: true });
     locationMock.getCurrentPositionAsync.mockReset();
@@ -260,10 +309,18 @@ describe('HomeRoute', () => {
     homeState.milestones = [];
     homeState.memories = [];
     homeState.memoryPreview = null;
+    homeState.activity = [
+      { dateKey: '2026-04-20', count: 1, weight: 1 },
+      { dateKey: '2026-04-21', count: 3, weight: 3 },
+    ];
     homeState.presence = null;
     homeState.todaySummary = { plans: { done: 0, total: 0 }, focus: { done: 0, total: 0 } };
     homeState.isLoading = false;
     homeState.error = null;
+    taskHookState.allTasks = [];
+    taskHookState.toggleTask.mockClear();
+    reminderHookState.reminders = [];
+    reminderHookState.toggleComplete.mockClear();
     checkInsState.myTodayCheckIn = null;
     checkInsState.partnerTodayCheckIn = null;
     checkInsHook.mockClear();
@@ -293,7 +350,7 @@ describe('HomeRoute', () => {
 
     expect(weatherCard).toBeDefined();
     expect(flattenStyle(weatherCard.props.style)).toEqual(
-      expect.arrayContaining([expect.objectContaining({ minHeight: 78 })]),
+      expect.arrayContaining([expect.objectContaining({ minHeight: 109 })]),
     );
 
     await act(async () => {
@@ -307,7 +364,24 @@ describe('HomeRoute', () => {
     act(() => renderer.unmount());
   });
 
-  it('labels milestone data as memory dates and renders the summary below activity', async () => {
+  it('loads weather automatically when location was already allowed', async () => {
+    locationMock.getForegroundPermissionsAsync.mockResolvedValueOnce({ status: 'granted', granted: true });
+
+    const renderer = await renderHome();
+    await act(async () => {
+      await flush();
+    });
+
+    const text = allText(renderer).join('\n');
+    expect(text).toContain('18°');
+    expect(text).toContain('Partly cloudy');
+    expect(locationMock.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
+    expect(locationMock.getCurrentPositionAsync).toHaveBeenCalledWith({ accuracy: 3 });
+
+    act(() => renderer.unmount());
+  });
+
+  it('labels milestone data as memory dates inside the redesigned home stack', async () => {
     homeState.timeline = [
       {
         id: 'task:next',
@@ -337,32 +411,35 @@ describe('HomeRoute', () => {
     const texts = allText(renderer);
     const text = texts.join('\n');
 
-    expect(text).toContain('MEMORY DATES');
     expect(text).toContain('MEMORY DATE');
-    expect(text).not.toContain('Tasks, goals, reminders, and memory dates due in the next 30 days.');
+    expect(text).toContain('Anniversary');
+    expect(text).not.toContain('Tasks, targets, reminders, and memory dates due in the next 30 days.');
     expect(text).not.toContain('MILESTONES');
-    expect(texts.indexOf('RECENT ACTIVITY')).toBeGreaterThanOrEqual(0);
-    expect(texts.indexOf('NEXT ITEM')).toBeGreaterThan(texts.indexOf('RECENT ACTIVITY'));
+    expect(texts.indexOf('QUICK STATS')).toBeGreaterThanOrEqual(0);
+    expect(texts.indexOf('UP NEXT')).toBeGreaterThan(texts.indexOf('QUICK STATS'));
+    expect(text).not.toContain('MOMENTS');
+    expect(text).not.toContain('NOW PLAYING · FOCUS MIX');
 
     act(() => renderer.unmount());
   });
 
-  it('renders recent activity as a compact multi-month heatmap', async () => {
+  it('replaces the old activity heatmap and fake lower sections with the richer home widgets', async () => {
     const renderer = await renderHome();
+    const texts = allText(renderer);
+    const text = texts.join('\n');
 
-    expect(findByTestID(renderer, 'activity-heatmap')[0].props.weeks).toBe(15);
-    expect(findByTestID(renderer, 'activity-heatmap')[0].props.maxCellSize).toBe(22);
-    expect(findByTestID(renderer, 'activity-heatmap')[0].props.cellRadius).toBe(1);
-    expect(findByTestID(renderer, 'activity-heatmap')[0].props.showWeekAxis).toBe(false);
-    expect(findByTestID(renderer, 'activity-heatmap')[0].props.weekLabelMode).toBe('months');
-    expect(allText(renderer)).toContain('15 WEEKS');
-    expect(allText(renderer)).not.toContain('8W');
-    expect(allText(renderer)).not.toContain('12W');
+    expect(findByTestID(renderer, 'activity-heatmap')).toHaveLength(0);
+    expect(texts).toContain('QUICK STATS');
+    expect(texts).toContain('UP NEXT');
+    expect(text).not.toContain('FOCUS SESSION · 25 MIN');
+    expect(text).not.toContain('REMINDERS TODAY');
+    expect(text).not.toContain('NOW PLAYING · FOCUS MIX');
+    expect(text).not.toContain('MOMENTS');
 
     act(() => renderer.unmount());
   });
 
-  it('uses a default coming-up cover unless the timeline item provides an image', async () => {
+  it('renders timeline items in the up-next stack without the old coming-up cover', async () => {
     homeState.timeline = [
       {
         id: 'task:default-cover',
@@ -380,7 +457,9 @@ describe('HomeRoute', () => {
 
     const fallbackRenderer = await renderHome();
 
-    expect(findByTestID(fallbackRenderer, 'home-coming-cover-fallback')).toHaveLength(1);
+    expect(allText(fallbackRenderer)).toContain('Task without image');
+    expect(findByTestID(fallbackRenderer, 'home-timeline-task-default-cover').length).toBeGreaterThan(0);
+    expect(findByTestID(fallbackRenderer, 'home-coming-cover-fallback')).toHaveLength(0);
     expect(findByTestID(fallbackRenderer, 'home-coming-cover-image')).toHaveLength(0);
 
     act(() => fallbackRenderer.unmount());
@@ -403,9 +482,9 @@ describe('HomeRoute', () => {
 
     const imageRenderer = await renderHome();
 
-    expect(findByTestID(imageRenderer, 'home-coming-cover-image')[0].props.source).toEqual({
-      uri: 'https://example.com/dinner.jpg',
-    });
+    expect(allText(imageRenderer)).toContain('Dinner booking');
+    expect(findByTestID(imageRenderer, 'home-timeline-event-image-cover').length).toBeGreaterThan(0);
+    expect(findByTestID(imageRenderer, 'home-coming-cover-image')).toHaveLength(0);
     expect(findByTestID(imageRenderer, 'home-coming-cover-fallback')).toHaveLength(0);
 
     act(() => imageRenderer.unmount());
@@ -450,14 +529,14 @@ describe('HomeRoute', () => {
     act(() => renderer.unmount());
   });
 
-  it('empty Today state explains there are no dated items and routes to the goal sheet', async () => {
+  it('empty Today state explains there are no dated items and routes to the target sheet', async () => {
     const renderer = await renderHome();
     const empty = findByTestID(renderer, 'home-timeline-empty')[0];
     const text = allText(renderer).join('\n');
 
     expect(empty).toBeDefined();
     expect(text).toContain('No items dated today');
-    expect(text).toContain('Schedule a goal');
+    expect(text).toContain('Schedule a target');
     expect(text).not.toContain('Add a plan');
     await act(async () => {
       await empty.props.onPress();
@@ -492,7 +571,7 @@ describe('HomeRoute', () => {
     act(() => renderer.unmount());
   });
 
-  it('timeline task item routes to /(tabs)/us/tasks', async () => {
+  it('timeline task item routes to the source task list when available', async () => {
     const occursAt = new Date();
     occursAt.setHours(12, 0, 0, 0);
     homeState.timeline = [
@@ -500,6 +579,7 @@ describe('HomeRoute', () => {
         id: 'task:1',
         type: 'task',
         sourceId: '1',
+        sourceParentId: 'list-1',
         sourceTable: 'tasks',
         title: 'Buy milk',
         subtitle: null,
@@ -513,9 +593,9 @@ describe('HomeRoute', () => {
     const btn = findByTestID(renderer, 'home-timeline-task-1')[0];
     expect(btn).toBeDefined();
     await act(async () => {
-      await btn.props.onPress();
+      await activateNode(btn);
     });
-    expect(routerSpy.push).toHaveBeenCalledWith('/(tabs)/us/tasks');
+    expect(routerSpy.push).toHaveBeenCalledWith('/(tabs)/us/tasks/list-1?taskId=1');
     act(() => renderer.unmount());
   });
 
@@ -539,7 +619,7 @@ describe('HomeRoute', () => {
     const renderer = await renderHome();
     const btn = findByTestID(renderer, 'home-timeline-plan-7')[0];
     await act(async () => {
-      await btn.props.onPress();
+      await activateNode(btn);
     });
     expect(routerSpy.push).toHaveBeenCalledWith('/(tabs)/us/plans');
     act(() => renderer.unmount());
@@ -565,9 +645,9 @@ describe('HomeRoute', () => {
     const renderer = await renderHome();
     const btn = findByTestID(renderer, 'home-timeline-reminder-3')[0];
     await act(async () => {
-      await btn.props.onPress();
+      await activateNode(btn);
     });
-    expect(routerSpy.push).toHaveBeenCalledWith('/(tabs)/us/reminders');
+    expect(routerSpy.push).toHaveBeenCalledWith('/(tabs)/us/reminders?reminderId=3');
     act(() => renderer.unmount());
   });
 
@@ -594,7 +674,7 @@ describe('HomeRoute', () => {
     const btn = findByTestID(renderer, 'home-timeline-memory-love-note-1')[0];
     expect(btn).toBeDefined();
     await act(async () => {
-      await btn.props.onPress();
+      await activateNode(btn);
     });
 
     expect(routerSpy.push).toHaveBeenCalledWith('/(tabs)/us/notes');
@@ -607,10 +687,8 @@ describe('HomeRoute', () => {
     const renderer = await renderHome();
     const texts = allText(renderer);
 
-    expect(texts).toContain('Task');
     expect(texts).not.toContain('Note');
     expect(texts).not.toContain('Check in');
-    expect(texts).not.toContain('Calendar');
 
     act(() => renderer.unmount());
   });
@@ -624,7 +702,6 @@ describe('HomeRoute', () => {
     expect(texts).not.toContain('tap to update');
     expect(texts).not.toContain("TODAY'S ARC");
     expect(texts).not.toContain('Check in');
-    expect(checkInsHook).toHaveBeenCalledWith({ enabled: false });
 
     const pressables = renderer.root.findAll((node: any) => typeof node.props?.onPress === 'function');
     for (const pressable of pressables) {

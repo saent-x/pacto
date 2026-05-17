@@ -25,12 +25,12 @@ describe('FloatingTop', () => {
     });
 
     const root = tree.root.findAllByType(View)[0];
-    expect(root.props.pointerEvents).toBe('box-none');
     expect(root.props.style).toMatchObject({
       position: 'absolute',
       top: 44 + 6,
       right: 16,
       zIndex: 10,
+      pointerEvents: 'box-none',
     });
 
     expect(tree.root.findByProps({ testID: 'child' })).toBeTruthy();

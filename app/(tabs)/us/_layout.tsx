@@ -61,6 +61,8 @@ export default function UsLayout() {
             <PressScale
               onPress={() => router.push('/notifications' as any)}
               hitSlop={12}
+              haptic="impact"
+              pressedScale={0.96}
               style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' }}
             >
               <Icon name="bell" size={22} color={C.inkColor} strokeWidth={2.2} />
@@ -69,6 +71,8 @@ export default function UsLayout() {
           headerRight: () => (
             <PressScale
               onPress={() => router.push('/sheets/profile' as any)}
+              haptic="impact"
+              pressedScale={0.96}
               style={{ minWidth: 40, height: 40, borderRadius: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
             >
               {isSolo ? (
@@ -122,16 +126,6 @@ export default function UsLayout() {
         }}
       />
       <Stack.Screen
-        name="expenses"
-        options={{
-          ...baseModule,
-          headerTitle: () => (
-            <HeaderBrand eyebrow={spaceLabel} title="expenses" />
-          ),
-          headerRight: () => <NavAddBtn href="/sheets/new-expense" />,
-        }}
-      />
-      <Stack.Screen
         name="wishlists"
         options={{
           ...baseModule,
@@ -156,7 +150,7 @@ export default function UsLayout() {
         options={{
           ...baseModule,
           headerTitle: () => (
-            <HeaderBrand eyebrow={spaceLabel} title="goals" />
+            <HeaderBrand eyebrow={spaceLabel} title="targets" />
           ),
           headerRight: () => (moduleEnabled('goals') ? <NavAddBtn href="/sheets/new-plan" /> : null),
         }}

@@ -23,7 +23,7 @@ const CODE_LENGTH = 6;
 type Stage = 'email' | 'code';
 
 export default function SignIn() {
-  const { C } = useTheme();
+  const { C, mode } = useTheme();
   const [stage, setStage] = useState<Stage>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState<string[]>(Array(CODE_LENGTH).fill(''));
@@ -128,12 +128,13 @@ export default function SignIn() {
     }
   };
 
-  const isSimulator = __DEV__;
-
   return (
     <ScrollView
+      style={{ backgroundColor: C.bg }}
       contentContainerStyle={[styles.root, { backgroundColor: C.bg }]}
+      contentInsetAdjustmentBehavior="automatic"
       keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
     >
       <View style={styles.hero}>
         <PactoMark size={64} />
@@ -275,9 +276,18 @@ export default function SignIn() {
               <PressScale
                 onPress={() => doOAuth('apple')}
                 disabled={busy}
-                style={[styles.oauth, { backgroundColor: '#2A241B' }]}
+                style={[
+                  styles.oauth,
+                  { backgroundColor: mode === 'dark' ? C.bgSoft : C.inkColor },
+                ]}
               >
-                <Text style={[Typography.buttonLabel, { color: '#FAF8F2' }]}>
+                <Text
+                  style={[
+                    Typography.buttonLabel,
+                    styles.buttonLabel,
+                    { color: mode === 'dark' ? C.inkColor : C.bg },
+                  ]}
+                >
                   Continue with Apple
                 </Text>
               </PressScale>
@@ -290,21 +300,11 @@ export default function SignIn() {
                 { backgroundColor: C.bgCard, borderColor: C.lineColor, borderWidth: 1 },
               ]}
             >
-              <Text style={[Typography.buttonLabel, { color: C.inkColor }]}>
+              <Text style={[Typography.buttonLabel, styles.buttonLabel, { color: C.inkColor }]}>
                 Continue with Google
               </Text>
             </PressScale>
 
-            {isSimulator ? (
-              <PressScale
-                onPress={() => updateEmail('dev@pacto.app')}
-                style={{ alignSelf: 'center', paddingVertical: 8 }}
-              >
-                <Text style={[Typography.small, { color: C.ink3 }]}>
-                  Dev: prefill test email
-                </Text>
-              </PressScale>
-            ) : null}
           </>
         ) : null}
       </View>
@@ -335,7 +335,9 @@ function PrimaryButton({
       ]}
     >
       {typeof children === 'string' ? (
-        <Text style={[Typography.buttonLabel, { color: C.bg }]}>{children}</Text>
+        <Text style={[Typography.buttonLabel, styles.buttonLabel, { color: C.bg }]}>
+          {children}
+        </Text>
       ) : (
         children
       )}
@@ -344,7 +346,7 @@ function PrimaryButton({
 }
 
 const styles = StyleSheet.create({
-  root: { padding: 24, paddingTop: 80, paddingBottom: 40 },
+  root: { flexGrow: 1, padding: 24, paddingTop: 80, paddingBottom: 40 },
   hero: {
     alignItems: 'center',
     marginBottom: 36,
@@ -365,7 +367,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 52,
     borderWidth: 1.5,
-    borderRadius: 12,
+    borderRadius: 8,
     textAlign: 'center',
     fontSize: 22,
   },
@@ -380,8 +382,10 @@ const styles = StyleSheet.create({
     height: 1,
   },
   oauth: {
+    minHeight: 56,
     paddingVertical: 14,
-    borderRadius: 14,
+    paddingHorizontal: 18,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -390,9 +394,16 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   primary: {
+    minHeight: 56,
     paddingVertical: 14,
-    borderRadius: 14,
+    paddingHorizontal: 18,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  buttonLabel: {
+    width: '100%',
+    textAlign: 'center',
+    includeFontPadding: false,
   },
 });

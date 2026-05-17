@@ -8,11 +8,12 @@ import { TextStyle, Platform } from 'react-native';
 // Design source: /tmp/pacto-design/coupl-design-ii/project/index.html (see :root tokens)
 // "Maya & Jordan"-style hero title uses the pixel display family across every top-level screen.
 
-// Display family: Bitcount Prop Single — proportional bit-mapped display face
-// from Google Fonts. Replaces Silkscreen for crisper pixel headlines.
-const pixelRegular = 'BitcountPropSingle_400Regular';
-const pixelMedium = 'BitcountPropSingle_500Medium';
-const pixelBold = 'BitcountPropSingle_700Bold';
+// Display family: Geist Pixel (Square variant) — Vercel's pixel display
+// face. Loaded as a local font asset; only one weight is shipped, so all
+// three tokens point at the same family. https://github.com/vercel/geist-pixel-font
+const pixelRegular = 'GeistPixel-Square';
+const pixelMedium = 'GeistPixel-Square';
+const pixelBold = 'GeistPixel-Square';
 
 const geistLight = 'Geist_300Light';
 const geistRegular = 'Geist_400Regular';

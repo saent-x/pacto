@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { db, id as newId } from '@/src/lib/instant';
 import { useSession } from './useSession';
 import type { IconName } from '@/src/components/ui/Icon';
+import { normalizeWho } from '@/src/lib/timetables-data';
 import type {
   ShareKind,
   TemplateKey,
@@ -150,7 +151,7 @@ export function normalizeTimetableItem(raw: any): TimetableItem {
     color: (raw.color as string) ?? '#F4A68C',
     ink: (raw.ink as string) ?? '#3A1F14',
     cat: (raw.category as string) ?? 'other',
-    who: ((raw.who as Who) ?? 'both') as Who,
+    who: normalizeWho(raw.who),
     star: Boolean(raw.star),
   };
 }

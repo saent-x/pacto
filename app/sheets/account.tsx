@@ -1,8 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import * as ImagePicker from 'expo-image-picker';
 import { Avatar, AvatarPair, Card, CrewStack, Pill } from '@/src/components/ui/pacto';
 import { Icon, IconName } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
@@ -11,7 +10,7 @@ import { DEFAULT_AVATARS, type DefaultAvatarId } from '@/src/constants/defaultAv
 import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
 import { useSession } from '@/src/lib/session';
-import { updateUserAvatar, uploadAvatarFromUri } from '@/src/lib/space-actions';
+import { updateUserAvatar, updateUserProfile, uploadAvatarFromUri } from '@/src/lib/space-actions';
 
 export default function AccountSheet() {
   const { C } = useTheme();
@@ -24,8 +23,23 @@ export default function AccountSheet() {
     }
   }, [session.status, navRouter]);
 
+  const savedDisplayName = session.user?.displayName?.trim() ?? '';
+  const [displayNameDraft, setDisplayNameDraft] = useState(savedDisplayName);
+  const [savingName, setSavingName] = useState(false);
+
+  useEffect(() => {
+    setDisplayNameDraft(savedDisplayName);
+  }, [session.user?.id, savedDisplayName]);
+
+  const trimmedDisplayName = displayNameDraft.trim();
+  const canSaveDisplayName =
+    !!session.user &&
+    trimmedDisplayName.length > 0 &&
+    trimmedDisplayName !== savedDisplayName &&
+    !savingName;
+
   const me =
-    session.user?.displayName?.trim() ||
+    trimmedDisplayName ||
     session.user?.email?.split('@')[0] ||
     'You';
   const partnerName = session.partner
@@ -59,9 +73,27 @@ export default function AccountSheet() {
     }
   }
 
+  async function onSaveDisplayName() {
+    if (!session.user || !canSaveDisplayName) return;
+    Haptics.selectionAsync().catch(() => undefined);
+    setSavingName(true);
+    try {
+      await updateUserProfile({
+        userId: session.user.id,
+        displayName: trimmedDisplayName,
+      });
+    } catch (err) {
+      console.warn('[account] display name update failed', err);
+      Alert.alert('Name update failed', 'Try again.');
+    } finally {
+      setSavingName(false);
+    }
+  }
+
   async function onUploadAvatar() {
     if (!session.user) return;
     Haptics.selectionAsync().catch(() => undefined);
+    const ImagePicker = await import('expo-image-picker');
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
       Alert.alert(
@@ -92,28 +124,24 @@ export default function AccountSheet() {
     }
   }
 
-  type Row = {
+  const rows = useMemo(() => {
+    type Row = {
     label: string;
     value: string;
     icon: IconName;
     muted?: boolean;
     testID?: string;
-  };
-  const rows: Row[] = [
-    {
-      label: 'Display name',
-      value: me,
-      icon: 'user',
-      testID: 'account-row-name',
-    },
-    {
-      label: 'Email',
-      value: session.user?.email ?? '—',
-      icon: 'mail',
-      muted: true,
-      testID: 'account-row-email',
-    },
-  ];
+    };
+    return [
+      {
+        label: 'Email',
+        value: session.user?.email ?? '—',
+        icon: 'mail' as const,
+        muted: true,
+        testID: 'account-row-email',
+      },
+    ] satisfies Row[];
+  }, [session.user?.email]);
 
   return (
     <SheetShell eyebrow="ACCOUNT" title="account">
@@ -146,6 +174,47 @@ export default function AccountSheet() {
       </View>
 
       <Card padded={false} style={{ marginBottom: 14 }}>
+        <View style={[styles.nameEditor, { borderBottomColor: C.lineColor }]}>
+          <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>Display name</Text>
+          <View style={styles.nameEditorRow}>
+            <TextInput
+              testID="account-display-name-input"
+              value={displayNameDraft}
+              onChangeText={setDisplayNameDraft}
+              placeholder="Your name"
+              placeholderTextColor={C.ink3}
+              autoCapitalize="words"
+              returnKeyType="done"
+              onSubmitEditing={onSaveDisplayName}
+              style={[
+                Typography.body,
+                styles.nameInput,
+                { color: C.inkColor, borderBottomColor: C.lineColor },
+              ]}
+            />
+            <PressScale
+              testID="account-save-display-name"
+              onPress={onSaveDisplayName}
+              disabled={!canSaveDisplayName}
+              style={[
+                styles.saveNameButton,
+                {
+                  backgroundColor: canSaveDisplayName ? C.accent : C.bgSoft,
+                  borderColor: canSaveDisplayName ? C.accent : C.lineColor,
+                },
+              ]}
+            >
+              <Text style={[Typography.captionMedium, { color: canSaveDisplayName ? C.bg : C.ink3 }]}>
+                {savingName ? 'Saving' : 'Save'}
+              </Text>
+            </PressScale>
+          </View>
+          {!trimmedDisplayName ? (
+            <Text style={[Typography.small, { color: C.error, marginTop: 6 }]}>
+              Add a display name so shared actions are clearly attributed.
+            </Text>
+          ) : null}
+        </View>
         <View style={styles.avatarPicker}>
           <View style={styles.avatarChoices}>
             {DEFAULT_AVATARS.map((avatar) => {
@@ -231,6 +300,32 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 13,
     paddingHorizontal: 16,
+  },
+  nameEditor: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    gap: 8,
+  },
+  nameEditorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  nameInput: {
+    flex: 1,
+    minHeight: 42,
+    borderBottomWidth: 1,
+    paddingVertical: 8,
+  },
+  saveNameButton: {
+    minWidth: 72,
+    minHeight: 40,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
   },
   avatarPicker: {
     paddingVertical: 13,

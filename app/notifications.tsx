@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import {
@@ -9,6 +10,7 @@ import {
   PixelHero,
 } from '@/src/components/ui/pacto';
 import { Icon } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
 import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
 import {
@@ -60,7 +62,7 @@ export default function NotificationsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <ScrollView
-        style={{ flex: 1 }}
+        style={{ flex: 1, backgroundColor: C.bg }}
         contentContainerStyle={{ paddingTop: insets.top + 60, paddingBottom: 80 }}
         showsVerticalScrollIndicator={false}
       >
@@ -77,7 +79,7 @@ export default function NotificationsScreen() {
             isLoading
               ? 'Catching up…'
               : total === 0
-              ? "Nothing new — you'll see notes, check-ins, and reminders here."
+              ? "Nothing new — you'll see memories, check-ins, and reminders here."
               : 'Tap to mark read.'
           }
           size="md"
@@ -88,7 +90,7 @@ export default function NotificationsScreen() {
             <ActionEmptyState
               icon="bell"
               title="Quiet right now"
-              body="Your next note, check-in, or reminder will land here."
+              body="Your next memory, check-in, or reminder will land here."
               accent={C.accent}
             />
           </View>
@@ -120,10 +122,13 @@ function NotificationRow({
       Haptics.selectionAsync().catch(() => undefined);
       setLocallyRead(true);
     }
+    if (notification.route) {
+      router.push(notification.route as any);
+    }
   };
 
   return (
-    <Pressable
+    <PressScale
       onPress={handlePress}
       testID={`notification-row-${notification.id}`}
       style={styles.row}
@@ -177,7 +182,7 @@ function NotificationRow({
           {notification.time}
         </Text>
       </View>
-    </Pressable>
+    </PressScale>
   );
 }
 
@@ -199,7 +204,7 @@ const styles = StyleSheet.create({
   iconTile: {
     width: 38,
     height: 38,
-    borderRadius: 12,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },

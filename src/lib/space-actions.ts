@@ -128,29 +128,43 @@ export async function leaveSpace(params: {
   await db.transact(ops);
 }
 
-// No-op placeholder. Auth auto-creates $users. Profile fields will move to
-// a dedicated `profiles` entity in a later phase.
 export async function ensureUserRow(_params: {
   userId: string;
   email: string;
+  displayName?: string | null;
   avatarUrl?: string | null;
 }): Promise<void> {
-  if (!_params.avatarUrl) return;
-  await updateUserAvatar({
+  await updateUserProfile({
     userId: _params.userId,
+    displayName: _params.displayName ?? undefined,
     avatarUrl: _params.avatarUrl,
   });
+}
+
+export async function updateUserProfile(params: {
+  userId: string;
+  displayName?: string | null;
+  avatarUrl?: string | null;
+}): Promise<void> {
+  const updates: Record<string, string | null> = {};
+  if (params.displayName !== undefined) {
+    const displayName = params.displayName?.trim() ?? '';
+    updates.displayName = displayName || null;
+  }
+  if (params.avatarUrl !== undefined) {
+    updates.avatarUrl = params.avatarUrl;
+  }
+  if (Object.keys(updates).length === 0) return;
+  await db.transact([
+    (tx as any).$users[params.userId].update(updates),
+  ]);
 }
 
 export async function updateUserAvatar(params: {
   userId: string;
   avatarUrl: string;
 }): Promise<void> {
-  await db.transact([
-    (tx as any).$users[params.userId].update({
-      avatarUrl: params.avatarUrl,
-    }),
-  ]);
+  await updateUserProfile(params);
 }
 
 /**

@@ -39,7 +39,6 @@ export function SegmentedTabs<K extends string>({
       style={[
         styles.track,
         {
-          backgroundColor: C.bgSoft,
           alignSelf: compact ? 'flex-start' : 'stretch',
         },
         style,
@@ -54,7 +53,10 @@ export function SegmentedTabs<K extends string>({
             onPress={() => onChange(o.key)}
             style={[
               compact ? styles.segmentCompact : styles.segmentLabeled,
-              active ? { backgroundColor: C.inkColor } : null,
+              {
+                backgroundColor: active ? C.inkColor : C.bgCard,
+                borderColor: active ? C.inkColor : C.line2,
+              },
             ]}
           >
             {o.icon ? (
@@ -89,8 +91,7 @@ export function SegmentedTabs<K extends string>({
 const styles = StyleSheet.create({
   track: {
     flexDirection: 'row',
-    borderRadius: 999,
-    padding: 3,
+    gap: 8,
   },
   segmentLabeled: {
     flex: 1,
@@ -99,6 +100,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 8,
     borderRadius: 999,
+    borderWidth: 1,
   },
   segmentCompact: {
     width: 32,
@@ -106,5 +108,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 14,
+    borderWidth: 1,
   },
 });

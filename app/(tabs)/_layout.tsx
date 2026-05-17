@@ -8,7 +8,7 @@ const TAB_ICONS = {
   me: require('../../assets/images/tabs/tab-me.png'),
   us: require('../../assets/images/tabs/tab-us.png'),
   calendar: require('../../assets/images/tabs/tab-calendar.png'),
-  memories: require('../../assets/images/tabs/tab-reminders.png'), // reuse asset until a memories icon ships
+  memories: require('../../assets/images/tabs/tab-memories.png'),
 };
 
 export default function TabsLayout() {
@@ -20,7 +20,7 @@ export default function TabsLayout() {
   return (
     <NativeTabs
       labelStyle={{ fontFamily: 'Geist_500Medium', fontSize: 11 }}
-      iconColor={{ default: C.inkColor, selected: C.inkColor }}
+      iconColor={{ default: C.ink2, selected: C.inkColor }}
       tintColor={C.inkColor}
       labelVisibilityMode="unlabeled"
       minimizeBehavior="onScrollDown"

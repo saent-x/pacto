@@ -13,6 +13,7 @@ import {
 } from '@/src/components/ui/pacto';
 import { Icon, type IconName } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
+import { useSession } from '@/src/hooks/useSession';
 import { useTimetable } from '@/src/hooks/useTimetables';
 import { useTheme } from '@/src/lib/theme';
 import { Typography } from '@/src/constants/typography';
@@ -28,10 +29,10 @@ type LayoutMode = 'grid' | 'list' | 'timeline';
 const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const HOUR_HEIGHT = 64;
 
-const PEACH = '#F4A68C';
-const PEACH_INK = '#3A1F14';
-const LAV = '#B8A8E8';
-const LAV_INK = '#1F1635';
+function initialFor(value: string | null | undefined, fallback: string) {
+  const trimmed = value?.trim();
+  return (trimmed ? trimmed.charAt(0) : fallback).toUpperCase();
+}
 
 function WhoBadge({
   who,
@@ -42,7 +43,11 @@ function WhoBadge({
   size?: number;
   borderColor: string;
 }) {
+  const { C } = useTheme();
+  const { user, partner } = useSession();
   const fontSize = Math.round(size * 0.5);
+  const meInitial = initialFor(user?.displayName ?? user?.email, 'Y');
+  const partnerInitial = initialFor(partner?.displayName ?? partner?.email, 'P');
   const bubble = (bg: string, fg: string, letter: string, overlap = false) => (
     <View
       style={{
@@ -71,13 +76,13 @@ function WhoBadge({
   if (who === 'both') {
     return (
       <View style={{ flexDirection: 'row' }}>
-        {bubble(PEACH, PEACH_INK, 'M')}
-        {bubble(LAV, LAV_INK, 'S', true)}
+        {bubble(C.peach, C.peachInk, meInitial)}
+        {bubble(C.lavender, C.lavenderInk, partnerInitial, true)}
       </View>
     );
   }
-  if (who === 'sofia') return bubble(LAV, LAV_INK, 'S');
-  return bubble(PEACH, PEACH_INK, 'M');
+  if (who === 'partner') return bubble(C.lavender, C.lavenderInk, partnerInitial);
+  return bubble(C.peach, C.peachInk, meInitial);
 }
 
 export default function TimetableDetail() {
@@ -255,7 +260,7 @@ function TimetableDetailInner() {
         style={{ flex: 1 }}
         contentContainerStyle={{
           paddingTop: insets.top + 60,
-          paddingBottom: 120,
+          paddingBottom: insets.bottom + 28,
         }}
         showsVerticalScrollIndicator={false}
       >
@@ -593,7 +598,8 @@ function TimelineBody({
     : 23;
   const totalHours = endHour - startHour;
   const gridHeight = (totalHours + 1) * HOUR_HEIGHT;
-  const viewportHeight = Math.min(420, Math.max(280, windowHeight - 540), gridHeight + 22);
+  const viewportHeight = Math.max(640, Math.min(900, windowHeight - 165));
+  const canvasHeight = Math.max(gridHeight, viewportHeight - 32);
   const totalMinutes = dayItems.reduce((sum, item) => sum + item.dur * 60, 0);
   const durationLabel = totalMinutes >= 60
     ? `${Math.floor(totalMinutes / 60)}h${totalMinutes % 60 ? ` ${Math.round(totalMinutes % 60)}m` : ''}`
@@ -605,7 +611,7 @@ function TimelineBody({
         testID="timetable-timeline-panel"
         style={[
           styles.timelinePanel,
-          { backgroundColor: C.bgCard, borderColor: C.lineColor },
+          { backgroundColor: C.bg, borderColor: 'transparent' },
         ]}
       >
         <View style={styles.timelineHeader}>
@@ -641,6 +647,7 @@ function TimelineBody({
           </View>
         ) : (
           <View
+            testID="timetable-timeline-viewport"
             style={[
               styles.timelineViewport,
               { backgroundColor: C.bgSoft, borderColor: C.lineColor },
@@ -653,7 +660,7 @@ function TimelineBody({
               nestedScrollEnabled
               showsVerticalScrollIndicator
             >
-              <View style={{ height: gridHeight, position: 'relative' }}>
+              <View style={{ height: canvasHeight, position: 'relative' }}>
                 <View style={[styles.timelineRail, { backgroundColor: C.lineColor }]} />
                 {Array.from({ length: totalHours + 1 }).map((_, i) => {
                   const h = startHour + i;
@@ -797,7 +804,7 @@ const styles = StyleSheet.create({
   dayHeaderTitle: {
     fontFamily: Typography.pixelFont,
     fontSize: 22,
-    letterSpacing: -0.4,
+    letterSpacing: 0,
     lineHeight: 24,
     textTransform: 'uppercase',
   },
@@ -809,7 +816,7 @@ const styles = StyleSheet.create({
   emptyDay: {
     paddingVertical: 32,
     alignItems: 'center',
-    borderRadius: 18,
+    borderRadius: 12,
     borderWidth: 1,
     borderStyle: 'dashed',
   },
@@ -820,7 +827,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingLeft: 18,
     paddingRight: 16,
-    borderRadius: 22,
+    borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
   },
@@ -830,7 +837,7 @@ const styles = StyleSheet.create({
   itemTime: {
     fontFamily: Typography.pixelFont,
     fontSize: 16,
-    letterSpacing: -0.4,
+    letterSpacing: 0,
     lineHeight: 18,
   },
   itemDur: {
@@ -859,7 +866,7 @@ const styles = StyleSheet.create({
   itemTitle: {
     fontFamily: Typography.geistSemiBoldFont,
     fontSize: 15,
-    letterSpacing: -0.2,
+    letterSpacing: 0,
     lineHeight: 18,
   },
   itemStar: {
@@ -888,18 +895,20 @@ const styles = StyleSheet.create({
   listIconTile: {
     width: 32,
     height: 32,
-    borderRadius: 10,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   // Timeline
   timelineSection: {
-    paddingHorizontal: 18,
+    paddingHorizontal: 8,
   },
   timelinePanel: {
-    borderWidth: 1,
-    borderRadius: 24,
-    padding: 14,
+    borderWidth: 0,
+    borderRadius: 0,
+    paddingHorizontal: 8,
+    paddingTop: 2,
+    paddingBottom: 0,
     overflow: 'hidden',
   },
   timelineHeader: {
@@ -920,16 +929,16 @@ const styles = StyleSheet.create({
   },
   timelineViewport: {
     borderWidth: 1,
-    borderRadius: 18,
+    borderRadius: 14,
     overflow: 'hidden',
   },
   timelineScroll: {
-    borderRadius: 17,
+    borderRadius: 13,
   },
   timelineScrollContent: {
-    paddingHorizontal: 12,
-    paddingTop: 16,
-    paddingBottom: 16,
+    paddingHorizontal: 14,
+    paddingTop: 18,
+    paddingBottom: 18,
   },
   timelineRail: {
     position: 'absolute',
@@ -970,7 +979,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 64,
     right: 0,
-    borderRadius: 18,
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     overflow: 'hidden',
@@ -983,7 +992,7 @@ const styles = StyleSheet.create({
   timelineBlockIcon: {
     width: 28,
     height: 28,
-    borderRadius: 9,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     opacity: 0.9,
@@ -999,7 +1008,7 @@ const styles = StyleSheet.create({
   timelineBlockTitle: {
     fontFamily: Typography.geistSemiBoldFont,
     fontSize: 16,
-    letterSpacing: -0.2,
+    letterSpacing: 0,
     lineHeight: 19,
     marginTop: 2,
   },

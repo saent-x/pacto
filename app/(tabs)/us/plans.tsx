@@ -200,7 +200,7 @@ function PlansScreenInner() {
     : stats.active > 0
     ? `${stats.active} ACTIVE`
     : 'DREAM SOMETHING UP';
-  const heroTitle = stats.featured?.title ?? 'Goals';
+  const heroTitle = stats.featured?.title ?? 'Targets';
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -214,12 +214,14 @@ function PlansScreenInner() {
           title: '',
           headerTitleAlign: 'center',
           headerTitle: () => (
-            <HeaderBrand eyebrow={eyebrowLabel} title="goals" />
+            <HeaderBrand eyebrow={eyebrowLabel} title="targets" />
           ),
           headerLeft: () => (
             <PressScale
               onPress={() => router.back()}
               hitSlop={12}
+              haptic="impact"
+              pressedScale={0.96}
               style={{ padding: 4 }}
             >
               <Icon name="chevronLeft" size={22} color={C.inkColor} strokeWidth={2.2} />
@@ -229,6 +231,8 @@ function PlansScreenInner() {
             <PressScale
               onPress={() => router.push('/sheets/new-plan' as any)}
               hitSlop={12}
+              haptic="impact"
+              pressedScale={0.96}
               style={{ padding: 4 }}
             >
               <Icon name="plus" size={22} color={C.inkColor} strokeWidth={2.2} />
@@ -245,6 +249,7 @@ function PlansScreenInner() {
         {/* Hero — slim status row + pipeline ribbon */}
         <View style={styles.heroWrap}>
           <StatBar
+            accent={C.plans}
             eyebrow={heroEyebrow}
             meta={
               stats.featured
@@ -321,9 +326,10 @@ function PlansScreenInner() {
           {buckets.length === 0 ? (
             <ActionEmptyState
               icon="compass"
-              title="No goals yet"
+              title="No targets yet"
               body="Set a trip, project, habit, or shared priority worth tracking."
-              actionLabel="New goal"
+              actionLabel="New target"
+              accent={C.plans}
               onAction={() => router.push('/sheets/new-plan' as any)}
             />
           ) : (
@@ -332,7 +338,7 @@ function PlansScreenInner() {
               rowKey={(p) => p.id}
               renderRow={(p) => (
                 <SwipeableRow
-                  deleteTitle="Delete goal?"
+                  deleteTitle="Delete target?"
                   deleteMessage={`"${p.title}" will be removed.`}
                   onEdit={() =>
                     router.push(`/sheets/new-plan?id=${p.id}` as any)
@@ -342,7 +348,6 @@ function PlansScreenInner() {
                   <View
                     style={[
                       styles.row,
-                      { backgroundColor: C.bgCard },
                       p.status === 'done' ? { opacity: 0.7 } : null,
                     ]}
                   >
@@ -373,14 +378,14 @@ function PlansScreenInner() {
                         {p.status !== 'done' ? (
                           <View
                             style={[
-                              styles.statusChip,
+                              styles.statusMark,
                               {
                                 backgroundColor:
                                   p.status === 'active'
-                                    ? C.accentSoft
+                                    ? C.accent
                                     : p.status === 'planning'
-                                    ? C.accent2Soft
-                                    : C.bgSoft,
+                                    ? C.accent2
+                                    : C.ink3,
                                 borderColor:
                                   p.status === 'active'
                                     ? C.accent
@@ -389,37 +394,8 @@ function PlansScreenInner() {
                                     : C.lineColor,
                               },
                             ]}
-                          >
-                            <View
-                              style={[
-                                styles.statusDot,
-                                {
-                                  backgroundColor:
-                                    p.status === 'active'
-                                      ? C.accent
-                                      : p.status === 'planning'
-                                      ? C.accent2
-                                      : C.ink3,
-                                },
-                              ]}
-                            />
-                            <Text
-                              style={[
-                                Typography.eyebrowSm,
-                                {
-                                  color:
-                                    p.status === 'active'
-                                      ? C.accent
-                                      : p.status === 'planning'
-                                      ? C.accent2
-                                      : C.ink2,
-                                  fontSize: 9,
-                                },
-                              ]}
-                            >
-                              {p.status.toUpperCase()}
-                            </Text>
-                          </View>
+                            accessibilityLabel={`${p.status} target`}
+                          />
                         ) : null}
                         <PriorityDot level={priorityLevel(p.priority)} />
                       </View>
@@ -489,19 +465,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 4,
   },
-  statusChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
+  statusMark: {
+    width: 13,
+    height: 13,
     borderRadius: 999,
-    borderWidth: 1,
-  },
-  statusDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 999,
+    borderWidth: 3,
   },
   filterRow: {
     paddingHorizontal: 18,
@@ -522,7 +490,7 @@ const styles = StyleSheet.create({
   iconTile: {
     width: 38,
     height: 38,
-    borderRadius: 12,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },

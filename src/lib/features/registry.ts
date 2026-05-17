@@ -117,8 +117,8 @@ const RAW_FEATURE_REGISTRY = [
   },
   {
     id: 'goals',
-    label: 'Goals',
-    description: 'Set priorities and track progress.',
+    label: 'Targets',
+    description: 'Set targets and track progress.',
     icon: 'flag',
     supportedModes: ['solo', 'pair', 'crew'],
     defaultForSolo: true,

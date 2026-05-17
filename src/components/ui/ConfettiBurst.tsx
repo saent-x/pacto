@@ -121,7 +121,7 @@ export function ConfettiBurst({
   if (!visible) return null;
 
   return (
-    <Animated.View style={styles.overlay} pointerEvents="none">
+    <Animated.View style={styles.overlay}>
       {particles.map((config, i) => (
         <Particle key={i} config={config} duration={duration} />
       ))}
@@ -131,7 +131,8 @@ export function ConfettiBurst({
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
+    pointerEvents: 'none',
   },
 });

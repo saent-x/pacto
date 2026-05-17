@@ -24,9 +24,11 @@ import Animated, {
 import { useTheme } from '@/src/lib/theme';
 import { Icon, IconName } from './Icon';
 import { PressScale } from './PressScale';
+import { PulsingDot } from './pacto/PulsingDot';
 
 if (
   Platform.OS === 'android' &&
+  !(globalThis as any).nativeFabricUIManager &&
   UIManager.setLayoutAnimationEnabledExperimental
 ) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -803,7 +805,7 @@ export function ScreenHeader({
             }}
           >
             {title}
-            <Text style={{ color: ac }}>.</Text>
+            <PulsingDot color={ac} />
           </Text>
         </View>
         {action}

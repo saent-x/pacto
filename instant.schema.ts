@@ -155,18 +155,6 @@ const _schema = i.schema({
       source: i.string().optional(),
       createdAt: i.number(),
     }),
-    expenses: i.entity({
-      title: i.string(),
-      amount: i.number(),
-      currency: i.string().optional(),
-      splitType: i.string().optional(),
-      splitAmount: i.number().optional(),
-      category: i.string().optional(),
-      date: i.string().indexed(),
-      isSettled: i.boolean().optional(),
-      createdAt: i.number().indexed(),
-      updatedAt: i.number().optional(),
-    }),
     wishlists: i.entity({
       name: i.string(),
       icon: i.string().optional(),
@@ -418,16 +406,6 @@ const _schema = i.schema({
     loveNoteAuthor: {
       forward: { on: 'loveNotes', has: 'one', label: 'author' },
       reverse: { on: '$users', has: 'many', label: 'loveNotes' },
-    },
-
-    // --- expenses ---
-    expenseCouple: {
-      forward: { on: 'expenses', has: 'one', label: 'couple', onDelete: 'cascade' },
-      reverse: { on: 'spaces', has: 'many', label: 'expenses' },
-    },
-    expensePayer: {
-      forward: { on: 'expenses', has: 'one', label: 'paidBy' },
-      reverse: { on: '$users', has: 'many', label: 'paidExpenses' },
     },
 
     // --- wishlists ---

@@ -3,18 +3,13 @@ import { differenceInCalendarDays, format, parseISO } from 'date-fns';
 import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  Bucket,
-  BucketedList,
-  Card,
-} from '@/src/components/ui/pacto';
-import { Platform } from 'react-native';
+import { PulsingStatusDot } from '@/src/components/ui/pacto/PulsingDot';
+import { CardHalo, ColorTile, type Tone } from '@/src/components/ui/pacto';
 import { Icon, IconName } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
 import { useSession } from '@/src/hooks/useSession';
 import { useLoveNotes } from '@/src/hooks/useLoveNotes';
 import { useCheckIns } from '@/src/hooks/useCheckIns';
-import { useExpenses } from '@/src/hooks/useExpenses';
 import { useWishlists } from '@/src/hooks/useWishlists';
 import { useMilestones } from '@/src/hooks/useMilestones';
 import { usePlans } from '@/src/hooks/usePlans';
@@ -26,6 +21,7 @@ import { Typography } from '@/src/constants/typography';
 import { featureForUsModule, useFeatureGate } from '@/src/hooks/useFeatureGate';
 import { getFeature, isFeatureSupportedForMode } from '@/src/lib/features/registry';
 import { useTheme } from '@/src/lib/theme';
+import { alphaColor } from '@/src/lib/color';
 
 type Module = {
   id: string;
@@ -39,11 +35,8 @@ type Module = {
 export default function UsScreen() {
   const insets = useSafeAreaInsets();
   const { C } = useTheme();
-  const { user, partner, mode, activeCouple, isFeatureEnabled } = useSession();
-  const memoryFeedGate = useFeatureGate('memoryFeed');
-
-  const myFirstName = (user?.displayName ?? user?.email?.split('@')[0] ?? 'You').split(' ')[0];
-  const partnerFirstName = partner?.displayName?.split(' ')[0] ?? null;
+  const { mode, activeCouple, isFeatureEnabled } = useSession();
+  const timetableGate = useFeatureGate('timetable');
 
   // Anniversary / day count
   const anniversary = activeCouple?.couple?.anniversary;
@@ -76,24 +69,11 @@ export default function UsScreen() {
     }
   }, [anniversary]);
 
-  const heroEyebrow = useMemo(() => {
-    if (mode === 'solo') return dayCount ? `ME · DAY ${dayCount}` : 'ME';
-    if (mode === 'crew') return 'CREW';
-    return dayCount ? `US · DAY ${dayCount}` : 'US';
-  }, [mode, dayCount]);
-
-  const heroTitle = useMemo(() => {
-    if (mode === 'solo') return myFirstName;
-    if (mode === 'crew') return activeCouple?.couple?.name || 'Our pact';
-    return partnerFirstName ? `${myFirstName} & ${partnerFirstName}` : myFirstName;
-  }, [mode, myFirstName, partnerFirstName, activeCouple?.couple?.name]);
-
   // Module counts (live from hooks)
   const tasks = useTasks();
   const reminders = useReminders();
   const notes = useLoveNotes();
   const checkIns = useCheckIns();
-  const expenses = useExpenses();
   const wishlists = useWishlists();
   const milestones = useMilestones();
   const plans = usePlans();
@@ -107,7 +87,6 @@ export default function UsScreen() {
     const allTs: number[] = [
       ...(notes.notes ?? []).map((x: any) => x.createdAt as number),
       ...(checkIns.checkIns ?? []).map((x: any) => x.createdAt as number),
-      ...(expenses.expenses ?? []).map((x: any) => x.createdAt as number),
       ...(wishlists.wishlists ?? []).map((x: any) => x.createdAt as number),
       ...(milestones.milestones ?? []).map((x: any) => x.createdAt as number),
       ...(plans.plans ?? []).map((x: any) => x.createdAt as number),
@@ -160,7 +139,6 @@ export default function UsScreen() {
     mode,
     notes.notes,
     checkIns.checkIns,
-    expenses.expenses,
     wishlists.wishlists,
     milestones.milestones,
     plans.plans,
@@ -183,7 +161,6 @@ export default function UsScreen() {
     };
     collect(notes.notes);
     collect(checkIns.checkIns);
-    collect(expenses.expenses);
     collect(wishlists.wishlists);
     collect(milestones.milestones);
     collect(plans.plans);
@@ -201,7 +178,6 @@ export default function UsScreen() {
     mode,
     notes.notes,
     checkIns.checkIns,
-    expenses.expenses,
     wishlists.wishlists,
     milestones.milestones,
     plans.plans,
@@ -237,14 +213,6 @@ export default function UsScreen() {
         accentKey: 'a2',
       },
       {
-        id: 'expenses',
-        href: '/(tabs)/us/expenses',
-        label: 'Expenses',
-        icon: 'creditCard',
-        meta: countLabel(expenses.expenses?.length, 'item', 'items'),
-        accentKey: 'a3',
-      },
-      {
         id: 'wishlist',
         href: '/(tabs)/us/wishlists',
         label: wishlistFeature.label,
@@ -257,7 +225,7 @@ export default function UsScreen() {
         href: '/(tabs)/us/plans',
         label: goalsFeature.label,
         icon: goalsFeature.icon,
-        meta: countLabel(plans.plans?.length, 'goal', 'goals'),
+        meta: countLabel(plans.plans?.length, 'target', 'targets'),
         accentKey: 'a3',
       },
       {
@@ -299,7 +267,6 @@ export default function UsScreen() {
       reminders.reminders?.length,
       notes.notes?.length,
       checkIns.checkIns?.length,
-      expenses.expenses?.length,
       wishlists.wishlists?.length,
       milestones.milestones?.length,
       plans.plans?.length,
@@ -317,19 +284,19 @@ export default function UsScreen() {
     [modules, mode, isFeatureEnabled],
   );
 
-  const moduleBuckets = useMemo<Bucket<Module>[]>(
-    () => [
-      {
-        label: 'Modules',
-        dotColor: C.accent2,
-        rows: visibleModules,
-      },
-    ],
-    [visibleModules, C.accent2],
-  );
-
   const accentFor = (k: Module['accentKey']) =>
     k === 'a1' ? C.accent : k === 'a2' ? C.accent2 : C.accent3;
+
+  const moduleTones: Tone[] = [
+    { bg: C.accent, ink: '#FFFDF7', muted: alphaColor('#FFFDF7', 0.72) },
+    { bg: C.accent2, ink: '#FFFDF7', muted: alphaColor('#FFFDF7', 0.72) },
+    { bg: C.peach, ink: C.peachInk, muted: alphaColor(C.peachInk, 0.66) },
+    { bg: C.butter, ink: C.butterInk, muted: alphaColor(C.butterInk, 0.66) },
+    { bg: C.mint, ink: C.mintInk, muted: alphaColor(C.mintInk, 0.66) },
+    { bg: C.sky, ink: C.skyInk, muted: alphaColor(C.skyInk, 0.66) },
+    { bg: C.lavender, ink: C.lavenderInk, muted: alphaColor(C.lavenderInk, 0.66) },
+    { bg: C.cardHi, ink: C.inkColor, muted: C.ink2 },
+  ];
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -340,8 +307,8 @@ export default function UsScreen() {
       >
         {/* Solo card — same layout as Together, with personal stats. */}
         {mode === 'solo' && soloStats ? (
-          <View style={styles.section}>
-            <Card padded={false}>
+          <View style={styles.statsSection}>
+            <View style={styles.togetherPanel}>
               <View style={styles.togetherBody}>
                 <View style={[styles.togetherLeft, { borderRightColor: C.lineColor }]}>
                   <Text style={[Typography.eyebrow, { color: C.ink3 }]}>SOLO</Text>
@@ -394,14 +361,14 @@ export default function UsScreen() {
                   ))}
                 </View>
               ) : null}
-            </Card>
+            </View>
           </View>
         ) : null}
 
         {/* Together card (pair/crew only) */}
         {mode !== 'solo' ? (
-          <View style={styles.section}>
-            <Card padded={false}>
+          <View style={styles.statsSection}>
+            <View style={styles.togetherPanel}>
               <View style={styles.togetherBody}>
                 <View style={[styles.togetherLeft, { borderRightColor: C.lineColor }]}>
                   <Text style={[Typography.eyebrow, { color: C.ink3 }]}>
@@ -466,7 +433,7 @@ export default function UsScreen() {
                   />
                 ))}
               </View>
-            </Card>
+            </View>
           </View>
         ) : null}
 
@@ -474,60 +441,68 @@ export default function UsScreen() {
         <View style={styles.quickActions}>
           <PressScale
             onPress={() => router.push('/sheets/new-task')}
+            accessibilityLabel="Create task"
+            haptic="impact"
+            pressedScale={0.96}
             style={[styles.quickAction, { backgroundColor: C.bgSoft }]}
           >
             <Text style={[Typography.body, { color: C.inkColor }]}>+ Task</Text>
           </PressScale>
           <PressScale
             onPress={() => router.push('/sheets/new-reminder')}
+            accessibilityLabel="Create reminder"
+            haptic="impact"
+            pressedScale={0.96}
             style={[styles.quickAction, { backgroundColor: C.bgSoft }]}
           >
             <Text style={[Typography.body, { color: C.inkColor }]}>+ Reminder</Text>
           </PressScale>
-          {memoryFeedGate.enabled ? (
+          {timetableGate.enabled ? (
             <PressScale
-              onPress={() => router.push('/sheets/memory-composer')}
+              onPress={() => router.push('/sheets/new-timetable')}
+              accessibilityLabel="Create timetable"
+              haptic="impact"
+              pressedScale={0.96}
               style={[styles.quickAction, { backgroundColor: C.bgSoft }]}
             >
-              <Text style={[Typography.body, { color: C.inkColor }]}>+ Memory</Text>
+              <Text style={[Typography.body, { color: C.inkColor }]}>+ Timetable</Text>
             </PressScale>
           ) : null}
         </View>
 
         {/* Modules grid */}
         <View style={styles.section}>
-          <View style={styles.moduleRows}>
-            <BucketedList
-              buckets={moduleBuckets}
-              rowKey={(m) => m.id}
-              renderRow={(m) => (
-                <PressScale
-                  onPress={() => router.push(m.href as any)}
-                  style={[
-                    styles.moduleRow,
-                    { backgroundColor: C.bgCard },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.moduleIcon,
-                      { backgroundColor: C.bgSoft },
-                    ]}
-                  >
-                    <Icon name={m.icon} size={16} color={accentFor(m.accentKey)} strokeWidth={2.3} />
-                  </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={[Typography.bodyMedium, { color: C.inkColor }]} numberOfLines={1}>
-                      {m.label}
-                    </Text>
-                    <Text style={[Typography.eyebrowSm, { color: C.ink3, fontSize: 9.5, marginTop: 3 }]} numberOfLines={1}>
-                      {m.meta}
-                    </Text>
-                  </View>
-                  <Icon name="chevronRight" size={15} color={C.ink3} strokeWidth={2.2} />
-                </PressScale>
-              )}
-            />
+          <View style={styles.modulesHead}>
+            <View style={styles.modulesHeadLeft}>
+              <PulsingStatusDot color={C.accent2} size={6} />
+              <Text style={[Typography.eyebrow, { color: C.ink3 }]}>MODULES</Text>
+              <Text style={[Typography.eyebrow, { color: C.ink3, opacity: 0.6 }]}>
+                · {visibleModules.length}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.moduleGrid}>
+            {visibleModules.map((m, index) => {
+              const tone = moduleTones[index % moduleTones.length];
+              const count = parseInt(m.meta.match(/\d+/)?.[0] ?? '0', 10);
+              const unit = m.meta.replace(/^[\d,]+\s*/, '').toUpperCase() || m.meta.toUpperCase();
+              return (
+                <CardHalo key={m.id} style={styles.moduleTileHalo}>
+                  <ColorTile
+                    tone={tone}
+                    title={m.label}
+                    icon={m.icon}
+                    stat={count}
+                    statLabel={unit}
+                    dotsTotal={7}
+                    dotsFilled={Math.min(7, count)}
+                    onPress={() => router.push(m.href as any)}
+                    accessibilityLabel={`Open ${m.label}. ${m.meta}`}
+                    style={styles.moduleTileFill}
+                  />
+                </CardHalo>
+              );
+            })}
           </View>
         </View>
       </ScrollView>
@@ -557,26 +532,30 @@ function monthsElapsed(anniversary: string | null | undefined): number {
 }
 
 const styles = StyleSheet.create({
-  topRow: {
-    paddingHorizontal: 22,
-    paddingTop: 6,
-    paddingBottom: 14,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
   section: {
     paddingHorizontal: 18,
     paddingBottom: 18,
   },
+  statsSection: {
+    paddingHorizontal: 0,
+    paddingBottom: 28,
+  },
+  togetherPanel: {
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
   togetherBody: {
     flexDirection: 'row',
-    padding: 18,
+    paddingHorizontal: 36,
+    paddingTop: 18,
+    paddingBottom: 18,
     gap: 16,
   },
   togetherLeft: {
     paddingRight: 16,
     borderRightWidth: 1,
-    minWidth: 96,
+    flex: 1,
+    minWidth: 0,
     justifyContent: 'center',
   },
   togetherRight: {
@@ -591,9 +570,10 @@ const styles = StyleSheet.create({
   },
   yearsBig: {
     fontFamily: Typography.pixelFont,
-    fontSize: 30,
-    lineHeight: 30,
-    letterSpacing: -0.5,
+    fontSize: 42,
+    lineHeight: 42,
+    letterSpacing: 0,
+    paddingLeft: 8,
   },
   yearsUnit: {
     fontFamily: Typography.geistMonoMediumFont,
@@ -604,9 +584,9 @@ const styles = StyleSheet.create({
   },
   annivDate: {
     fontFamily: Typography.pixelFont,
-    fontSize: 22,
-    lineHeight: 24,
-    letterSpacing: -0.3,
+    fontSize: 30,
+    lineHeight: 32,
+    letterSpacing: 0,
     marginTop: 2,
   },
   daysChip: {
@@ -626,7 +606,7 @@ const styles = StyleSheet.create({
   },
   monthDashRow: {
     flexDirection: 'row',
-    paddingHorizontal: 18,
+    paddingHorizontal: 36,
     paddingBottom: 14,
     gap: 2,
   },
@@ -635,34 +615,37 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 2,
   },
-  moduleRows: {
-    marginTop: 0,
+  modulesHead: {
+    paddingHorizontal: 4,
+    marginBottom: 10,
   },
-  moduleRow: {
+  modulesHeadLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    gap: 7,
   },
-  moduleIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
+  moduleGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  moduleTileHalo: {
+    width: '48%',
+  },
+  moduleTileFill: {
+    width: '100%',
   },
   quickActions: {
     flexDirection: 'row',
     gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 18,
+    paddingBottom: 18,
   },
   quickAction: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 999,
+    paddingVertical: 12,
   },
 });

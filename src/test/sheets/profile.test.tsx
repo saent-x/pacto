@@ -158,8 +158,8 @@ describe('profile sheet', () => {
 
     const labels = readText(renderer.root);
     expect(labels).toContain('Mattia');
-    expect(labels).toContain('mattia@coupl.app');
-    expect(findByTestID(renderer.root, 'profile-row-name')).toBeDefined();
+    expect(labels).not.toContain('mattia@coupl.app');
+    expect(findByTestID(renderer.root, 'profile-row-account')).toBeDefined();
     expect(findByTestID(renderer.root, 'profile-row-code')).toBeDefined();
     expect(findByTestID(renderer.root, 'profile-row-features')).toBeDefined();
     act(() => renderer.unmount());

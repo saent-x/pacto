@@ -24,6 +24,8 @@ vi.mock('react-native-reanimated', () => {
     Reactx.createElement('AnimatedView', props, props.children);
   const MockScrollView = (props: any) =>
     Reactx.createElement('AnimatedScrollView', props, props.children);
+  const MockText = (props: any) =>
+    Reactx.createElement('AnimatedText', props, props.children);
   const chainable = () => {
     const api: any = {};
     for (const m of ['duration', 'delay', 'springify', 'damping']) {
@@ -39,26 +41,26 @@ vi.mock('react-native-reanimated', () => {
     default: {
       View: MockView,
       ScrollView: MockScrollView,
+      Text: MockText,
       createAnimatedComponent: (C: any) => C,
     },
     View: MockView,
     ScrollView: MockScrollView,
+    Text: MockText,
     createAnimatedComponent: (C: any) => C,
     FadeIn,
     FadeOut,
     FadeInDown,
     Easing: { inOut: () => 0, out: (fn: any) => fn ?? 0, cubic: (v: any) => v, bezier: () => 0, ease: 0 },
     useSharedValue: (v: any) => ({ value: v }),
-    useAnimatedProps: (fn: any) => fn?.() ?? {},
     useAnimatedStyle: (fn: any) => fn?.() ?? {},
     useReducedMotion: () => false,
-    withDelay: (_d: number, v: any) => v,
     withTiming: (v: any) => v,
     withDelay: (_d: any, v: any) => v,
-    useReducedMotion: () => false,
     useAnimatedProps: (fn: any) => fn(),
     interpolateColor: () => "#000000",
     withRepeat: (v: any) => v,
+    withSequence: (...args: any[]) => args[args.length - 1],
     interpolate: () => 0,
   };
 });
@@ -73,6 +75,7 @@ type Item = {
   createdAt: number;
   time: string;
   unread: boolean;
+  route?: string;
 };
 
 const notifState = vi.hoisted(() => ({
@@ -121,6 +124,9 @@ describe('notifications screen', () => {
     notifState.error = null;
     notifState.markAllRead = vi.fn(async () => undefined);
     hapticsSpy.selectionAsync.mockClear();
+    routerSpy.push.mockClear();
+    routerSpy.back.mockClear();
+    routerSpy.replace.mockClear();
   });
 
   afterEach(() => {
@@ -147,7 +153,7 @@ describe('notifications screen', () => {
       await flush();
     });
     expect(hasText(renderer.root, 'Quiet right now')).toBe(true);
-    expect(hasText(renderer.root, 'Your next note, check-in, or reminder will land here.')).toBe(true);
+    expect(hasText(renderer.root, 'Your next memory, check-in, or reminder will land here.')).toBe(true);
     expect(findAllByTestIDPrefix(renderer.root, 'notifications-bucket-')).toHaveLength(0);
     act(() => renderer.unmount());
   });
@@ -159,11 +165,12 @@ describe('notifications screen', () => {
         items: [
           itemFixture({ id: 'loveNote:a', title: 'Sofia sent you a note', unread: true }),
           itemFixture({ id: 'checkIn:b', title: 'Check-in · bright', unread: true }),
+          itemFixture({ id: 'memory:c', kind: 'memory', title: 'Sofia added a memory', unread: true }),
         ],
       },
       {
         label: 'Earlier',
-        items: [itemFixture({ id: 'expense:c', title: 'Sofia added €42', unread: false })],
+        items: [itemFixture({ id: 'reminder:d', title: 'Sofia nudged a reminder', unread: false })],
       },
     ];
     let renderer: any;
@@ -175,7 +182,8 @@ describe('notifications screen', () => {
     expect(hasText(renderer.root, 'Earlier')).toBe(true);
     expect(findByTestID(renderer.root, 'notification-row-loveNote:a')).toBeDefined();
     expect(findByTestID(renderer.root, 'notification-row-checkIn:b')).toBeDefined();
-    expect(findByTestID(renderer.root, 'notification-row-expense:c')).toBeDefined();
+    expect(findByTestID(renderer.root, 'notification-row-memory:c')).toBeDefined();
+    expect(findByTestID(renderer.root, 'notification-row-reminder:d')).toBeDefined();
     act(() => renderer.unmount());
   });
 
@@ -254,6 +262,37 @@ describe('notifications screen', () => {
       await flush();
     });
     expect(hapticsSpy.selectionAsync).not.toHaveBeenCalled();
+    act(() => renderer.unmount());
+  });
+
+  it('routes notification rows that carry a destination', async () => {
+    notifState.buckets = [
+      {
+        label: 'Today',
+        items: [
+          itemFixture({
+            id: 'memory:a',
+            kind: 'memory',
+            unread: false,
+            route: '/(tabs)/memories/a',
+          }),
+        ],
+      },
+    ];
+    let renderer: any;
+    await act(async () => {
+      renderer = TestRenderer.create(<Notifications />);
+      await flush();
+    });
+    const row = findByTestID(renderer.root, 'notification-row-memory:a');
+    const pressable = row.findAll(
+      (n: any) => typeof n.props?.onPress === 'function',
+    )[0];
+    await act(async () => {
+      pressable.props.onPress();
+      await flush();
+    });
+    expect(routerSpy.push).toHaveBeenCalledWith('/(tabs)/memories/a');
     act(() => renderer.unmount());
   });
 

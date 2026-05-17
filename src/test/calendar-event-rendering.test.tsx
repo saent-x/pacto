@@ -78,6 +78,7 @@ vi.mock('react-native-reanimated', () => {
     interpolateColor: () => "#000000",
     withSpring: (v: any) => v,
     withRepeat: (v: any) => v,
+    withSequence: (...args: any[]) => args[args.length - 1],
   };
 });
 

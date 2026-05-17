@@ -11,11 +11,11 @@ type Props = {
 };
 
 /**
- * 7px-radius rounded square checkbox. Accent fill when checked.
+ * Circular checkbox. Accent fill when checked.
  *
  * Design source: /tmp/pacto-design/coupl-design-ii/project/components.jsx (Checkbox)
  */
-export function Checkbox({ checked, onChange, size = 22, color }: Props) {
+export function Checkbox({ checked, onChange, size = 34, color }: Props) {
   const { C } = useTheme();
   const accent = color ?? C.accent;
   const tickSize = size * 0.7;
@@ -31,7 +31,7 @@ export function Checkbox({ checked, onChange, size = 22, color }: Props) {
       style={{
         width: size,
         height: size,
-        borderRadius: 7,
+        borderRadius: size / 2,
         borderWidth: 1.5,
         borderColor: checked ? accent : C.line2,
         backgroundColor: checked ? accent : C.bgCard,

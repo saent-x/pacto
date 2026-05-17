@@ -5,7 +5,6 @@ export const AI_DOMAINS = [
   'events',
   'loveNotes',
   'checkIns',
-  'expenses',
   'wishlists',
   'wishlistItems',
   'milestones',

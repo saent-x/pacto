@@ -1,6 +1,5 @@
-// Pacto WARM CALM palette
-// Source: /tmp/pacto-design/coupl-design-ii/project/index.html (:root + [data-theme="dark"])
-// OKLCH values converted to hex for React Native (which doesn't accept oklch() in styles).
+// Pacto FULL PALETTE / WARM NIGHT palette
+// OKLCH-authored values converted to hex for React Native style support.
 //
 // Three accent hues sharing chroma 0.13 / lightness 0.68:
 //   - accent   = terracotta-rose (mine / Maya / primary)
@@ -11,36 +10,36 @@
 // screens render immediately under the new palette while Phase 6+7+8+10 rebuild them.
 
 // ─── Tokens (light) ──────────────────────────────────────────────
-const L_BG = '#FAF8F2';
-const L_BG_SOFT = '#F4F0E5';
-const L_BG_CARD = '#FFFFFF';
-const L_INK = '#2A241B';
-const L_INK_2 = '#5C5345';
-const L_INK_3 = '#918875';
-const L_LINE = '#E8E2D4';
-const L_LINE_2 = '#DBD3C0';
-const L_ACCENT = '#C7755A';
-const L_ACCENT_2 = '#6FB3A2';
-const L_ACCENT_3 = '#C8AE73';
-const L_ACCENT_SOFT = '#F5DDD3';
-const L_ACCENT_2_SOFT = '#DCEDE7';
-const L_ACCENT_3_SOFT = '#EEE4C8';
+const L_BG = '#FBF6EA';
+const L_BG_SOFT = '#F1E8D8';
+const L_BG_CARD = '#FFF9EE';
+const L_INK = '#2C2118';
+const L_INK_2 = '#625442';
+const L_INK_3 = '#92846E';
+const L_LINE = '#E3D8C5';
+const L_LINE_2 = '#D4C5AD';
+const L_ACCENT = '#C86F54';
+const L_ACCENT_2 = '#5EAFA0';
+const L_ACCENT_3 = '#BD9850';
+const L_ACCENT_SOFT = '#F4D8CA';
+const L_ACCENT_2_SOFT = '#D9ECE5';
+const L_ACCENT_3_SOFT = '#EFE0B9';
 
 // ─── Tokens (dark) ───────────────────────────────────────────────
-const D_BG = '#2A2620';
-const D_BG_SOFT = '#322D26';
-const D_BG_CARD = '#39322B';
-const D_INK = '#F2EEE5';
-const D_INK_2 = '#C2BAA9';
-const D_INK_3 = '#847A6A';
-const D_LINE = '#4D4537';
-const D_LINE_2 = '#5B5141';
-const D_ACCENT = '#D08B6F';
-const D_ACCENT_2 = '#7FBFAF';
-const D_ACCENT_3 = '#D2BC85';
-const D_ACCENT_SOFT = '#4D352B';
-const D_ACCENT_2_SOFT = '#2C443D';
-const D_ACCENT_3_SOFT = '#4A4128';
+const D_BG = '#211A15';
+const D_BG_SOFT = '#2B231D';
+const D_BG_CARD = '#352B23';
+const D_INK = '#F1E7D6';
+const D_INK_2 = '#CBBCA4';
+const D_INK_3 = '#93836E';
+const D_LINE = '#4B4033';
+const D_LINE_2 = '#5E5141';
+const D_ACCENT = '#D48668';
+const D_ACCENT_2 = '#79C0AE';
+const D_ACCENT_3 = '#D5B66B';
+const D_ACCENT_SOFT = '#56372A';
+const D_ACCENT_2_SOFT = '#2F4942';
+const D_ACCENT_3_SOFT = '#4F4326';
 
 const dark = {
   // ─── New WARM CALM tokens ────────────────────────────────────
@@ -62,60 +61,60 @@ const dark = {
   // ─── Legacy aliases (re-pointed) ─────────────────────────────
   primary: D_ACCENT,
   primaryLight: D_ACCENT_SOFT,
-  primaryDark: '#A3654C',
-  primaryMuted: 'rgba(208, 139, 111, 0.16)',
-  primaryVivid: '#DCA78F',
+  primaryDark: '#A85C43',
+  primaryMuted: '#493226',
+  primaryVivid: '#E0A085',
 
   ink: D_BG,
   coal: D_BG_SOFT,
   card: D_BG_CARD,
-  cardHi: '#3F3830',
+  cardHi: '#3E3127',
   line: D_LINE,
   lineHi: D_LINE_2,
   bone: D_INK,
   mist: D_INK_2,
   fog: D_INK_3,
-  ash: '#6E6555',
+  ash: '#776753',
   gold: D_ACCENT,
-  goldDim: '#A3654C',
-  goldSoft: 'rgba(208, 139, 111, 0.16)',
+  goldDim: '#A85C43',
+  goldSoft: '#493226',
 
   night: D_BG_SOFT,
   dark: D_BG_CARD,
-  dim: '#3F3830',
+  dim: '#3E3127',
   muted: D_LINE,
   dusk: D_LINE_2,
   haze: D_INK_2,
   cream: D_INK,
   parchment: D_INK,
 
-  success: '#8AAF7B',
-  successLight: 'rgba(138, 175, 123, 0.14)',
-  warning: '#D4A054',
-  warningLight: 'rgba(212, 160, 84, 0.14)',
-  error: '#C96B5A',
-  errorLight: 'rgba(201, 107, 90, 0.14)',
-  info: '#7BA0AF',
-  infoLight: 'rgba(123, 160, 175, 0.14)',
+  success: '#91C477',
+  successLight: '#2F482C',
+  warning: '#D8A64C',
+  warningLight: '#4C3A20',
+  error: '#E27B68',
+  errorLight: '#522F29',
+  info: '#719CB6',
+  infoLight: '#2E414C',
 
-  reminders: '#9B8EC4',
-  remindersLight: 'rgba(155, 142, 196, 0.14)',
-  tasks: '#7BA08A',
-  tasksLight: 'rgba(123, 160, 138, 0.14)',
-  journal: '#C4977A',
-  journalLight: 'rgba(196, 151, 122, 0.14)',
-  wishlists: '#D4A054',
-  wishlistsLight: 'rgba(212, 160, 84, 0.14)',
-  plans: '#8AAF7B',
-  plansLight: 'rgba(138, 175, 123, 0.14)',
-  checklists: '#7BA0AF',
-  checklistsLight: 'rgba(123, 160, 175, 0.14)',
-  expenses: '#B08090',
-  expensesLight: 'rgba(176, 128, 144, 0.14)',
-  milestones: '#C4977A',
-  milestonesLight: 'rgba(196, 151, 122, 0.14)',
-  mood: '#9B8EC4',
-  moodLight: 'rgba(155, 142, 196, 0.14)',
+  reminders: '#A092D7',
+  remindersLight: '#3D3656',
+  tasks: '#7CBC9A',
+  tasksLight: '#31483B',
+  journal: '#D08F70',
+  journalLight: '#4B352B',
+  wish: '#D8A64C',
+  wishLight: '#4C3A20',
+  wishlists: '#D8A64C',
+  wishlistsLight: '#4C3A20',
+  plans: '#95BC74',
+  plansLight: '#3A482D',
+  checklists: '#719CB6',
+  checklistsLight: '#2E414C',
+  milestones: '#D08F70',
+  milestonesLight: '#4B352B',
+  mood: '#A092D7',
+  moodLight: '#3D3656',
 
   background: D_BG,
   screenBackground: D_BG,
@@ -129,7 +128,7 @@ const dark = {
   black: D_BG,
 
   gradientWarm: [D_BG_SOFT, D_BG] as readonly string[],
-  gradientGold: ['rgba(208, 139, 111, 0.10)', 'rgba(208, 139, 111, 0)'] as readonly string[],
+  gradientGold: ['#493226', D_BG] as readonly string[],
 };
 
 const light = {
@@ -152,60 +151,60 @@ const light = {
   // ─── Legacy aliases (re-pointed) ─────────────────────────────
   primary: L_ACCENT,
   primaryLight: L_ACCENT_SOFT,
-  primaryDark: '#9F5A40',
-  primaryMuted: 'rgba(199, 117, 90, 0.14)',
-  primaryVivid: '#B86846',
+  primaryDark: '#9B543D',
+  primaryMuted: '#F2D8C8',
+  primaryVivid: '#BB6246',
 
   ink: L_BG,
   coal: L_BG_SOFT,
   card: L_BG_CARD,
-  cardHi: '#FFFDF7',
+  cardHi: '#FFFCF4',
   line: L_LINE,
   lineHi: L_LINE_2,
   bone: L_INK,
   mist: L_INK_2,
   fog: L_INK_3,
-  ash: '#A89E89',
+  ash: '#A3957B',
   gold: L_ACCENT,
-  goldDim: '#9F5A40',
-  goldSoft: 'rgba(199, 117, 90, 0.14)',
+  goldDim: '#9B543D',
+  goldSoft: '#F2D8C8',
 
   night: L_BG_SOFT,
   dark: L_BG_CARD,
-  dim: '#FFFDF7',
+  dim: '#FFFCF4',
   muted: L_LINE,
   dusk: L_LINE_2,
   haze: L_INK_2,
   cream: L_INK,
   parchment: L_INK,
 
-  success: '#5A7A50',
-  successLight: 'rgba(90, 122, 80, 0.10)',
-  warning: '#A87A38',
-  warningLight: 'rgba(168, 122, 56, 0.10)',
-  error: '#A84A3A',
-  errorLight: 'rgba(168, 74, 58, 0.10)',
-  info: '#5A7A8A',
-  infoLight: 'rgba(90, 122, 138, 0.10)',
+  success: '#6D965A',
+  successLight: '#DFEBD4',
+  warning: '#C99135',
+  warningLight: '#F1DFC0',
+  error: '#BD5948',
+  errorLight: '#F3D3CA',
+  info: '#5C8EAA',
+  infoLight: '#D8E8F0',
 
-  reminders: '#6A5E9A',
-  remindersLight: 'rgba(106, 94, 154, 0.10)',
-  tasks: '#5A7A6A',
-  tasksLight: 'rgba(90, 122, 106, 0.10)',
-  journal: '#A87258',
-  journalLight: 'rgba(168, 114, 88, 0.10)',
-  wishlists: '#A87A38',
-  wishlistsLight: 'rgba(168, 122, 56, 0.10)',
-  plans: '#5A7A50',
-  plansLight: 'rgba(90, 122, 80, 0.10)',
-  checklists: '#5A7A8A',
-  checklistsLight: 'rgba(90, 122, 138, 0.10)',
-  expenses: '#8A5A6A',
-  expensesLight: 'rgba(138, 90, 106, 0.10)',
-  milestones: '#A87258',
-  milestonesLight: 'rgba(168, 114, 88, 0.10)',
-  mood: '#6A5E9A',
-  moodLight: 'rgba(106, 94, 154, 0.10)',
+  reminders: '#8B78C0',
+  remindersLight: '#E4DEF3',
+  tasks: '#5F9B7B',
+  tasksLight: '#DCEBDF',
+  journal: '#B7785D',
+  journalLight: '#ECD9CC',
+  wish: '#C99135',
+  wishLight: '#F1DFC0',
+  wishlists: '#C99135',
+  wishlistsLight: '#F1DFC0',
+  plans: '#789D57',
+  plansLight: '#E1EAD2',
+  checklists: '#5C8EAA',
+  checklistsLight: '#D8E8F0',
+  milestones: '#B7785D',
+  milestonesLight: '#ECD9CC',
+  mood: '#8B78C0',
+  moodLight: '#E4DEF3',
 
   background: L_BG,
   screenBackground: L_BG,
@@ -215,11 +214,11 @@ const light = {
   textTertiary: L_INK_3,
   border: L_LINE,
   divider: L_LINE_2,
-  white: '#FFFFFF',
+  white: L_BG_CARD,
   black: L_INK,
 
   gradientWarm: [L_BG_SOFT, L_BG] as readonly string[],
-  gradientGold: ['rgba(199, 117, 90, 0.06)', 'rgba(199, 117, 90, 0)'] as readonly string[],
+  gradientGold: ['#F2D8C8', L_BG] as readonly string[],
 };
 
 export type ColorScheme = {

@@ -12,7 +12,6 @@ const CREATE_SHEETS = [
   'new-timetable-item.tsx',
   'new-checkin.tsx',
   'new-entry.tsx',
-  'new-expense.tsx',
   'new-milestone.tsx',
   'new-note.tsx',
   'new-reminder.tsx',
@@ -50,7 +49,7 @@ describe('Create sheet uniformity', () => {
   });
 
   it('sheets touching dates use SheetDateField/SheetTimeField', () => {
-    const dateSheets = ['new-milestone.tsx', 'new-expense.tsx', 'new-reminder.tsx'];
+    const dateSheets = ['new-milestone.tsx', 'new-reminder.tsx'];
     for (const f of dateSheets) {
       const src = read(f);
       expect(src, `${f} must use SheetDateField`).toMatch(/SheetDateField/);

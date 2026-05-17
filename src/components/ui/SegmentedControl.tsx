@@ -5,7 +5,11 @@ import { useTheme } from '@/src/lib/theme';
 import { Typography } from '@/src/constants/typography';
 import { Spacing } from '@/src/constants/spacing';
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+if (
+  Platform.OS === 'android' &&
+  !(globalThis as any).nativeFabricUIManager &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
@@ -85,11 +89,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   activeSegment: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
   },
   segmentText: {
     ...Typography.captionMedium,

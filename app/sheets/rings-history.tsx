@@ -9,18 +9,15 @@ import {
   startOfMonth,
   subMonths,
 } from 'date-fns';
+import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import { AnimatedTripleRing } from '@/src/components/ui/atoms';
 import { SheetShell } from '@/src/components/ui/SheetShell';
+import { alphaColor } from '@/src/lib/color';
 import { useTheme } from '@/src/lib/theme';
 import { useSession } from '@/src/hooks/useSession';
 import { useRingsHistory, type RingValues } from '@/src/hooks/useRingsHistory';
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-const FUTURE_COLORS: [string, string, string] = [
-  'rgba(244,166,140,0.22)',
-  'rgba(228,178,74,0.22)',
-  'rgba(184,168,232,0.22)',
-];
 
 function monthFirstWeekdayIndex(date: Date): number {
   return (startOfMonth(date).getDay() + 6) % 7;
@@ -47,6 +44,11 @@ function Month({
   const daysInMonth = getDaysInMonth(anchor);
   const firstDay = monthFirstWeekdayIndex(anchor);
   const todayEnd = endOfDay(today);
+  const futureColors: [string, string, string] = [
+    alphaColor(C.peach, 0.22),
+    alphaColor(C.gold, 0.22),
+    alphaColor(C.lavender, 0.22),
+  ];
 
   const cells: React.ReactNode[] = [];
   for (let i = 0; i < firstDay; i++) {
@@ -63,7 +65,7 @@ function Month({
     const values: [number, number, number] =
       isFutureDay || !hasData ? [0, 0, 0] : ringValuesFor(data);
     const colors: [string, string, string] =
-      isFutureDay || !hasData ? FUTURE_COLORS : [C.peach, C.gold, C.lavender];
+      isFutureDay || !hasData ? futureColors : [C.peach, C.gold, C.lavender];
 
     cells.push(
       <View
@@ -78,7 +80,7 @@ function Month({
             width: 42,
             height: 42,
             borderRadius: 21,
-            backgroundColor: isTodayCell ? C.error : 'transparent',
+            backgroundColor: isTodayCell ? C.peach : 'transparent',
           }}
         >
           <AnimatedTripleRing
@@ -87,7 +89,7 @@ function Month({
             gap={1.5}
             values={values}
             colors={colors}
-            bg="rgba(255,255,255,0.08)"
+            bg={alphaColor(C.inkColor, 0.08)}
             delay={monthIdx * 240 + (d - 1) * 8}
           />
         </View>
@@ -95,7 +97,7 @@ function Month({
           style={{
             fontSize: 11,
             fontFamily: F.bodyBold,
-            color: isTodayCell ? C.bone : C.mist,
+            color: isTodayCell ? C.peachInk : C.ink2,
             marginTop: 4,
           }}
         >
@@ -112,8 +114,8 @@ function Month({
         style={{
           fontFamily: F.displayBold,
           fontSize: 20,
-          color: C.bone,
-          letterSpacing: -0.4,
+          color: C.inkColor,
+          letterSpacing: 0,
           marginBottom: 14,
           textAlign: 'center',
         }}
@@ -129,7 +131,7 @@ function Month({
               textAlign: 'center',
               fontSize: 11,
               fontFamily: F.bodyBold,
-              color: C.fog,
+              color: C.ink3,
               letterSpacing: 0.5,
             }}
           >
@@ -143,6 +145,14 @@ function Month({
 }
 
 export default function RingsHistory() {
+  return (
+    <FeatureRouteGuard featureId="checkins">
+      <RingsHistoryContent />
+    </FeatureRouteGuard>
+  );
+}
+
+function RingsHistoryContent() {
   const { C, F } = useTheme();
   const { activeCouple } = useSession();
   const { byDateKey, error } = useRingsHistory();
@@ -160,7 +170,7 @@ export default function RingsHistory() {
             style={{
               fontFamily: F.body,
               fontSize: 14,
-              color: C.mist,
+              color: C.ink2,
               textAlign: 'center',
               lineHeight: 20,
             }}

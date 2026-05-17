@@ -79,6 +79,51 @@ export async function sendPushToSpace(args: {
   }
 }
 
+export async function sendPushToUser(args: {
+  userId: string;
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+}): Promise<void> {
+  try {
+    const { data } = await (db as any).queryOnce({
+      devices: {
+        $: { where: { 'user.id': args.userId } },
+        user: {},
+      },
+    });
+
+    const tokens = ((data?.devices ?? []) as any[])
+      .map((device) => device?.expoPushToken)
+      .filter((token): token is string =>
+        typeof token === 'string' && token.startsWith('ExponentPushToken'),
+      );
+
+    if (tokens.length === 0) return;
+
+    const messages: ExpoMessage[] = tokens.map((to) => ({
+      to,
+      title: args.title,
+      body: args.body,
+      sound: 'default',
+      channelId: 'default',
+      data: args.data ?? {},
+    }));
+
+    await fetch(EXPO_PUSH_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Accept-Encoding': 'gzip, deflate',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(messages),
+    });
+  } catch (e) {
+    console.warn('[push] sendPushToUser failed', e);
+  }
+}
+
 /**
  * Convenience wrapper for hook code: skips solo spaces and missing ids,
  * forwards `route` as `data.route` so taps deep-link via PushBootstrap.

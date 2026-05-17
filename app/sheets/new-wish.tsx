@@ -143,15 +143,15 @@ function NewWishInner() {
               flexDirection: 'row',
               alignItems: 'baseline',
               gap: 4,
-              backgroundColor: C.card,
+              backgroundColor: C.bgCard,
               borderWidth: 1,
-              borderColor: C.line,
+              borderColor: C.lineColor,
               borderRadius: 14,
               paddingHorizontal: 14,
               paddingVertical: 12,
             }}
           >
-            <Text style={{ color: C.fog, fontFamily: F.bodyBold }}>€</Text>
+            <Text style={{ color: C.ink3, fontFamily: F.bodyBold }}>€</Text>
             <TextInput
               testID="new-wish-price-input"
               value={price}
@@ -161,7 +161,7 @@ function NewWishInner() {
               inputMode="numeric"
               style={{
                 flex: 1,
-                color: C.bone,
+                color: C.inkColor,
                 fontFamily: F.displayBold,
                 fontSize: 18,
               }}
@@ -186,15 +186,15 @@ function NewWishInner() {
               flexDirection: 'row',
               alignItems: 'center',
               gap: 8,
-              backgroundColor: C.card,
+              backgroundColor: C.bgCard,
               borderWidth: 1,
-              borderColor: C.line,
+              borderColor: C.lineColor,
               borderRadius: 14,
               paddingHorizontal: 14,
               paddingVertical: 12,
             }}
           >
-            <Icon name="link" size={14} color={C.fog} />
+            <Icon name="link" size={14} color={C.ink3} />
             <TextInput
               testID="new-wish-url-input"
               value={url}
@@ -203,7 +203,7 @@ function NewWishInner() {
               placeholderTextColor={C.fog}
               style={{
                 flex: 1,
-                color: C.bone,
+                color: C.inkColor,
                 fontSize: 13,
                 fontFamily: F.body,
               }}
@@ -222,15 +222,17 @@ function NewWishInner() {
         />
       </SheetSection>
 
-      <SheetSection title="For">
-        <SheetSegment
-          options={scopeOptions}
-          selected={selectedScope}
-          onChange={setScope}
-          accent={C.peach}
-          testIDPrefix="new-wish-scope"
-        />
-      </SheetSection>
+      {scopeOptions.length > 1 ? (
+        <SheetSection title="For">
+          <SheetSegment
+            options={scopeOptions}
+            selected={selectedScope}
+            onChange={setScope}
+            accent={C.peach}
+            testIDPrefix="new-wish-scope"
+          />
+        </SheetSection>
+      ) : null}
     </SheetShell>
   );
 }

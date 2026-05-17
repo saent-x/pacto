@@ -5,6 +5,7 @@ import { useTheme } from '@/src/lib/theme';
 import { useSession } from '@/src/hooks/useSession';
 import { useMemoryActions } from '@/src/hooks/memories/useMemoryActions';
 import { useAssistantOverlay } from '@/src/lib/assistant-overlay';
+import { memoryShareUrl } from '@/src/lib/share-links';
 import { MemoryActions, type SpaceMode } from './MemoryActions';
 import { MemoryAttachments } from './MemoryAttachments';
 import { MemoryBody } from './MemoryBody';
@@ -64,7 +65,7 @@ export function MemoryCard({ memory, variant }: Props) {
           replyCount={memory.replyCount ?? 0}
           repostCount={memory.repostCount ?? 0}
           onReply={() => router.push(`/sheets/memory-composer?mode=reply&parentId=${memory.id}` as any)}
-          onShare={() => Share.share({ message: `coupl://memories/${memory.id}` })}
+          onShare={() => Share.share({ message: memoryShareUrl(memory.id) })}
         />
       </View>
     );
@@ -118,7 +119,7 @@ export function MemoryCard({ memory, variant }: Props) {
         }}
         onReply={() => router.push(`/sheets/memory-composer?mode=reply&parentId=${memory.id}` as any)}
         onRepost={() => actions.repost(memory.id)}
-        onShare={() => Share.share({ message: `coupl://memories/${memory.id}` })}
+        onShare={() => Share.share({ message: memoryShareUrl(memory.id) })}
       />
     </PressScale>
   );

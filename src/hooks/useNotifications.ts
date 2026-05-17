@@ -8,9 +8,9 @@ export type NotificationKind =
   | 'loveNote'
   | 'checkIn'
   | 'reminder'
-  | 'expense'
   | 'milestone'
-  | 'timetable';
+  | 'timetable'
+  | 'memory';
 
 export type NotificationItem = {
   id: string;
@@ -22,6 +22,7 @@ export type NotificationItem = {
   createdAt: number;
   time: string;
   unread: boolean;
+  route?: string;
 };
 
 export type BucketLabel = 'Today' | 'Yesterday' | 'This week' | 'Earlier';
@@ -94,15 +95,6 @@ type QueryShape = {
     createdAt: number;
     isCompleted?: boolean;
   }>;
-  expenses: Array<{
-    id: string;
-    title: string;
-    amount: number;
-    currency?: string;
-    category?: string;
-    createdAt: number;
-    paidBy?: Array<{ id: string; displayName?: string }> | { id: string; displayName?: string };
-  }>;
   milestones: Array<{
     id: string;
     title: string;
@@ -113,6 +105,15 @@ type QueryShape = {
     id: string;
     title: string;
     createdAt: number;
+  }>;
+  memories: Array<{
+    id: string;
+    body?: string;
+    kind?: string;
+    isPrivate?: boolean;
+    notifyMembers?: boolean;
+    createdAt: number;
+    author?: Array<{ id: string; displayName?: string }> | { id: string; displayName?: string };
   }>;
 };
 
@@ -135,9 +136,9 @@ export function useNotifications() {
           loveNotes: { $: { where: { 'couple.id': coupleId } }, author: {} },
           checkIns: { $: { where: { 'couple.id': coupleId } }, author: {} },
           reminders: { $: { where: { 'couple.id': coupleId } } },
-          expenses: { $: { where: { 'couple.id': coupleId } }, paidBy: {} },
           milestones: { $: { where: { 'couple.id': coupleId } } },
           timetableItems: { $: { where: { 'couple.id': coupleId } } },
+          memories: { $: { where: { 'space.id': coupleId } }, author: {} },
         }
       : null,
   );
@@ -162,6 +163,7 @@ export function useNotifications() {
         createdAt: n.createdAt,
         time: formatTime(n.createdAt, now),
         unread: n.createdAt > lastReadAt,
+        route: '/(tabs)/us/notes',
       });
     }
 
@@ -181,6 +183,7 @@ export function useNotifications() {
         createdAt: c.createdAt,
         time: formatTime(c.createdAt, now),
         unread: c.createdAt > lastReadAt,
+        route: '/(tabs)/us/checkins',
       });
     }
 
@@ -201,24 +204,7 @@ export function useNotifications() {
         createdAt: r.createdAt,
         time: formatTime(r.createdAt, now),
         unread: r.createdAt > lastReadAt,
-      });
-    }
-
-    for (const e of q.expenses ?? []) {
-      const payer = firstRel(e.paidBy);
-      const fromPartner = payer?.id && payer.id !== userId;
-      const who = fromPartner ? payer?.displayName ?? partnerName : 'You';
-      const sym = e.currency === 'USD' ? '$' : '€';
-      out.push({
-        id: `expense:${e.id}`,
-        kind: 'expense',
-        icon: 'dollarSign',
-        color: pastels.mint,
-        title: `${who} added ${sym}${Math.round(e.amount)} expense`,
-        sub: e.category ?? e.title,
-        createdAt: e.createdAt,
-        time: formatTime(e.createdAt, now),
-        unread: e.createdAt > lastReadAt,
+        route: '/(tabs)/us/reminders',
       });
     }
 
@@ -233,6 +219,7 @@ export function useNotifications() {
         createdAt: ms.createdAt,
         time: formatTime(ms.createdAt, now),
         unread: ms.createdAt > lastReadAt,
+        route: '/(tabs)/us/milestones',
       });
     }
 
@@ -247,6 +234,31 @@ export function useNotifications() {
         createdAt: t.createdAt,
         time: formatTime(t.createdAt, now),
         unread: t.createdAt > lastReadAt,
+        route: '/(tabs)/us/timetables',
+      });
+    }
+
+    for (const m of q.memories ?? []) {
+      const author = firstRel(m.author);
+      const fromPartner = author?.id && author.id !== userId;
+      if (m.isPrivate && fromPartner) continue;
+      if (fromPartner && m.notifyMembers === false) continue;
+      const preview = m.body?.trim();
+      out.push({
+        id: `memory:${m.id}`,
+        kind: 'memory',
+        icon: 'heart',
+        color: pastels.rose,
+        title: m.kind === 'reply'
+          ? 'Memory reply'
+          : fromPartner
+          ? `${author?.displayName ?? partnerName} added a memory`
+          : 'Memory posted',
+        sub: preview ? preview.slice(0, 90) : 'Open memory',
+        createdAt: m.createdAt,
+        time: formatTime(m.createdAt, now),
+        unread: m.createdAt > lastReadAt,
+        route: `/(tabs)/memories/${m.id}`,
       });
     }
 

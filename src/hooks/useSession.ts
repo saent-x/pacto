@@ -6,6 +6,8 @@ export type ActiveCouple = {
     id: string;
     name: string | null;
     anniversary: string | null;
+    kind: ReturnType<typeof useBaseSession>['mode'];
+    plan?: string | null;
     enabledFeatures: FeatureId[];
   };
   memberCount: number;
@@ -47,7 +49,10 @@ export type HookSession = {
 
 export function useSession(): HookSession {
   const s = useBaseSession();
+  return buildHookSession(s);
+}
 
+export function buildHookSession(s: ReturnType<typeof useBaseSession>): HookSession {
   const user: HookUser | null = s.user
     ? {
         id: s.user.id,
@@ -63,9 +68,11 @@ export function useSession(): HookSession {
           id: s.space.id,
           name: s.space.name ?? null,
           anniversary: s.space.anniversary ?? null,
+          kind: s.space.kind,
+          plan: s.space.plan ?? null,
           enabledFeatures: s.space.enabledFeatures,
         },
-        memberCount: s.partner ? 2 : 1,
+        memberCount: 1 + s.members.length,
         partner: s.partner
           ? {
               id: s.partner.id,

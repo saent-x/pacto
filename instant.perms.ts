@@ -53,7 +53,6 @@ const rules = {
   milestones: { allow: coupleMemberOnly },
   journalEntries: { allow: coupleMemberOnly },
   loveNotes: { allow: coupleMemberOnly },
-  expenses: { allow: coupleMemberOnly },
   wishlists: { allow: coupleMemberOnly },
   wishlistItems: { allow: coupleMemberOnly },
   timetables: { allow: coupleMemberOnly },
@@ -81,9 +80,10 @@ const rules = {
   },
   $files: {
     // Avatars under `avatars/{userId}/*` — owner writes, any signed-in user reads.
-    // Memory media under `spaces/{spaceId}/memories/*` — any authenticated user in the
-    // space may write. TODO: tighten to strict membership check once InstantDB CEL
-    // supports `data.path.split('/')[1] in data.ref('$user.memberships.space.id')`.
+    // Memory media under `spaces/{spaceId}/memories/*` is limited to signed-in
+    // users. InstantDB CEL cannot currently derive the space id from the file
+    // path for a strict membership comparison here, so memory rows enforce
+    // membership and media quota before a file path is linked into the feed.
     allow: {
       view: "auth.id != null && (data.path.startsWith('avatars/') || data.path.startsWith('spaces/'))",
       create:

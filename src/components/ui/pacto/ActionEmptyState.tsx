@@ -30,7 +30,7 @@ export function ActionEmptyState({
   const active = accent ?? C.accent;
   return (
     <View style={[styles.wrap, { borderColor: C.lineColor, backgroundColor: C.bgCard }, style]}>
-      <View style={[styles.icon, { backgroundColor: C.bgSoft }]}>
+      <View style={[styles.icon, { backgroundColor: C.bgSoft, borderColor: C.lineColor }]}>
         <Icon name={icon} size={20} color={active} />
       </View>
       <Text style={[Typography.subheading, { color: C.inkColor, textAlign: 'center' }]}>
@@ -45,8 +45,9 @@ export function ActionEmptyState({
       {actionLabel && onAction ? (
         <PressScale
           onPress={onAction}
-          style={[styles.action, { backgroundColor: active }]}
+          style={[styles.action, { backgroundColor: C.inkColor }]}
           accessibilityRole="button"
+          accessibilityLabel={actionLabel}
         >
           <Icon name="plus" size={14} color={C.bg} />
           <Text style={[Typography.buttonLabel, { color: C.bg }]}>{actionLabel}</Text>
@@ -59,17 +60,19 @@ export function ActionEmptyState({
 const styles = StyleSheet.create({
   wrap: {
     borderWidth: 1,
-    borderStyle: 'dashed',
     borderRadius: 20,
-    paddingVertical: 28,
+    paddingTop: 28,
+    paddingBottom: 28,
     paddingHorizontal: 18,
     alignItems: 'center',
     gap: 10,
+    overflow: 'hidden',
   },
   icon: {
     width: 44,
     height: 44,
     borderRadius: 14,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },

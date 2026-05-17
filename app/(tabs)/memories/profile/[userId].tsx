@@ -7,7 +7,7 @@ import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
 import { useSession } from '@/src/hooks/useSession';
 import { useMemberProfile } from '@/src/hooks/memories/useMemberProfile';
-import { MemoryCard } from '@/src/components/ui/pacto/memories/MemoryCard';
+import { MemoryPost } from '@/src/components/ui/pacto/memories/MemoryPost';
 
 export default function MemberProfileScreen() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
@@ -33,7 +33,13 @@ export default function MemberProfileScreen() {
       <FlatList
         data={memories}
         keyExtractor={(m: any) => m.id}
-        renderItem={({ item }) => <MemoryCard memory={item as any} variant="feed" />}
+        renderItem={({ item, index }) => (
+          <MemoryPost
+            memory={item as any}
+            variant="feed"
+            isLast={index === memories.length - 1}
+          />
+        )}
         contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
       />
     </View>

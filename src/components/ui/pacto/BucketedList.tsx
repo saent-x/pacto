@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTheme } from '@/src/lib/theme';
 import { Card } from './Card';
 import { SectionHead } from './SectionHead';
@@ -20,7 +20,7 @@ type Props<T> = {
 /**
  * Reminders-screen list pattern. Each bucket renders a SectionHead followed
  * by a flat Card with hairline-separated rows. Used by Calendar, Tasks-Detail,
- * Reminders, Wishlists, Expenses.
+ * Reminders, and Wishlists.
  *
  * Design source: /tmp/pacto-design/coupl-design-ii/project/screens.jsx (RemindersScreen)
  * + /tmp/pacto-design/coupl-design-ii/project/modules.jsx (bucketed module screens)
@@ -34,7 +34,13 @@ export function BucketedList<T>({ buckets, renderRow, rowKey, spacing = 18 }: Pr
           <SectionHead dotColor={bucket.dotColor} count={bucket.rows.length}>
             {bucket.label}
           </SectionHead>
-          <Card padded={false}>
+          <Card
+            padded={false}
+            style={[
+              styles.bucketCard,
+              { borderColor: C.lineColor, backgroundColor: C.bgCard },
+            ]}
+          >
             {bucket.rows.map((row, ri) => (
               <View
                 key={rowKey(row, ri)}
@@ -53,3 +59,9 @@ export function BucketedList<T>({ buckets, renderRow, rowKey, spacing = 18 }: Pr
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  bucketCard: {
+    borderRadius: 18,
+  },
+});

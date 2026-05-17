@@ -28,7 +28,7 @@ const FEATURE_TILE_COPY: Record<FeatureId, string> = {
   checkins: 'Mood updates',
   recurring: 'Repeating routines',
   timetable: 'Weekly rhythm',
-  goals: 'Plans & priorities',
+  goals: 'Targets & priorities',
 };
 
 const MODE_LABEL: Record<SpaceMode, string> = {
@@ -104,7 +104,12 @@ export default function OnboardingFeatures() {
   }
 
   return (
-    <ScrollView contentContainerStyle={[styles.root, { backgroundColor: C.bg }]}>
+    <ScrollView
+      style={{ backgroundColor: C.bg }}
+      contentContainerStyle={[styles.root, { backgroundColor: C.bg }]}
+      contentInsetAdjustmentBehavior="automatic"
+      showsVerticalScrollIndicator={false}
+    >
       <Stack.Screen
         options={{
           headerShown: true,
@@ -259,7 +264,7 @@ function featureTileAccent(featureId: FeatureId, C: ReturnType<typeof useTheme>[
 }
 
 const styles = StyleSheet.create({
-  root: { padding: 24, paddingTop: 58, paddingBottom: 54 },
+  root: { flexGrow: 1, padding: 24, paddingTop: 58, paddingBottom: 54 },
   hero: { alignItems: 'center', marginBottom: 26 },
   features: {
     flexDirection: 'row',
@@ -275,6 +280,7 @@ const styles = StyleSheet.create({
     height: 108,
     padding: 11,
     justifyContent: 'space-between',
+    borderRadius: 8,
   },
   featureAccentRail: {
     position: 'absolute',
@@ -292,7 +298,7 @@ const styles = StyleSheet.create({
   featureIcon: {
     width: 34,
     height: 34,
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -311,7 +317,7 @@ const styles = StyleSheet.create({
   createButton: {
     marginTop: 24,
     minHeight: 52,
-    borderRadius: 16,
+    borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

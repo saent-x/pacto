@@ -36,10 +36,13 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import * as WebBrowser from 'expo-web-browser';
+import { HeroPactoBadge } from '@/src/components/ui/pacto';
 import { ThemeProvider, useTheme } from '@/src/lib/theme';
 import { SessionProvider } from '@/src/lib/session';
 import { SessionGate } from '@/src/lib/session-gate';
@@ -73,6 +76,11 @@ export default function RootLayout() {
     BitcountPropSingle_400Regular,
     BitcountPropSingle_500Medium,
     BitcountPropSingle_700Bold,
+    'GeistPixel-Square': require('../assets/fonts/GeistPixel-Square.ttf'),
+    'GeistPixel-Grid': require('../assets/fonts/GeistPixel-Grid.ttf'),
+    'GeistPixel-Line': require('../assets/fonts/GeistPixel-Line.ttf'),
+    'GeistPixel-Circle': require('../assets/fonts/GeistPixel-Circle.ttf'),
+    'GeistPixel-Triangle': require('../assets/fonts/GeistPixel-Triangle.ttf'),
   });
 
   // Hold the native splash until fonts have loaded — otherwise the splash
@@ -86,9 +94,15 @@ export default function RootLayout() {
     return () => clearTimeout(t);
   }, [loaded]);
 
+  // Hold the entire tree until fonts are ready. Without this, components
+  // render once with system fallback fonts and a second time after
+  // `loaded` flips — on iOS/RN-Web some Text nodes keep the cached
+  // fallback metrics and never swap to the pixel font without a remount.
+  if (!loaded) return null;
+
   return (
     <ErrorBoundary>
-      <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#0E0B0A' }}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
           <ThemeProvider>
             <BottomSheetModalProvider>
@@ -98,6 +112,7 @@ export default function RootLayout() {
                     <PushBootstrap />
                     <SessionGate>
                       <ThemedRoot />
+                      <FloatingPactoLauncher />
                     </SessionGate>
                   </AssistantOverlayProvider>
                 </SessionAiAssistantProvider>
@@ -107,6 +122,27 @@ export default function RootLayout() {
         </SafeAreaProvider>
       </GestureHandlerRootView>
     </ErrorBoundary>
+  );
+}
+
+function FloatingPactoLauncher() {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View
+      pointerEvents="box-none"
+      style={{
+        position: 'absolute',
+        right: 18,
+        bottom: insets.bottom + 84,
+        zIndex: 50,
+      }}
+    >
+      <HeroPactoBadge
+        size={58}
+        markSize={54}
+      />
+    </View>
   );
 }
 
@@ -132,6 +168,7 @@ function ThemedRoot() {
             headerBackground: () => null,
             headerTintColor: C.inkColor,
             headerBackTitle: '',
+            headerBackButtonDisplayMode: 'minimal',
             title: '',
             headerTitleAlign: 'center',
             contentStyle: { backgroundColor: C.bg },
@@ -173,7 +210,6 @@ function ThemedRoot() {
         {[
           'sheets/new-note',
           'sheets/new-checkin',
-          'sheets/new-expense',
           'sheets/new-wish',
           'sheets/new-milestone',
           'sheets/new-plan',

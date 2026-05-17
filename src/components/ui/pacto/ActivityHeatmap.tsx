@@ -3,6 +3,7 @@ import { LayoutChangeEvent, PanResponder, StyleSheet, Text, View } from 'react-n
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/src/lib/theme';
 import { Typography } from '@/src/constants/typography';
+import type { ActivityHeatmapDay } from '@/src/lib/home/activity';
 
 type Category = {
   key: string;
@@ -23,6 +24,8 @@ type Props = {
   cellGap?: number;
   cellRadius?: number;
   maxCellSize?: number;
+  days?: ActivityHeatmapDay[];
+  todayColor?: string;
 };
 
 const DEFAULT_GAP = 4;
@@ -47,9 +50,12 @@ export function ActivityHeatmap({
   cellGap = DEFAULT_GAP,
   cellRadius = 3,
   maxCellSize,
+  days,
+  todayColor,
 }: Props) {
   const { C } = useTheme();
   const heatColor = color ?? categories?.[0]?.color ?? C.accent;
+  const todayFill = todayColor ?? C.peach;
   const colors = palette ?? [
     C.line2,
     mixColor(heatColor, 1),
@@ -108,20 +114,33 @@ export function ActivityHeatmap({
     [shiftWeeks],
   );
 
+  const activityByDate = useMemo(() => {
+    if (!days) return null;
+    return new Map(days.map((day) => [day.dateKey, day]));
+  }, [days]);
+
   const grid = useMemo(() => {
     const rng = makeRng(seed + (weekOffset + 1000) * 997);
-    const cells: { weight: number }[][] = [];
+    const cells: { weight: number; count: number }[][] = [];
     for (let d = 0; d < 7; d++) {
-      const row: { weight: number }[] = [];
+      const row: { weight: number; count: number }[] = [];
       for (let w = 0; w < weeks; w++) {
-        const r = rng();
-        const weight = r < 0.45 ? 0 : r < 0.7 ? 1 : r < 0.88 ? 2 : 3;
-        row.push({ weight });
+        const dateKey = formatLocalDateKey(addDays(columnDates[w], d));
+        const activity = activityByDate?.get(dateKey);
+        if (activity) {
+          row.push({ weight: activity.weight, count: activity.count });
+        } else if (activityByDate) {
+          row.push({ weight: 0, count: 0 });
+        } else {
+          const r = rng();
+          const weight = r < 0.45 ? 0 : r < 0.7 ? 1 : r < 0.88 ? 2 : 3;
+          row.push({ weight, count: weight });
+        }
       }
       cells.push(row);
     }
     return cells;
-  }, [seed, weekOffset, weeks]);
+  }, [activityByDate, columnDates, seed, weekOffset, weeks]);
 
   const todayCol = columnDates.findIndex((date) => sameDate(date, currentWeekStart));
   const todayRow = (() => {
@@ -242,10 +261,11 @@ export function ActivityHeatmap({
             >
               {row.map((cell, ci) => {
                 const isToday = todayCol >= 0 && ci === todayCol && ri === todayRow;
-                const bg = colors[cell.weight] ?? colors[0];
+                const bg = isToday ? todayFill : colors[cell.weight] ?? colors[0];
                 return (
                   <View
                     key={ci}
+                    accessibilityLabel={`${cell.count} activities`}
                     style={{
                       width: cellSize || 0,
                       height: cellSize || 0,
@@ -328,6 +348,13 @@ function sameDate(a: Date | undefined, b: Date | undefined): boolean {
 function formatAxisDate(date: Date): string {
   const month = date.toLocaleDateString(undefined, { month: 'short' });
   return `${month} ${date.getDate()}`;
+}
+
+function formatLocalDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function makeRng(seed: number) {

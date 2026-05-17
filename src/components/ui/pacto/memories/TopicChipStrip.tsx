@@ -34,7 +34,7 @@ export function TopicChipStrip({ topics, selected, onSelect }: Props) {
               styles.chip,
               {
                 borderColor: isActive ? C.inkColor : C.lineColor,
-                backgroundColor: isActive ? C.inkColor : C.bgCard,
+                backgroundColor: isActive ? C.inkColor : C.bgSoft,
               },
             ]}
           >
@@ -71,7 +71,7 @@ export function TopicChipStrip({ topics, selected, onSelect }: Props) {
 const styles = StyleSheet.create({
   row: {
     paddingHorizontal: 18,
-    paddingTop: 4,
+    paddingTop: 0,
     paddingBottom: 14,
     gap: 8,
     flexDirection: 'row',

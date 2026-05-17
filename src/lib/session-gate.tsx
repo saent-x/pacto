@@ -1,6 +1,7 @@
 import { useRouter, useSegments } from 'expo-router';
 import { useEffect, type PropsWithChildren } from 'react';
 import { View } from 'react-native';
+import { BootScreen } from '@/src/components/ui/BootScreen';
 import { useSession } from './session';
 
 export function SessionGate({ children }: PropsWithChildren) {
@@ -42,16 +43,7 @@ export function SessionGate({ children }: PropsWithChildren) {
   return (
     <View style={{ flex: 1 }}>
       {children}
-      {status === 'loading' && (
-        <View
-          pointerEvents="auto"
-          style={{
-            position: 'absolute',
-            top: 0, bottom: 0, left: 0, right: 0,
-            backgroundColor: '#0E0B0A',
-          }}
-        />
-      )}
+      {status === 'loading' ? <BootScreen absolute /> : null}
     </View>
   );
 }

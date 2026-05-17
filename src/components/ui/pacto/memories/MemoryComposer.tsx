@@ -17,13 +17,16 @@ import { PressScale } from '@/src/components/ui/PressScale';
 import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
 import { useSession } from '@/src/hooks/useSession';
-import { useMemoryComposer } from '@/src/hooks/memories/useMemoryComposer';
+import {
+  addMemoryDraftAttachment,
+  useMemoryComposer,
+} from '@/src/hooks/memories/useMemoryComposer';
 import { useMediaUpload } from '@/src/hooks/memories/useMediaUpload';
 import { useMediaQuota } from '@/src/hooks/memories/useMediaQuota';
-import { useAiQuota } from '@/src/hooks/useAiQuota';
 import { MemoriesIcon } from './MemoriesIcon';
 import { QuotaBadge } from './QuotaBadge';
 import { useMediaPicker } from './MediaPickerSheet';
+import { EntityRefCard } from './EntityRefCard';
 
 type Visibility = 'pair' | 'crew' | 'private';
 
@@ -33,7 +36,7 @@ type Visibility = 'pair' | 'crew' | 'private';
  * Layout, top → bottom:
  *   1. Sheet header     · "New memory" + close (×) button
  *   2. Author row       · Avatar + lowercase name + autoFocus multiline TextInput
- *   3. Attachments row  · image · entity-link · poll (crew only) · AI polish
+ *   3. Attachments row  · image · entity-link · poll (crew only) · local AI polish
  *   4. Optional media preview list
  *   5. Visibility chips · pair → "Just us / Just me", crew → "Crew / Just me", solo: hidden
  *   6. Primary "Post memory" button (full-width, ink fill, disabled until body)
@@ -43,6 +46,8 @@ export function MemoryComposer() {
     mode?: string;
     parentId?: string;
     quoteId?: string;
+    pickedRefId?: string;
+    pickedRefType?: string;
   }>();
   const { C } = useTheme();
   const session = useSession() as any;
@@ -56,7 +61,6 @@ export function MemoryComposer() {
   const { upload } = useMediaUpload();
   const { pick } = useMediaPicker();
   const quota = useMediaQuota(space?.id);
-  const aiQuota = useAiQuota(space?.id);
   const [submitting, setSubmitting] = useState(false);
 
   // Sync route params → draft once on mount / param change.
@@ -69,6 +73,18 @@ export function MemoryComposer() {
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.mode, params.parentId, params.quoteId]);
+
+  // Backward-compatible picked-entity round-trip for older routes/tests. The
+  // attach sheet now writes straight into the shared composer draft store.
+  useEffect(() => {
+    const pickedRefId = Array.isArray(params.pickedRefId) ? params.pickedRefId[0] : params.pickedRefId;
+    const pickedRefType = Array.isArray(params.pickedRefType) ? params.pickedRefType[0] : params.pickedRefType;
+    if (!pickedRefId || !pickedRefType) return;
+    addMemoryDraftAttachment({ type: pickedRefType as any, refId: pickedRefId });
+    // Clear the params so the same pick doesn't re-add on every render.
+    (router as any).setParams?.({ pickedRefId: undefined, pickedRefType: undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.pickedRefId, params.pickedRefType]);
 
   // Visibility chips — mode-aware. Maps to the existing isPrivate boolean.
   const visibilityOptions = useMemo<{ id: Visibility; label: string }[]>(() => {
@@ -114,19 +130,13 @@ export function MemoryComposer() {
         uri: asset.uri,
         rawSize: asset.size,
       });
-      setDraft({
-        ...draft,
-        attachments: [
-          ...draft.attachments,
-          {
-            type: asset.isGif ? 'gif' : 'image',
-            mediaUrl: uploaded.mediaUrl,
-            mediaPath: uploaded.mediaPath,
-            mediaSize: uploaded.mediaSize,
-            mediaWidth: uploaded.mediaWidth,
-            mediaHeight: uploaded.mediaHeight,
-          },
-        ],
+      addMemoryDraftAttachment({
+        type: asset.isGif ? 'gif' : 'image',
+        mediaUrl: uploaded.mediaUrl,
+        mediaPath: uploaded.mediaPath,
+        mediaSize: uploaded.mediaSize,
+        mediaWidth: uploaded.mediaWidth,
+        mediaHeight: uploaded.mediaHeight,
       });
     } catch (e: any) {
       Alert.alert('Upload failed', e?.message ?? 'Unknown error');
@@ -142,13 +152,6 @@ export function MemoryComposer() {
       pollOptions: draft.pollOptions.length === 0 ? ['', ''] : [],
     });
 
-  const onPolish = () => {
-    if (aiQuota.isExhausted) {
-      router.push('/sheets/upgrade' as any);
-      return;
-    }
-    Alert.alert('AI Polish', 'Polishing coming soon. Sit tight.');
-  };
 
   // ── Submit ──────────────────────────────────────────────────────────────
   const canPost = draft.body.trim().length > 0 || draft.attachments.length > 0;
@@ -188,7 +191,7 @@ export function MemoryComposer() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={[styles.root, { backgroundColor: (C as any).coal ?? C.bg }]}
     >
       {/* Sheet header */}
@@ -208,7 +211,9 @@ export function MemoryComposer() {
 
       <ScrollView
         contentContainerStyle={{ padding: 18, paddingBottom: 32 }}
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
         {/* Author + body */}
         <View style={styles.authorRow}>
@@ -247,9 +252,6 @@ export function MemoryComposer() {
                   <PollIcon color={draft.pollOptions.length > 0 ? C.accent : C.ink3} />
                 </PressScale>
               ) : null}
-              <PressScale onPress={onPolish} hitSlop={8} style={styles.toolBtn}>
-                <SparkleIcon color={C.ink3} />
-              </PressScale>
             </View>
 
             <QuotaBadge percent={quota.percent} isOverThreshold={quota.isOverThreshold} />
@@ -264,7 +266,11 @@ export function MemoryComposer() {
                 {draft.attachments.map((a, i) => (
                   <View
                     key={i}
-                    style={[styles.mediaTile, { borderColor: C.lineColor, backgroundColor: C.bgCard }]}
+                    style={[
+                      styles.mediaTile,
+                      a.refId ? styles.entityTile : null,
+                      { borderColor: C.lineColor, backgroundColor: C.bgCard },
+                    ]}
                   >
                     {a.mediaUrl ? (
                       <Image
@@ -272,6 +278,10 @@ export function MemoryComposer() {
                         style={StyleSheet.absoluteFill as any}
                         resizeMode="cover"
                       />
+                    ) : a.refId ? (
+                      <View pointerEvents="none" style={styles.entityPreview}>
+                        <EntityRefCard type={a.type as any} refId={a.refId} />
+                      </View>
                     ) : (
                       <Text style={[styles.mediaLabel, { color: C.ink3 }]}>
                         {(a.type ?? 'attachment').toUpperCase()}
@@ -433,14 +443,6 @@ function PollIcon({ color }: { color: string }) {
   );
 }
 
-function SparkleIcon({ color }: { color: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
-      <Path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3zM18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8L18 14z" />
-    </Svg>
-  );
-}
-
 const styles = StyleSheet.create({
   root: { flex: 1 },
   header: {
@@ -502,7 +504,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   mediaTile: {
-    width: 120,
+    width: 124,
     height: 160,
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
@@ -511,10 +513,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'relative',
   },
+  entityTile: {
+    width: 260,
+    height: 92,
+    alignItems: 'stretch',
+  },
   mediaLabel: {
     fontFamily: 'GeistMono_400Regular',
     fontSize: 10,
     letterSpacing: 1.4,
+  },
+  entityPreview: {
+    width: '100%',
+    paddingHorizontal: 8,
   },
   mediaRemove: {
     position: 'absolute',

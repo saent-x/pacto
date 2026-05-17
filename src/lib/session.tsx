@@ -32,6 +32,7 @@ export type SessionSpace = {
   name?: string | null;
   anniversary?: string | null;
   inviteCode?: string | null;
+  plan?: string | null;
   enabledFeatures: FeatureId[];
 };
 
@@ -101,7 +102,6 @@ export function SessionProvider({ children }: PropsWithChildren) {
       return emptySession('loading');
     }
 
-    console.log('[session] memberships count:', data.memberships?.length ?? 0);
     const myMembership = data.memberships?.[0];
     if (!myMembership) {
       return {
@@ -146,6 +146,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
         name: space.name ?? null,
         anniversary: space.anniversary ?? null,
         inviteCode: space.inviteCode ?? null,
+        plan: space.plan ?? null,
         enabledFeatures: featureState.enabledFeatures,
       },
       membership: {

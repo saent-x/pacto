@@ -49,13 +49,12 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
       ...(goalsEnabled ? { plans: spaceWhere } : {}),
       ...(recurringEnabled ? { rituals: spaceWhere, reminders: spaceWhere } : {}),
       ...(checkinsEnabled ? { checkIns: spaceWhere } : {}),
-      ...(tasksEnabled ? { tasks: spaceWhere } : {}),
+      ...(tasksEnabled ? { tasks: { ...spaceWhere, list: {} } } : {}),
       ...(memoriesEnabled ? { milestones: spaceWhere, loveNotes: spaceWhere } : {}),
       ...((memoriesEnabled || memoryFeedEnabled) ? { memories: memoriesWhere } : {}),
       ...(journalEnabled ? { journalEntries: spaceWhere } : {}),
       ...(timetableEnabled ? { timetableItems: spaceWhere } : {}),
       ...(wishlistEnabled ? { wishlistItems: spaceWhere } : {}),
-      expenses: { $: { where: { 'couple.id': coupleId } }, paidBy: {} },
       dailyVerseCache: { $: { where: { dateKey: todayKey } } },
     };
   }, [
@@ -124,7 +123,6 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
     const loveNotes = memoriesEnabled ? data?.loveNotes ?? [] : [];
     const checkIns = checkinsEnabled ? data?.checkIns ?? [] : [];
     const milestones = memoriesEnabled ? data?.milestones ?? [] : [];
-    const expenses = data?.expenses ?? [];
     const wishlistItems = wishlistEnabled ? data?.wishlistItems ?? [] : [];
     const timetableItems = timetableEnabled ? data?.timetableItems ?? [] : [];
     const feedMemories = memoriesEnabled || memoryFeedEnabled ? data?.memories ?? [] : [];
@@ -194,7 +192,6 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
       milestones,
       journalEntries,
       loveNotes,
-      expenses,
       wishlistItems,
       timetableItems,
       memories: feedMemories,

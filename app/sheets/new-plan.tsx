@@ -16,6 +16,7 @@ import {
 } from '@/src/components/ui/SheetShell';
 import { useFeatureGate } from '@/src/hooks/useFeatureGate';
 import { usePlans } from '@/src/hooks/usePlans';
+import { alphaColor } from '@/src/lib/color';
 import { useTheme } from '@/src/lib/theme';
 
 const ICONS: IconOption<IconName>[] = [
@@ -86,6 +87,7 @@ function NewPlanInner() {
     existing ? bucketFromCanon(existing.bucket) : 'Soon',
   );
   const [saving, setSaving] = useState(false);
+  const previewInk = C.peachInk;
 
   const canSave = title.trim().length > 0 && !saving;
 
@@ -120,16 +122,16 @@ function NewPlanInner() {
 
   return (
     <SheetShell
-      eyebrow={isEdit ? 'EDIT GOAL' : 'NEW GOAL'}
+      eyebrow={isEdit ? 'EDIT TARGET' : 'NEW TARGET'}
       eyebrowColor={color}
-      title={isEdit ? 'Edit goal' : 'New goal'}
+      title={isEdit ? 'Edit target' : 'New target'}
       footer={
         <PrimaryButton icon={isEdit ? 'check' : 'plus'} onPress={onSave} disabled={!canSave}>
-          {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create goal'}
+          {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create target'}
         </PrimaryButton>
       }
     >
-      <SheetPreviewCard bg={color} ink="#1A0F0A">
+      <SheetPreviewCard bg={color} ink={previewInk}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <View style={{ flex: 1 }}>
             <Text
@@ -138,7 +140,7 @@ function NewPlanInner() {
                 fontFamily: F.bodyBold,
                 letterSpacing: 1.4,
                 opacity: 0.5,
-                color: '#1A0F0A',
+                color: previewInk,
                 textTransform: 'uppercase',
               }}
             >
@@ -148,13 +150,13 @@ function NewPlanInner() {
               style={{
                 fontFamily: F.displayBold,
                 fontSize: 20,
-                color: '#1A0F0A',
-                letterSpacing: -0.4,
+                color: previewInk,
+                letterSpacing: 0,
                 lineHeight: 22,
                 marginTop: 4,
               }}
             >
-              {title || 'Your goal title'}
+              {title || 'Your target title'}
             </Text>
           </View>
           <View
@@ -162,12 +164,12 @@ function NewPlanInner() {
               width: 36,
               height: 36,
               borderRadius: 12,
-              backgroundColor: 'rgba(0,0,0,0.14)',
+              backgroundColor: alphaColor(previewInk, 0.14),
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Icon name={icon} size={16} color="#1A0F0A" />
+            <Icon name={icon} size={16} color={previewInk} />
           </View>
         </View>
       </SheetPreviewCard>
@@ -177,7 +179,7 @@ function NewPlanInner() {
           testID="new-plan-title-input"
           value={title}
           onChangeText={setTitle}
-          placeholder="Name your goal…"
+          placeholder="Name your target…"
           accent={color}
         />
       </SheetSection>

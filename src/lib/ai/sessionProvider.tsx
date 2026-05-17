@@ -1,55 +1,90 @@
 import React, { useMemo } from 'react';
 import { db } from '@/src/lib/instant';
 import { useSession } from '@/src/lib/session';
+import type { FeatureId } from '@/src/lib/features/registry';
 import { AiAssistantProvider } from './provider';
 import { buildAiContextPrompt } from './context';
-import type { AiDomain } from './types';
+import type { AiContextRecord } from './context';
+import { AI_DOMAINS, type AiDomain } from './types';
+
+const AI_DOMAIN_FEATURES: Record<AiDomain, FeatureId> = {
+  reminders: 'recurring',
+  tasks: 'tasks',
+  taskLists: 'tasks',
+  events: 'calendar',
+  loveNotes: 'memories',
+  checkIns: 'checkins',
+  wishlists: 'wishlist',
+  wishlistItems: 'wishlist',
+  milestones: 'memories',
+  plans: 'goals',
+  journalEntries: 'journal',
+  timetables: 'timetable',
+  timetableItems: 'timetable',
+};
+
+const AI_DOMAIN_RELATION: Record<AiDomain, 'couple' | 'space'> = {
+  reminders: 'couple',
+  tasks: 'couple',
+  taskLists: 'couple',
+  events: 'couple',
+  loveNotes: 'couple',
+  checkIns: 'couple',
+  wishlists: 'couple',
+  wishlistItems: 'couple',
+  milestones: 'couple',
+  plans: 'couple',
+  journalEntries: 'couple',
+  timetables: 'couple',
+  timetableItems: 'couple',
+};
+
+export function buildAiSessionQuery(
+  spaceId: string | null,
+  isFeatureEnabled: (featureId: FeatureId) => boolean,
+) {
+  if (!spaceId) return null;
+  const query = AI_DOMAINS.reduce<Record<string, unknown>>((acc, domain) => {
+    if (!isFeatureEnabled(AI_DOMAIN_FEATURES[domain])) return acc;
+    const relation = AI_DOMAIN_RELATION[domain];
+    acc[domain] = {
+      $: { where: { [`${relation}.id`]: spaceId } },
+      [relation]: {},
+    };
+    return acc;
+  }, {});
+  return Object.keys(query).length > 0 ? query : null;
+}
+
+export function buildAiSessionRecords(
+  data: Partial<Record<AiDomain, AiContextRecord[]>> | null | undefined,
+  isFeatureEnabled: (featureId: FeatureId) => boolean,
+) {
+  return AI_DOMAINS.reduce<Partial<Record<AiDomain, AiContextRecord[]>>>((acc, domain) => {
+    if (!isFeatureEnabled(AI_DOMAIN_FEATURES[domain])) return acc;
+    acc[domain] = data?.[domain] ?? [];
+    return acc;
+  }, {});
+}
 
 export function SessionAiAssistantProvider({ children }: { children: React.ReactNode }) {
   const session = useSession();
   const spaceId = session.space?.id ?? null;
   const userId = session.user?.id ?? null;
-
-  const { data } = db.useQuery(
-    spaceId
-      ? {
-          reminders: { $: { where: { 'couple.id': spaceId } }, couple: {} },
-          tasks: { $: { where: { 'couple.id': spaceId } }, couple: {} },
-          taskLists: { $: { where: { 'couple.id': spaceId } }, couple: {} },
-          events: { $: { where: { 'couple.id': spaceId } }, couple: {} },
-          loveNotes: { $: { where: { 'couple.id': spaceId } }, couple: {} },
-          checkIns: { $: { where: { 'couple.id': spaceId } }, couple: {} },
-          expenses: { $: { where: { 'couple.id': spaceId } }, couple: {} },
-          wishlists: { $: { where: { 'couple.id': spaceId } }, couple: {} },
-          wishlistItems: { $: { where: { 'couple.id': spaceId } }, couple: {} },
-          milestones: { $: { where: { 'couple.id': spaceId } }, couple: {} },
-          plans: { $: { where: { 'couple.id': spaceId } }, couple: {} },
-          journalEntries: { $: { where: { 'couple.id': spaceId } }, couple: {} },
-          timetables: { $: { where: { 'couple.id': spaceId } }, couple: {} },
-          timetableItems: { $: { where: { 'couple.id': spaceId } }, couple: {} },
-        }
-      : null,
+  const query = useMemo(
+    () => buildAiSessionQuery(spaceId, session.isFeatureEnabled),
+    [spaceId, session.isFeatureEnabled],
   );
 
+  const { data } = db.useQuery(query as any);
+
   const records = useMemo(
-    () =>
-      ({
-        reminders: data?.reminders ?? [],
-        tasks: data?.tasks ?? [],
-        taskLists: data?.taskLists ?? [],
-        events: data?.events ?? [],
-        loveNotes: data?.loveNotes ?? [],
-        checkIns: data?.checkIns ?? [],
-        expenses: data?.expenses ?? [],
-        wishlists: data?.wishlists ?? [],
-        wishlistItems: data?.wishlistItems ?? [],
-        milestones: data?.milestones ?? [],
-        plans: data?.plans ?? [],
-        journalEntries: data?.journalEntries ?? [],
-        timetables: data?.timetables ?? [],
-        timetableItems: data?.timetableItems ?? [],
-      }) satisfies Partial<Record<AiDomain, unknown[]>>,
-    [data],
+    () => buildAiSessionRecords(data as Partial<Record<AiDomain, AiContextRecord[]>> | undefined, session.isFeatureEnabled),
+    [data, session.isFeatureEnabled],
+  );
+  const allowedDomains = useMemo(
+    () => Object.keys(records) as AiDomain[],
+    [records],
   );
 
   const contextPrompt = useMemo(
@@ -79,6 +114,7 @@ export function SessionAiAssistantProvider({ children }: { children: React.React
     <AiAssistantProvider
       contextPrompt={contextPrompt}
       records={records}
+      allowedDomains={allowedDomains}
       mutationContext={{ coupleId: spaceId, userId }}
     >
       {children}

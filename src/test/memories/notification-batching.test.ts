@@ -1,5 +1,23 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ReactionDebouncer } from '@/src/lib/memories/notifications';
+
+const dbMock = vi.hoisted(() => ({
+  queryOnce: vi.fn(),
+}));
+const sendPushToUser = vi.hoisted(() => vi.fn(async () => undefined));
+
+vi.mock('@/src/lib/instant', () => ({
+  db: dbMock,
+}));
+vi.mock('@/src/lib/push', () => ({
+  sendPushToUser,
+}));
+
+import {
+  notifyMemoryQuote,
+  notifyMemoryReaction,
+  notifyMemoryRepost,
+  ReactionDebouncer,
+} from '@/src/lib/memories/notifications';
 
 describe('ReactionDebouncer', () => {
   it('emits the first reaction immediately', async () => {
@@ -29,5 +47,72 @@ describe('ReactionDebouncer', () => {
     d.notify('memory-2', 'r1', { actor: 'B' });
     await new Promise((r) => setTimeout(r, 150));
     expect(send).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('memory notification targeting', () => {
+  it('sends reactions to the memory author and skips self-reactions', async () => {
+    const debouncer = new ReactionDebouncer({ windowMs: 1000, send: vi.fn() });
+    dbMock.queryOnce.mockResolvedValueOnce({
+      data: { memories: [{ author: [{ id: 'author-1' }] }] },
+    });
+
+    await notifyMemoryReaction({
+      memoryId: 'memory-1',
+      actorUserId: 'actor-1',
+      actorName: 'Ari',
+      debouncer,
+    });
+
+    expect((debouncer as any).opts.send).toHaveBeenCalledWith({
+      memoryId: 'memory-1',
+      recipientId: 'author-1',
+      actor: 'Ari',
+    });
+
+    dbMock.queryOnce.mockResolvedValueOnce({
+      data: { memories: [{ author: [{ id: 'actor-1' }] }] },
+    });
+    await notifyMemoryReaction({
+      memoryId: 'memory-1',
+      actorUserId: 'actor-1',
+      actorName: 'Ari',
+      debouncer,
+    });
+
+    expect((debouncer as any).opts.send).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends repost and quote pushes to the source memory author', async () => {
+    dbMock.queryOnce
+      .mockResolvedValueOnce({ data: { memories: [{ author: [{ id: 'author-1' }] }] } })
+      .mockResolvedValueOnce({ data: { memories: [{ author: [{ id: 'author-1' }] }] } });
+    sendPushToUser.mockClear();
+
+    await notifyMemoryRepost({
+      sourceMemoryId: 'source-1',
+      actorUserId: 'actor-1',
+      actorName: 'Ari',
+      routeMemoryId: 'repost-1',
+    });
+    await notifyMemoryQuote({
+      sourceMemoryId: 'source-1',
+      actorUserId: 'actor-1',
+      actorName: 'Ari',
+      routeMemoryId: 'quote-1',
+    });
+
+    expect(sendPushToUser).toHaveBeenCalledWith({
+      userId: 'author-1',
+      title: 'Memory reposted',
+      body: 'Ari reposted your memory',
+      data: { route: '/(tabs)/memories/repost-1' },
+    });
+    expect(sendPushToUser).toHaveBeenCalledWith({
+      userId: 'author-1',
+      title: 'Memory quoted',
+      body: 'Ari quoted your memory',
+      data: { route: '/(tabs)/memories/quote-1' },
+    });
   });
 });

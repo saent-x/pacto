@@ -6,6 +6,7 @@
 export type Task = {
   id: string;
   couple_id: string;
+  list_id?: string | null;
   title: string;
   notes: string | null;
   category: string | null;

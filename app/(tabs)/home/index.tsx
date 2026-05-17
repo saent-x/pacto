@@ -1,19 +1,30 @@
-import { router } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
-import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { router, Stack } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
+import Svg, { Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import { format } from 'date-fns';
 import {
-  ActivityHeatmap,
+  Avatar,
   Card,
-  HeroPactoBadge,
-  SectionHead,
+  CardHalo,
+  ColorTile,
+  MonthlyHeatmap,
+  type Tone,
 } from '@/src/components/ui/pacto';
+import { RhythmHybrid } from '@/src/components/ui/pacto/rhythm-variants';
 import { Icon, IconName } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
-import { useCheckIns, getLocalDateKey, type CheckInRecord } from '@/src/hooks/useCheckIns';
+import { useCheckIns, type CheckInRecord } from '@/src/hooks/useCheckIns';
 import { useHomeTimeline } from '@/src/hooks/useHomeTimeline';
 import { useSession } from '@/src/hooks/useSession';
 import { getCheckInStateMeta } from '@/src/constants/checkInStates';
@@ -26,6 +37,7 @@ import type { FeatureId } from '@/src/lib/features/registry';
 
 const ARC_BUCKETS = 14;
 const ARC_START_HOUR = 6;
+const PACTO_AVATAR = require('../../../assets/images/pacto-avatar.png');
 
 type TodayVariant = 'band' | 'pocket' | 'ledger';
 
@@ -286,7 +298,7 @@ function useWeatherStatus(): WeatherStatus & { request: () => void } {
     icon: 'mapPin',
   });
 
-  const request = useCallback(async () => {
+  const loadWeather = useCallback(async ({ requestPermission }: { requestPermission: boolean }) => {
     const fetcher = (globalThis as any).fetch;
 
     setStatus({
@@ -307,12 +319,16 @@ function useWeatherStatus(): WeatherStatus & { request: () => void } {
     }
 
     try {
-      const permission = await Location.requestForegroundPermissionsAsync();
+      const permission = requestPermission
+        ? await Location.requestForegroundPermissionsAsync()
+        : await Location.getForegroundPermissionsAsync();
       if (!permission.granted) {
         setStatus({
           state: 'unavailable',
-          title: 'Location not enabled',
-          detail: 'Allow location in Settings to show weather.',
+          title: requestPermission ? 'Location not enabled' : 'Weather needs location',
+          detail: requestPermission
+            ? 'Allow location in Settings to show weather.'
+            : 'Tap to allow local conditions.',
           icon: 'mapPin',
         });
         return;
@@ -351,6 +367,14 @@ function useWeatherStatus(): WeatherStatus & { request: () => void } {
     }
   }, []);
 
+  useEffect(() => {
+    loadWeather({ requestPermission: false }).catch(() => undefined);
+  }, [loadWeather]);
+
+  const request = useCallback(() => {
+    loadWeather({ requestPermission: true }).catch(() => undefined);
+  }, [loadWeather]);
+
   return { ...status, request };
 }
 
@@ -375,11 +399,12 @@ function timelineSourceLabel(type: TimelineItem['type']): string {
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { C, mode: themeMode } = useTheme();
-  const { partner, mode, isFeatureEnabled } = useSession();
+  const session = useSession();
+  const { partner, mode, isFeatureEnabled, profile, user, space } = session;
   const home = useHomeTimeline({ previewDays: 30 });
   const weather = useWeatherStatus();
   const checkinsEnabled = isFeatureEnabled('checkins');
-  const { todayCheckIn, partnerTodayCheckIn, checkIns } = useCheckInSnapshot(checkinsEnabled);
+  const { myTodayCheckIn } = useCheckIns({ enabled: checkinsEnabled });
   const today = useMemo(() => new Date(), []);
   const dateLabel = format(today, 'EEE · MMM d').toUpperCase();
   const todayRows = useMemo(
@@ -388,6 +413,7 @@ export default function HomeScreen() {
   );
   const comingMilestone = home.milestones[0] ?? null;
   const goalsEnabled = isFeatureEnabled('goals');
+  const myMood = moodFor(myTodayCheckIn?.mood);
   const routedTodayRows = useMemo(
     () => todayRows.filter((row) => routeForTimelineItem(row, isFeatureEnabled)),
     [todayRows, isFeatureEnabled],
@@ -408,15 +434,35 @@ export default function HomeScreen() {
   );
 
   const partnerFirstName = partner?.displayName?.split(' ')[0] ?? null;
-  const myMood = moodFor(todayCheckIn?.mood);
-  const partnerMood = moodFor(partnerTodayCheckIn?.mood);
+  const currentMode = mode ?? (session.isSolo ? 'solo' : session.isCrew ? 'crew' : 'pair');
 
-  const todayKey = getLocalDateKey();
-  const arcSlots = useMemo(() => buildArc(checkIns, todayKey), [checkIns, todayKey]);
-
-  const onCheckIn = () => {
-    if (checkinsEnabled) router.push('/sheets/new-checkin');
-  };
+  // Scroll-driven header pill condense (subtle scale + opacity)
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
+  const pillAnimStyle = useAnimatedStyle(() => {
+    const c = interpolate(
+      scrollY.value,
+      [0, 56],
+      [0, 1],
+      Extrapolation.CLAMP,
+    );
+    return {
+      transform: [{ scale: 1 - c * 0.22 }],
+      opacity: 1 - c * 0.3,
+    };
+  });
+  const displayName =
+    profile?.displayName?.split(' ')[0] ??
+    user?.displayName?.split(' ')[0] ??
+    partnerFirstName ??
+    'there';
+  const spaceName =
+    space?.name ??
+    (currentMode === 'solo' ? 'Just you' : currentMode === 'crew' ? 'Crew space' : partnerFirstName ? `${partnerFirstName} + you` : 'Shared space');
 
   const isDarkTheme = themeMode === 'dark';
   const moodSignal = {
@@ -442,92 +488,8 @@ export default function HomeScreen() {
     heatmapPalette: aheadHeatmapPalette,
   };
 
-  const renderSoloMoodCard = () => {
-    return (
-      <PressScale
-        onPress={onCheckIn}
-        accessibilityLabel="Update check-in"
-        accessibilityHint="Opens the check-in sheet"
-        style={[
-          styles.moodWrap,
-          styles.softShadow,
-          styles.soloMoodStampWrap,
-          { backgroundColor: moodSignal.wrapBg },
-        ]}
-      >
-        <HeroPactoBadge style={styles.heroBadge} />
-        <View
-          style={[
-            styles.soloMood,
-            styles.soloMoodStamp,
-            {
-              backgroundColor: moodSignal.cardBg,
-              borderColor: moodSignal.border,
-            },
-          ]}
-        >
-          <View style={styles.moodMetaRow}>
-            <View
-              style={[
-                styles.moodDatePill,
-                styles.moodDatePillDark,
-                {
-                  backgroundColor: moodSignal.pillBg,
-                  borderColor: moodSignal.border,
-                },
-              ]}
-            >
-              <Text style={[Typography.eyebrowSm, styles.tabularText, { color: moodSignal.muted }]}>
-                {dateLabel}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.soloMoodMain}>
-            <View
-              style={[
-                styles.soloMoodImageFrame,
-                styles.soloMoodImageStamp,
-                {
-                  backgroundColor: moodSignal.imageBg,
-                  borderColor: moodSignal.border,
-                },
-              ]}
-            >
-              <Image source={myMood.image} style={styles.soloMoodIcon} resizeMode="contain" />
-            </View>
-            <View style={{ marginLeft: 14, flex: 1 }}>
-              <Text style={[Typography.eyebrow, { color: moodSignal.muted }]}>
-                Current signal
-              </Text>
-              <Text
-                style={[
-                  Typography.pixelHero,
-                  { color: moodSignal.ink, marginTop: 4 },
-                ]}
-              >
-                {myMood.label}
-              </Text>
-            </View>
-          </View>
-          <View
-            style={[
-              styles.soloMoodChevron,
-              {
-                backgroundColor: moodSignal.pillBg,
-                borderColor: moodSignal.border,
-              },
-            ]}
-          >
-            <Icon name="chevronRight" size={18} color={moodSignal.muted} />
-          </View>
-        </View>
-        <ArcStrip slots={arcSlots} />
-      </PressScale>
-    );
-  };
-
   const aheadTitle =
-    mode === 'solo' ? 'YOUR RHYTHM' : mode === 'crew' ? 'CREW RHYTHM' : 'OUR RHYTHM';
+    currentMode === 'solo' ? 'YOUR RHYTHM' : currentMode === 'crew' ? 'CREW RHYTHM' : 'OUR RHYTHM';
   // Distinct days with any activity in the visible 15-week window.
   // Source-of-truth = the same buildActivityHeatmapDays output the heatmap renders.
   const liveDayCount = home.activity.filter((d) => d.count > 0).length;
@@ -546,6 +508,24 @@ export default function HomeScreen() {
     : comingMilestone
       ? comingMilestone.title
       : 'Nothing scheduled yet';
+  const totalTodayItems = todayRows.length;
+  const focusDone = home.todaySummary?.focus?.done ?? 0;
+  const focusTotal = home.todaySummary?.focus?.total ?? 0;
+  const planDone = home.todaySummary?.plans?.done ?? 0;
+  const planTotal = home.todaySummary?.plans?.total ?? 0;
+  const heroDone = Math.max(focusDone + planDone, totalTodayItems > 0 ? 1 : 0);
+  const heroTotal = Math.max(focusTotal + planTotal, totalTodayItems || routedTimelineItems.length || 1);
+  const heroProgress = Math.max(8, Math.min(100, Math.round((heroDone / heroTotal) * 100)));
+  const taskCount = routedTimelineItems.filter((item) => item.type === 'task').length;
+  const reminderCount = routedTimelineItems.filter((item) => item.type === 'reminder').length;
+  const nextRows = (routedTodayRows.length > 0 ? routedTodayRows : routedTimelineItems).slice(0, 3);
+  const combinedChartBars = useMemo(() => {
+    const base = [taskCount, reminderCount, activityStreak, heroDone, heroTotal - heroDone, scheduledItemCount, liveDayCount, planTotal, focusTotal];
+    return base.map((value, index) => ({
+      value,
+      height: 16 + Math.min(42, Math.max(0, value) * 6 + (index % 3) * 5),
+    }));
+  }, [activityStreak, focusTotal, heroDone, heroTotal, liveDayCount, planTotal, reminderCount, scheduledItemCount, taskCount]);
 
   const renderAheadCard = () => {
     const nextItemRoute = routedComingTimeline
@@ -564,7 +544,7 @@ export default function HomeScreen() {
           <Text
             style={[Typography.eyebrow, styles.tabularText, { color: C.accent2 }]}
           >
-            PAST 15 WEEKS
+            PAST 7 WEEKS
           </Text>
         </View>
         <Card
@@ -575,32 +555,24 @@ export default function HomeScreen() {
             {
               backgroundColor: aheadTicket.cardBg,
               borderColor: aheadTicket.border,
-              // Square the bottom corners so the card meets the standalone
-              // DATES/NEXT footer below it as one continuous slab.
-              borderBottomLeftRadius: 0,
-              borderBottomRightRadius: 0,
             },
           ]}
         >
-          <Pressable
+          <PressScale
             onPress={() => {
               if (!checkinsEnabled) return;
-              Haptics.selectionAsync().catch(() => undefined);
               router.push('/sheets/new-checkin');
             }}
             disabled={!checkinsEnabled}
-            accessibilityRole="button"
             accessibilityLabel={
               activityStreak > 0
                 ? `Streak: ${activityStreak} day${activityStreak === 1 ? '' : 's'}. Tap to check in and keep it going.`
                 : 'No active streak. Tap to start one.'
             }
-            style={({ pressed }) => [
+            hitSlop={8}
+            style={[
               styles.aheadTicketNotch,
-              {
-                backgroundColor: aheadTicket.notchBg,
-                opacity: pressed ? 0.85 : 1,
-              },
+              { backgroundColor: aheadTicket.notchBg },
             ]}
           >
             <Text style={[Typography.eyebrowSm, styles.tabularText, { color: aheadTicket.notchInk }]}>
@@ -617,14 +589,19 @@ export default function HomeScreen() {
                 {activityStreak}
               </Text>
             ) : null}
-          </Pressable>
+          </PressScale>
           <View style={styles.aheadHeroRow}>
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text
                 style={[Typography.pixelHeroSm, { color: aheadTicket.ink }]}
                 numberOfLines={1}
               >
-                <Text style={[Typography.pixelHeroSm, { color: C.accent2 }]}>
+                <Text
+                  style={[
+                    Typography.pixelHeroSm,
+                    { color: C.accent2, fontVariant: ['tabular-nums'] },
+                  ]}
+                >
                   {liveDayCount}
                 </Text>
                 {liveDayCount === 1 ? ' LIVE DAY' : ' LIVE DAYS'}
@@ -651,99 +628,9 @@ export default function HomeScreen() {
               { borderTopColor: aheadTicket.border },
             ]}
           >
-            <View style={styles.activityHeader}>
-              <View style={styles.activityTitleRow}>
-                <Icon name="activity" size={13} color={C.accent2} />
-                <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
-                  RECENT ACTIVITY
-                </Text>
-              </View>
-              <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
-                15 WEEKS
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.activityHeatmapFrame,
-                styles.aheadSignalHeatmap,
-                styles.aheadTicketHeatmap,
-                { backgroundColor: aheadTicket.heatmapBg },
-              ]}
-            >
-              <ActivityHeatmap
-                weeks={15}
-                days={home.activity}
-                palette={aheadTicket.heatmapPalette}
-                showLegend={false}
-                showDayAxis={false}
-                showWeekAxis={false}
-                weekLabelMode="months"
-                cellGap={3}
-                cellRadius={1}
-                maxCellSize={22}
-                todayColor={C.accent2}
-              />
-            </View>
+            <RhythmHybrid days={home.activity.slice(-49)} weeks={7} />
           </View>
         </Card>
-        {/*
-          Footer (DATES | NEXT ITEM) lives OUTSIDE the bordered Card so it has
-          no left / right / bottom enclosing stroke — only the existing
-          vertical divider in the middle and a small breathing gap above.
-          Mirrors the way Signal Arc sits below the bordered Current Signal
-          panel in the today-card.
-        */}
-        <View style={styles.aheadFooterStandalone}>
-          <Pressable
-            onPress={memoryDatesRoute ? () => {
-              Haptics.selectionAsync().catch(() => undefined);
-              router.push(memoryDatesRoute as any);
-            } : undefined}
-            disabled={!memoryDatesRoute}
-            accessibilityRole="button"
-            accessibilityLabel={`Open dates, ${home.milestones.length} saved`}
-            style={({ pressed }) => [
-              styles.aheadFooterButton,
-              pressed ? styles.aheadFooterButtonPressed : null,
-              !memoryDatesRoute ? { opacity: 0.55 } : null,
-            ]}
-          >
-            <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
-              DATES
-            </Text>
-            <Text
-              style={[Typography.captionMedium, { color: aheadTicket.ink, marginTop: 4 }]}
-            >
-              {home.milestones.length}
-            </Text>
-          </Pressable>
-          <View style={[styles.aheadFooterDivider, { backgroundColor: aheadTicket.border }]} />
-          <Pressable
-            onPress={nextItemRoute ? () => {
-              Haptics.selectionAsync().catch(() => undefined);
-              router.push(nextItemRoute as any);
-            } : undefined}
-            disabled={!nextItemRoute}
-            accessibilityRole="button"
-            accessibilityLabel={`Open next item, ${nextItemTitle}`}
-            style={({ pressed }) => [
-              styles.aheadFooterButton,
-              styles.aheadFooterButtonRight,
-              pressed ? styles.aheadFooterButtonPressed : null,
-              !nextItemRoute ? { opacity: 0.55 } : null,
-            ]}
-          >
-            <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
-              NEXT ITEM
-            </Text>
-            <Text
-              style={[Typography.captionMedium, { color: aheadTicket.ink, marginTop: 4 }]}
-              numberOfLines={1}
-            >
-              {nextItemTitle}
-            </Text>
-          </Pressable>
-        </View>
       </View>
     );
   };
@@ -895,331 +782,1254 @@ export default function HomeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <ScrollView
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerTitleAlign: 'left',
+          headerTransparent: true,
+          headerStyle: { backgroundColor: 'transparent' } as any,
+          headerShadowVisible: false,
+          headerBackVisible: false,
+          title: '',
+          headerLeft: () => null,
+          headerTitle: () => (
+            <Animated.View style={[{ alignSelf: 'flex-start' }, pillAnimStyle]}>
+            <PressScale
+              onPress={() => router.push('/sheets/profile' as any)}
+              haptic="impact"
+              pressedScale={0.96}
+              style={[
+                styles.modeChip,
+                { backgroundColor: C.bgCard, borderColor: C.lineColor },
+              ]}
+            >
+              <Avatar
+                person={{
+                  displayName: profile?.displayName ?? user?.displayName ?? undefined,
+                  avatarUrl: profile?.avatarUrl ?? user?.avatarUrl ?? null,
+                  color: C.accent,
+                  initial:
+                    currentMode === 'crew'
+                      ? 'C'
+                      : currentMode === 'solo'
+                        ? undefined
+                        : 'U',
+                }}
+                size={28}
+              />
+              <Text
+                style={[Typography.captionMedium, { color: C.inkColor, flexShrink: 1 }]}
+                numberOfLines={1}
+              >
+                {displayName}
+              </Text>
+              <View style={[styles.modeTag, { backgroundColor: C.bgSoft }]}>
+                <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
+                  {currentMode.toUpperCase()}
+                </Text>
+              </View>
+            </PressScale>
+            </Animated.View>
+          ),
+          headerRight: () => (
+            <PressScale
+              onPress={() => router.push('/notifications' as any)}
+              haptic="impact"
+              pressedScale={0.9}
+              hitSlop={12}
+              accessibilityLabel="Notifications"
+            >
+              <Icon name="bell" size={22} color={C.inkColor} strokeWidth={2.2} />
+            </PressScale>
+          ),
+        }}
+      />
+      <Animated.ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingTop: insets.top + 56, paddingBottom: 120 }}
+        contentContainerStyle={{ paddingTop: insets.top + 50, paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
       >
-        {checkinsEnabled ? (
-          <View style={styles.section}>
-            {mode === 'solo' ? (
-              renderSoloMoodCard()
-            ) : (
-              <Card
-                padded={false}
-                elevated
-                style={[
-                  styles.moodCard,
-                  {
-                    backgroundColor: C.bgCard,
-                    borderColor: C.lineColor,
-                  },
-                ]}
+        <View style={styles.heroSection}>
+          <View style={[styles.heroGrid, styles.heroHalo]}>
+            {/* LEFT — tall TODAY'S PACTO */}
+            <CardHalo style={styles.heroPactoHalo}>
+            <PressScale
+              haptic="impactMedium"
+              pressedScale={0.97}
+              onPress={() => {
+                const route = routedComingTimeline
+                  ? routeForTimelineItem(routedComingTimeline, isFeatureEnabled)
+                  : comingMilestone
+                    ? routeForMilestoneItem(comingMilestone)
+                    : goalsEnabled
+                      ? '/sheets/new-plan'
+                      : null;
+                if (route) router.push(route as any);
+              }}
+              accessibilityLabel={`Open today's Pacto. ${nextItemTitle}. ${heroDone} of ${heroTotal} done.`}
+              style={[
+                styles.heroPactoCol,
+                { backgroundColor: C.accent, borderColor: C.accent },
+              ]}
+            >
+              <View style={styles.heroOrb} />
+              <Image source={PACTO_AVATAR} style={styles.heroPactoMascot} resizeMode="contain" />
+              <Text style={[Typography.eyebrowSm, { color: '#FFF5EF' }]}>TODAY'S PACTO</Text>
+              <Text
+                style={[Typography.pixelHero, styles.heroPactoTitle]}
+                numberOfLines={3}
               >
-                <HeroPactoBadge style={styles.heroBadge} />
-                <View style={[styles.moodCardHeader, { backgroundColor: C.bgSoft }]}>
-                  <View
-                    style={[
-                      styles.moodDatePill,
-                      {
-                        backgroundColor: C.bgCard,
-                        borderColor: C.lineColor,
-                      },
-                    ]}
-                  >
-                    <Text style={[Typography.eyebrowSm, styles.tabularText, { color: C.ink2 }]}>
-                      {dateLabel}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.moodPair}>
-                  <PressScale
-                    onPress={onCheckIn}
-                    style={[
-                      styles.moodHalf,
-                      { backgroundColor: myMood.color },
-                    ]}
-                  >
-                    <Text style={[Typography.eyebrowSm, { color: C.peachInk }]}>
-                      You
-                    </Text>
-                    <View style={styles.moodInline}>
-                      <View style={styles.inlineMoodImageFrame}>
-                        <Image source={myMood.image} style={styles.inlineMoodIcon} resizeMode="contain" />
-                      </View>
-                      <Text
-                        style={[
-                          Typography.pixelHeroSm,
-                          { color: C.peachInk, marginLeft: 8 },
-                        ]}
-                      >
-                        {myMood.label}
-                      </Text>
-                    </View>
-                    <Text style={[Typography.small, { color: C.peachInk, marginTop: 4 }]}>
-                      tap to update
-                    </Text>
-                  </PressScale>
-                  <View
-                    style={[
-                      styles.moodHalf,
-                      { backgroundColor: partnerMood.color },
-                    ]}
-                  >
-                    <Text style={[Typography.eyebrowSm, { color: C.peachInk }]}>
-                      {partnerFirstName ?? 'They'}
-                    </Text>
-                    <View style={styles.moodInline}>
-                      <View style={styles.inlineMoodImageFrame}>
-                        <Image source={partnerMood.image} style={styles.inlineMoodIcon} resizeMode="contain" />
-                      </View>
-                      <Text
-                        style={[
-                          Typography.pixelHeroSm,
-                          { color: C.peachInk, marginLeft: 8 },
-                        ]}
-                      >
-                        {partnerMood.label}
-                      </Text>
-                    </View>
-                    <Text style={[Typography.small, { color: C.peachInk, marginTop: 4 }]}>
-                      {partnerTodayCheckIn ? 'today' : 'no check-in today'}
-                    </Text>
-                  </View>
-                </View>
-                <ArcStrip slots={arcSlots} />
-              </Card>
-            )}
-          </View>
-        ) : null}
+                {nextItemTitle}
+              </Text>
+              <View style={{ flex: 1 }} />
+              <View style={styles.heroProgressTrack}>
+                <View style={[styles.heroProgressFill, { width: `${heroProgress}%` }]} />
+              </View>
+              <View style={styles.heroStatsCol}>
+                <Text style={[Typography.captionMedium, styles.heroStatText]} numberOfLines={1}>
+                  {heroDone}/{heroTotal} done
+                </Text>
+                <Text style={[Typography.captionMedium, styles.heroStatText]} numberOfLines={1}>
+                  {scheduledItemCount} scheduled
+                </Text>
+              </View>
+            </PressScale>
+            </CardHalo>
 
-        {/* When you're together — live-derived summary */}
-        <View style={styles.section}>
-          {renderAheadCard()}
-        </View>
-
-        {/* Today — live timeline rows */}
-        <View style={styles.section}>
-          {renderTodayCard('band')}
-        </View>
-
-        {/* Coming up */}
-        <View style={styles.section}>
-          <View style={styles.comingHeadRow}>
-            <Text style={[Typography.eyebrow, { color: C.ink3 }]}>COMING UP</Text>
-            {goalsEnabled ? (
+            {/* RIGHT — stacked check-in + weather */}
+            <View style={styles.heroRightCol}>
+              <CardHalo style={styles.heroSmallHalo}>
               <PressScale
-                testID="home-coming-all"
-                onPress={() => router.push('/(tabs)/us/plans' as any)}
-                hitSlop={8}
-                style={styles.comingAllBtn}
+                testID="home-checkin-card"
+                onPress={() => {
+                  if (checkinsEnabled) router.push('/sheets/new-checkin' as any);
+                }}
+                haptic="impact"
+                pressedScale={0.97}
+                accessibilityLabel={
+                  myTodayCheckIn
+                    ? `Current signal: ${myMood.label}. Tap to update.`
+                    : 'Tap to check in.'
+                }
+                style={[styles.heroSmallCard, { backgroundColor: C.accent2 }]}
               >
-                <Text style={[Typography.eyebrow, { color: C.ink3 }]}>ALL  →</Text>
-              </PressScale>
-            ) : null}
-          </View>
-          {hasComingUp ? (
-            <View style={styles.comingRow}>
-              {routedComingTimeline ? (() => {
-                const cover = timelineCoverVisual(routedComingTimeline.type);
-                const imageUri = timelineImageUri(routedComingTimeline);
-                return (
-                  <Card
-                    padded={false}
-                    elevated
-                    style={styles.comingPlanCard}
-                    onPress={() => {
-                      const route = routeForTimelineItem(routedComingTimeline, isFeatureEnabled);
-                      if (route) router.push(route as any);
-                    }}
-                  >
-                    <View style={[styles.comingCover, { backgroundColor: cover.bg }]}>
-                      {imageUri ? (
-                        <Image
-                          testID="home-coming-cover-image"
-                          source={{ uri: imageUri }}
-                          style={styles.comingCoverImage}
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <View testID="home-coming-cover-fallback" style={styles.comingCoverDefault}>
-                          <Icon
-                            name={cover.icon}
-                            size={62}
-                            color={cover.ink}
-                            style={styles.comingCoverDefaultIcon}
-                          />
-                        </View>
-                      )}
-                      <View style={[styles.comingPill, { borderColor: cover.pillBorder }]}>
-                        <Text style={[Typography.eyebrowSm, { color: cover.pillInk, letterSpacing: 1.4 }]}>
-                          {dateLabelForTimeline(routedComingTimeline.occursAt)}
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={styles.comingPlanMeta}>
-                      <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
-                        {routedComingTimeline.type.toUpperCase()}
-                      </Text>
-                      <Text
-                        style={{
-                          fontFamily: Typography.fallbackSerif,
-                          fontSize: 22,
-                          lineHeight: 26,
-                          color: C.inkColor,
-                          marginTop: 4,
-                        }}
-                        numberOfLines={1}
-                      >
-                        {routedComingTimeline.title}
-                      </Text>
-                      <Text style={[Typography.caption, { color: C.ink3, marginTop: 8 }]} numberOfLines={2}>
-                        {routedComingTimeline.subtitle ?? timelineSourceLabel(routedComingTimeline.type)}
-                      </Text>
-                    </View>
-                  </Card>
-                );
-              })() : (
-                <Card padded={false} elevated style={styles.comingPlanCard}>
-                  <View style={[styles.comingCover, { backgroundColor: C.bgSoft }]}>
-                    <View style={[styles.comingPill, { borderColor: C.lineColor }]}>
-                      <Text style={[Typography.eyebrowSm, { color: C.ink3, letterSpacing: 1.4 }]}>
-                        TIMELINE
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={styles.comingPlanMeta}>
-                    <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>NEXT ITEM</Text>
-                    <Text
-                      style={{
-                        fontFamily: Typography.fallbackSerif,
-                        fontSize: 22,
-                        lineHeight: 26,
-                        color: C.inkColor,
-                        marginTop: 4,
-                      }}
-                      numberOfLines={1}
-                    >
-                      Nothing scheduled
-                    </Text>
-                    <Text style={[Typography.caption, { color: C.ink3, marginTop: 8 }]} numberOfLines={2}>
-                      Add a dated task, reminder, event, or target.
-                    </Text>
-                  </View>
-                </Card>
-              )}
-              {comingMilestone ? (
-                <Card
-                  padded={false}
-                  elevated
-                  style={styles.comingAnnivCard}
-                  onPress={() => router.push(routeForMilestoneItem(comingMilestone) as any)}
+                <Svg
+                  style={StyleSheet.absoluteFill}
+                  viewBox="0 0 100 100"
+                  preserveAspectRatio="xMidYMid slice"
+                  pointerEvents="none"
                 >
-                  <View style={styles.annivInner}>
-                    <Icon name="flag" size={18} color={C.accent} />
-                    <Text style={[Typography.eyebrowSm, { color: C.ink3, marginTop: 22 }]}>
-                      {memoryDateTypeLabel(comingMilestone)}
-                    </Text>
-                    <Text style={[Typography.pixelHeroSm, { color: C.inkColor, marginTop: 4 }]} numberOfLines={2}>
-                      {comingMilestone.title}
-                    </Text>
-                    <View style={{ flex: 1 }} />
-                    <View style={styles.annivCount}>
-                      <Text style={[Typography.pixelHero, { color: C.accent }]}>
-                        {comingMilestone.daysUntil}
-                      </Text>
-                      <Text style={[Typography.captionMedium, { color: C.ink3, marginLeft: 6, marginBottom: 6 }]}>
-                        days
-                      </Text>
-                    </View>
-                    <Text style={[Typography.caption, { color: C.ink3 }]}>
-                      {comingUpLabel(comingMilestone.daysUntil)} · {dateLabelForMilestone(comingMilestone)}
-                    </Text>
-                  </View>
-                </Card>
-              ) : (
-                <Card padded={false} elevated style={styles.comingAnnivCard}>
-                  <View style={styles.annivInner}>
-                    <Icon name="flag" size={18} color={C.ink3} />
-                    <Text style={[Typography.eyebrowSm, { color: C.ink3, marginTop: 22 }]}>
-                      MEMORY DATES
-                    </Text>
-                    <Text style={[Typography.pixelHeroSm, { color: C.inkColor, marginTop: 4 }]} numberOfLines={2}>
-                      No dates yet
-                    </Text>
-                    <View style={{ flex: 1 }} />
-                    <Text style={[Typography.caption, { color: C.ink3 }]}>
-                      Add a memory date to keep this side panel active.
-                    </Text>
-                  </View>
-                </Card>
-              )}
-            </View>
-          ) : (
-            <Card elevated style={styles.emptyBlock}>
-              <Text style={[Typography.bodyMedium, { color: C.inkColor }]}>
-                Nothing coming up yet
-              </Text>
-              <Text style={[Typography.caption, { color: C.ink3, marginTop: 4 }]}>
-                Enable a feature or add dated items to see what is next.
-              </Text>
-            </Card>
-          )}
-        </View>
-
-        {/* Capture dock */}
-        <View style={styles.section}>
-          <View style={styles.captureHeadRow}>
-            <SectionHead>Capture</SectionHead>
-            <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>
-              FAST ADD
-            </Text>
-          </View>
-          <View style={styles.captureDock}>
-            {enabledShortcuts.map((s) => (
-              <PressScale
-                key={s.label}
-                onPress={() => router.push(s.route as any)}
-                style={[
-                  styles.captureAction,
-                  { backgroundColor: C.bgSoft, borderColor: C.lineColor },
-                ]}
-              >
-                <View style={[styles.captureIcon, { backgroundColor: C.accentSoft }]}>
-                  <Icon name={s.icon} size={19} color={C.accent} />
+                  <Circle cx="86" cy="92" r="40" fill="rgba(255, 255, 255, 0.14)" />
+                  <Circle cx="14" cy="-8" r="22" fill="rgba(255, 255, 255, 0.10)" />
+                </Svg>
+                <View style={styles.heroSmallTop}>
+                  <Text style={[Typography.eyebrowSm, { color: 'rgba(255, 255, 255, 0.82)', letterSpacing: 1.4, flexShrink: 1 }]}>
+                    CURRENT SIGNAL
+                  </Text>
+                  <Image source={myMood.image} style={styles.heroSmallMoodImg} resizeMode="contain" />
                 </View>
-                <Text style={[Typography.captionMedium, { color: C.inkColor, marginTop: 6 }]}>
-                  {s.label}
+                <View style={{ flex: 1 }} />
+                <Text
+                  style={[
+                    Typography.pixelHero,
+                    {
+                      color: '#FFFDF7',
+                      fontSize: 26,
+                      lineHeight: 28,
+                      letterSpacing: -0.3,
+                    },
+                  ]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.7}
+                >
+                  {myTodayCheckIn ? myMood.label : 'check in'}
                 </Text>
               </PressScale>
-            ))}
+              </CardHalo>
+
+              <CardHalo style={styles.heroSmallHalo}>
+              <PressScale
+                testID="home-weather-card"
+                onPress={weather.request}
+                haptic="impact"
+                pressedScale={0.97}
+                accessibilityLabel="Local conditions"
+                style={[styles.heroSmallCard, { backgroundColor: C.mint }]}
+              >
+                <Svg
+                  style={StyleSheet.absoluteFill}
+                  viewBox="0 0 100 100"
+                  preserveAspectRatio="xMidYMid slice"
+                  pointerEvents="none"
+                >
+                  <Circle cx="14" cy="92" r="36" fill="rgba(255, 255, 255, 0.16)" />
+                  <Circle cx="92" cy="6" r="20" fill="rgba(255, 255, 255, 0.10)" />
+                </Svg>
+                <View style={styles.heroSmallTop}>
+                  <Text
+                    style={[
+                      Typography.eyebrowSm,
+                      { color: alphaColor(C.mintInk, 0.7), letterSpacing: 1.4, flexShrink: 1 },
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {weather.state === 'ready' ? 'LOCAL CONDITIONS' : 'TAP TO ENABLE'}
+                  </Text>
+                  <Icon name={weather.icon} size={42} color={C.mintInk} strokeWidth={2.4} />
+                </View>
+                <View style={{ flex: 1 }} />
+                {weather.state === 'ready' ? (
+                  (() => {
+                    const sepIdx = weather.title.indexOf(' · ');
+                    const tempPart = sepIdx >= 0 ? weather.title.slice(0, sepIdx) : weather.title;
+                    const labelPart = sepIdx >= 0 ? weather.title.slice(sepIdx + 3) : '';
+                    return (
+                      <View>
+                        <Text
+                          style={{
+                            fontFamily: Typography.pixelFont,
+                            color: C.mintInk,
+                            fontSize: 36,
+                            lineHeight: 38,
+                            letterSpacing: -0.6,
+                            fontVariant: ['tabular-nums'],
+                          }}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.7}
+                        >
+                          {tempPart}
+                        </Text>
+                        {labelPart ? (
+                          <Text
+                            style={[
+                              Typography.captionMedium,
+                              { color: C.mintInk, fontSize: 13, lineHeight: 15, marginTop: 2 },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {labelPart}
+                          </Text>
+                        ) : null}
+                      </View>
+                    );
+                  })()
+                ) : (
+                  <Text
+                    style={[
+                      Typography.captionMedium,
+                      { color: C.mintInk, fontSize: 14, lineHeight: 16 },
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {weather.title}
+                  </Text>
+                )}
+              </PressScale>
+              </CardHalo>
+            </View>
           </View>
+
+          <View style={{ marginTop: 16 }}>
+            <View style={styles.togetherHeadRow}>
+              <Text style={[Typography.eyebrow, { color: C.ink3 }]}>ACTIVITY</Text>
+              <Text
+                style={[Typography.eyebrow, styles.tabularText, { color: C.accent2 }]}
+              >
+                4 WEEKS
+              </Text>
+            </View>
+            <CardHalo>
+              <MonthlyHeatmap
+                days={home.activity}
+                weeks={4}
+                onDayPress={(day) => {
+                  if (isFeatureEnabled('calendar')) {
+                    router.push(`/(tabs)/calendar?date=${day.dateKey}` as any);
+                  } else {
+                    router.push('/(tabs)/us' as any);
+                  }
+                }}
+              />
+            </CardHalo>
+          </View>
+
+          <CardHalo style={styles.shortcutHalo}>
+          <View style={styles.shortcutRail}>
+            {enabledShortcuts.slice(0, 3).map((s, index) => {
+              const tones: Tone[] = [
+                { bg: C.accent, ink: '#FFFDF7', muted: alphaColor('#FFFDF7', 0.72) },
+                { bg: C.accent2, ink: '#FFFDF7', muted: alphaColor('#FFFDF7', 0.72) },
+                { bg: C.lavender, ink: C.lavenderInk, muted: alphaColor(C.lavenderInk, 0.66) },
+              ];
+              const tone = tones[index % tones.length];
+              const stat =
+                s.feature === 'recurring'
+                  ? String(reminderCount)
+                  : s.feature === 'tasks'
+                    ? String(routedTimelineItems.filter((item) => item.type === 'task').length)
+                    : s.feature === 'calendar'
+                      ? format(today, 'EEE').toUpperCase()
+                      : 'NEW';
+              return (
+                <ColorTile
+                  key={s.label}
+                  tone={tone}
+                  title={s.label}
+                  icon={s.icon}
+                  stat={stat}
+                  statLabel={s.description.toUpperCase()}
+                  onPress={() => router.push(s.route as any)}
+                  accessibilityLabel={`Open ${s.label}. ${s.description}`}
+                  style={styles.shortcutSegment}
+                />
+              );
+            })}
+          </View>
+          </CardHalo>
         </View>
-      </ScrollView>
+
+        <View style={styles.section}>
+          <View style={styles.homeSectionTitle}>
+            <Text style={[Typography.eyebrow, { color: C.ink3 }]}>QUICK STATS</Text>
+          </View>
+          <CardHalo>
+          <View style={styles.mergedStack}>
+            <View style={styles.mergedRailRow}>
+              <ColorTile
+                tone={{
+                  bg: C.butter,
+                  ink: C.butterInk,
+                  muted: alphaColor(C.butterInk, 0.66),
+                }}
+                title="Tasks this week"
+                icon="checkSquare"
+                stat={`${taskCount}/${Math.max(taskCount, heroTotal)}`}
+                statLabel={`+${Math.max(1, liveDayCount)}% TRACKED`}
+                style={styles.mergedRailSegment}
+              />
+              <ColorTile
+                tone={{
+                  bg: C.mint,
+                  ink: C.mintInk,
+                  muted: alphaColor(C.mintInk, 0.66),
+                }}
+                title={`${reminderCount} reminders tracked`}
+                icon="clock"
+                stat={activityStreak}
+                statLabel="STREAK · DAYS"
+                style={styles.mergedRailSegment}
+              />
+            </View>
+
+            <View
+              style={[
+                styles.mergedListSection,
+                { backgroundColor: C.bgCard, borderTopColor: C.lineColor },
+              ]}
+            >
+              <View style={styles.mergedListHead}>
+                <Text style={[Typography.eyebrow, { color: C.ink3 }]}>UP NEXT</Text>
+                {goalsEnabled ? (
+                  <PressScale
+                    testID="home-coming-all"
+                    onPress={() => router.push('/(tabs)/us/plans' as any)}
+                    hitSlop={8}
+                  >
+                    <Text style={[Typography.captionMedium, { color: C.accent }]}>See all</Text>
+                  </PressScale>
+                ) : null}
+              </View>
+
+              {nextRows.length === 0 ? (
+                goalsEnabled ? (
+                  <PressScale
+                    testID="home-timeline-empty"
+                    onPress={() => router.push('/sheets/new-plan' as any)}
+                    haptic="impact"
+                    pressedScale={0.98}
+                    style={styles.homeListRow}
+                  >
+                    <View style={[styles.nextCircle, { borderColor: C.line2 }]} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[Typography.bodyMedium, { color: C.inkColor }]}>No items dated today</Text>
+                      <Text style={[Typography.caption, { color: C.ink3, marginTop: 2 }]}>Schedule a target</Text>
+                    </View>
+                    <View style={[styles.nextPill, { backgroundColor: C.accentSoft }]}>
+                      <Text style={[Typography.eyebrowSm, { color: C.accent }]}>NEW</Text>
+                    </View>
+                  </PressScale>
+                ) : (
+                  <View testID="home-timeline-empty" style={styles.homeListRow}>
+                    <View style={[styles.nextCircle, { borderColor: C.line2 }]} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[Typography.bodyMedium, { color: C.inkColor }]}>No items dated today</Text>
+                      <Text style={[Typography.caption, { color: C.ink3, marginTop: 2 }]}>Nothing from enabled features is scheduled for today.</Text>
+                    </View>
+                  </View>
+                )
+              ) : nextRows.map((row, index) => {
+                const route = routeForTimelineItem(row, isFeatureEnabled);
+                const isDone = !!row.isCompleted;
+                const rowIcon: IconName =
+                  row.type === 'task'
+                    ? 'checkSquare'
+                    : row.type === 'reminder'
+                      ? 'bell'
+                      : row.type === 'plan'
+                        ? 'flag'
+                        : row.type === 'event'
+                          ? 'calendar'
+                          : 'bookmark';
+                return (
+                  <View
+                    key={row.id}
+                    testID={`home-timeline-${row.type}-${row.sourceId}`}
+                    onStartShouldSetResponder={() => !!route}
+                    onResponderRelease={() => {
+                      if (route) router.push(route as any);
+                    }}
+                    style={[
+                      styles.homeListRow,
+                      index > 0 ? { borderTopColor: C.lineColor, borderTopWidth: 1 } : null,
+                    ]}
+                  >
+                    <View
+                      accessibilityElementsHidden
+                      importantForAccessibility="no"
+                      style={[
+                        styles.nextIconBadge,
+                        isDone
+                          ? { backgroundColor: C.accent2Soft }
+                          : { backgroundColor: C.bgSoft },
+                      ]}
+                    >
+                      <Icon name={isDone ? 'check' : rowIcon} size={15} color={isDone ? C.accent2 : C.ink2} />
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text
+                        style={[
+                          Typography.bodyMedium,
+                          {
+                            color: isDone ? C.ink3 : C.inkColor,
+                            textDecorationLine: isDone ? 'line-through' : 'none',
+                          },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {row.title}
+                      </Text>
+                      <Text style={[Typography.caption, { color: C.ink3, marginTop: 2 }]} numberOfLines={1}>
+                        {timeLabel(row.occursAt)} · {row.subtitle ?? timelineSourceLabel(row.type)}
+                      </Text>
+                    </View>
+                    <View style={[styles.nextPill, { backgroundColor: isDone ? C.accent2Soft : C.accentSoft }]}>
+                      <Text style={[Typography.eyebrowSm, { color: isDone ? C.accent2 : C.accent }]}>
+                        {isDone ? 'DONE' : row.occursAt ? 'TODAY' : 'SOON'}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+          </CardHalo>
+        </View>
+
+        {comingMilestone ? (
+          <View style={styles.section}>
+          {comingMilestone ? (
+            <PressScale
+              onPress={() => router.push(routeForMilestoneItem(comingMilestone) as any)}
+              haptic="impact"
+              pressedScale={0.98}
+              style={[styles.loveNote, { backgroundColor: isDarkTheme ? C.bgCard : C.bgCard, borderColor: C.accent }]}
+            >
+              <Text style={[Typography.eyebrowSm, { color: C.accent }]}>MEMORY DATE</Text>
+              <Text style={[Typography.subheading, { color: C.inkColor, marginTop: 4 }]} numberOfLines={2}>
+                {comingMilestone.title}
+              </Text>
+              <Text style={[Typography.caption, { color: C.ink3, marginTop: 5 }]}>
+                {comingUpLabel(comingMilestone.daysUntil)} · {dateLabelForMilestone(comingMilestone)}
+              </Text>
+            </PressScale>
+          ) : null}
+          </View>
+        ) : null}
+      </Animated.ScrollView>
     </View>
   );
 }
 
-const SHORTCUTS: { icon: IconName; label: string; route: string; feature: FeatureId }[] = [
-  { icon: 'heart', label: 'Note', route: '/sheets/new-note', feature: 'memories' },
-  { icon: 'feather', label: 'Check in', route: '/sheets/new-checkin', feature: 'checkins' },
-  { icon: 'checkSquare', label: 'Task', route: '/sheets/new-task', feature: 'tasks' },
-  { icon: 'calendar', label: 'Calendar', route: '/(tabs)/calendar', feature: 'calendar' },
+const SHORTCUTS: {
+  icon: IconName;
+  label: string;
+  route: string;
+  feature: FeatureId;
+  description: string;
+}[] = [
+  { icon: 'bell', label: 'Reminder', route: '/sheets/new-reminder', feature: 'recurring', description: 'Ping yourself' },
+  { icon: 'heart', label: 'Note', route: '/sheets/new-note', feature: 'memories', description: 'Capture a memory' },
+  { icon: 'calendar', label: 'Calendar', route: '/(tabs)/calendar', feature: 'calendar', description: 'Plan the day' },
+  { icon: 'flag', label: 'Target', route: '/sheets/new-plan', feature: 'goals', description: 'Set a goal' },
 ];
-
-function useCheckInSnapshot(enabled: boolean) {
-  const data = useCheckIns({ enabled });
-  return {
-    todayCheckIn: data.myTodayCheckIn ?? null,
-    partnerTodayCheckIn: data.partnerTodayCheckIn ?? null,
-    checkIns: data.checkIns,
-  };
-}
 
 const styles = StyleSheet.create({
   section: {
     paddingHorizontal: 18,
     paddingBottom: 18,
+  },
+  heroSection: {
+    paddingHorizontal: 14,
+    paddingTop: 16,
+    paddingBottom: 20,
+  },
+  fixedHomeHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 18,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+  },
+  pactoTopBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 16,
+  },
+  modeChip: {
+    alignSelf: 'flex-start',
+    minHeight: 38,
+    maxWidth: 220,
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingLeft: 5,
+    paddingRight: 10,
+  },
+  modeAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modeTag: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  greetLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 2,
+  },
+  mascotTile: {
+    width: 48,
+    height: 48,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  mascotImage: {
+    width: 44,
+    height: 44,
+  },
+  dayStrip: {
+    marginTop: 14,
+    minHeight: 78,
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+  },
+  sunPip: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  weatherIconTile: {
+    width: 44,
+    height: 44,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signalShell: {
+    marginTop: 14,
+    borderRadius: 27,
+    padding: 5,
+  },
+  signalInner: {
+    borderRadius: 22,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  signalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    minHeight: 70,
+  },
+  signalIconTile: {
+    width: 44,
+    height: 44,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signalCheckinHero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  signalMoodTile: {
+    width: 76,
+    height: 76,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  signalMoodImg: {
+    width: 56,
+    height: 56,
+  },
+  signalChevronTile: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signalDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: 16,
+    opacity: 0.7,
+  },
+  heroShell: {
+    marginTop: 14,
+    borderRadius: 31,
+    padding: 5,
+  },
+  heroHalo: {
+    marginTop: 10,
+  },
+  heroPactoHalo: {
+    flex: 1.05,
+    alignSelf: 'stretch',
+  },
+  heroSmallHalo: {
+    flex: 1,
+  },
+  shortcutHalo: {
+    marginTop: 14,
+  },
+  heroGrid: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 12,
+  },
+  heroPactoCol: {
+    flex: 1,
+    alignSelf: 'stretch',
+    borderRadius: 22,
+    borderWidth: 1,
+    padding: 16,
+    minHeight: 230,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  heroPactoMascot: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    width: 22,
+    height: 22,
+    zIndex: 2,
+  },
+  heroPactoTitle: {
+    color: '#fff',
+    marginTop: 8,
+    fontSize: 28,
+    lineHeight: 30,
+    letterSpacing: -0.4,
+  },
+  heroStatsCol: {
+    marginTop: 10,
+    gap: 4,
+  },
+  heroRightCol: {
+    flex: 1,
+    flexDirection: 'column',
+    gap: 12,
+  },
+  heroSmallCard: {
+    flex: 1,
+    borderRadius: 22,
+    padding: 14,
+    overflow: 'hidden',
+    minHeight: 109,
+  },
+  heroSmallTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  heroSmallMoodImg: {
+    width: 60,
+    height: 60,
+  },
+  pactoHero: {
+    borderRadius: 26,
+    borderWidth: 1,
+    padding: 18,
+    minHeight: 188,
+    overflow: 'hidden',
+  },
+  heroMascot: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    width: 62,
+    height: 62,
+    zIndex: 2,
+  },
+  heroOrb: {
+    position: 'absolute',
+    right: -42,
+    bottom: -48,
+    width: 156,
+    height: 156,
+    borderRadius: 78,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  heroTitle: {
+    color: '#fff',
+    maxWidth: '74%',
+    marginTop: 8,
+  },
+  heroProgressTrack: {
+    marginTop: 24,
+    height: 7,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.24)',
+    overflow: 'hidden',
+  },
+  heroProgressFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: '#fff',
+  },
+  heroStats: {
+    marginTop: 11,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  heroStatText: {
+    color: '#FFF5EF',
+    fontVariant: ['tabular-nums'],
+  },
+  actionTiles: {
+    flexDirection: 'row',
+    marginTop: 0,
+  },
+  actionRail: {
+    marginTop: 12,
+    borderRadius: 24,
+    padding: 5,
+    flexDirection: 'row',
+    overflow: 'hidden',
+  },
+  shortcutRail: {
+    flexDirection: 'row',
+    borderRadius: 22,
+    overflow: 'hidden',
+  },
+  shortcutSegment: {
+    flex: 1,
+    width: 'auto',
+    minHeight: 132,
+    padding: 12,
+    borderRadius: 0,
+  },
+  mergedStack: {
+    marginTop: 0,
+    borderRadius: 22,
+    overflow: 'hidden',
+  },
+  cardHalo: {
+    borderRadius: 27,
+    padding: 5,
+  },
+  mergedRailRow: {
+    flexDirection: 'row',
+  },
+  mergedRailSegment: {
+    flex: 1,
+    width: 'auto',
+    minHeight: 132,
+    padding: 12,
+    borderRadius: 0,
+  },
+  mergedListSection: {
+    paddingTop: 12,
+    paddingHorizontal: 0,
+    paddingBottom: 4,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  mergedListHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  actionList: {
+    gap: 8,
+    marginTop: 16,
+  },
+  actionRow: {
+    minHeight: 70,
+    borderRadius: 18,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  actionTile: {
+    flex: 1,
+    minHeight: 96,
+    borderRadius: 0,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    overflow: 'hidden',
+  },
+  actionTileFirst: {
+    borderTopLeftRadius: 19,
+    borderBottomLeftRadius: 19,
+  },
+  actionTileLast: {
+    borderTopRightRadius: 19,
+    borderBottomRightRadius: 19,
+  },
+  actionTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 11,
+  },
+  actionGlyph: {
+    width: 36,
+    height: 36,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  activityBrandCard: {
+    borderRadius: 22,
+  },
+  activitySummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 14,
+  },
+  streakPill: {
+    minWidth: 66,
+    borderRadius: 16,
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  activityHeatmapWrap: {
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+  },
+  homeSectionTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    marginBottom: 10,
+  },
+  quickGrid: {
+    flexDirection: 'row',
+  },
+  metricConsole: {
+    borderRadius: 26,
+    overflow: 'hidden',
+  },
+  quickCard: {
+    flex: 1,
+    minHeight: 122,
+    gap: 8,
+    padding: 16,
+  },
+  quickHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  quickIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickNum: {
+    fontFamily: Typography.pixelFont,
+    fontSize: 28,
+    lineHeight: 32,
+    fontVariant: ['tabular-nums'],
+  },
+  quickNumRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+  },
+  focusCard: {
+    marginTop: 14,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    overflow: 'hidden',
+  },
+  focusRing: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 6,
+    borderColor: 'rgba(224,111,85,0.28)',
+  },
+  focusPlay: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chartCard: {
+    borderTopWidth: 1,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 12,
+  },
+  chartLead: {
+    width: 92,
+    justifyContent: 'space-between',
+  },
+  chartRing: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    borderWidth: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  chartBars: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  combinedChart: {
+    flex: 1,
+    minHeight: 108,
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    justifyContent: 'space-between',
+  },
+  combinedBars: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 5,
+  },
+  combinedBar: {
+    flex: 1,
+    borderRadius: 5,
+  },
+  combinedLegend: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  chartMini: {
+    flex: 1,
+    minHeight: 104,
+    borderRadius: 16,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+    justifyContent: 'space-between',
+    overflow: 'hidden',
+  },
+  chartMiniBars: {
+    height: 36,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 3,
+  },
+  chartMiniBar: {
+    flex: 1,
+    borderRadius: 4,
+  },
+  homeListCard: {
+    borderRadius: 22,
+    padding: 0,
+    overflow: 'hidden',
+  },
+  homeListRow: {
+    minHeight: 74,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  nextCard: {
+    minHeight: 64,
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 10,
+  },
+  nextCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nextIconBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nextPill: {
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  timelineCard: {
+    borderRadius: 18,
+    paddingVertical: 8,
+  },
+  timelinePing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 8,
+  },
+  timelineTime: {
+    width: 38,
+  },
+  timelinePulse: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+  },
+  timelineIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  streakRibbon: {
+    marginTop: 10,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    overflow: 'hidden',
+  },
+  streakIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.38)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  streakNum: {
+    fontFamily: Typography.pixelFont,
+    fontSize: 23,
+    lineHeight: 25,
+    fontVariant: ['tabular-nums'],
+  },
+  streakNumRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 5,
+  },
+  streakSmall: {
+    fontFamily: Typography.geistMediumFont,
+    fontSize: 12,
+    color: '#FFF5EF',
+  },
+  weekBars: {
+    flexDirection: 'row',
+    gap: 3,
+  },
+  weekBar: {
+    width: 8,
+    height: 22,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+  },
+  weekBarOn: {
+    backgroundColor: '#fff',
+  },
+  weekBarToday: {
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  vibesCard: {
+    marginTop: 10,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#25243D',
+    overflow: 'hidden',
+  },
+  vibesCover: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E06F55',
+  },
+  vibesLabel: {
+    fontFamily: Typography.geistMonoFont,
+    fontSize: 9,
+    lineHeight: 12,
+    letterSpacing: 1.4,
+    color: 'rgba(255,255,255,0.58)',
+  },
+  vibesTitle: {
+    fontFamily: Typography.geistSemiBoldFont,
+    fontSize: 13,
+    lineHeight: 17,
+    color: '#fff',
+  },
+  vibesBy: {
+    fontFamily: Typography.geistFont,
+    fontSize: 10,
+    lineHeight: 13,
+    color: 'rgba(255,255,255,0.68)',
+  },
+  vibeBars: {
+    height: 24,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  vibeBar: {
+    width: 3,
+    borderRadius: 2,
+  },
+  loveNote: {
+    marginTop: 10,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    padding: 14,
+  },
+  momentsStrip: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingRight: 18,
+  },
+  momentCard: {
+    width: 86,
+    height: 110,
+    borderRadius: 16,
+    padding: 8,
+    justifyContent: 'space-between',
+    overflow: 'hidden',
+  },
+  momentPill: {
+    alignSelf: 'flex-start',
+    borderRadius: 7,
+    overflow: 'hidden',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    color: '#292D3D',
+    fontFamily: Typography.geistMonoFont,
+    fontSize: 8,
+    letterSpacing: 0.8,
+  },
+  momentCap: {
+    color: '#fff',
+    fontFamily: Typography.geistSemiBoldFont,
+    fontSize: 10,
+    lineHeight: 13,
+  },
+  momentAdd: {
+    width: 86,
+    height: 110,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   moodWrap: {
     borderRadius: 24,
@@ -1499,16 +2309,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFDF7',
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
-    ...Platform.select({
-      web: { boxShadow: '0px 5px 14px rgba(0, 0, 0, 0.06)' },
-      default: {
-        shadowColor: '#000',
-        shadowOpacity: 0.06,
-        shadowOffset: { width: 0, height: 5 },
-        shadowRadius: 14,
-        elevation: 1,
-      },
-    }),
+    boxShadow: '0px 5px 14px rgba(0, 0, 0, 0.06)',
   },
   aheadFooterButton: {
     flex: 1,
@@ -1670,12 +2471,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   comingCoverImage: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     width: '100%',
     height: '100%',
   },
   comingCoverDefault: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1763,16 +2564,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   softShadow: {
-    ...Platform.select({
-      web: { boxShadow: '0px 5px 14px rgba(0, 0, 0, 0.06)' },
-      default: {
-        shadowColor: '#000',
-        shadowOpacity: 0.06,
-        shadowOffset: { width: 0, height: 5 },
-        shadowRadius: 14,
-        elevation: 1,
-      },
-    }),
+    boxShadow: '0px 5px 14px rgba(0, 0, 0, 0.06)',
   },
   tabularText: {
     fontVariant: ['tabular-nums'],

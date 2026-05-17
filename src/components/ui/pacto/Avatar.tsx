@@ -33,7 +33,7 @@ export function Avatar({ person, size = 36, ring, style }: AvatarProps) {
   const bg = person?.color ?? C.accent;
   const avatarSource = resolveAvatarSource(person?.avatarUrl);
   // Uploaded photos use { uri }; bundled defaults use require() and resolve to
-  // a number on native, an object with `uri` on web.
+  // numeric native asset references.
   const isUploaded =
     !!avatarSource &&
     typeof avatarSource === 'object' &&

@@ -25,16 +25,17 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
+import { PactoMark } from '../components/ui/pacto/PactoMark';
 import { useAiAssistant } from './ai';
 import { useTheme } from './theme';
 
 /**
- * White → violet radial torch. Bright white center bleeds into purple,
- * fading fully transparent at the edge — no hard disc outline.
+ * Warm radial torch. A tinted paper center bleeds into Pacto red, fading
+ * fully transparent at the edge with no hard outline.
  *
  * Variants:
- *   - 'core' : hot white core → violet, slightly off-center for refraction
- *   - 'halo' : pure violet wash, no white center — used for outer glow rings
+ *   - 'core' : warm white core → red, slightly off-center for refraction
+ *   - 'halo' : red-white wash, no hard center, used for outer glow rings
  */
 type GlowVariant = 'core' | 'halo';
 
@@ -48,22 +49,22 @@ const TorchGlow = React.memo(function TorchGlow({
 }) {
   const gradId = `torch-${id}`;
   return (
-    <Svg style={StyleSheet.absoluteFill as any} pointerEvents="none">
+    <Svg style={[StyleSheet.absoluteFill, styles.nonInteractive] as any}>
       <Defs>
         {variant === 'core' ? (
-          <RadialGradient id={gradId} cx="48%" cy="46%" r="55%" fx="48%" fy="46%">
-            <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.88} />
-            <Stop offset="22%" stopColor="#FFFFFF" stopOpacity={0.42} />
-            <Stop offset="48%" stopColor="#B8A8E8" stopOpacity={0.30} />
-            <Stop offset="75%" stopColor="#7B5CD9" stopOpacity={0.10} />
-            <Stop offset="100%" stopColor="#7B5CD9" stopOpacity={0} />
+          <RadialGradient id={gradId} cx="48%" cy="47%" r="72%" fx="48%" fy="47%">
+            <Stop offset="0%" stopColor="#FFF8ED" stopOpacity={0.68} />
+            <Stop offset="20%" stopColor="#F7D8CF" stopOpacity={0.38} />
+            <Stop offset="48%" stopColor="#E47162" stopOpacity={0.22} />
+            <Stop offset="76%" stopColor="#B84D43" stopOpacity={0.09} />
+            <Stop offset="100%" stopColor="#B84D43" stopOpacity={0} />
           </RadialGradient>
         ) : (
-          <RadialGradient id={gradId} cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-            <Stop offset="0%" stopColor="#B8A8E8" stopOpacity={0.32} />
-            <Stop offset="45%" stopColor="#B8A8E8" stopOpacity={0.16} />
-            <Stop offset="80%" stopColor="#7B5CD9" stopOpacity={0.04} />
-            <Stop offset="100%" stopColor="#7B5CD9" stopOpacity={0} />
+          <RadialGradient id={gradId} cx="50%" cy="50%" r="70%" fx="50%" fy="50%">
+            <Stop offset="0%" stopColor="#FFF8ED" stopOpacity={0.18} />
+            <Stop offset="38%" stopColor="#E47162" stopOpacity={0.14} />
+            <Stop offset="76%" stopColor="#B84D43" stopOpacity={0.06} />
+            <Stop offset="100%" stopColor="#B84D43" stopOpacity={0} />
           </RadialGradient>
         )}
       </Defs>
@@ -91,12 +92,18 @@ const LISTENING_DOTS = Array.from({ length: 231 }, (_, index) => {
 // Assistant visuals are intentionally isolated in this file. Reverting this
 // file restores the previous overlay direction without touching AI behavior.
 const ASSISTANT_VISUAL = {
-  scrim: 'rgba(42, 36, 27, 0.68)',
+  scrim: 'rgba(44, 38, 29, 0.68)',
   ink: '#2A241B',
   ink2: '#5C5345',
   warm: '#D08B6F',
   mint: '#7FBFAF',
+  red: '#E47162',
+  redDeep: '#B84D43',
+  paper: '#FFF8ED',
 };
+
+const listeningTextShadow = { textShadow: '0 2px 10px rgba(42,36,27,0.36)' } as any;
+const listeningHelpShadow = { textShadow: '0 1px 8px rgba(42,36,27,0.28)' } as any;
 
 type AssistantOverlayContextValue = {
   isVoiceOverlayOpen: boolean;
@@ -242,16 +249,20 @@ function AssistantVoiceOverlay({
               style={({ pressed }) => [
                 styles.listeningTarget,
                 {
-                  opacity: pressed ? 0.7 : 1,
-                  transform: [{ scale: pressed ? 0.98 : 1 }],
+                  opacity: pressed ? 0.92 : 1,
+                  transform: [{ translateY: pressed ? 2 : 0 }, { scale: pressed ? 0.985 : 1 }],
                 },
               ]}
             >
+              <View style={styles.listeningMascotGlow}>
+                <PactoMark size={48} animated />
+              </View>
               <Text
                 style={[
                   styles.listeningText,
+                  listeningTextShadow,
                   {
-                    color: 'rgba(250,248,242,0.92)',
+                    color: 'rgba(255,248,237,0.94)',
                     fontFamily: F.geistMonoMedium,
                   },
                 ]}
@@ -259,6 +270,18 @@ function AssistantVoiceOverlay({
                 {labelForState(turn.state)}
               </Text>
               <VoiceMeter active={recorderState.isRecording} />
+              <Text
+                style={[
+                  styles.listeningHelp,
+                  listeningHelpShadow,
+                  {
+                    color: 'rgba(255,248,237,0.64)',
+                    fontFamily: F.geistMedium,
+                  },
+                ]}
+              >
+                Hint: tap when finished
+              </Text>
             </Pressable>
           </View>
 
@@ -351,13 +374,13 @@ function AssistantVoiceOverlay({
 }
 
 function labelForState(state: ReturnType<typeof useAiAssistant>['turn']['state']) {
-  if (state === 'transcribing') return 'transcribing';
-  if (state === 'thinking') return 'thinking';
-  if (state === 'awaitingConfirmation') return 'review';
-  if (state === 'applying') return 'applying';
-  if (state === 'error') return 'needs attention';
-  if (state === 'complete') return 'ready';
-  return 'listening';
+  if (state === 'transcribing') return 'Transcribing';
+  if (state === 'thinking') return 'Thinking';
+  if (state === 'awaitingConfirmation') return 'Review';
+  if (state === 'applying') return 'Applying';
+  if (state === 'error') return 'Attention';
+  if (state === 'complete') return 'Ready';
+  return 'Listening';
 }
 
 function VoiceMeter({ active }: { active: boolean }) {
@@ -478,25 +501,25 @@ function ListeningAura() {
 
       <Animated.View
         testID="pacto-ai-listening-ring"
-        pointerEvents="none"
         style={[
           styles.outerRing,
+          styles.nonInteractive,
           {
             opacity: pulse.interpolate({
               inputRange: [0, 1],
-              outputRange: [0.2, 0.46],
+              outputRange: [0.24, 0.52],
             }),
             transform: [
               {
                 scaleX: pulse.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [0.9, 1.08],
+                  outputRange: [0.94, 1.14],
                 }),
               },
               {
                 scaleY: pulse.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [1.08, 0.86],
+                  outputRange: [1.12, 0.92],
                 }),
               },
             ],
@@ -506,25 +529,25 @@ function ListeningAura() {
         <TorchGlow variant="halo" id="ring" />
       </Animated.View>
       <Animated.View
-        pointerEvents="none"
         style={[
           styles.gasCloudViolet,
+          styles.nonInteractive,
           {
             opacity: pulse.interpolate({
               inputRange: [0, 1],
-              outputRange: [0.16, 0.4],
+              outputRange: [0.18, 0.42],
             }),
             transform: [
               {
                 translateX: pulse.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [-24, 38],
+                  outputRange: [-58, 76],
                 }),
               },
               {
                 scale: pulse.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [0.92, 1.1],
+                  outputRange: [0.96, 1.18],
                 }),
               },
             ],
@@ -534,31 +557,31 @@ function ListeningAura() {
         <TorchGlow variant="halo" id="violet" />
       </Animated.View>
       <Animated.View
-        pointerEvents="none"
         style={[
           styles.gasCloudBlue,
+          styles.nonInteractive,
           {
             opacity: pulse.interpolate({
               inputRange: [0, 1],
-              outputRange: [0.12, 0.34],
+              outputRange: [0.14, 0.34],
             }),
             transform: [
               {
                 translateX: pulse.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [42, -30],
+                  outputRange: [82, -70],
                 }),
               },
               {
                 translateY: pulse.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [18, -12],
+                  outputRange: [26, -18],
                 }),
               },
               {
                 scale: pulse.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [1.02, 0.88],
+                  outputRange: [1.08, 0.94],
                 }),
               },
             ],
@@ -568,25 +591,25 @@ function ListeningAura() {
         <TorchGlow variant="halo" id="cool" />
       </Animated.View>
       <Animated.View
-        pointerEvents="none"
         style={[
           styles.innerGlow,
+          styles.nonInteractive,
           {
             opacity: pulse.interpolate({
               inputRange: [0, 1],
-              outputRange: [0.74, 1],
+              outputRange: [0.62, 0.86],
             }),
             transform: [
               {
                 scaleX: pulse.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [0.72, 1.04],
+                  outputRange: [0.88, 1.18],
                 }),
               },
               {
                 scaleY: pulse.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [1.14, 0.82],
+                  outputRange: [1.1, 0.96],
                 }),
               },
             ],
@@ -596,19 +619,19 @@ function ListeningAura() {
         <TorchGlow variant="core" id="core" />
       </Animated.View>
       <Animated.View
-        pointerEvents="none"
         style={[
           styles.sideGlow,
+          styles.nonInteractive,
           {
             opacity: pulse.interpolate({
               inputRange: [0, 1],
-              outputRange: [0.18, 0.48],
+              outputRange: [0.22, 0.52],
             }),
             transform: [
               {
                 translateX: pulse.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [-54, 54],
+                  outputRange: [-112, 112],
                 }),
               },
             ],
@@ -644,9 +667,9 @@ const styles = StyleSheet.create({
   },
   auraField: {
     position: 'absolute',
-    bottom: -96,
-    width: 520,
-    height: 320,
+    bottom: -132,
+    width: 720,
+    height: 440,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'visible',
@@ -665,7 +688,7 @@ const styles = StyleSheet.create({
     width: 2,
     height: 2,
     borderRadius: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ASSISTANT_VISUAL.paper,
   },
   // All disc layers are now frames for inner SVG TorchGlow gradients —
   // no backgroundColor / borderRadius / boxShadow so nothing draws a
@@ -674,28 +697,28 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: '50%',
     top: '50%',
-    width: 540,
-    height: 320,
-    marginLeft: -270,
-    marginTop: -160,
+    width: 720,
+    height: 430,
+    marginLeft: -360,
+    marginTop: -215,
   },
   gasCloudViolet: {
     position: 'absolute',
     left: '50%',
     top: '50%',
-    width: 420,
-    height: 280,
-    marginLeft: -210,
-    marginTop: -140,
+    width: 610,
+    height: 380,
+    marginLeft: -305,
+    marginTop: -190,
   },
   gasCloudBlue: {
     position: 'absolute',
     left: '50%',
     top: '50%',
-    width: 380,
-    height: 260,
-    marginLeft: -190,
-    marginTop: -130,
+    width: 560,
+    height: 360,
+    marginLeft: -280,
+    marginTop: -180,
   },
   innerGlow: {
     // Frame for the TorchGlow SVG. No backgroundColor / borderRadius /
@@ -704,49 +727,60 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: '50%',
     top: '50%',
-    width: 320,
-    height: 240,
-    marginLeft: -160,
-    marginTop: -120,
+    width: 460,
+    height: 300,
+    marginLeft: -230,
+    marginTop: -150,
   },
   sideGlow: {
     position: 'absolute',
     left: '50%',
     top: '50%',
-    width: 360,
-    height: 220,
-    marginLeft: -180,
-    marginTop: -110,
+    width: 620,
+    height: 320,
+    marginLeft: -310,
+    marginTop: -160,
   },
-  // Naked tap target — no pill, no border, no background. Label + meter
-  // stack against the aura. Press just dims and scales slightly.
   listeningTarget: {
+    minWidth: 192,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 14,
+    gap: 9,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
+  },
+  listeningMascotGlow: {
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,248,237,0.14)',
+    boxShadow: '0 0 22px rgba(228,113,98,0.34)',
   },
   listeningText: {
-    fontSize: 11,
-    lineHeight: 14,
-    letterSpacing: 3,
+    fontSize: 14,
+    lineHeight: 18,
+    letterSpacing: 2.2,
     textTransform: 'uppercase',
+    textAlign: 'center',
   },
   listeningMeter: {
-    height: 28,
+    height: 24,
     minWidth: 100,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
   },
+  listeningHelp: {
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 0.1,
+    textAlign: 'center',
+  },
   meterBar: {
     width: 4,
     height: 22,
     borderRadius: 2,
-    backgroundColor: '#B8A8E8',
-    boxShadow: '0 0 10px rgba(184, 168, 232, 0.65)',
+    backgroundColor: ASSISTANT_VISUAL.red,
+    boxShadow: '0 0 10px rgba(228, 113, 98, 0.48)',
   },
   nonInteractive: {
     pointerEvents: 'none',
@@ -763,7 +797,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 5,
     boxShadow: '0 8px 18px rgba(42,36,27,0.14)',
-    elevation: 4,
   },
   assistantMessage: {
     alignSelf: 'flex-start',
@@ -790,7 +823,6 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     gap: 7,
     boxShadow: '0 8px 18px rgba(42,36,27,0.14)',
-    elevation: 4,
   },
   actionTitle: {
     fontSize: 16,

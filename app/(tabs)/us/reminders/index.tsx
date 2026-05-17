@@ -24,6 +24,7 @@ import {
 import { useReminders } from '@/src/hooks/useReminders';
 import { useSession } from '@/src/hooks/useSession';
 import { Typography } from '@/src/constants/typography';
+import { alphaColor } from '@/src/lib/color';
 import { useTheme } from '@/src/lib/theme';
 import type { Reminder } from '@/src/types/database';
 
@@ -129,11 +130,17 @@ function RemindersScreenInner() {
       >
         <View style={styles.heroWrap}>
           <StatBar
+            accent={overdueCount > 0 ? C.accent : C.reminders}
             eyebrow={overdueCount > 0 ? 'NEEDS ATTENTION' : nextReminder ? 'NEXT REMINDER' : 'THIS WEEK'}
             meta={`${todayCount} TODAY · ${doneCount} DONE`}
             primary={
               <>
-                <Text style={[Typography.pixelHeroSm, { color: C.inkColor }]}>
+                <Text
+                  style={[Typography.pixelHeroLg, { color: C.inkColor }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.72}
+                >
                   {overdueCount > 0 ? overdueCount : activeCount}
                 </Text>
                 <Text style={[styles.heroMetricLabel, { color: C.ink2 }]}>
@@ -149,6 +156,14 @@ function RemindersScreenInner() {
                 ) : null}
               </>
             }
+            microVis={
+              <ReminderDueStrip
+                reminders={upcoming}
+                accent={overdueCount > 0 ? C.accent : C.reminders}
+                todayColor={C.accent2}
+                trackColor={C.lineColor}
+              />
+            }
           />
         </View>
 
@@ -159,6 +174,7 @@ function RemindersScreenInner() {
               title="No reminders yet"
               body="Add one thing worth remembering and assign it to yourself or the pact."
               actionLabel="New reminder"
+              accent={C.reminders}
               onAction={() => router.push('/sheets/new-reminder' as any)}
             />
           </View>
@@ -166,23 +182,25 @@ function RemindersScreenInner() {
           <>
 
         {/* Filter pills */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterRow}
-        >
-          {filters.map((f) => (
-            <Pill
-              key={f}
-              size="md"
-              active={filter === f}
-              onPress={() => setFilter(f)}
-              color={C.inkColor}
-            >
-              {f === 'Theirs' && partnerName ? `${partnerName.split(' ')[0]}'s` : f}
-            </Pill>
-          ))}
-        </ScrollView>
+        <View style={styles.filterWrap}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterRow}
+          >
+            {filters.map((f) => (
+              <Pill
+                key={f}
+                size="md"
+                active={filter === f}
+                onPress={() => setFilter(f)}
+                color={C.inkColor}
+              >
+                {f === 'Theirs' && partnerName ? `${partnerName.split(' ')[0]}'s` : f}
+              </Pill>
+            ))}
+          </ScrollView>
+        </View>
 
         <View style={styles.listWrap}>
           {buckets.length === 0 ? (
@@ -269,6 +287,57 @@ function priorityLevel(p: number): 'none' | 'low' | 'med' | 'high' {
   return 'none';
 }
 
+function ReminderDueStrip({
+  reminders,
+  accent,
+  todayColor,
+  trackColor,
+}: {
+  reminders: Reminder[];
+  accent: string;
+  todayColor: string;
+  trackColor: string;
+}) {
+  const cells = ['Overdue', 'Today', 'Tomorrow', 'This week', 'Later'].map((label) => ({
+    label,
+    count: reminders.filter((r) =>
+      label === 'Overdue'
+        ? isOverdue(r.due_at, r.is_completed)
+        : bucketOfDue(r.due_at) === label
+    ).length,
+  }));
+  const peak = Math.max(1, ...cells.map((c) => c.count));
+
+  return (
+    <View
+      style={styles.dueStrip}
+      accessibilityLabel={`Reminder timing: ${cells
+        .map((c) => `${c.label} ${c.count}`)
+        .join(', ')}`}
+    >
+      {cells.map((cell) => {
+        const active = cell.count > 0;
+        const isToday = cell.label === 'Today';
+        const fill = isToday ? todayColor : accent;
+        return (
+          <View
+            key={cell.label}
+            style={[
+              styles.dueCell,
+              {
+                backgroundColor: active
+                  ? alphaColor(fill, 0.28 + (cell.count / peak) * 0.58)
+                  : 'transparent',
+                borderColor: active ? 'transparent' : trackColor,
+              },
+            ]}
+          />
+        );
+      })}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   heroWrap: {
     paddingHorizontal: 18,
@@ -312,10 +381,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 8,
   },
-  filterRow: {
-    paddingHorizontal: 18,
+  filterWrap: {
     paddingTop: 12,
     paddingBottom: 14,
+  },
+  filterRow: {
+    paddingHorizontal: 18,
     gap: 6,
   },
   listWrap: {
@@ -351,5 +422,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 23,
     letterSpacing: 0,
+  },
+  dueStrip: {
+    flexDirection: 'row',
+    gap: 5,
+  },
+  dueCell: {
+    flex: 1,
+    height: 10,
+    borderRadius: 2,
+    borderWidth: 1,
   },
 });

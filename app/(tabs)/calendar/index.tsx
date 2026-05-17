@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
@@ -41,6 +41,15 @@ function CalendarScreenInner() {
   const { mode, partner } = useSession();
   const cal = useCalendar();
   const { week, agenda, monthLabel, selectedDate, selectDate } = cal;
+
+  // Honor `?date=YYYY-MM-DD` so other surfaces can deep-link a specific day.
+  const params = useLocalSearchParams<{ date?: string }>();
+  useEffect(() => {
+    const target = Array.isArray(params.date) ? params.date[0] : params.date;
+    if (target && /^\d{4}-\d{2}-\d{2}$/.test(target) && target !== selectedDate) {
+      selectDate(target);
+    }
+  }, [params.date, selectDate, selectedDate]);
 
   const partnerName = partner?.displayName ?? null;
 

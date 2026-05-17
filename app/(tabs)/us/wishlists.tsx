@@ -23,6 +23,7 @@ import {
 } from '@/src/hooks/useWishlists';
 import { useSession } from '@/src/hooks/useSession';
 import { Typography } from '@/src/constants/typography';
+import { alphaColor } from '@/src/lib/color';
 import { useTheme } from '@/src/lib/theme';
 import { findCurrency, usePreferences } from '@/src/lib/preferences';
 
@@ -262,6 +263,8 @@ function WishlistsScreenInner() {
             <PressScale
               onPress={() => router.back()}
               hitSlop={12}
+              haptic="impact"
+              pressedScale={0.96}
               style={{ padding: 4 }}
             >
               <Icon name="chevronLeft" size={22} color={C.inkColor} strokeWidth={2.2} />
@@ -271,6 +274,8 @@ function WishlistsScreenInner() {
             <PressScale
               onPress={() => router.push('/sheets/new-wish' as any)}
               hitSlop={12}
+              haptic="impact"
+              pressedScale={0.96}
               style={{ padding: 4 }}
             >
               <Icon name="plus" size={22} color={C.inkColor} strokeWidth={2.2} />
@@ -288,20 +293,26 @@ function WishlistsScreenInner() {
         {rows.length > 0 ? (
         <View style={styles.heroWrap}>
           <StatBar
+            accent={C.wish}
             eyebrow="ON THE LIST"
             meta={`${stats.open} OPEN · ${stats.bought} BOUGHT`}
             primary={
               <>
                 <Text
-                  style={[Typography.pixelHeroSm, { color: C.inkColor }]}
+                  style={[Typography.pixelHeroLg, { color: C.inkColor }]}
                   numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.72}
                 >
                   {fmtMoney(stats.totalValue, currencyCode)}
                 </Text>
                 <PressScale
                   onPress={() => router.push('/sheets/currency' as any)}
                   hitSlop={6}
-                  style={styles.currencyChip}
+                  style={[
+                    styles.currencyChip,
+                    { backgroundColor: alphaColor(C.inkColor, 0.08) },
+                  ]}
                 >
                   <Text style={[Typography.eyebrowSm, { color: C.ink2, fontSize: 9.5 }]}>
                     {currencyCode}
@@ -365,7 +376,7 @@ function WishlistsScreenInner() {
                   }
                   onDelete={() => remove(w.id)}
                 >
-                  <View style={[styles.row, { backgroundColor: C.bgCard }]}>
+                  <View style={styles.row}>
                     <Checkbox
                       checked={w.isPurchased}
                       onChange={() => {
@@ -423,6 +434,7 @@ function WishlistsScreenInner() {
 }
 
 function SegmentedBar({ open, bought }: { open: number; bought: number }) {
+  const { C } = useTheme();
   const total = Math.max(1, open + bought);
   const w = (n: number) => Math.max(4, Math.round((n / total) * 100));
   return (
@@ -430,7 +442,7 @@ function SegmentedBar({ open, bought }: { open: number; bought: number }) {
       <View
         style={{
           flex: w(open),
-          backgroundColor: '#2A241B',
+          backgroundColor: C.inkColor,
           borderRadius: 3,
           height: 6,
         }}
@@ -438,7 +450,7 @@ function SegmentedBar({ open, bought }: { open: number; bought: number }) {
       <View
         style={{
           flex: w(bought),
-          backgroundColor: 'rgba(0,0,0,0.18)',
+          backgroundColor: alphaColor(C.inkColor, 0.18),
           borderRadius: 3,
           height: 6,
         }}
@@ -460,7 +472,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: 'rgba(0,0,0,0.08)',
   },
   bar: {
     flexDirection: 'row',

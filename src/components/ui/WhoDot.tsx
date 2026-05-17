@@ -6,15 +6,19 @@ export function WhoDot({
   who,
   size = 18,
   borderColor,
+  meInitial = 'Y',
+  partnerInitial = 'P',
 }: {
   who: Who;
   size?: number;
   borderColor?: string;
+  meInitial?: string;
+  partnerInitial?: string;
 }) {
   const { C, F } = useTheme();
   const font = Math.round(size * 0.5);
-  const peach = { bg: '#F4A68C', fg: '#3A1F14', letter: 'M' };
-  const lav = { bg: '#B8A8E8', fg: '#1F1635', letter: 'S' };
+  const peach = { bg: '#F4A68C', fg: '#3A1F14', letter: meInitial.charAt(0).toUpperCase() };
+  const lav = { bg: '#B8A8E8', fg: '#1F1635', letter: partnerInitial.charAt(0).toUpperCase() };
   const bubble = (cfg: typeof peach, overlap = false) => (
     <View
       style={{
@@ -48,5 +52,5 @@ export function WhoDot({
       </View>
     );
   }
-  return bubble(who === 'sofia' ? lav : peach);
+  return bubble(who === 'partner' ? lav : peach);
 }

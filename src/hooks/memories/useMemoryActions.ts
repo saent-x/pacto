@@ -2,6 +2,10 @@ import { useCallback } from 'react';
 import { id } from '@/src/lib/instant';
 import { db } from '@/src/lib/instant';
 import { useSession } from '@/src/hooks/useSession';
+import {
+  notifyMemoryReaction,
+  notifyMemoryRepost,
+} from '@/src/lib/memories/notifications';
 
 export function useMemoryActions() {
   const session = useSession() as any;
@@ -17,7 +21,12 @@ export function useMemoryActions() {
         .update({ emoji, createdAt: Date.now() })
         .link({ memory: memoryId, user: user.id }),
     ]);
-  }, [user?.id]);
+    await notifyMemoryReaction({
+      memoryId,
+      actorUserId: user.id,
+      actorName: displayName(user),
+    });
+  }, [user]);
 
   const unreact = useCallback(async (reactionId: string) => {
     await db.transact([db.tx.memoryReactions[reactionId].delete()]);
@@ -31,7 +40,13 @@ export function useMemoryActions() {
         .update({ body: '', kind: 'repost', createdAt: Date.now() })
         .link({ space: spaceId, author: user.id, repostOf: sourceMemoryId }),
     ]);
-  }, [user?.id, spaceId, mode]);
+    await notifyMemoryRepost({
+      sourceMemoryId,
+      actorUserId: user.id,
+      actorName: displayName(user),
+      routeMemoryId: newId,
+    });
+  }, [user, spaceId, mode]);
 
   const remove = useCallback(async (memoryId: string) => {
     await db.transact([db.tx.memories[memoryId].delete()]);
@@ -42,4 +57,8 @@ export function useMemoryActions() {
   }, []);
 
   return { react, unreact, repost, remove, togglePin };
+}
+
+function displayName(user: any): string {
+  return user?.displayName?.trim() || user?.email?.split('@')[0] || 'Someone';
 }

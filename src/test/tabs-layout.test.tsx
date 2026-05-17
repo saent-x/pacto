@@ -3,18 +3,25 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('expo-router/unstable-native-tabs', () => {
   const captured: string[] = [];
+  const icons: Record<string, unknown> = {};
   function Trigger({ name, children }: { name: string; children?: React.ReactNode }) {
     captured.push(name);
-    return null;
+    (Trigger as any).__current = name;
+    return children;
   }
   Trigger.Label = ({ children }: any) => null;
-  Trigger.Icon = () => null;
+  Trigger.Icon = ({ src }: any) => {
+    icons[(Trigger as any).__current] = src;
+    return null;
+  };
   function NativeTabs({ children }: any) {
     captured.length = 0;
+    for (const key of Object.keys(icons)) delete icons[key];
     return children;
   }
   (NativeTabs as any).Trigger = Trigger;
   (NativeTabs as any).__captured = captured;
+  (NativeTabs as any).__icons = icons;
   return { NativeTabs };
 });
 
@@ -40,5 +47,11 @@ describe('bottom tabs layout', () => {
     const captured: string[] = (nativeTabs.NativeTabs as any).__captured;
     expect(captured).not.toContain('tasks');
     expect(captured).not.toContain('reminders');
+  });
+
+  it('uses a dedicated memories tab asset', () => {
+    renderToStaticMarkup(<TabsLayout />);
+    const icons: Record<string, unknown> = (nativeTabs.NativeTabs as any).__icons;
+    expect(String(icons.memories)).toContain('tab-memories');
   });
 });

@@ -2,7 +2,7 @@
  * SubscreenHero — pastel slab hero for Together sub-screens.
  *
  * Big chunky metric on the left, contextual meta on the right.
- * Drop into LoveNotes / Checkins / Expenses / Wishlists / Milestones / Plans.
+ * Drop into LoveNotes / Checkins / Wishlists / Milestones / Plans.
  */
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
@@ -10,6 +10,7 @@ import { Feather } from '@expo/vector-icons';
 import { BlockCard, Overline } from './WarmBlock';
 import { Pastels, type PastelKey } from '@/src/constants/pastels';
 import { Typography } from '@/src/constants/typography';
+import { alphaColor } from '@/src/lib/color';
 
 type PastelName = 'peach' | 'lavender' | 'butter' | 'mint' | 'rose' | 'sky';
 
@@ -40,12 +41,12 @@ export function SubscreenHero({
   return (
     <BlockCard pastel={pastel} style={styles.card}>
       <View style={styles.topRow}>
-        <Overline color="rgba(0,0,0,0.55)">{eyebrow}</Overline>
+        <Overline color={alphaColor(ink, 0.55)}>{eyebrow}</Overline>
         {rightSlot
           ? rightSlot
           : icon
             ? (
-              <View style={[styles.iconBubble, { backgroundColor: 'rgba(0,0,0,0.14)' }]}>
+              <View style={[styles.iconBubble, { backgroundColor: alphaColor(ink, 0.14) }]}>
                 <Feather name={icon} size={14} color={ink} />
               </View>
             )
@@ -58,7 +59,7 @@ export function SubscreenHero({
       </View>
 
       {subtitle && (
-        <Text style={[styles.subtitle, { color: 'rgba(0,0,0,0.65)' }]}>{subtitle}</Text>
+        <Text style={[styles.subtitle, { color: alphaColor(ink, 0.65) }]}>{subtitle}</Text>
       )}
     </BlockCard>
   );

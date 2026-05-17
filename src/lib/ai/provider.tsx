@@ -1,6 +1,10 @@
 import React, { createContext, useCallback, useContext, useMemo, useReducer } from 'react';
 import { applyMutationPlan, buildActionDraft, parseAiToolCall } from './tools';
-import { confirmAiActionDrafts, processAiAudioTurn } from './assistantLoop';
+import {
+  confirmAiActionDrafts,
+  filterToolCallsForAllowedDomains,
+  processAiAudioTurn,
+} from './assistantLoop';
 import { AI_MODEL_PACKS } from './modelRegistry';
 import { getAiModelStorageStatus } from './modelManager';
 import { createLlamaRnPlanningAdapter, createWhisperRnAdapter } from './runtime';
@@ -26,12 +30,14 @@ export function AiAssistantProvider({
   processAudioRecording,
   contextPrompt,
   records,
+  allowedDomains,
   mutationContext,
 }: {
   children: React.ReactNode;
   processAudioRecording?: (audioUri: string) => Promise<void>;
   contextPrompt?: string;
   records?: Partial<Record<AiDomain, unknown[]>>;
+  allowedDomains?: readonly AiDomain[];
   mutationContext?: {
     coupleId: string | null;
     userId: string | null;
@@ -46,17 +52,27 @@ export function AiAssistantProvider({
     dispatch({ type: 'startRecording' });
   }, []);
 
-  const queueActionDrafts = useCallback((toolCalls: unknown[]) => {
-    const drafts = toolCalls.map((raw) => buildActionDraft(parseAiToolCall(raw)));
-    dispatch({ type: 'awaitConfirmation', actions: drafts });
-    return drafts;
-  }, []);
+  const queueActionDrafts = useCallback(
+    (toolCalls: unknown[]) => {
+      const parsedCalls = filterToolCallsForAllowedDomains(
+        toolCalls.map(parseAiToolCall),
+        allowedDomains,
+      );
+      const drafts = parsedCalls.map((call) => buildActionDraft(call));
+      dispatch({ type: 'awaitConfirmation', actions: drafts });
+      return drafts;
+    },
+    [allowedDomains],
+  );
 
   const submitTranscriptForPlanning = useCallback(
     (transcript: string, toolCalls: unknown[] = []) => {
       dispatch({ type: 'transcriptionComplete', transcript });
       dispatch({ type: 'thinking' });
-      const parsedCalls = toolCalls.map(parseAiToolCall);
+      const parsedCalls = filterToolCallsForAllowedDomains(
+        toolCalls.map(parseAiToolCall),
+        allowedDomains,
+      );
       const readCalls = parsedCalls.filter((call) => call.operation === 'read');
       const mutationCalls = parsedCalls.filter(
         (call): call is AiToolCall & { operation: 'create' | 'update' | 'delete' } =>
@@ -81,7 +97,7 @@ export function AiAssistantProvider({
             : 'I heard you. The local model planner is ready for this request.',
       });
     },
-    [],
+    [allowedDomains],
   );
 
   const processRecording = useCallback(
@@ -97,6 +113,7 @@ export function AiAssistantProvider({
           audioUri,
           contextPrompt: contextPrompt ?? buildDefaultContextPrompt(),
           records: records ?? {},
+          allowedDomains,
           ...(await createDefaultLocalAdapters()),
         });
         dispatch({ type: 'transcriptionComplete', transcript: result.transcript });
@@ -116,7 +133,7 @@ export function AiAssistantProvider({
         });
       }
     },
-    [contextPrompt, processAudioRecording, records],
+    [allowedDomains, contextPrompt, processAudioRecording, records],
   );
 
   const confirmPendingActions = useCallback(() => {

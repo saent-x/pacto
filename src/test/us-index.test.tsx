@@ -98,10 +98,6 @@ vi.mock('@/src/hooks/useCheckIns', () => ({
   useCheckIns: () => ({ checkIns: [] }),
 }));
 
-vi.mock('@/src/hooks/useExpenses', () => ({
-  useExpenses: () => ({ expenses: [] }),
-}));
-
 vi.mock('@/src/hooks/useWishlists', () => ({
   useWishlists: () => ({ wishlists: [] }),
 }));
@@ -163,8 +159,8 @@ describe('UsIndex feature gates', () => {
     const text = readText(renderer.root);
 
     expect(text).toContain('Memories');
-    expect(text).toContain('Goals');
-    expect(text).toContain('Expenses');
+    expect(text).toContain('Targets');
+    expect(text).not.toContain('Expenses');
     expect(text).not.toContain('Wishlist');
     expect(text).not.toContain('Journal');
     expect(text).not.toContain('Check-ins');
@@ -180,8 +176,9 @@ describe('UsIndex feature gates', () => {
     const text = readText(renderer.root);
 
     expect(text).toContain('Wishlist');
-    expect(text).toContain('Goals');
+    expect(text).toContain('Targets');
     expect(text).toContain('Timetable');
+    expect(text).not.toContain('Expenses');
     expect(text).not.toContain('Plans');
     expect(text).not.toContain('Timetables');
     expect(text).not.toContain('rhythms');

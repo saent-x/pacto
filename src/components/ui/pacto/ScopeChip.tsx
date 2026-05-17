@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '@/src/lib/theme';
 import { Typography } from '@/src/constants/typography';
+import { PulsingStatusDot } from './PulsingDot';
 
 type Mode = 'solo' | 'pair' | 'crew';
 type Scope = 'mine' | 'partner' | 'shared';
@@ -32,7 +33,7 @@ export function ScopeChip({ scope, mode, partnerName }: Props) {
 
   return (
     <View style={[styles.container, { backgroundColor: C.bgSoft, borderColor: C.lineColor }]}>
-      <View style={[styles.dot, { backgroundColor: it.color }]} />
+      <PulsingStatusDot color={it.color} size={5} />
       <Text style={[styles.label, Typography.pillLabel, { color: it.color }]}>{it.label}</Text>
     </View>
   );
@@ -48,11 +49,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 4,
     alignSelf: 'flex-start',
-  },
-  dot: {
-    width: 5,
-    height: 5,
-    borderRadius: 999,
   },
   label: {
     fontSize: 10.5,

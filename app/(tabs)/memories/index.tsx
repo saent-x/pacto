@@ -34,7 +34,7 @@ export default function MemoriesScreen() {
     .charAt(0)
     .toUpperCase();
   const partnerInitial = partner?.displayName?.charAt(0)?.toUpperCase();
-  const crewMemberCount = session?.activeCouple?.couple?.memberCount ?? 4;
+  const crewMemberCount = session?.activeCouple?.memberCount ?? 1;
 
   const eyebrow = isSolo
     ? 'YOUR MEMORIES'
@@ -77,65 +77,78 @@ export default function MemoriesScreen() {
   const visibleTopics = isSolo ? topics.filter((t) => t.id !== 'us') : topics;
 
   return (
-    <FlatList
-      style={[styles.root, { backgroundColor: C.bg }]}
-      contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
-      data={memories}
-      keyExtractor={(m: any) => m.id}
-      renderItem={({ item, index }) => (
-        <MemoryPost
-          memory={item as any}
-          variant="feed"
-          isLast={index === memories.length - 1}
+    <View style={[styles.root, { backgroundColor: C.bg, flex: 1 }]}>
+      <View
+        style={[
+          styles.fixedHeader,
+          {
+            backgroundColor: C.bg,
+            borderBottomColor: C.lineColor,
+            paddingTop: insets.top + 56,
+          },
+        ]}
+      >
+        <MemoriesHero
+          eyebrow={eyebrow}
+          title={heroTitle}
+          caption={heroCaption}
+          rightSlot={heroRightSlot}
         />
-      )}
-      ListHeaderComponent={
-        <View>
-          <MemoriesHero
-            eyebrow={eyebrow}
-            title={heroTitle}
-            caption={heroCaption}
-            rightSlot={heroRightSlot}
-          />
-
-          <TopicChipStrip
-            topics={visibleTopics}
-            selected={topic}
-            onSelect={setTopic}
-          />
-
-          <View style={[styles.divider, { backgroundColor: C.lineColor }]} />
-        </View>
-      }
-      ListEmptyComponent={<EmptyMemoriesState />}
-      ListFooterComponent={
-        memories.length > 0 ? (
-          <Text style={[styles.footerCap, { color: C.ink3 }]}>
-            — caught up · {memories.length} {memories.length === 1 ? 'memory' : 'memories'} —
-          </Text>
-        ) : null
-      }
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={() => {
-            setRefreshing(true);
-            setTimeout(() => setRefreshing(false), 600);
-          }}
+        <TopicChipStrip
+          topics={visibleTopics}
+          selected={topic}
+          onSelect={setTopic}
         />
-      }
-    />
+      </View>
+      <FlatList
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          paddingTop: 8,
+          paddingBottom: insets.bottom + 56,
+        }}
+        data={memories}
+        keyExtractor={(m: any) => m.id}
+        renderItem={({ item, index }) => (
+          <MemoryPost
+            memory={item as any}
+            variant="feed"
+            isLast={index === memories.length - 1}
+          />
+        )}
+        ListEmptyComponent={<EmptyMemoriesState />}
+        ListFooterComponent={
+          memories.length > 0 ? (
+            <Text style={[styles.footerCap, { color: C.ink3 }]}>
+              caught up · {memories.length} {memories.length === 1 ? 'memory' : 'memories'}
+            </Text>
+          ) : null
+        }
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              setTimeout(() => setRefreshing(false), 600);
+            }}
+          />
+        }
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  fixedHeader: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
   divider: {
     height: StyleSheet.hairlineWidth,
   },
   footerCap: {
     textAlign: 'center',
-    paddingVertical: 24,
+    paddingTop: 16,
+    paddingBottom: 10,
     fontFamily: 'GeistMono_400Regular',
     fontSize: 10,
     letterSpacing: 1.6,

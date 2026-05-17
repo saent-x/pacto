@@ -225,6 +225,8 @@ function MilestonesScreenInner() {
             <PressScale
               onPress={() => router.back()}
               hitSlop={12}
+              haptic="impact"
+              pressedScale={0.96}
               style={{ padding: 4 }}
             >
               <Icon name="chevronLeft" size={22} color={C.inkColor} strokeWidth={2.2} />
@@ -234,6 +236,8 @@ function MilestonesScreenInner() {
             <PressScale
               onPress={() => router.push('/sheets/new-milestone' as any)}
               hitSlop={12}
+              haptic="impact"
+              pressedScale={0.96}
               style={{ padding: 4 }}
             >
               <Icon name="plus" size={22} color={C.inkColor} strokeWidth={2.2} />
@@ -250,6 +254,7 @@ function MilestonesScreenInner() {
         {/* Hero — slim status row */}
         <View style={styles.heroWrap}>
           <StatBar
+            accent={C.accent}
             eyebrow={heroEyebrow}
             meta={
               stats.next
@@ -293,6 +298,7 @@ function MilestonesScreenInner() {
               title="No milestones yet"
               body="Pin moments worth remembering — anniversaries, first steps, traditions."
               actionLabel="New milestone"
+              accent={C.accent}
               onAction={() => router.push('/sheets/new-milestone' as any)}
             />
           ) : (
@@ -308,7 +314,7 @@ function MilestonesScreenInner() {
                   }
                   onDelete={() => remove(m.id)}
                 >
-                  <View style={[styles.row, { backgroundColor: C.bgCard }]}>
+                  <View style={styles.row}>
                     <View style={[styles.iconTile, { backgroundColor: C.accentSoft }]}>
                       <Icon
                         name={resolveMilestoneIcon(m.icon)}
@@ -419,7 +425,7 @@ const styles = StyleSheet.create({
   iconTile: {
     width: 38,
     height: 38,
-    borderRadius: 12,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },

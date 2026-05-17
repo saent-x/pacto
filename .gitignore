@@ -17,6 +17,9 @@ expo-env.d.ts
 .vibe/
 .agents/
 .github/
+.codex-checkpoints/
+.impeccable/
+.intent/
 
 # Native
 .kotlin/
@@ -34,6 +37,7 @@ expo-env.d.ts
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+tmp/
 
 # macOS
 .DS_Store

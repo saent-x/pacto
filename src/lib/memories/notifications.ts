@@ -1,3 +1,6 @@
+import { db } from '@/src/lib/instant';
+import { sendPushToUser } from '@/src/lib/push';
+
 export interface ReactionPayload {
   actor: string;
   aggregate?: { others: number };
@@ -50,14 +53,82 @@ export class ReactionDebouncer {
   }
 }
 
-// TODO(memories-notifications-integration): wire this debouncer plus the
-// new-post / reply / repost / quote fan-out into the existing notifications
-// pipeline. See `src/hooks/useNotifications.ts` for the established pattern
-// (look at how tasks/reminders are notified). Each event type needs:
-//   - new memory (kind='post')   → notify all space members except author,
-//                                  unless isPrivate=true or notifyMembers=false
-//   - new reply on your memory   → notify memory.author (skip if author == replier)
-//   - new reaction               → use ReactionDebouncer (5min window)
-//   - new repost / quote         → notify original author (skip self)
-// Per-user opt-outs live on memberships.notifyOn{Post,Reply,Reaction,Repost}.
-// Push delivery uses the existing `devices` table's expoPushToken.
+export async function notifyMemoryReaction(args: {
+  memoryId: string;
+  actorUserId: string;
+  actorName: string;
+  debouncer?: ReactionDebouncer;
+}): Promise<void> {
+  const target = await getMemoryNotificationTarget(args.memoryId);
+  if (!target || target.authorId === args.actorUserId) return;
+
+  const debouncer = args.debouncer ?? defaultReactionDebouncer;
+  debouncer.notify(args.memoryId, target.authorId, { actor: args.actorName });
+}
+
+export async function notifyMemoryRepost(args: {
+  sourceMemoryId: string;
+  actorUserId: string;
+  actorName: string;
+  routeMemoryId: string;
+}): Promise<void> {
+  const target = await getMemoryNotificationTarget(args.sourceMemoryId);
+  if (!target || target.authorId === args.actorUserId) return;
+
+  await sendPushToUser({
+    userId: target.authorId,
+    title: 'Memory reposted',
+    body: `${args.actorName} reposted your memory`,
+    data: { route: `/(tabs)/memories/${args.routeMemoryId}` },
+  });
+}
+
+export async function notifyMemoryQuote(args: {
+  sourceMemoryId: string;
+  actorUserId: string;
+  actorName: string;
+  routeMemoryId: string;
+}): Promise<void> {
+  const target = await getMemoryNotificationTarget(args.sourceMemoryId);
+  if (!target || target.authorId === args.actorUserId) return;
+
+  await sendPushToUser({
+    userId: target.authorId,
+    title: 'Memory quoted',
+    body: `${args.actorName} quoted your memory`,
+    data: { route: `/(tabs)/memories/${args.routeMemoryId}` },
+  });
+}
+
+async function getMemoryNotificationTarget(memoryId: string): Promise<{
+  authorId: string;
+} | null> {
+  const { data } = await (db as any).queryOnce({
+    memories: {
+      $: { where: { id: memoryId } },
+      author: {},
+    },
+  });
+  const memory = data?.memories?.[0];
+  const author = firstRel<{ id?: string }>(memory?.author);
+  return typeof author?.id === 'string' ? { authorId: author.id } : null;
+}
+
+function firstRel<T>(rel: T | T[] | undefined): T | undefined {
+  if (!rel) return undefined;
+  return Array.isArray(rel) ? rel[0] : rel;
+}
+
+const defaultReactionDebouncer = new ReactionDebouncer({
+  windowMs: 5 * 60_000,
+  send: (payload) => {
+    sendPushToUser({
+      userId: payload.recipientId,
+      title: 'New reaction',
+      body: payload.aggregate
+        ? `${payload.actor} and ${payload.aggregate.others} more reacted to your memory`
+        : `${payload.actor} reacted to your memory`,
+      data: { route: `/(tabs)/memories/${payload.memoryId}` },
+    }).catch(() => undefined);
+  },
+});

@@ -82,7 +82,7 @@ describe('new-timetable-item sheet', () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<NewTimetableItem />); await flush(); });
     expect(findByTestID(renderer.root, 'new-timetable-item-who-me')).toBeUndefined();
-    expect(findByTestID(renderer.root, 'new-timetable-item-who-sofia')).toBeUndefined();
+    expect(findByTestID(renderer.root, 'new-timetable-item-who-partner')).toBeUndefined();
     expect(findByTestID(renderer.root, 'new-timetable-item-who-both')).toBeUndefined();
     await act(async () => {
       findByTestID(renderer.root, 'new-timetable-item-title-input').props.onChangeText('Solo lunch');
@@ -110,7 +110,7 @@ describe('new-timetable-item sheet', () => {
         renderer.root.findAll((n: any) => n.props?.testID === `new-timetable-item-preset-${l}`).length,
       ).toBeGreaterThan(0);
     }
-    for (const w of ['me', 'sofia', 'both']) {
+    for (const w of ['me', 'partner', 'both']) {
       expect(findByTestID(renderer.root, `new-timetable-item-who-${w}`)).toBeDefined();
     }
     for (const r of ['weekly', 'once']) {

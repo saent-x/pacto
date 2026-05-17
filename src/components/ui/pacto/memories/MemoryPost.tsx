@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useMemo } from 'react';
 import {
+  Alert,
   Image,
   ScrollView,
   Share,
@@ -11,11 +12,13 @@ import {
 } from 'react-native';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { Avatar } from '@/src/components/ui/pacto/Avatar';
+import { EntityRefCard } from './EntityRefCard';
 import { MemoriesIcon, type MemoriesIconName } from './MemoriesIcon';
 import { PressScale } from '@/src/components/ui/PressScale';
 import { Typography } from '@/src/constants/typography';
 import { useSession } from '@/src/hooks/useSession';
 import { useMemoryActions } from '@/src/hooks/memories/useMemoryActions';
+import { memoryShareUrl } from '@/src/lib/share-links';
 import { useTheme } from '@/src/lib/theme';
 
 export type MemoryPostVariant = 'feed' | 'detail' | 'reply';
@@ -122,15 +125,22 @@ export function MemoryPost({ memory, variant, isLast }: Props) {
     actions.repost(memory.id);
   };
   const onShare = () => {
-    Share.share({ message: `coupl://memories/${memory.id}` });
+    Share.share({ message: memoryShareUrl(memory.id) });
   };
 
   return (
-    <PressScale
-      onPress={onPress}
+    <View
+      // No accessibilityRole='button' — would render as <button> on web and
+      // break nested Pressables inside the post (EntityRefCard, ActionBtn).
+      onStartShouldSetResponder={() => !!onPress}
+      onResponderRelease={onPress}
       style={[
         styles.row,
-        !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.lineColor },
+        {
+          backgroundColor: C.bg,
+          borderBottomColor: C.line2 ?? C.lineColor,
+        },
+        !isLast && { borderBottomWidth: StyleSheet.hairlineWidth },
       ]}
     >
       {/* Avatar gutter with thread line */}
@@ -141,19 +151,21 @@ export function MemoryPost({ memory, variant, isLast }: Props) {
             color: C.accent,
             avatarUrl: author?.avatarUrl,
           }}
-          size={36}
+          size={40}
         />
-        {hasReply ? (
+        {hasReply || variant !== 'feed' ? (
           <>
-            <View style={[styles.threadLine, { backgroundColor: C.lineColor }]} />
-            <Avatar
-              person={{
-                initial: (memory.replyPreview!.who ?? '?').charAt(0).toUpperCase(),
-                color: C.accent2,
-                avatarUrl: memory.replyPreview!.avatarUrl,
-              }}
-              size={20}
-            />
+            <View style={[styles.threadLine, { backgroundColor: C.line2 ?? C.lineColor }]} />
+            {hasReply ? (
+              <Avatar
+                person={{
+                  initial: (memory.replyPreview!.who ?? '?').charAt(0).toUpperCase(),
+                  color: C.accent2,
+                  avatarUrl: memory.replyPreview!.avatarUrl,
+                }}
+                size={22}
+              />
+            ) : null}
           </>
         ) : null}
       </View>
@@ -175,7 +187,43 @@ export function MemoryPost({ memory, variant, isLast }: Props) {
               {time}
             </Text>
           </View>
-          <PressScale hitSlop={8} onPress={() => undefined} style={styles.dotsBtn}>
+          <PressScale
+            hitSlop={8}
+            onPress={() => {
+              const isMine = author?.id === me?.id;
+              if (!isMine) return;
+              Alert.alert('Post options', undefined, [
+                {
+                  text: 'Edit',
+                  onPress: () =>
+                    router.push(
+                      `/sheets/memory-composer?mode=edit&id=${memory.id}` as any,
+                    ),
+                },
+                {
+                  text: 'Delete',
+                  style: 'destructive',
+                  onPress: () => {
+                    Alert.alert(
+                      'Delete post?',
+                      'This will permanently remove this thread.',
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        {
+                          text: 'Delete',
+                          style: 'destructive',
+                          onPress: () => actions.remove(memory.id),
+                        },
+                      ],
+                    );
+                  },
+                },
+                { text: 'Cancel', style: 'cancel' },
+              ]);
+            }}
+            accessibilityLabel="Post options"
+            style={styles.dotsBtn}
+          >
             <MemoriesIcon name="dots" size={18} color={C.ink3} />
           </PressScale>
         </View>
@@ -185,7 +233,34 @@ export function MemoryPost({ memory, variant, isLast }: Props) {
         ) : null}
 
         {memory.attachments && memory.attachments.length > 0 ? (
-          <MediaCarousel attachments={memory.attachments} />
+          (() => {
+            const media = memory.attachments.filter(
+              (a: any) => a.type === 'image' || a.type === 'gif' || a.type === 'video',
+            );
+            const entities = memory.attachments.filter(
+              (a: any) =>
+                a.type !== 'image' &&
+                a.type !== 'gif' &&
+                a.type !== 'video' &&
+                !!a.refId,
+            );
+            return (
+              <>
+                {media.length > 0 ? <MediaCarousel attachments={media} /> : null}
+                {entities.length > 0 ? (
+                  <View style={styles.entityStack}>
+                    {entities.map((a: any) => (
+                      <EntityRefCard
+                        key={a.id ?? `${a.type}-${a.refId}`}
+                        type={a.type}
+                        refId={a.refId}
+                      />
+                    ))}
+                  </View>
+                ) : null}
+              </>
+            );
+          })()
         ) : null}
 
         {memory.quoteOf ? (
@@ -240,13 +315,13 @@ export function MemoryPost({ memory, variant, isLast }: Props) {
           </View>
         ) : null}
       </View>
-    </PressScale>
+    </View>
   );
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
-const AVATAR_COL_W = 36;
+const AVATAR_COL_W = 40;
 
 function formatTime(ts: number): string {
   // Compact relative — design uses "2h", "5h", "1d"; date-fns "Strict" gives us that.
@@ -307,8 +382,7 @@ function MediaCarousel({ attachments }: { attachments: any[] }) {
   const { C } = useTheme();
   const { width: winW } = useWindowDimensions();
   const single = attachments.length === 1;
-  // Body column width = window - 18px L/R padding - 36px gutter - 12px gap.
-  const bodyW = Math.max(200, winW - 18 * 2 - AVATAR_COL_W - 12);
+  const bodyW = Math.max(200, winW - 14 * 2 - AVATAR_COL_W - 10);
 
   return (
     <ScrollView
@@ -354,7 +428,7 @@ function MediaCarousel({ attachments }: { attachments: any[] }) {
               },
             ]}
           >
-            <View style={[styles.placeholderLabel, { backgroundColor: 'rgba(255,255,255,0.7)' }]}>
+            <View style={[styles.placeholderLabel, { backgroundColor: C.bgCard }]}>
               <Text style={[styles.placeholderText, { color: C.ink2 }]}>
                 {(a.type ?? 'attachment').toString().toUpperCase()}
               </Text>
@@ -371,7 +445,6 @@ function entityTone(type: string | undefined, C: any): string {
     case 'milestone': return C.accent3 ?? C.accent;
     case 'plan': return C.accent ?? '#eee';
     case 'checkIn': return C.accent2 ?? '#eee';
-    case 'expense': return C.bgSoft ?? '#eee';
     case 'wishlistItem': return C.accent3 ?? '#eee';
     default: return C.bgCard ?? '#eee';
   }
@@ -424,33 +497,34 @@ function ActionBtn({ icon, count, active, activeColor, idleColor, countColor, on
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    paddingHorizontal: 18,
-    paddingTop: 14,
-    paddingBottom: 14,
-    gap: 12,
+    paddingHorizontal: 14,
+    paddingTop: 16,
+    paddingBottom: 13,
+    gap: 10,
   },
   gutter: {
     flexDirection: 'column',
     alignItems: 'center',
     flexShrink: 0,
-    paddingTop: 2,
+    paddingTop: 1,
     width: AVATAR_COL_W,
   },
   threadLine: {
     flex: 1,
     width: 2,
     borderRadius: 1,
-    marginTop: 8,
-    marginBottom: 8,
-    minHeight: 20,
-    opacity: 0.6,
+    marginTop: 9,
+    marginBottom: 9,
+    minHeight: 26,
+    opacity: 0.72,
   },
   body: { flex: 1, minWidth: 0 },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 6,
+    minHeight: 25,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -461,8 +535,9 @@ const styles = StyleSheet.create({
   },
   name: {
     fontFamily: 'Geist_600SemiBold',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
+    lineHeight: 20,
   },
   metaTag: {
     fontFamily: 'GeistMono_400Regular',
@@ -472,20 +547,29 @@ const styles = StyleSheet.create({
   },
   time: {
     fontFamily: 'GeistMono_400Regular',
-    fontSize: 13,
+    fontSize: 12,
+    lineHeight: 20,
   },
   dotsBtn: {
-    paddingHorizontal: 4,
-    paddingVertical: 4,
+    width: 34,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -4,
   },
   bodyText: {
     fontFamily: 'Geist_400Regular',
-    fontSize: 15,
-    lineHeight: 22,
-    marginTop: 4,
+    fontSize: 16,
+    lineHeight: 23,
+    marginTop: 1,
+  },
+  entityStack: {
+    gap: 8,
+    marginTop: 12,
+    paddingRight: 8,
   },
   mediaTile: {
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
     position: 'relative',

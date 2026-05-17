@@ -91,6 +91,7 @@ vi.mock('react-native-reanimated', () => {
     withTiming: (v: any) => v,
     withDelay: (_d: any, v: any) => v,
     withSequence: (...args: any[]) => args[args.length - 1],
+    withRepeat: (v: any) => v,
     useReducedMotion: () => false,
     useAnimatedProps: (fn: any) => fn(),
     interpolateColor: () => "#000000",
@@ -285,79 +286,11 @@ describe('Task list detail interactions', () => {
     act(() => renderer.unmount());
   });
 
-  it('quick-add creates a trimmed task in the current list', async () => {
+  it('does not render the old bottom quick-add composer', async () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<TaskListDetail />); await flush(); });
-
-    const input = findByTestID(renderer.root, 'task-detail-quickadd-input');
-    await act(async () => { input.props.onChangeText('  Buy train tickets  '); await flush(); });
-
-    const send = findByTestID(renderer.root, 'task-detail-quickadd-send');
-    await act(async () => { await send.props.onPress(); await flush(); });
-
-    expect(taskState.create).toHaveBeenCalledTimes(1);
-    expect(taskState.create).toHaveBeenCalledWith({
-      title: 'Buy train tickets',
-      due_date: null,
-      priority: 0,
-    });
-    expect(findByTestID(renderer.root, 'task-detail-quickadd-input').props.value).toBe('');
-    act(() => renderer.unmount());
-  });
-
-  it('quick-add does not create for blank input', async () => {
-    let renderer: any;
-    await act(async () => { renderer = TestRenderer.create(<TaskListDetail />); await flush(); });
-
-    const input = findByTestID(renderer.root, 'task-detail-quickadd-input');
-    await act(async () => { input.props.onChangeText('   '); await flush(); });
-
-    const send = findByTestID(renderer.root, 'task-detail-quickadd-send');
-    await act(async () => { await send.props.onPress(); await flush(); });
-    await act(async () => { input.props.onSubmitEditing(); await flush(); });
-
-    expect(taskState.create).not.toHaveBeenCalled();
-    expect(send.props.disabled).toBe(true);
-    act(() => renderer.unmount());
-  });
-
-  it('quick-add ignores a second submit while create is in flight', async () => {
-    let resolveCreate: (() => void) | null = null;
-    taskState.create.mockImplementationOnce(
-      () => new Promise<void>((resolve) => { resolveCreate = resolve; }),
-    );
-    let renderer: any;
-    await act(async () => { renderer = TestRenderer.create(<TaskListDetail />); await flush(); });
-
-    const input = findByTestID(renderer.root, 'task-detail-quickadd-input');
-    await act(async () => { input.props.onChangeText('Duplicate guard'); await flush(); });
-
-    const send = findByTestID(renderer.root, 'task-detail-quickadd-send');
-    await act(async () => {
-      send.props.onPress();
-      send.props.onPress();
-      await flush();
-    });
-
-    expect(taskState.create).toHaveBeenCalledTimes(1);
-    await act(async () => {
-      resolveCreate?.();
-      await flush();
-    });
-
-    act(() => renderer.unmount());
-  });
-
-  it('keeps the quick-add composer keyboard-aware', async () => {
-    let renderer: any;
-    await act(async () => { renderer = TestRenderer.create(<TaskListDetail />); await flush(); });
-
-    const keyboardAvoider = renderer.root.findAll(
-      (n: any) => n.props?.keyboardVerticalOffset === 0 && n.props?.behavior,
-    )[0];
-    expect(keyboardAvoider).toBeDefined();
-    expect(keyboardAvoider.findAll((n: any) => n.props?.testID === 'task-detail-quickadd-input')).toHaveLength(1);
-
+    expect(findByTestID(renderer.root, 'task-detail-quickadd-input')).toBeUndefined();
+    expect(findByTestID(renderer.root, 'task-detail-quickadd-send')).toBeUndefined();
     act(() => renderer.unmount());
   });
 });

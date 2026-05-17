@@ -146,7 +146,7 @@ function Ring({
             cx={cx}
             cy={cy}
             r={r}
-            stroke={metrics[i]?.color ?? '#000'}
+            stroke={metrics[i]?.color ?? '#2C2118'}
             strokeWidth={stroke[i]}
             value={values[i] ?? 0}
             delay={staggerDelay + i * 110}

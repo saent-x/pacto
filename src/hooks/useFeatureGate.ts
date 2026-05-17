@@ -15,12 +15,14 @@ const ROUTE_FEATURES: readonly [string, FeatureId][] = [
   ['/(tabs)/us/reminders', 'recurring'],
   ['/sheets/new-reminder', 'recurring'],
   ['/(tabs)/us/wishlists', 'wishlist'],
+  ['/sheets/currency', 'wishlist'],
   ['/sheets/new-wish', 'wishlist'],
   ['/(tabs)/us/journal', 'journal'],
   ['/sheets/new-entry', 'journal'],
   ['/sheets/journal-entry', 'journal'],
   ['/(tabs)/us/checkins', 'checkins'],
   ['/sheets/new-checkin', 'checkins'],
+  ['/sheets/rings-history', 'checkins'],
   ['/(tabs)/us/notes', 'memories'],
   ['/sheets/new-note', 'memories'],
   ['/(tabs)/us/milestones', 'memories'],
@@ -30,6 +32,9 @@ const ROUTE_FEATURES: readonly [string, FeatureId][] = [
   ['/sheets/new-timetable-item', 'timetable'],
   ['/(tabs)/us/plans', 'goals'],
   ['/sheets/new-plan', 'goals'],
+  ['/(tabs)/memories', 'memoryFeed'],
+  ['/sheets/memory-composer', 'memoryFeed'],
+  ['/sheets/memory-attach-entity', 'memoryFeed'],
 ];
 
 const US_MODULE_FEATURES = {

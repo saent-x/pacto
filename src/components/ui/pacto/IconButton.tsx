@@ -30,7 +30,7 @@ export function IconButton({
   style,
 }: Props) {
   const { C } = useTheme();
-  const bg = active ? C.inkColor : soft ? C.bgSoft : 'transparent';
+  const bg = active ? C.inkColor : soft ? C.bgCard : 'transparent';
   const fg = color ?? (active ? C.bg : C.ink2);
 
   return (
@@ -46,6 +46,8 @@ export function IconButton({
           height: size,
           borderRadius: 999,
           backgroundColor: bg,
+          borderWidth: soft || active ? 1 : 0,
+          borderColor: active ? C.inkColor : C.line2,
           alignItems: 'center',
           justifyContent: 'center',
         },

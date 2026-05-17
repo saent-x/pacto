@@ -6,6 +6,7 @@ export type ProcessAiAudioTurnInput = {
   audioUri: string;
   contextPrompt: string;
   records?: Partial<Record<AiDomain, unknown[]>>;
+  allowedDomains?: readonly AiDomain[];
   transcriptionAdapter: AiTranscriptionAdapter;
   planningAdapter: AiPlanningAdapter;
 };
@@ -22,6 +23,7 @@ export async function processAiAudioTurn({
   audioUri,
   contextPrompt,
   records = {},
+  allowedDomains,
   transcriptionAdapter,
   planningAdapter,
 }: ProcessAiAudioTurnInput): Promise<ProcessAiAudioTurnResult> {
@@ -30,7 +32,7 @@ export async function processAiAudioTurn({
     throw new Error('I could not hear a request clearly. Please try again.');
   }
 
-  const toolCalls = (await planningAdapter.plan([
+  const toolCalls = filterToolCallsForAllowedDomains((await planningAdapter.plan([
     {
       role: 'system',
       content: buildPlannerSystemPrompt(contextPrompt),
@@ -39,7 +41,7 @@ export async function processAiAudioTurn({
       role: 'user',
       content: transcript,
     },
-  ])).map(parseAiToolCall);
+  ])).map(parseAiToolCall), allowedDomains);
 
   const readResults = toolCalls
     .filter((call) => call.operation === 'read')
@@ -56,6 +58,15 @@ export async function processAiAudioTurn({
     actionDrafts,
     assistantMessage: buildAssistantMessage(readResults, actionDrafts),
   };
+}
+
+export function filterToolCallsForAllowedDomains(
+  toolCalls: AiToolCall[],
+  allowedDomains?: readonly AiDomain[],
+): AiToolCall[] {
+  if (!allowedDomains) return toolCalls;
+  const allowed = new Set<AiDomain>(allowedDomains);
+  return toolCalls.filter((call) => allowed.has(call.domain));
 }
 
 export type ConfirmAiActionDraftsContext = Omit<AiMutationContext, 'confirmed'> & {

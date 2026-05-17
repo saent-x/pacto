@@ -27,6 +27,7 @@ import { useTheme } from '@/src/lib/theme';
 import { Typography } from '@/src/constants/typography';
 import { Icon, IconName } from './Icon';
 import { PressScale } from './PressScale';
+import { PulsingDot } from './pacto/PulsingDot';
 
 export function SheetShell({
   eyebrow,
@@ -42,10 +43,11 @@ export function SheetShell({
   footer?: React.ReactNode;
 }) {
   const { C } = useTheme();
+  const headerAccent = eyebrowColor ?? C.accent;
   return (
     <ScrollView
       style={{ backgroundColor: C.bg }}
-      contentContainerStyle={{ padding: 20, paddingBottom: 24 }}
+      contentContainerStyle={{ padding: 20, paddingTop: 18, paddingBottom: 28, gap: 2 }}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
       bounces={false}
@@ -54,13 +56,14 @@ export function SheetShell({
         style={{
           flexDirection: 'row',
           justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 18,
+          alignItems: 'flex-start',
+          marginBottom: 24,
+          gap: 16,
         }}
       >
         <View style={{ flex: 1 }}>
           {!!eyebrow && (
-            <Text style={[Typography.eyebrowSm, { color: eyebrowColor ?? C.accent }]}>
+            <Text style={[Typography.eyebrowSm, { color: headerAccent }]}>
               {eyebrow}
             </Text>
           )}
@@ -79,7 +82,7 @@ export function SheetShell({
               ]}
             >
               {title}
-              <Text style={{ color: eyebrowColor ?? C.accent }}>.</Text>
+              <PulsingDot color={headerAccent} />
             </Text>
           )}
         </View>
@@ -92,9 +95,9 @@ export function SheetShell({
             borderRadius: 20,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: C.bgCard,
+            backgroundColor: C.bgSoft,
             borderWidth: 1,
-            borderColor: C.lineColor,
+            borderColor: C.line2 ?? C.lineColor,
           }}
         >
           <Icon name="x" size={18} color={C.inkColor} />
@@ -121,13 +124,14 @@ export function SheetSection({
 }) {
   const { C } = useTheme();
   return (
-    <View style={[{ marginTop: first ? 0 : 22 }, style]}>
+    <View style={[{ marginTop: first ? 0 : 24 }, style]}>
       <View
         style={{
           flexDirection: 'row',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: 10,
+          marginBottom: 12,
+          paddingHorizontal: 2,
         }}
       >
         <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>{title}</Text>
@@ -190,12 +194,12 @@ export function SheetTitleField({
       placeholderTextColor={C.fog}
       autoFocus={autoFocus}
       style={{
-        color: C.bone,
+        color: C.inkColor,
         fontFamily: F.displayBold,
         fontSize: 22,
         paddingVertical: 6,
         borderBottomWidth: 2,
-        borderBottomColor: value ? (accent ?? C.gold) : C.line,
+        borderBottomColor: value ? (accent ?? C.accent) : C.lineColor,
       }}
     />
   );
@@ -226,12 +230,12 @@ export function SheetTextArea({
       textAlignVertical="top"
       style={{
         minHeight,
-        backgroundColor: C.card,
+        backgroundColor: C.bgCard,
         borderWidth: 1,
-        borderColor: C.line,
-        borderRadius: 14,
+        borderColor: C.lineColor,
+        borderRadius: 20,
         padding: 14,
-        color: C.bone,
+        color: C.inkColor,
         fontSize: 14,
         fontFamily: F.body,
       }}
@@ -273,15 +277,15 @@ export function SheetIconGrid<K extends string>({
             style={{
               width: 44,
               height: 44,
-              borderRadius: 14,
-              backgroundColor: sel ? `${accent}33` : C.card,
+              borderRadius: 16,
+              backgroundColor: sel ? `${accent}33` : C.bgCard,
               borderWidth: 1,
-              borderColor: sel ? accent : C.line,
+              borderColor: sel ? accent : C.lineColor,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Icon name={o.icon} size={18} color={sel ? accent : C.mist} />
+            <Icon name={o.icon} size={18} color={sel ? accent : C.ink3} />
           </PressScale>
         );
       })}
@@ -300,6 +304,7 @@ export function SheetColorGrid<K extends string>({
   onChange: (key: K) => void;
   testIDPrefix: string;
 }) {
+  const { C } = useTheme();
   return (
     <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
       {colors.map((c) => (
@@ -316,7 +321,7 @@ export function SheetColorGrid<K extends string>({
             borderRadius: 17,
             backgroundColor: c.value,
             borderWidth: 3,
-            borderColor: selected === c.key ? 'rgba(255,255,255,0.3)' : 'transparent',
+            borderColor: selected === c.key ? C.inkColor : 'transparent',
           }}
         />
       ))}
@@ -368,10 +373,10 @@ export function SheetIconLabelPicker<K extends string>({
                 height: iconOnly ? 54 : undefined,
                 paddingVertical: iconOnly ? 0 : 10,
                 paddingHorizontal: iconOnly ? 0 : 14,
-                borderRadius: iconOnly ? 14 : 999,
+                borderRadius: iconOnly ? 18 : 999,
                 backgroundColor: sel ? `${o.color}26` : 'transparent',
                 borderWidth: 1,
-                borderColor: sel ? o.color : C.line,
+                borderColor: sel ? o.color : C.lineColor,
               }}
             >
               {o.image ? (
@@ -390,7 +395,7 @@ export function SheetIconLabelPicker<K extends string>({
               {!iconOnly ? (
                 <Text
                   style={{
-                    color: sel ? o.color : C.mist,
+                    color: sel ? o.color : C.ink2,
                     fontFamily: F.bodyBold,
                     fontSize: 12,
                   }}
@@ -416,7 +421,6 @@ export function SheetSegment<K extends string>({
   options,
   selected,
   onChange,
-  accent,
   testIDPrefix,
 }: {
   options: readonly SegmentOption<K>[];
@@ -425,19 +429,12 @@ export function SheetSegment<K extends string>({
   accent?: string;
   testIDPrefix: string;
 }) {
-  const { C, F } = useTheme();
-  const fill = accent ?? C.bone;
-  const fillInk = accent ? `${accent}26` : C.bone;
+  const { C } = useTheme();
   return (
     <View
       style={{
         flexDirection: 'row',
-        backgroundColor: C.card,
-        borderWidth: 1,
-        borderColor: C.line,
-        borderRadius: 14,
-        padding: 4,
-        gap: 4,
+        gap: 8,
       }}
     >
       {options.map((o) => {
@@ -454,19 +451,24 @@ export function SheetSegment<K extends string>({
             }}
             style={{
               flex: 1,
-              paddingVertical: 10,
-              borderRadius: 10,
-              backgroundColor: sel ? (accent ? fillInk : fill) : 'transparent',
+              minHeight: 36,
+              paddingVertical: 8,
+              paddingHorizontal: 10,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: sel ? C.inkColor : C.line2 ?? C.lineColor,
+              backgroundColor: sel ? C.inkColor : C.bgCard,
               alignItems: 'center',
+              justifyContent: 'center',
               opacity: o.disabled ? 0.4 : 1,
             }}
           >
             <Text
-              style={{
-                fontSize: 12,
-                fontFamily: F.bodyBold,
-                color: sel ? (accent ?? C.ink) : C.mist,
-              }}
+              style={[
+                Typography.captionMedium,
+                { color: sel ? C.bg : C.ink2 },
+              ]}
+              numberOfLines={1}
             >
               {o.label}
             </Text>
@@ -507,7 +509,7 @@ function DateTimeFieldImpl({
   onPress: () => void;
   minimumDate?: Date;
 }) {
-  const { C, F } = useTheme();
+  const { C, F, mode: themeMode } = useTheme();
   const label = mode === 'date' ? formatDate(value) : formatTime(value);
   const handlePickerChange = (_e: DateTimePickerEvent, picked?: Date) => {
     if (Platform.OS !== 'ios') onPress();
@@ -529,9 +531,9 @@ function DateTimeFieldImpl({
           onPress();
         }}
         style={{
-          backgroundColor: open ? C.cardHi : C.card,
+          backgroundColor: open ? C.bgSoft : C.bgCard,
           borderWidth: 1,
-          borderColor: open ? accent : C.line,
+          borderColor: open ? accent : C.lineColor,
           borderRadius: 14,
           paddingVertical: 14,
           paddingHorizontal: 14,
@@ -541,27 +543,30 @@ function DateTimeFieldImpl({
         }}
       >
         <Icon name={mode === 'date' ? 'calendar' : 'clock'} size={16} color={accent} />
-        <Text style={{ flex: 1, color: C.bone, fontSize: 13, fontFamily: F.bodyBold }}>{label}</Text>
+        <Text style={{ flex: 1, color: C.inkColor, fontSize: 13, fontFamily: F.bodyBold }}>{label}</Text>
       </PressScale>
       {open ? (
         <View
           testID={pressTestID ? `${pressTestID}-picker` : undefined}
           style={{
             marginTop: 10,
-            backgroundColor: C.card,
+            backgroundColor: C.bgCard,
             borderWidth: 1,
-            borderColor: C.line,
+            borderColor: C.lineColor,
             borderRadius: 14,
             overflow: 'hidden',
+            paddingVertical: Platform.OS === 'ios' ? 6 : 0,
+            paddingHorizontal: Platform.OS === 'ios' ? 8 : 0,
+            alignItems: Platform.OS === 'ios' ? 'flex-start' : 'stretch',
           }}
         >
           <DateTimePicker
             testID={pressTestID ? `${pressTestID}-picker-control` : undefined}
             value={value}
             mode={mode}
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            display={Platform.OS === 'ios' ? 'compact' : 'default'}
             onChange={handlePickerChange}
-            themeVariant="dark"
+            themeVariant={themeMode === 'dark' ? 'dark' : 'light'}
             minimumDate={minimumDate}
           />
         </View>
@@ -612,9 +617,9 @@ export function SheetDurationField({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-        backgroundColor: C.card,
+        backgroundColor: C.bgCard,
         borderWidth: 1,
-        borderColor: minutes > 0 ? accent : C.line,
+        borderColor: minutes > 0 ? accent : C.lineColor,
         borderRadius: 14,
         paddingVertical: 14,
         paddingHorizontal: 14,
@@ -635,7 +640,7 @@ export function SheetDurationField({
         maxLength={4}
         style={{
           flex: 1,
-          color: C.bone,
+          color: C.inkColor,
           fontFamily: F.displayBold,
           fontSize: 18,
           padding: 0,
@@ -689,27 +694,27 @@ export function SheetToggleRow({
     transform: [{ translateX: progress.value * 18 }],
   }));
   const trackStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(progress.value, [0, 1], [C.line, accent]),
+    backgroundColor: interpolateColor(progress.value, [0, 1], [C.lineColor, accent]),
   }));
   return (
     <View
       style={{
         paddingVertical: 14,
         paddingHorizontal: 16,
-        backgroundColor: value ? `${accent}10` : C.card,
+        backgroundColor: value ? `${accent}10` : C.bgCard,
         borderWidth: 1,
-        borderColor: value ? accent : C.line,
+        borderColor: value ? accent : C.lineColor,
         borderRadius: 14,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
       }}
-    >
-      <Icon name={icon} size={16} color={value ? accent : C.fog} />
-      <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 13, color: C.bone, fontFamily: F.bodyBold }}>{label}</Text>
+      >
+        <Icon name={icon} size={16} color={value ? accent : C.fog} />
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 13, color: C.inkColor, fontFamily: F.bodyBold }}>{label}</Text>
         {!!sublabel && (
-          <Text style={{ fontSize: 11, color: C.fog, marginTop: 2, fontFamily: F.body }}>
+          <Text style={{ fontSize: 11, color: C.ink3, marginTop: 2, fontFamily: F.body }}>
             {sublabel}
           </Text>
         )}
@@ -794,17 +799,17 @@ export function SheetInfoCard({
       style={{
         paddingVertical: 14,
         paddingHorizontal: 16,
-        backgroundColor: C.card,
+        backgroundColor: C.bgCard,
         borderWidth: 1,
-        borderColor: C.line,
+        borderColor: C.lineColor,
         borderRadius: 14,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
       }}
     >
-      <Icon name={icon} size={16} color={C.fog} />
-      <Text style={{ flex: 1, fontSize: 12, color: C.mist, fontFamily: F.body, lineHeight: 17 }}>
+      <Icon name={icon} size={16} color={C.ink3} />
+      <Text style={{ flex: 1, fontSize: 12, color: C.ink2, fontFamily: F.body, lineHeight: 17 }}>
         {children}
       </Text>
     </View>

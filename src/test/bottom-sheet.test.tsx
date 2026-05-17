@@ -19,6 +19,12 @@ vi.mock('@/src/hooks/useColors', () => ({
 vi.mock('@/src/lib/theme', () => ({
   useTheme: () => ({
     mode: 'dark',
+    C: {
+      bgCard: '#211A15',
+      bone: '#FFF9EE',
+      line2: '#4D3E34',
+      lineColor: '#3A3029',
+    },
   }),
 }));
 

@@ -8,7 +8,11 @@ export {
 } from './tools';
 export { createInitialAiTurn, reduceAiTurn } from './state';
 export { buildAiContextPrompt } from './context';
-export { confirmAiActionDrafts, processAiAudioTurn } from './assistantLoop';
+export {
+  confirmAiActionDrafts,
+  filterToolCallsForAllowedDomains,
+  processAiAudioTurn,
+} from './assistantLoop';
 export {
   deleteAiModelPack,
   downloadAiModelPack,

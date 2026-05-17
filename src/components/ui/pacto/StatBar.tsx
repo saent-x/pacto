@@ -3,11 +3,13 @@ import { StyleSheet, Text, View, ViewStyle, type StyleProp } from 'react-native'
 import { Icon, type IconName } from '@/src/components/ui/Icon';
 import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
+import { PulsingStatusDot } from './PulsingDot';
 
 type Props = {
   eyebrow: string;
   meta?: string;
   metaIcon?: IconName;
+  accent?: string;
   primary?: ReactNode;
   microVis?: ReactNode;
   style?: StyleProp<ViewStyle>;
@@ -18,17 +20,21 @@ type Props = {
  * eyebrow + meta on top, an inline metric line below, and an optional
  * micro-visualization row. Lets the actual list/grid content lead the screen.
  */
-export function StatBar({ eyebrow, meta, metaIcon, primary, microVis, style }: Props) {
+export function StatBar({ eyebrow, meta, metaIcon, accent, primary, microVis, style }: Props) {
   const { C } = useTheme();
+  const active = accent ?? C.accent;
   return (
     <View style={[styles.wrap, style]}>
       <View style={styles.headRow}>
-        <Text style={[Typography.eyebrow, { color: C.ink3 }]} numberOfLines={1}>
-          {eyebrow}
-        </Text>
+        <View style={styles.eyebrowRow}>
+          <PulsingStatusDot color={active} size={7} />
+          <Text style={[Typography.eyebrow, { color: active }]} numberOfLines={1}>
+            {eyebrow}
+          </Text>
+        </View>
         {meta ? (
           <View style={styles.metaRow}>
-            {metaIcon ? <Icon name={metaIcon} size={12} color={C.accent} /> : null}
+            {metaIcon ? <Icon name={metaIcon} size={12} color={active} /> : null}
             <Text
               style={[Typography.mono, { color: C.ink3, fontSize: 11 }]}
               numberOfLines={1}
@@ -48,7 +54,7 @@ const styles = StyleSheet.create({
   wrap: {
     paddingHorizontal: 4,
     paddingTop: 4,
-    paddingBottom: 14,
+    paddingBottom: 12,
   },
   headRow: {
     flexDirection: 'row',
@@ -56,6 +62,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 6,
     gap: 12,
+  },
+  eyebrowRow: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   metaRow: {
     flexDirection: 'row',

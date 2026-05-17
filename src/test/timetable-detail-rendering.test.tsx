@@ -47,6 +47,8 @@ vi.mock('expo-haptics', () => ({
 vi.mock('@/src/hooks/useSession', () => ({
   useSession: () => ({
     mode: 'pair',
+    user: { id: 'u-me', displayName: 'Avery' },
+    partner: { id: 'u-partner', displayName: 'River' },
     isFeatureEnabled: () => true,
   }),
 }));
@@ -238,7 +240,7 @@ describe('Timetable detail rendering', () => {
     act(() => renderer.unmount());
   });
 
-  it('keeps the timeline grid constrained to an internal padded scroll panel', async () => {
+  it('keeps the timeline grid constrained to an internal scroll viewport', async () => {
     const renderer = await renderTimetable();
 
     await act(async () => {
@@ -250,7 +252,14 @@ describe('Timetable detail rendering', () => {
     const panelStyles = findByTestID(renderer, 'timetable-timeline-panel')[0].props.style.flat();
     expect(panelStyles).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ padding: 14, borderRadius: 24, overflow: 'hidden' }),
+        expect.objectContaining({ paddingHorizontal: 8, borderRadius: 0, overflow: 'hidden' }),
+      ]),
+    );
+
+    const viewportStyles = findByTestID(renderer, 'timetable-timeline-viewport')[0].props.style.flat();
+    expect(viewportStyles).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ borderRadius: 14, overflow: 'hidden' }),
       ]),
     );
 

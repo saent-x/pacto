@@ -15,9 +15,12 @@ export function routeForTimelineItem(
     case "plan":
       return isFeatureEnabled("goals") ? "/(tabs)/us/plans" : null;
     case "reminder":
-      return isFeatureEnabled("recurring") ? "/(tabs)/us/reminders" : null;
+      return isFeatureEnabled("recurring") ? `/(tabs)/us/reminders?reminderId=${item.sourceId}` : null;
     case "task":
-      return isFeatureEnabled("tasks") ? "/(tabs)/us/tasks" : null;
+      if (!isFeatureEnabled("tasks")) return null;
+      return item.sourceParentId
+        ? `/(tabs)/us/tasks/${item.sourceParentId}?taskId=${item.sourceId}`
+        : "/(tabs)/us/tasks";
     case "ritual":
       return isFeatureEnabled("recurring") && isFeatureEnabled("calendar") ? "/(tabs)/calendar" : null;
     case "memory": {

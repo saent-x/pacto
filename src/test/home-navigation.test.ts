@@ -33,11 +33,16 @@ describe("homeNavigation", () => {
       "/(tabs)/us/plans",
     );
     expect(routeForTimelineItem(makeTimelineItem({ type: "reminder" }))).toBe(
-      "/(tabs)/us/reminders",
+      "/(tabs)/us/reminders?reminderId=source-1",
     );
     expect(routeForTimelineItem(makeTimelineItem({ type: "task" }))).toBe(
       "/(tabs)/us/tasks",
     );
+    expect(
+      routeForTimelineItem(
+        makeTimelineItem({ type: "task", sourceParentId: "list-1" }),
+      ),
+    ).toBe("/(tabs)/us/tasks/list-1?taskId=source-1");
     expect(routeForTimelineItem(makeTimelineItem({ type: "ritual" }))).toBe(
       "/(tabs)/calendar",
     );

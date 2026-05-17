@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '@/src/lib/theme';
 import { Typography } from '@/src/constants/typography';
+import { PulsingDot } from './PulsingDot';
 
 type Props = {
   eyebrow?: string;
@@ -40,7 +41,7 @@ export function HeaderBrand({ eyebrow, title, accent, align = 'center', size = 2
         ]}
       >
         {title}
-        <Text style={{ color: acc }}>.</Text>
+        <PulsingDot color={acc} />
       </Text>
     </View>
   );

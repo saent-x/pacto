@@ -119,7 +119,7 @@ function NewTimetableInner() {
                 fontFamily: F.displayBold,
                 fontSize: 22,
                 color: tmpl.ink,
-                letterSpacing: -0.4,
+                letterSpacing: 0,
                 lineHeight: 24,
                 marginTop: 6,
               }}
@@ -169,9 +169,9 @@ function NewTimetableInner() {
                   width: '48%',
                   padding: 12,
                   borderRadius: 14,
-                  backgroundColor: sel ? t.color : C.card,
+                  backgroundColor: sel ? t.color : C.bgCard,
                   borderWidth: 1,
-                  borderColor: sel ? t.color : C.line,
+                  borderColor: sel ? t.color : C.lineColor,
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 10,
@@ -193,7 +193,7 @@ function NewTimetableInner() {
                   style={{
                     fontSize: 12,
                     fontFamily: F.bodyBold,
-                    color: sel ? t.ink : C.bone,
+                    color: sel ? t.ink : C.inkColor,
                     flex: 1,
                   }}
                 >

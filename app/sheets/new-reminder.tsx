@@ -25,7 +25,7 @@ import { useTheme } from '@/src/lib/theme';
 
 type CatKey = 'General' | 'DateNight' | 'Anniversary' | 'Health' | 'Bills' | 'Travel';
 type Repeat = 'None' | 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
-type Assignee = 'both' | 'me' | 'sofia';
+type Assignee = 'both' | 'me' | 'partner';
 
 const CATS: (IconOption<CatKey> & { label: string })[] = [
   { key: 'General', icon: 'bookmark', label: 'General' },
@@ -77,7 +77,7 @@ function NewReminderInner() {
         : [
             { key: 'both', label: 'Both' },
             { key: 'me', label: 'Me' },
-            { key: 'sofia', label: partnerName },
+            { key: 'partner', label: partnerName },
           ],
     [isSolo, partnerName],
   );
@@ -182,16 +182,18 @@ function NewReminderInner() {
         />
       </SheetSection>
 
-      <View style={{ marginTop: 22 }}>
-        <SheetLabel style={{ marginBottom: 10 }}>Assign to</SheetLabel>
-        <SheetSegment
-          options={assigneeOptions}
-          selected={assignee}
-          onChange={setAssignee}
-          accent={C.reminders}
-          testIDPrefix="new-reminder-assignee"
-        />
-      </View>
+      {assigneeOptions.length > 1 ? (
+        <View style={{ marginTop: 22 }}>
+          <SheetLabel style={{ marginBottom: 10 }}>Assign to</SheetLabel>
+          <SheetSegment
+            options={assigneeOptions}
+            selected={assignee}
+            onChange={setAssignee}
+            accent={C.reminders}
+            testIDPrefix="new-reminder-assignee"
+          />
+        </View>
+      ) : null}
     </SheetShell>
   );
 }

@@ -1,12 +1,9 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import {
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,6 +24,7 @@ import { useTaskLists } from '@/src/hooks/useTaskLists';
 import { useTaskItems } from '@/src/hooks/useTasks';
 import { useSession } from '@/src/hooks/useSession';
 import { Typography } from '@/src/constants/typography';
+import { alphaColor } from '@/src/lib/color';
 import { useTheme } from '@/src/lib/theme';
 import { pastels } from '@/src/lib/tokens';
 import type { Task } from '@/src/types/database';
@@ -40,7 +38,7 @@ export default function TaskListDetail() {
 }
 
 function TaskListDetailInner() {
-  const { listId } = useLocalSearchParams<{ listId: string }>();
+  const { listId } = useLocalSearchParams<{ listId: string; taskId?: string }>();
   const { C } = useTheme();
   const insets = useSafeAreaInsets();
   const { user, partner, mode } = useSession();
@@ -49,16 +47,15 @@ function TaskListDetailInner() {
     () => lists.find((l) => l.id === listId) ?? null,
     [lists, listId]
   );
-  const { tasks, toggleComplete, remove, create } = useTaskItems(listId ?? null);
-  const [quickAddTitle, setQuickAddTitle] = useState('');
-  const [quickAddSaving, setQuickAddSaving] = useState(false);
-  const quickAddSavingRef = useRef(false);
+  const { tasks, toggleComplete, remove } = useTaskItems(listId ?? null);
 
   const partnerName = partner?.displayName ?? null;
   const youId = user?.id ?? null;
   const partnerId = partner?.id ?? null;
 
   const tilePastel = list ? ((pastels as any)[list.colorKey] ?? pastels.peach) : pastels.peach;
+  const tileInk = C.peachInk;
+  const tileInkMuted = C.peachInk;
 
   const stats = useMemo(() => {
     const total = tasks.length;
@@ -118,23 +115,6 @@ function TaskListDetailInner() {
     if (p === 1) return 'low';
     return 'none';
   };
-
-  const handleQuickAdd = async () => {
-    const title = quickAddTitle.trim();
-    if (!title || quickAddSavingRef.current) return;
-
-    quickAddSavingRef.current = true;
-    setQuickAddSaving(true);
-    try {
-      await create({ title, due_date: null, priority: 0 });
-      setQuickAddTitle('');
-    } finally {
-      quickAddSavingRef.current = false;
-      setQuickAddSaving(false);
-    }
-  };
-
-  const quickAddDisabled = !quickAddTitle.trim() || quickAddSaving;
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -196,24 +176,24 @@ function TaskListDetailInner() {
             <HeroPactoBadge style={styles.heroBadge} />
             <View style={styles.heroTop}>
               <View style={{ flex: 1 }}>
-                <Text style={[Typography.eyebrow, { color: '#5C4F3D' }]}>
+                <Text style={[Typography.eyebrow, { color: tileInkMuted }]}>
                   {list?.name ?? 'List'}
                 </Text>
                 <View style={styles.heroNumberRow}>
-                  <Text style={[styles.heroNumber, { color: '#2A241B' }]}>
+                  <Text style={[styles.heroNumber, { color: tileInk }]}>
                     {stats.open}
                   </Text>
                   <Text
                     style={[
                       Typography.bodyMedium,
-                      { color: '#5C4F3D', marginLeft: 8 },
+                      { color: tileInkMuted, marginLeft: 8 },
                     ]}
                   >
                     open
                   </Text>
                 </View>
                 <Text
-                  style={[Typography.caption, { color: '#5C4F3D', marginTop: 6 }]}
+                  style={[Typography.caption, { color: tileInkMuted, marginTop: 6 }]}
                 >
                   {stats.done} done · {stats.total} total
                   {stats.overdue ? ` · ${stats.overdue} overdue` : ''}
@@ -221,16 +201,16 @@ function TaskListDetailInner() {
               </View>
             </View>
 
-            <SegmentedBar open={stats.open} done={stats.done} />
+            <SegmentedBar open={stats.open} done={stats.done} ink={tileInk} />
 
             <View style={styles.barLabels}>
-              <Text style={[Typography.eyebrowSm, { color: '#5C4F3D' }]}>
+              <Text style={[Typography.eyebrowSm, { color: tileInkMuted }]}>
                 OPEN {stats.open}
               </Text>
-              <Text style={[Typography.eyebrowSm, { color: '#5C4F3D' }]}>
+              <Text style={[Typography.eyebrowSm, { color: tileInkMuted }]}>
                 DONE {stats.done}
               </Text>
-              <Text style={[Typography.eyebrowSm, { color: '#5C4F3D' }]}>
+              <Text style={[Typography.eyebrowSm, { color: tileInkMuted }]}>
                 TOTAL {stats.total}
               </Text>
             </View>
@@ -274,6 +254,7 @@ function TaskListDetailInner() {
                     <Checkbox
                       checked={t.is_completed}
                       onChange={() => toggleComplete(t)}
+                      size={34}
                     />
                     <View style={{ flex: 1 }}>
                       <Text
@@ -316,68 +297,11 @@ function TaskListDetailInner() {
           )}
         </View>
       </ScrollView>
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
-        style={[
-          styles.quickAddWrap,
-          {
-            paddingBottom: Math.max(insets.bottom, 12),
-            backgroundColor: C.bg,
-            borderTopColor: C.lineColor,
-          },
-        ]}
-      >
-        <View
-          style={[
-            styles.quickAddBar,
-            { backgroundColor: C.bgCard, borderColor: C.lineColor },
-          ]}
-        >
-          <TextInput
-            testID="task-detail-quickadd-input"
-            value={quickAddTitle}
-            onChangeText={setQuickAddTitle}
-            onSubmitEditing={handleQuickAdd}
-            editable={!quickAddSaving}
-            placeholder="Add a task"
-            placeholderTextColor={C.ink3}
-            returnKeyType="send"
-            style={[
-              styles.quickAddInput,
-              Typography.bodyMedium,
-              { color: C.inkColor },
-            ]}
-          />
-          <PressScale
-            testID="task-detail-quickadd-send"
-            onPress={handleQuickAdd}
-            disabled={quickAddDisabled}
-            accessibilityRole="button"
-            accessibilityLabel="Add task"
-            style={[
-              styles.quickAddSend,
-              {
-                backgroundColor: quickAddDisabled ? C.bgSoft : C.accent,
-                opacity: quickAddDisabled ? 0.58 : 1,
-              },
-            ]}
-          >
-            <Icon
-              name="send"
-              size={17}
-              color={quickAddDisabled ? C.ink3 : C.bg}
-              strokeWidth={2.3}
-            />
-          </PressScale>
-        </View>
-      </KeyboardAvoidingView>
     </View>
   );
 }
 
-function SegmentedBar({ open, done }: { open: number; done: number }) {
+function SegmentedBar({ open, done, ink }: { open: number; done: number; ink: string }) {
   const total = Math.max(1, open + done);
   const w = (n: number) => Math.max(4, Math.round((n / total) * 100));
   return (
@@ -385,7 +309,7 @@ function SegmentedBar({ open, done }: { open: number; done: number }) {
       <View
         style={{
           flex: w(open),
-          backgroundColor: '#2A241B',
+          backgroundColor: ink,
           borderRadius: 3,
           height: 6,
         }}
@@ -393,7 +317,7 @@ function SegmentedBar({ open, done }: { open: number; done: number }) {
       <View
         style={{
           flex: w(done),
-          backgroundColor: 'rgba(0,0,0,0.18)',
+          backgroundColor: alphaColor(ink, 0.18),
           borderRadius: 3,
           height: 6,
         }}
@@ -423,7 +347,7 @@ const styles = StyleSheet.create({
     fontFamily: Typography.pixelFont,
     fontSize: 54,
     lineHeight: 54,
-    letterSpacing: -1,
+    letterSpacing: 0,
   },
   heroTile: {
     width: 44,
@@ -477,36 +401,5 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: 999,
     marginTop: 14,
-  },
-  quickAddWrap: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingTop: 10,
-    paddingHorizontal: 18,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  quickAddBar: {
-    minHeight: 50,
-    borderWidth: 1,
-    borderRadius: 18,
-    paddingLeft: 16,
-    paddingRight: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  quickAddInput: {
-    flex: 1,
-    minHeight: 44,
-    paddingVertical: 0,
-  },
-  quickAddSend: {
-    width: 38,
-    height: 38,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

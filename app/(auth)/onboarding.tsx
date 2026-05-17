@@ -11,6 +11,7 @@ import {
 } from '@/src/components/ui/pacto';
 import { Icon } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
+import { PulsingDot } from '@/src/components/ui/pacto/PulsingDot';
 import { Typography } from '@/src/constants/typography';
 import { DEFAULT_AVATARS } from '@/src/constants/defaultAvatars';
 import { useTheme } from '@/src/lib/theme';
@@ -36,7 +37,12 @@ export default function Onboarding() {
   }
 
   return (
-    <ScrollView contentContainerStyle={[styles.root, { backgroundColor: C.bg }]}>
+    <ScrollView
+      style={{ backgroundColor: C.bg }}
+      contentContainerStyle={[styles.root, { backgroundColor: C.bg }]}
+      contentInsetAdjustmentBehavior="automatic"
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.hero}>
         <PactoMark size={56} />
         <View style={{ height: 16 }} />
@@ -66,7 +72,7 @@ export default function Onboarding() {
         <ModeCard
           eyebrow="TWO OF YOU"
           title="Pair"
-          description="Any two-person bond — partner, friend, roommate."
+          description="Any two-person bond: partner, friend, or roommate."
           accent={C.accent2}
           left={
             <AvatarPair
@@ -83,7 +89,7 @@ export default function Onboarding() {
         <ModeCard
           eyebrow="SMALL GROUP"
           title="Crew"
-          description="3–8 people. House, family, project crew."
+          description="3 to 8 people. House, family, project crew."
           accent={C.accent3}
           left={<CrewStack size={28} />}
           selected={mode === 'crew'}
@@ -94,7 +100,9 @@ export default function Onboarding() {
 
       <PressScale
         testID="onboarding-continue"
-        onPress={mode ? continueToFeatures : undefined}
+        onPress={continueToFeatures}
+        disabled={!mode}
+        accessibilityLabel="Continue onboarding"
         style={[
           styles.createButton,
           {
@@ -110,7 +118,11 @@ export default function Onboarding() {
         <Icon name="arrowRight" size={16} color={mode ? C.bg : C.ink3} />
       </PressScale>
 
-      <PressScale onPress={goJoin} style={styles.joinLink}>
+      <PressScale
+        onPress={goJoin}
+        style={styles.joinLink}
+        accessibilityLabel="Enter an invite code"
+      >
         <Text style={[Typography.captionMedium, { color: C.ink2 }]}>
           Already have an invite code?
         </Text>
@@ -141,11 +153,19 @@ function ModeCard({
 }) {
   const { C } = useTheme();
   return (
-    <PressScale testID={testID} onPress={onPress}>
+    <PressScale
+      testID={testID}
+      onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityLabel={`${title}. ${description}`}
+      accessibilityState={{ selected }}
+    >
       <Card
         style={[
           styles.modeCard,
-          selected ? { borderColor: accent, backgroundColor: C.bgSoft } : null,
+          selected
+            ? { borderColor: accent, backgroundColor: C.bgSoft }
+            : { backgroundColor: C.bgCard },
         ]}
       >
         <View style={styles.modeRow}>
@@ -165,7 +185,7 @@ function ModeCard({
               ]}
             >
               {title}
-              <Text style={{ color: accent }}>.</Text>
+              <PulsingDot color={accent} />
             </Text>
             <Text style={[Typography.caption, { color: C.ink2, marginTop: 6 }]}>
               {description}
@@ -179,10 +199,10 @@ function ModeCard({
 }
 
 const styles = StyleSheet.create({
-  root: { padding: 24, paddingTop: 64, paddingBottom: 60 },
+  root: { flexGrow: 1, padding: 24, paddingTop: 64, paddingBottom: 60 },
   hero: { alignItems: 'center', marginBottom: 32 },
   cards: { gap: 12 },
-  modeCard: { padding: 18 },
+  modeCard: { padding: 18, borderRadius: 8 },
   modeRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -195,7 +215,7 @@ const styles = StyleSheet.create({
   createButton: {
     marginTop: 24,
     minHeight: 52,
-    borderRadius: 16,
+    borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

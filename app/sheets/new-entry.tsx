@@ -110,12 +110,12 @@ function NewEntryInner() {
           textAlignVertical="top"
           style={{
             minHeight: 200,
-            backgroundColor: C.card,
+            backgroundColor: C.bgCard,
             borderWidth: 1,
-            borderColor: C.line,
+            borderColor: C.lineColor,
             borderRadius: 14,
             padding: 14,
-            color: C.bone,
+            color: C.inkColor,
             fontFamily: F.serif,
             fontStyle: body ? 'normal' : 'italic',
             fontSize: 16,

@@ -9,8 +9,17 @@ vi.mock('@/src/lib/instant', () => ({
 vi.mock('@/src/hooks/useSession', () => ({
   useSession: () => ({ user: null, activeCouple: null, space: null }),
 }));
+vi.mock('@/src/lib/push', () => ({
+  notifySpaceMutation: vi.fn(async () => undefined),
+}));
 
-import { validateComposerDraft } from '@/src/hooks/memories/useMemoryComposer';
+import {
+  addMemoryDraftAttachment,
+  getMemoryComposerDraft,
+  resolveComposerSpace,
+  setMemoryComposerDraft,
+  validateComposerDraft,
+} from '@/src/hooks/memories/useMemoryComposer';
 
 const baseSpace = { id: 's1', kind: 'pair' as const, plan: 'free' as const };
 
@@ -40,5 +49,36 @@ describe('validateComposerDraft', () => {
     const r = validateComposerDraft({ body: '', attachments: [{ type: 'video' }], pollOptions: [], mode: 'post' }, baseSpace);
     expect(r.ok).toBe(false);
     expect((r as any).reason).toMatch(/video/i);
+  });
+
+  it('resolves composer space from canonical session space before legacy activeCouple', () => {
+    expect(
+      resolveComposerSpace({
+        mode: 'pair',
+        space: { id: 'space-1', kind: 'crew', plan: 'pro' },
+        activeCouple: { couple: { id: 'legacy-space' } },
+      }),
+    ).toEqual({ id: 'space-1', kind: 'crew', plan: 'pro' });
+  });
+
+  it('falls back to session mode when legacy activeCouple lacks kind', () => {
+    expect(
+      resolveComposerSpace({
+        mode: 'crew',
+        activeCouple: { couple: { id: 'space-1' } },
+      }),
+    ).toEqual({ id: 'space-1', kind: 'crew', plan: null });
+  });
+
+  it('stores picked entity attachments in the shared composer draft and dedupes them', () => {
+    setMemoryComposerDraft({ body: 'typed already', attachments: [], pollOptions: [], mode: 'post' });
+
+    addMemoryDraftAttachment({ type: 'task', refId: 'task-1' });
+    addMemoryDraftAttachment({ type: 'task', refId: 'task-1' });
+
+    expect(getMemoryComposerDraft()).toMatchObject({
+      body: 'typed already',
+      attachments: [{ type: 'task', refId: 'task-1' }],
+    });
   });
 });

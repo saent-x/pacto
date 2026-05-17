@@ -32,8 +32,8 @@ export function Pill({ children, active, color, size = 'sm', onPress, style, tes
     paddingHorizontal: padX,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: active ? accent : C.lineColor,
-    backgroundColor: active ? accent : C.bgSoft,
+    borderColor: active ? C.inkColor : C.lineColor,
+    backgroundColor: active ? C.inkColor : C.bgCard,
     alignSelf: 'flex-start',
     ...style,
   };
@@ -50,6 +50,8 @@ export function Pill({ children, active, color, size = 'sm', onPress, style, tes
       <PressScale
         testID={testID}
         onPress={onPress}
+        accessibilityRole="button"
+        accessibilityState={{ selected: !!active }}
         style={({ pressed }) => [containerStyle, pressed ? { opacity: 0.7 } : null]}
       >
         {content}

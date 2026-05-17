@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '@/src/lib/theme';
 import { Typography } from '@/src/constants/typography';
+import { PulsingStatusDot } from './PulsingDot';
 
 type Props = {
   children: string;
@@ -21,7 +22,7 @@ export function SectionHead({ children, dotColor, count, action }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.left}>
-        {dotColor ? <View style={[styles.dot, { backgroundColor: dotColor }]} /> : null}
+        {dotColor ? <PulsingStatusDot color={dotColor} size={6} /> : null}
         <Text style={[Typography.eyebrow, { color: C.ink3 }]}>{children}</Text>
         {typeof count === 'number' ? (
           <Text style={[Typography.eyebrow, { color: C.ink3, opacity: 0.6 }]}>· {count}</Text>
@@ -44,10 +45,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 999,
   },
 });

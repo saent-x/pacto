@@ -39,7 +39,7 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
         ref={[Function]}
         style={
           {
-            "color": "rgba(145,136,117,1.00)",
+            "color": "rgba(146,132,110,1.00)",
             "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
             "letterSpacing": "1.4px",
@@ -56,7 +56,7 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
         ref={[Function]}
         style={
           {
-            "color": "rgba(42,36,27,1.00)",
+            "color": "rgba(44,33,24,1.00)",
             "fontFamily": "BitcountPropSingle_700Bold",
             "fontSize": "42px",
             "letterSpacing": "-1.2px",
@@ -65,18 +65,20 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
         }
       >
         Today
-        <span
-          className="css-textHasAncestor-1jxf684"
-          dir={null}
-          ref={[Function]}
+        <AnimatedText
           style={
-            {
-              "color": "rgba(240,192,80,1.00)",
-            }
+            [
+              {
+                "color": "#f0c050",
+              },
+              {
+                "opacity": 1,
+              },
+            ]
           }
         >
           .
-        </span>
+        </AnimatedText>
       </div>
     </div>
   </div>
@@ -111,7 +113,7 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
     ref={[Function]}
     style={
       {
-        "color": "rgba(92,83,69,1.00)",
+        "color": "rgba(98,84,66,1.00)",
         "fontFamily": "Geist_400Regular",
         "fontSize": "11px",
         "letterSpacing": "0.4px",
@@ -163,7 +165,7 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
         ref={[Function]}
         style={
           {
-            "color": "rgba(42,36,27,1.00)",
+            "color": "rgba(44,33,24,1.00)",
             "fontFamily": "BitcountPropSingle_700Bold",
             "fontSize": "42px",
             "letterSpacing": "-1.2px",
@@ -172,18 +174,20 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
         }
       >
         Journal
-        <span
-          className="css-textHasAncestor-1jxf684"
-          dir={null}
-          ref={[Function]}
+        <AnimatedText
           style={
-            {
-              "color": "rgba(199,117,90,1.00)",
-            }
+            [
+              {
+                "color": "#C86F54",
+              },
+              {
+                "opacity": 1,
+              },
+            ]
           }
         >
           .
-        </span>
+        </AnimatedText>
       </div>
     </div>
   </div>
@@ -206,7 +210,7 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
       <Path
         d="M0 4 Q 12 0, 24 4 T 48 4 T 72 4 T 96 4"
         fill="none"
-        stroke="#C7755A"
+        stroke="#C86F54"
         strokeLinecap="round"
         strokeWidth={2}
       />
@@ -242,7 +246,7 @@ exports[`ScreenHeader — both variants coexist > ui/ScreenHeader.tsx — gold a
         ref={[Function]}
         style={
           {
-            "color": "rgba(145,136,117,1.00)",
+            "color": "rgba(146,132,110,1.00)",
           }
         }
       >
@@ -254,7 +258,7 @@ exports[`ScreenHeader — both variants coexist > ui/ScreenHeader.tsx — gold a
         ref={[Function]}
         style={
           {
-            "color": "rgba(42,36,27,1.00)",
+            "color": "rgba(44,33,24,1.00)",
           }
         }
       >
@@ -331,7 +335,7 @@ exports[`ScreenHeader — both variants coexist > ui/ScreenHeader.tsx — with b
         ref={[Function]}
         style={
           {
-            "color": "rgba(42,36,27,1.00)",
+            "color": "rgba(44,33,24,1.00)",
           }
         }
       >

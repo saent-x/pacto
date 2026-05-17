@@ -70,6 +70,11 @@ const taskItemsSpy = vi.hoisted(() =>
 );
 const calendarProviderSpy = vi.hoisted(() => vi.fn((props) => props.children));
 const wishlistItemsSpy = vi.hoisted(() => vi.fn(() => ({ items: [], isLoading: false })));
+const memoryComposerSpy = vi.hoisted(() => vi.fn(() => null));
+const entityAttachmentSpy = vi.hoisted(() => vi.fn(() => ({ entities: [] })));
+const preferencesSpy = vi.hoisted(() =>
+  vi.fn(() => ({ currencyCode: 'USD', setCurrencyCode: vi.fn() })),
+);
 
 vi.mock('@/src/hooks/useSession', () => ({ useSession: () => sessionState }));
 vi.mock('@/src/hooks/useTaskLists', () => ({
@@ -89,13 +94,19 @@ vi.mock('@/src/hooks/useWishlists', () => ({
   useQuickAddWishItem: () => ({ remove: vi.fn(), quickAdd: vi.fn(), update: vi.fn() }),
   sanitizeWishScope: (value) => value ?? 'shared',
 }));
+vi.mock('@/src/hooks/memories/useEntityAttachment', () => ({
+  useEntityAttachment: entityAttachmentSpy,
+}));
+vi.mock('@/src/components/ui/pacto/memories/MemoryComposer', () => ({
+  MemoryComposer: memoryComposerSpy,
+}));
 vi.mock('@/src/lib/calendar/context', () => ({
   CalendarProvider: calendarProviderSpy,
   useCalendar: vi.fn(),
 }));
 vi.mock('@/src/lib/preferences', () => ({
   findCurrency: () => ({ symbol: '$', code: 'USD' }),
-  usePreferences: () => ({ currencyCode: 'USD' }),
+  usePreferences: preferencesSpy,
 }));
 
 import NewTask from '@/app/sheets/new-task';
@@ -104,6 +115,9 @@ import NewTimetable from '@/app/sheets/new-timetable';
 import CalendarLayout from '@/app/(tabs)/calendar/_layout';
 import TaskListDetail from '@/app/(tabs)/us/tasks/[listId]';
 import WishlistsScreen from '@/app/(tabs)/us/wishlists';
+import CurrencySheet from '@/app/sheets/currency';
+import MemoryComposerSheet from '@/app/sheets/memory-composer';
+import MemoryAttachEntitySheet from '@/app/sheets/memory-attach-entity';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -133,6 +147,9 @@ describe('direct sheet feature guards', () => {
     taskItemsSpy.mockClear();
     calendarProviderSpy.mockClear();
     wishlistItemsSpy.mockClear();
+    memoryComposerSpy.mockClear();
+    entityAttachmentSpy.mockClear();
+    preferencesSpy.mockClear();
   });
 
   it('disabled new-task renders unavailable state and hides the title input', async () => {
@@ -197,6 +214,39 @@ describe('direct sheet feature guards', () => {
     expect(hasText(renderer.root, 'Wishlist is unavailable')).toBe(true);
     expect(wishlistItemsSpy).not.toHaveBeenCalled();
     expect(sessionState.isFeatureEnabled).toHaveBeenCalledWith('wishlist');
+
+    act(() => renderer.unmount());
+  });
+
+  it('disabled currency sheet renders unavailable before preferences hooks run', async () => {
+    sessionState.disabledFeature = 'wishlist';
+    const renderer = await render(<CurrencySheet />);
+
+    expect(hasText(renderer.root, 'Wishlist is unavailable')).toBe(true);
+    expect(preferencesSpy).not.toHaveBeenCalled();
+    expect(sessionState.isFeatureEnabled).toHaveBeenCalledWith('wishlist');
+
+    act(() => renderer.unmount());
+  });
+
+  it('disabled memory composer sheet renders unavailable before mounting composer', async () => {
+    sessionState.disabledFeature = 'memoryFeed';
+    const renderer = await render(<MemoryComposerSheet />);
+
+    expect(hasText(renderer.root, 'Memory Feed is unavailable')).toBe(true);
+    expect(memoryComposerSpy).not.toHaveBeenCalled();
+    expect(sessionState.isFeatureEnabled).toHaveBeenCalledWith('memoryFeed');
+
+    act(() => renderer.unmount());
+  });
+
+  it('disabled memory attachment sheet renders unavailable before attachment hooks run', async () => {
+    sessionState.disabledFeature = 'memoryFeed';
+    const renderer = await render(<MemoryAttachEntitySheet />);
+
+    expect(hasText(renderer.root, 'Memory Feed is unavailable')).toBe(true);
+    expect(entityAttachmentSpy).not.toHaveBeenCalled();
+    expect(sessionState.isFeatureEnabled).toHaveBeenCalledWith('memoryFeed');
 
     act(() => renderer.unmount());
   });

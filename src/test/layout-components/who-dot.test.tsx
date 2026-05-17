@@ -26,12 +26,12 @@ function letters(tree: any): string[] {
 }
 
 describe('WhoDot', () => {
-  it('renders a single peach bubble with M for mattia', () => {
+  it('renders a single peach bubble with the current user initial', () => {
     let tree: any;
     act(() => {
-      tree = TestRenderer.create(<WhoDot who={'mattia' as any} />);
+      tree = TestRenderer.create(<WhoDot who={'me' as any} meInitial="A" />);
     });
-    expect(letters(tree)).toEqual(['M']);
+    expect(letters(tree)).toEqual(['A']);
 
     const bubble = tree.root.findAllByType(View)[0];
     expect(bubble.props.style).toMatchObject({
@@ -42,12 +42,12 @@ describe('WhoDot', () => {
     });
   });
 
-  it('renders a single lavender bubble with S for sofia', () => {
+  it('renders a single lavender bubble with the partner initial', () => {
     let tree: any;
     act(() => {
-      tree = TestRenderer.create(<WhoDot who={'sofia' as any} />);
+      tree = TestRenderer.create(<WhoDot who={'partner' as any} partnerInitial="R" />);
     });
-    expect(letters(tree)).toEqual(['S']);
+    expect(letters(tree)).toEqual(['R']);
 
     const bubble = tree.root.findAllByType(View)[0];
     expect(bubble.props.style).toMatchObject({
@@ -58,9 +58,9 @@ describe('WhoDot', () => {
   it('renders two overlapping bubbles for both, second with negative margin and border', () => {
     let tree: any;
     act(() => {
-      tree = TestRenderer.create(<WhoDot who={'both' as any} />);
+      tree = TestRenderer.create(<WhoDot who={'both' as any} meInitial="A" partnerInitial="R" />);
     });
-    expect(letters(tree)).toEqual(['M', 'S']);
+    expect(letters(tree)).toEqual(['A', 'R']);
 
     const views = tree.root.findAllByType(View);
     const [row, first, second] = views;

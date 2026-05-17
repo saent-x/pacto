@@ -7,10 +7,10 @@ import { Pill, PrimaryButton } from '@/src/components/ui/atoms';
 import { Icon } from '@/src/components/ui/Icon';
 import {
   SheetSection,
-  SheetSegment,
+  SheetIconLabelPicker,
   SheetShell,
   SheetTitleField,
-  type SegmentOption,
+  type IconLabelOption,
 } from '@/src/components/ui/SheetShell';
 import { useTheme } from '@/src/lib/theme';
 import { useFeatureGate } from '@/src/hooks/useFeatureGate';
@@ -20,11 +20,6 @@ import { useTaskItems } from '@/src/hooks/useTasks';
 type Priority = 'low' | 'med' | 'high';
 
 const PRIORITY_NUM: Record<Priority, number> = { low: 1, med: 2, high: 3 };
-const PRIORITY_OPTS: SegmentOption<Priority>[] = [
-  { key: 'low', label: 'Low' },
-  { key: 'med', label: 'Med' },
-  { key: 'high', label: 'High' },
-];
 
 const MONTH_LABELS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -85,6 +80,14 @@ function NewTaskInner() {
   const list = lists.find((l) => l.id === listId) ?? null;
   const color = list ? ((C as any)[list.colorKey] as string) : C.gold;
   const listInk = list ? (((C as any)[`${list.colorKey}Ink`] as string | undefined) ?? C.ink) : C.ink;
+  const priorityOptions = useMemo<IconLabelOption<Priority>[]>(
+    () => [
+      { key: 'low', icon: 'arrowUp', label: 'Low priority', color: C.ink3 },
+      { key: 'med', icon: 'trendingUp', label: 'Medium priority', color: C.butter },
+      { key: 'high', icon: 'chevronsUp', label: 'High priority', color: C.accent },
+    ],
+    [C.accent, C.butter, C.ink3],
+  );
 
   const buckets = useMemo(() => buildBuckets(), []);
   const existing = useMemo(
@@ -177,11 +180,11 @@ function NewTaskInner() {
       </SheetSection>
 
       <SheetSection title="Priority">
-        <SheetSegment
-          options={PRIORITY_OPTS}
+        <SheetIconLabelPicker
+          options={priorityOptions}
           selected={priority}
           onChange={setPriority}
-          accent={color}
+          iconOnly
           testIDPrefix="new-task-priority"
         />
       </SheetSection>
@@ -193,9 +196,9 @@ function NewTaskInner() {
             flexDirection: 'row',
             alignItems: 'center',
             gap: 10,
-            backgroundColor: C.card,
+            backgroundColor: C.bgCard,
             borderWidth: 1,
-            borderColor: C.line,
+            borderColor: C.lineColor,
             borderRadius: 14,
             paddingVertical: 12,
             paddingHorizontal: 14,
@@ -213,11 +216,11 @@ function NewTaskInner() {
           >
             <Icon name={list.icon} size={14} color={listInk} />
           </View>
-          <Text style={{ flex: 1, color: C.mist, fontFamily: F.body, fontSize: 13 }}>
+          <Text style={{ flex: 1, color: C.ink2, fontFamily: F.body, fontSize: 13 }}>
             {isEdit ? (
-              <>Editing in <Text style={{ color: C.bone, fontFamily: F.bodyBold }}>{list.name}</Text></>
+              <>Editing in <Text style={{ color: C.inkColor, fontFamily: F.bodyBold }}>{list.name}</Text></>
             ) : (
-              <>Adding to <Text style={{ color: C.bone, fontFamily: F.bodyBold }}>{list.name}</Text></>
+              <>Adding to <Text style={{ color: C.inkColor, fontFamily: F.bodyBold }}>{list.name}</Text></>
             )}
           </Text>
         </View>

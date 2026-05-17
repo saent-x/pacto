@@ -92,9 +92,9 @@ function NewNoteInner() {
       <SheetSection title="Note" first>
         <View
           style={{
-            backgroundColor: C.card,
+            backgroundColor: C.bgCard,
             borderWidth: 1,
-            borderColor: C.line,
+            borderColor: C.lineColor,
             borderRadius: 18,
             padding: 18,
           }}
@@ -112,7 +112,7 @@ function NewNoteInner() {
             textAlignVertical="top"
             style={{
               minHeight: 140,
-              color: C.bone,
+              color: C.inkColor,
               fontFamily: F.serif,
               fontStyle: body ? 'normal' : 'italic',
               fontSize: 17,

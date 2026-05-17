@@ -35,6 +35,7 @@ function toTaskRow(task: any): Task {
   return {
     id: task.id,
     couple_id: task.couple?.[0]?.id ?? '',
+    list_id: task.list?.[0]?.id ?? null,
     title: task.title,
     notes: task.notes ?? null,
     category: task.category ?? null,
@@ -123,6 +124,7 @@ export function useTasks() {
           tasks: {
             $: { where: { 'couple.id': coupleId } },
             couple: {},
+            list: {},
             createdBy: {},
             assignedTo: {},
             completedBy: {},

@@ -19,6 +19,8 @@ vi.mock('react-native-reanimated', () => {
   const Reactx = require('react');
   const MockView = (props: any) =>
     Reactx.createElement('AnimatedView', props, props.children);
+  const MockText = (props: any) =>
+    Reactx.createElement('AnimatedText', props, props.children);
   const chainable = () => {
     const api: any = {};
     for (const m of ['duration', 'delay', 'springify', 'damping']) {
@@ -28,8 +30,9 @@ vi.mock('react-native-reanimated', () => {
   };
   return {
     __esModule: true,
-    default: { View: MockView, createAnimatedComponent: (C: any) => C },
+    default: { View: MockView, Text: MockText, createAnimatedComponent: (C: any) => C },
     View: MockView,
+    Text: MockText,
     createAnimatedComponent: (C: any) => C,
     FadeIn: chainable(),
     FadeOut: chainable(),
@@ -40,7 +43,6 @@ vi.mock('react-native-reanimated', () => {
     useReducedMotion: () => false,
     withTiming: (v: any) => v,
     withDelay: (_d: any, v: any) => v,
-    useReducedMotion: () => false,
     useAnimatedProps: (fn: any) => fn(),
     interpolateColor: () => "#000000",
     withRepeat: (v: any) => v,
@@ -61,6 +63,10 @@ const { act } = TestRenderer;
 const flush = () => new Promise((r) => setTimeout(r, 0));
 const findByTestID = (root: any, id: string) =>
   root.findAll((n: any) => n.props?.testID === id)[0];
+const allText = (root: any) =>
+  root
+    .findAll((n: any) => typeof n.children?.[0] === 'string')
+    .map((n: any) => n.children.join(''));
 
 describe('root index routing + boot visual', () => {
   beforeEach(() => {
@@ -80,6 +86,8 @@ describe('root index routing + boot visual', () => {
     });
     expect(findByTestID(renderer.root, 'boot-screen')).toBeDefined();
     expect(findByTestID(renderer.root, 'boot-status')).toBeDefined();
+    expect(allText(renderer.root).join(' ')).toContain('OPENING YOUR PACT');
+    expect(allText(renderer.root).join(' ')).not.toContain('loading');
     expect(routerSpy.replace).not.toHaveBeenCalled();
     act(() => renderer.unmount());
   });

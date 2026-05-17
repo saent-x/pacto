@@ -46,6 +46,7 @@ export async function scheduleReminderNotification(
   if (!Notifications) return null;
   const fireAt = new Date(dueAtIso).getTime();
   if (!Number.isFinite(fireAt) || fireAt <= Date.now()) return null;
+  await ensureAndroidChannel(Notifications);
   const granted = await ensureNotificationPermission();
   if (!granted) return null;
   const identifier = idFor(reminderId);
@@ -92,9 +93,9 @@ export async function registerPushToken(userId: string): Promise<string | null> 
   const Notifications = await loadNotifications();
   if (!Notifications) return null;
   if (!Device.isDevice) return null; // simulators cannot get APNs/FCM tokens
+  await ensureAndroidChannel(Notifications);
   const granted = await ensureNotificationPermission();
   if (!granted) return null;
-  await ensureAndroidChannel(Notifications);
 
   const projectId = getProjectId();
   if (!projectId) {

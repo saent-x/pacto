@@ -20,11 +20,11 @@ export function MemoriesHero({ eyebrow, title, caption, rightSlot }: Props) {
   return (
     <View style={styles.row}>
       <View style={styles.col}>
-        <Text style={[Typography.eyebrow, { color: C.ink3 }]} numberOfLines={1}>
+        <Text style={[Typography.eyebrow, { color: C.accent }]} numberOfLines={1}>
           {eyebrow}
         </Text>
         <Text
-          style={[Typography.pixelHero, { color: C.inkColor, marginTop: 6 }]}
+          style={[Typography.pixelHero, styles.title, { color: C.inkColor }]}
           numberOfLines={2}
         >
           {title}
@@ -45,15 +45,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    paddingHorizontal: 22,
+    paddingHorizontal: 24,
     paddingTop: 4,
-    paddingBottom: 14,
+    paddingBottom: 18,
     gap: 14,
   },
   col: { flex: 1, minWidth: 0 },
   right: { flexShrink: 0, marginTop: 2 },
-  caption: {
+  title: {
     marginTop: 6,
+  },
+  caption: {
+    marginTop: 8,
     fontSize: 13,
     lineHeight: 18,
   },

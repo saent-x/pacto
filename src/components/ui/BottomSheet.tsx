@@ -31,7 +31,7 @@ interface ThemedSheetProps {
 
 /** Liquid glass background for the sheet */
 function GlassBackground({ style }: { style?: any }) {
-  const { mode } = useTheme();
+  const { C, mode } = useTheme();
 
   if (Platform.OS === 'ios') {
     // systemChromeMaterial + systemThickMaterial*  resolve to iOS 26 "liquid glass"
@@ -48,14 +48,12 @@ function GlassBackground({ style }: { style?: any }) {
           { borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden' },
         ]}
       >
-        {/* Subtle warm tint — keeps the Coupl identity under the system blur. */}
+        {/* Subtle Pacto tint under the system blur. */}
         <View
           style={[
             StyleSheet.absoluteFill,
             {
-              backgroundColor: mode === 'dark'
-                ? 'rgba(22, 19, 17, 0.35)'
-                : 'rgba(255, 255, 255, 0.35)',
+              backgroundColor: mode === 'dark' ? '#171B2A99' : '#FFFDF8B3',
             },
           ]}
         />
@@ -64,9 +62,7 @@ function GlassBackground({ style }: { style?: any }) {
           style={[
             styles.sheetHighlight,
             {
-              backgroundColor: mode === 'dark'
-                ? 'rgba(255, 255, 255, 0.14)'
-                : 'rgba(255, 255, 255, 0.75)',
+              backgroundColor: mode === 'dark' ? '#F7F1E833' : '#FFFDF8E6',
             },
           ]}
         />
@@ -79,11 +75,9 @@ function GlassBackground({ style }: { style?: any }) {
       style={[
         style,
         {
-          backgroundColor: mode === 'dark'
-            ? 'rgba(27, 23, 21, 0.95)'
-            : 'rgba(242, 237, 231, 0.98)',
-          borderTopLeftRadius: 20,
-          borderTopRightRadius: 20,
+          backgroundColor: C.bgCard,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
         },
       ]}
     />
@@ -132,9 +126,7 @@ export function ThemedSheet({
           style={[
             styles.footer,
             {
-              borderTopColor: mode === 'dark'
-                ? 'rgba(255, 255, 255, 0.06)'
-                : 'rgba(0, 0, 0, 0.06)',
+              borderTopColor: C.lineColor,
             },
           ]}
         >
@@ -142,7 +134,7 @@ export function ThemedSheet({
         </View>
       </BottomSheetFooter>
     ),
-    [footer, mode],
+    [footer, C.lineColor],
   );
 
   const handleDismiss = useCallback(() => {
@@ -162,9 +154,7 @@ export function ThemedSheet({
   }, [sheetRef]);
 
   // Glass handle indicator color
-  const handleColor = mode === 'dark'
-    ? 'rgba(255, 255, 255, 0.15)'
-    : 'rgba(0, 0, 0, 0.12)';
+  const handleColor = C.line2;
 
   return (
     <BottomSheetModal
@@ -193,14 +183,12 @@ export function ThemedSheet({
         <>
           {title && (
             <View style={styles.header}>
-              <Text style={[styles.title, { color: C.bone }]}>{title}</Text>
+              <Text style={[styles.title, { color: C.inkColor }]}>{title}</Text>
               <View
                 style={[
                   styles.divider,
                   {
-                    backgroundColor: mode === 'dark'
-                      ? 'rgba(255, 255, 255, 0.06)'
-                      : 'rgba(0, 0, 0, 0.06)',
+                    backgroundColor: C.lineColor,
                   },
                 ]}
               />
@@ -230,14 +218,12 @@ export function ThemedSheet({
         <BottomSheetView style={styles.content}>
           {title && (
             <View style={styles.header}>
-              <Text style={[styles.title, { color: C.bone }]}>{title}</Text>
+              <Text style={[styles.title, { color: C.inkColor }]}>{title}</Text>
               <View
                 style={[
                   styles.divider,
                   {
-                    backgroundColor: mode === 'dark'
-                      ? 'rgba(255, 255, 255, 0.06)'
-                      : 'rgba(0, 0, 0, 0.06)',
+                    backgroundColor: C.lineColor,
                   },
                 ]}
               />

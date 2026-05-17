@@ -5,24 +5,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   addDays,
   format,
-  getDay,
-  isToday,
-  isYesterday,
   startOfDay,
   startOfWeek,
   subDays,
 } from 'date-fns';
 import {
   ActionEmptyState,
-  Avatar,
-  AvatarPair,
   Bucket,
   BucketedList,
-  Card,
-  CrewStack,
   HeaderBrand,
-  HeroPactoBadge,
   Pill,
+  StatBar,
   SwipeableRow,
 } from '@/src/components/ui/pacto';
 import { Icon } from '@/src/components/ui/Icon';
@@ -183,6 +176,8 @@ export default function CheckinsScreen() {
             <PressScale
               onPress={() => router.back()}
               hitSlop={12}
+              haptic="impact"
+              pressedScale={0.96}
               style={{ padding: 4 }}
             >
               <Icon name="chevronLeft" size={22} color={C.inkColor} strokeWidth={2.2} />
@@ -192,6 +187,8 @@ export default function CheckinsScreen() {
             <PressScale
               onPress={() => router.push('/sheets/new-checkin' as any)}
               hitSlop={12}
+              haptic="impact"
+              pressedScale={0.96}
               style={{ padding: 4 }}
             >
               <Icon name="plus" size={22} color={C.inkColor} strokeWidth={2.2} />
@@ -205,21 +202,14 @@ export default function CheckinsScreen() {
         contentContainerStyle={{ paddingTop: insets.top + 60, paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero — week strip */}
+        {/* Hero — shared stat header */}
         <View style={styles.heroWrap}>
-          <Card
-            style={{
-              padding: 18,
-              paddingRight: 52,
-              borderWidth: 0,
-              backgroundColor: C.accent2Soft,
-              overflow: 'visible',
-            }}
-          >
-            <HeroPactoBadge style={styles.heroBadge} />
-            <View style={styles.heroTop}>
-              <View style={{ flex: 1 }}>
-                <Text style={[Typography.eyebrow, { color: C.ink2 }]}>This week</Text>
+          <StatBar
+            accent={C.accent2}
+            eyebrow="THIS WEEK"
+            meta={`STREAK · ${streak} ${streak === 1 ? 'DAY' : 'DAYS'}`}
+            primary={
+              <>
                 <View style={styles.heroNumberRow}>
                   <Text style={[styles.heroNumber, { color: C.inkColor }]}>
                     {mode === 'solo' ? stats.myDays : stats.sharedDays}
@@ -234,49 +224,26 @@ export default function CheckinsScreen() {
                   </Text>
                 </View>
                 {mode !== 'solo' ? (
-                  <Text style={[Typography.caption, { color: C.ink2, marginTop: 6 }]}>
+                  <Text
+                    style={[
+                      Typography.caption,
+                      { color: C.ink2, flexBasis: '100%', marginTop: 4 },
+                    ]}
+                  >
                     {stats.myDays} from you · {stats.possibleDays - stats.myDays > 0
                       ? `${stats.possibleDays - stats.myDays} missed`
                       : 'all caught up'}
                   </Text>
                 ) : null}
-              </View>
-            </View>
-
-            {/* Streak strip — Streak Nd | LAST 7 DAYS + week squares */}
-            <View
-              style={[
-                styles.streakInner,
-                { borderTopColor: 'rgba(0,0,0,0.08)' },
-              ]}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-                <View style={{ width: 60 }}>
-                  <Text style={[Typography.eyebrowSm, { color: C.ink2 }]}>
-                    STREAK
-                  </Text>
-                  <View style={styles.streakRow}>
-                    <Text
-                      style={[
-                        {
-                          fontFamily: Typography.geistMonoMediumFont,
-                          fontSize: 18,
-                          color: C.accent,
-                        },
-                      ]}
-                    >
-                      {streak}
-                    </Text>
-                    <Text style={[Typography.caption, { color: C.ink2, marginLeft: 4 }]}>
-                      d
-                    </Text>
-                  </View>
-                </View>
+              </>
+            }
+            microVis={
+              <View style={styles.weekPanel}>
                 <View style={{ flex: 1 }}>
                   <Text
                     style={[
                       Typography.eyebrowSm,
-                      { color: C.ink2, marginBottom: 6 },
+                      { color: C.ink3, marginBottom: 8 },
                     ]}
                   >
                     LAST 7 DAYS
@@ -290,9 +257,9 @@ export default function CheckinsScreen() {
                               styles.weekSquare,
                               {
                                 backgroundColor:
-                                  d.mineColor ?? 'rgba(0,0,0,0.10)',
+                                  d.mineColor ?? C.bgSoft,
                                 borderWidth: d.isToday ? 1.2 : 0,
-                                borderColor: '#2A241B',
+                                borderColor: C.inkColor,
                               },
                             ]}
                           />
@@ -302,10 +269,10 @@ export default function CheckinsScreen() {
                                 styles.weekSquare,
                                 {
                                   backgroundColor:
-                                    d.theirsColor ?? 'rgba(0,0,0,0.10)',
+                                    d.theirsColor ?? C.bgSoft,
                                   marginTop: 2,
                                   borderWidth: d.isToday ? 1.2 : 0,
-                                  borderColor: '#2A241B',
+                                  borderColor: C.inkColor,
                                 },
                               ]}
                             />
@@ -314,7 +281,7 @@ export default function CheckinsScreen() {
                         <Text
                           style={[
                             Typography.eyebrowSm,
-                            { color: '#5C4F3D', fontSize: 9, marginTop: 4 },
+                            { color: C.ink2, fontSize: 9, marginTop: 4 },
                           ]}
                         >
                           {d.label}
@@ -324,8 +291,8 @@ export default function CheckinsScreen() {
                   </View>
                 </View>
               </View>
-            </View>
-          </Card>
+            }
+          />
         </View>
 
         {/* Filter pills */}
@@ -361,6 +328,7 @@ export default function CheckinsScreen() {
               title="No check-ins yet"
               body={mode === 'solo' ? 'Log your first mood.' : 'Log the first mood for this pact.'}
               actionLabel="Check in"
+              accent={C.accent2}
               onAction={() => router.push('/sheets/new-checkin' as any)}
             />
           ) : (
@@ -389,7 +357,7 @@ export default function CheckinsScreen() {
                     }
                     onDelete={() => remove(c.id)}
                   >
-                    <View style={[styles.row, { backgroundColor: C.bgCard }]}>
+                    <View style={styles.row}>
                       <View
                         style={[
                           styles.moodTile,
@@ -453,51 +421,26 @@ export default function CheckinsScreen() {
 const styles = StyleSheet.create({
   heroWrap: {
     paddingHorizontal: 18,
-    paddingTop: 4,
-    paddingBottom: 14,
-  },
-  heroTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
+    paddingTop: 8,
+    paddingBottom: 6,
   },
   heroNumberRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    marginTop: 6,
   },
   heroNumber: {
     fontFamily: Typography.pixelFont,
     fontSize: 48,
     lineHeight: 48,
+    paddingLeft: 8,
   },
-  heroTile: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroBadge: {
-    position: 'absolute',
-    top: -10,
-    right: -6,
-    zIndex: 3,
-  },
-  streakInner: {
-    marginTop: 18,
-    paddingTop: 16,
-    borderTopWidth: 1,
-  },
-  streakRow: {
+  weekPanel: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    marginTop: 4,
+    alignItems: 'center',
   },
   weekStrip: {
     flexDirection: 'row',
-    gap: 4,
+    gap: 5,
   },
   weekCell: {
     flex: 1,
@@ -531,7 +474,7 @@ const styles = StyleSheet.create({
   moodTile: {
     width: 38,
     height: 38,
-    borderRadius: 12,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -13,6 +13,8 @@ export function PressScale({
   haptic = 'selection',
   pressedScale = 0.96,
   onPress,
+  accessibilityRole,
+  accessibilityState,
   ...rest
 }: Omit<PressableProps, 'style'> & {
   style?: PressableProps['style'] | StyleProp<ViewStyle>;
@@ -40,6 +42,11 @@ export function PressScale({
       {...rest}
       onPress={onPress ? handlePress : undefined}
       disabled={disabled}
+      accessibilityRole={accessibilityRole ?? (onPress ? 'button' : undefined)}
+      accessibilityState={{
+        ...accessibilityState,
+        disabled: disabled || accessibilityState?.disabled || undefined,
+      }}
       style={(state) => {
         const base =
           typeof style === 'function' ? (style as any)(state) : style;

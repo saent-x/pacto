@@ -43,6 +43,26 @@ vi.mock('expo-audio', () => ({
   }),
 }));
 
+vi.mock('@react-native-async-storage/async-storage', () => {
+  const store = new Map<string, string>();
+
+  return {
+    __esModule: true,
+    default: {
+      getItem: vi.fn(async (key: string) => store.get(key) ?? null),
+      setItem: vi.fn(async (key: string, value: string) => {
+        store.set(key, value);
+      }),
+      removeItem: vi.fn(async (key: string) => {
+        store.delete(key);
+      }),
+      clear: vi.fn(async () => {
+        store.clear();
+      }),
+    },
+  };
+});
+
 // @instantdb/react-native transitively imports react-native-get-random-values
 // (CJS) which cannot be loaded in Vitest's ESM context. Mock the SDK.
 vi.mock('@instantdb/react-native', () => {
@@ -103,6 +123,7 @@ vi.mock('react-native-svg', () => {
     Defs: passthrough('Defs'),
     G: passthrough('G'),
     LinearGradient: passthrough('LinearGradient'),
+    RadialGradient: passthrough('RadialGradient'),
     Line: passthrough('Line'),
     Path: passthrough('Path'),
     Polygon: passthrough('Polygon'),

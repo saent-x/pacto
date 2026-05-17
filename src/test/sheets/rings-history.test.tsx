@@ -25,25 +25,26 @@ vi.mock('react-native-reanimated', () => {
   const Reactx = require('react');
   const MockView = (props: any) =>
     Reactx.createElement('AnimatedView', props, props.children);
+  const MockText = (props: any) =>
+    Reactx.createElement('AnimatedText', props, props.children);
   const createAnimatedComponent = (Comp: any) => (props: any) =>
     Reactx.createElement(Comp, props, props.children);
   return {
     __esModule: true,
-    default: { View: MockView, createAnimatedComponent },
+    default: { View: MockView, Text: MockText, createAnimatedComponent },
     View: MockView,
+    Text: MockText,
     createAnimatedComponent,
     Easing: { inOut: () => 0, out: (fn: any) => fn ?? 0, cubic: (v: any) => v, bezier: () => 0, ease: 0 },
     useSharedValue: (v: any) => ({ value: v }),
-    useAnimatedProps: (fn: any) => fn?.() ?? {},
     useAnimatedStyle: (fn: any) => fn?.() ?? {},
     useReducedMotion: () => false,
-    withDelay: (_d: number, v: any) => v,
     withTiming: (v: any) => v,
     withDelay: (_d: any, v: any) => v,
-    useReducedMotion: () => false,
     useAnimatedProps: (fn: any) => fn(),
     interpolateColor: () => "#000000",
     withRepeat: (v: any) => v,
+    withSequence: (...args: any[]) => args[args.length - 1],
     interpolate: () => 0,
   };
 });
@@ -55,6 +56,8 @@ const sessionState = vi.hoisted(() => ({
   partner: null,
   isSolo: false,
   isCouple: true,
+  mode: 'pair',
+  isFeatureEnabled: vi.fn((featureId: string) => featureId !== 'disabled-feature'),
   status: 'ready',
   profile: null,
 }));
@@ -69,8 +72,9 @@ const ringsState = vi.hoisted(() => ({
   error: null as any,
   upsert: vi.fn(async () => undefined),
 }));
+const ringsHistorySpy = vi.hoisted(() => vi.fn(() => ringsState));
 vi.mock('@/src/hooks/useRingsHistory', () => ({
-  useRingsHistory: () => ringsState,
+  useRingsHistory: ringsHistorySpy,
 }));
 
 import RingsHistory from '@/app/sheets/rings-history';
@@ -90,6 +94,9 @@ describe('rings-history sheet', () => {
       toFake: ['Date'],
     });
     sessionState.activeCouple = { couple: { id: 's1', name: null, anniversary: null }, memberCount: 2, partner: null };
+    sessionState.isFeatureEnabled.mockImplementation((featureId: string) => featureId !== 'disabled-feature');
+    sessionState.isFeatureEnabled.mockClear();
+    ringsHistorySpy.mockClear();
     ringsState.byDateKey = new Map();
     ringsState.error = null;
   });
@@ -169,6 +176,19 @@ describe('rings-history sheet', () => {
     });
     expect(findByTestID(renderer.root, 'rings-empty')).toBeDefined();
     expect(findByTestID(renderer.root, 'rings-month-label-2026-04')).toBeUndefined();
+    act(() => renderer.unmount());
+  });
+
+  it('disabled check-ins render unavailable before rings history hooks run', async () => {
+    sessionState.isFeatureEnabled.mockImplementation((featureId: string) => featureId !== 'checkins');
+    let renderer: any;
+    await act(async () => {
+      renderer = TestRenderer.create(<RingsHistory />);
+      await flush();
+    });
+    expect(renderer.root.findAll((n: any) => n.children?.includes('Check-ins is unavailable')).length).toBe(1);
+    expect(ringsHistorySpy).not.toHaveBeenCalled();
+    expect(sessionState.isFeatureEnabled).toHaveBeenCalledWith('checkins');
     act(() => renderer.unmount());
   });
 });

@@ -14,12 +14,11 @@ import {
 import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import {
   ActionEmptyState,
-  Avatar,
   Bucket,
   BucketedList,
   HeaderBrand,
-  PulsingDot,
   SegmentedTabs,
+  StatBar,
   SwipeableRow,
 } from '@/src/components/ui/pacto';
 import { Icon } from '@/src/components/ui/Icon';
@@ -216,6 +215,8 @@ function JournalScreenInner() {
             <PressScale
               onPress={() => router.back()}
               hitSlop={12}
+              haptic="impact"
+              pressedScale={0.96}
               style={{ padding: 4 }}
             >
               <Icon name="chevronLeft" size={22} color={C.inkColor} strokeWidth={2.2} />
@@ -225,6 +226,8 @@ function JournalScreenInner() {
             <PressScale
               onPress={() => router.push('/sheets/new-entry' as any)}
               hitSlop={12}
+              haptic="impact"
+              pressedScale={0.96}
               style={{ padding: 4 }}
             >
               <Icon name="edit" size={22} color={C.inkColor} strokeWidth={2.2} />
@@ -238,83 +241,82 @@ function JournalScreenInner() {
         contentContainerStyle={{ paddingTop: insets.top + 60, paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero — featured-entry pull-quote, no colored card */}
+        {/* Hero — shared stat header */}
         <View style={styles.heroWrap}>
-          <View style={styles.heroHead}>
-            <Text style={[Typography.eyebrow, { color: C.ink3 }]}>{heroEyebrow}</Text>
-            <Text style={[Typography.mono, { color: C.ink3, fontSize: 11 }]}>
-              {stats.total} ENTRIES · {stats.thisMonth} THIS MONTH
-              {mode !== 'solo' ? ` · ${stats.fromMe} FROM YOU` : ''}
-            </Text>
-          </View>
-
-          {featured && featuredPreview ? (
-            <View style={styles.featuredBlock}>
-              <Text
-                style={{
-                  fontFamily: Typography.geistFont,
-                  fontStyle: 'italic',
-                  fontSize: 18,
-                  lineHeight: 26,
-                  color: C.inkColor,
-                  marginTop: 10,
-                }}
-                numberOfLines={3}
-              >
-                &ldquo;{featuredPreview}&rdquo;
-              </Text>
-              <View style={styles.featuredFoot}>
-                <Avatar
-                  person={{
-                    initial: featured.authorInitial,
-                    color: featured.authorColor,
-                  }}
-                  size={20}
-                />
-                <Text
-                  style={[
-                    Typography.eyebrowSm,
-                    { color: featured.authorColor, fontSize: 9.5 },
-                  ]}
-                >
-                  {featured.authorName.toUpperCase()}
-                </Text>
-                <Text style={[Typography.mono, { color: C.ink3, fontSize: 10 }]}>
-                  {featured.entryDate
-                    ? format(parseISO(featured.entryDate), 'MMM d')
-                    : format(new Date(featured.createdAt), 'MMM d')}
-                </Text>
-                {featured.isPrivate ? (
-                  <View
+          <StatBar
+            accent={C.journal}
+            eyebrow={heroEyebrow}
+            meta={`${stats.total} ENTRIES · ${stats.thisMonth} THIS MONTH${
+              mode !== 'solo' ? ` · ${stats.fromMe} FROM YOU` : ''
+            }`}
+            primary={
+              featured && featuredPreview ? (
+                <>
+                  <Text
                     style={[
-                      styles.privateChip,
-                      { backgroundColor: C.bgSoft, borderColor: C.lineColor },
+                      styles.featuredQuote,
+                      { color: C.inkColor },
                     ]}
+                    numberOfLines={3}
                   >
-                    <Icon name="lock" size={9} color={C.ink2} strokeWidth={2.2} />
+                    &ldquo;{featuredPreview}&rdquo;
+                  </Text>
+                  <View style={styles.featuredFoot}>
+                    <View
+                      style={[
+                        styles.authorDotLarge,
+                        { backgroundColor: featured.authorColor },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          Typography.eyebrowSm,
+                          { color: C.inkColor, fontSize: 9 },
+                        ]}
+                      >
+                        {featured.authorInitial}
+                      </Text>
+                    </View>
                     <Text
                       style={[
                         Typography.eyebrowSm,
-                        { color: C.ink2, fontSize: 9 },
+                        { color: featured.authorColor, fontSize: 9.5 },
                       ]}
                     >
-                      PRIVATE
+                      {featured.authorName.toUpperCase()}
                     </Text>
+                    <Text style={[Typography.mono, { color: C.ink3, fontSize: 10 }]}>
+                      {featured.entryDate
+                        ? format(parseISO(featured.entryDate), 'MMM d')
+                        : format(new Date(featured.createdAt), 'MMM d')}
+                    </Text>
+                    {featured.isPrivate ? (
+                      <View
+                        style={[
+                          styles.privateChip,
+                          { backgroundColor: C.bgSoft, borderColor: C.lineColor },
+                        ]}
+                      >
+                        <Icon name="lock" size={9} color={C.ink2} strokeWidth={2.2} />
+                        <Text
+                          style={[
+                            Typography.eyebrowSm,
+                            { color: C.ink2, fontSize: 9 },
+                          ]}
+                        >
+                          PRIVATE
+                        </Text>
+                      </View>
+                    ) : null}
                   </View>
-                ) : null}
-              </View>
-            </View>
-          ) : (
-            <Text
-              style={[
-                Typography.pixelHeroSm,
-                { color: C.inkColor, marginTop: 8 },
-              ]}
-            >
-              Write something
-              <PulsingDot color={C.accent3} />
-            </Text>
-          )}
+                </>
+              ) : (
+                <Text style={[Typography.pixelHeroSm, { color: C.inkColor }]}>
+                  Write something
+                </Text>
+              )
+            }
+          />
         </View>
 
         {/* Filter pills */}
@@ -340,6 +342,7 @@ function JournalScreenInner() {
               title="A quiet page"
               body="Write a sentence about today. A line is enough."
               actionLabel="New entry"
+              accent={C.journal}
               onAction={() => router.push('/sheets/new-entry' as any)}
             />
           ) : (
@@ -373,12 +376,14 @@ function JournalScreenInner() {
                       onPress={() =>
                         router.push(`/sheets/journal-entry?id=${e.id}` as any)
                       }
-                      style={[styles.row, { backgroundColor: C.bgCard }]}
+                      haptic="impact"
+                      pressedScale={0.96}
+                      style={styles.row}
                     >
                       <View
                         style={[
-                          styles.dateMargin,
-                          { borderLeftColor: e.authorColor },
+                          styles.authorDot,
+                          { backgroundColor: e.authorColor },
                         ]}
                       />
                       <View style={{ flex: 1 }}>
@@ -449,21 +454,27 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 12,
   },
-  heroHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  featuredBlock: {
-    marginBottom: 4,
+  featuredQuote: {
+    flexBasis: '100%',
+    fontFamily: Typography.geistFont,
+    fontStyle: 'italic',
+    fontSize: 18,
+    lineHeight: 26,
   },
   featuredFoot: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginTop: 10,
+    flexBasis: '100%',
+    marginTop: 2,
     flexWrap: 'wrap',
+  },
+  authorDotLarge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   privateChip: {
     flexDirection: 'row',
@@ -490,11 +501,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  dateMargin: {
-    width: 3,
-    borderLeftWidth: 3,
-    alignSelf: 'stretch',
-    borderRadius: 2,
+  authorDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginTop: 7,
   },
   headRow: {
     flexDirection: 'row',

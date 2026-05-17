@@ -2,19 +2,26 @@ import { useMemo } from 'react';
 import { db } from '@/src/lib/instant';
 import { useSession } from '@/src/hooks/useSession';
 
-export type AttachableEntity = 'milestone' | 'plan' | 'checkIn' | 'expense' | 'wishlistItem';
+export type AttachableEntity =
+  | 'task'
+  | 'reminder'
+  | 'plan'
+  | 'checkIn'
+  | 'timetable'
+  | 'journal';
 
 const ENTITY_KEYS: Record<AttachableEntity, string> = {
-  milestone: 'milestones',
+  task: 'tasks',
+  reminder: 'reminders',
   plan: 'plans',
   checkIn: 'checkIns',
-  expense: 'expenses',
-  wishlistItem: 'wishlistItems',
+  timetable: 'timetables',
+  journal: 'journalEntries',
 };
 
 export function useEntityAttachment(type: AttachableEntity) {
-  const { activeCouple } = useSession() as any;
-  const spaceId = activeCouple?.couple?.id;
+  const session = useSession() as any;
+  const spaceId = session?.space?.id ?? session?.activeCouple?.couple?.id;
 
   const query = useMemo(() => {
     if (!spaceId) return null;

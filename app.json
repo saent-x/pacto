@@ -3,24 +3,25 @@
     "name": "Pacto",
     "slug": "pacto",
     "version": "1.0.0",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "pacto",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/images/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#FAF8F2"
-    },
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.pacto.app",
+      "supportsTablet": false,
+      "bundleIdentifier": "com.stbrnstudios.pacto",
       "buildNumber": "1",
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Pacto uses your location to show local weather on your Home screen.",
         "NSMicrophoneUsageDescription": "Pacto uses the microphone to transcribe your AI assistant requests on this device.",
-        "NSUserNotificationsUsageDescription": "Pacto sends reminders and notifies you when your partner adds something to your shared space."
+        "NSUserNotificationsUsageDescription": "Pacto sends reminders and notifies you when your partner adds something to your shared space.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -33,16 +34,19 @@
         "monochromeImage": "./assets/images/adaptive-icon-monochrome.png"
       },
       "permissions": [
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION",
-        "RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA"
       ],
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": true
     },
     "web": {
       "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "output": "single",
+      "favicon": "./assets/images/icon.png",
+      "backgroundColor": "#FAF8F2",
+      "themeColor": "#FAF8F2"
     },
     "plugins": [
       "expo-router",
@@ -51,7 +55,12 @@
         {
           "backgroundColor": "#FAF8F2",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200
+          "imageWidth": 200,
+          "dark": {
+            "backgroundColor": "#0F0D0B",
+            "image": "./assets/images/splash-icon.png",
+            "imageWidth": 200
+          }
         }
       ],
       "expo-secure-store",
@@ -75,21 +84,30 @@
         "expo-notifications",
         {
           "icon": "./assets/images/icon.png",
-          "color": "#FAF8F2"
+          "color": "#FAF8F2",
+          "defaultChannel": "default"
         }
       ],
       [
         "llama.rn",
         {
-          "enableEntitlements": true,
+          "enableEntitlements": false,
           "entitlementsProfile": "production",
           "forceCxx20": true,
-          "enableOpenCL": true
+          "enableOpenCLAndHexagon": true
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "378cd223-a0f0-4361-b5ea-57889e30a0a0"
+      }
+    },
+    "owner": "stbrn-studios"
   }
 }

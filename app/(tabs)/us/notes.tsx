@@ -88,7 +88,7 @@ function NotesScreenInner() {
     if (authorId === userId) return C.accent;
     const idx = members.findIndex((m) => m.id === authorId);
     if (idx === -1) return C.accent2;
-    return [C.accent2, C.accent3, '#A89BD4', '#7BA0AF'][idx % 4];
+    return [C.accent2, C.accent3, C.lavender, C.sky][idx % 4];
   };
 
   const participantName = (authorId: string): string => {
@@ -199,6 +199,8 @@ function NotesScreenInner() {
             <PressScale
               onPress={() => router.back()}
               hitSlop={12}
+              haptic="impact"
+              pressedScale={0.96}
               style={{ padding: 4 }}
             >
               <Icon
@@ -212,6 +214,8 @@ function NotesScreenInner() {
           headerRight: () => (
             <PressScale
               onPress={() => router.push('/sheets/profile' as any)}
+              haptic="impact"
+              pressedScale={0.96}
               style={{ flexDirection: 'row' }}
             >
               {mode === 'solo' ? (
@@ -391,6 +395,7 @@ function NotesScreenInner() {
               onPress={onSend}
               disabled={!draft.trim() || sending}
               haptic="impact"
+              pressedScale={0.96}
               style={[
                 styles.sendBtn,
                 {
@@ -457,7 +462,7 @@ function ChatHero({
       <View
         style={[
           styles.heroCard,
-          { backgroundColor: 'transparent', borderColor: 'transparent' },
+          { backgroundColor: C.bgCard, borderColor: C.lineColor },
         ]}
       >
         <View style={styles.heroLeft}>
@@ -649,8 +654,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    paddingVertical: 8,
-    paddingHorizontal: 4,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderRadius: 20,
   },
   heroLeft: {
     flexShrink: 0,

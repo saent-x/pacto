@@ -1,15 +1,25 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import { Card } from '@/src/components/ui/pacto';
 import { Icon } from '@/src/components/ui/Icon';
+import { PressScale } from '@/src/components/ui/PressScale';
 import { SheetShell } from '@/src/components/ui/SheetShell';
 import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
 import { CURRENCIES, usePreferences } from '@/src/lib/preferences';
 
 export default function CurrencySheet() {
+  return (
+    <FeatureRouteGuard featureId="wishlist">
+      <CurrencySheetContent />
+    </FeatureRouteGuard>
+  );
+}
+
+function CurrencySheetContent() {
   const { C } = useTheme();
   const { currencyCode, setCurrencyCode } = usePreferences();
   const [query, setQuery] = useState('');
@@ -61,7 +71,7 @@ export default function CurrencySheet() {
           {filtered.map((c, i) => {
             const sel = c.code === currencyCode;
             return (
-              <Pressable
+              <PressScale
                 key={c.code}
                 onPress={() => onPick(c.code)}
                 style={[
@@ -100,7 +110,7 @@ export default function CurrencySheet() {
                 {sel ? (
                   <Icon name="check" size={18} color={C.accent} strokeWidth={2.4} />
                 ) : null}
-              </Pressable>
+              </PressScale>
             );
           })}
         </Card>

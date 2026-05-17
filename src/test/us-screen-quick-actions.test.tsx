@@ -64,7 +64,6 @@ vi.mock('@/src/hooks/useReminders', () => ({
 }));
 vi.mock('@/src/hooks/useLoveNotes', () => ({ useLoveNotes: () => ({ notes: [] }) }));
 vi.mock('@/src/hooks/useCheckIns', () => ({ useCheckIns: () => ({ checkIns: [] }) }));
-vi.mock('@/src/hooks/useExpenses', () => ({ useExpenses: () => ({ expenses: [] }) }));
 vi.mock('@/src/hooks/useWishlists', () => ({ useWishlists: () => ({ wishlists: [] }) }));
 vi.mock('@/src/hooks/useMilestones', () => ({ useMilestones: () => ({ milestones: [] }) }));
 vi.mock('@/src/hooks/usePlans', () => ({ usePlans: () => ({ plans: [] }) }));
@@ -116,12 +115,13 @@ function findNodesByText(root: any, text: string): any[] {
 }
 
 describe('UsScreen quick actions', () => {
-  it('renders + Task, + Reminder, + Memory buttons', async () => {
+  it('renders + Task, + Reminder, + Timetable buttons', async () => {
     const renderer = await renderScreen();
     const text = findAllText(renderer.root);
     expect(text).toContain('+ Task');
     expect(text).toContain('+ Reminder');
-    expect(text).toContain('+ Memory');
+    expect(text).toContain('+ Timetable');
+    expect(text).not.toContain('+ Expense');
     act(() => renderer.unmount());
   });
 
@@ -152,15 +152,15 @@ describe('UsScreen quick actions', () => {
     act(() => renderer.unmount());
   });
 
-  it('+ Memory pushes /sheets/memory-composer', async () => {
+  it('+ Timetable pushes /sheets/new-timetable', async () => {
     pushSpy.mockClear();
     const renderer = await renderScreen();
     const pressable = renderer.root.findAll(
       (n: any) => n.props?.onPress && Array.isArray(n.children) &&
-        n.findAll((c: any) => typeof c.children?.[0] === 'string' && c.children[0] === '+ Memory').length > 0,
+        n.findAll((c: any) => typeof c.children?.[0] === 'string' && c.children[0] === '+ Timetable').length > 0,
     )[0];
     pressable?.props?.onPress();
-    expect(pushSpy).toHaveBeenCalledWith('/sheets/memory-composer');
+    expect(pushSpy).toHaveBeenCalledWith('/sheets/new-timetable');
     act(() => renderer.unmount());
   });
 });

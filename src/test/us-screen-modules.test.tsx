@@ -58,7 +58,6 @@ vi.mock('@/src/hooks/useReminders', () => ({
 }));
 vi.mock('@/src/hooks/useLoveNotes', () => ({ useLoveNotes: () => ({ notes: [] }) }));
 vi.mock('@/src/hooks/useCheckIns', () => ({ useCheckIns: () => ({ checkIns: [] }) }));
-vi.mock('@/src/hooks/useExpenses', () => ({ useExpenses: () => ({ expenses: [] }) }));
 vi.mock('@/src/hooks/useWishlists', () => ({ useWishlists: () => ({ wishlists: [] }) }));
 vi.mock('@/src/hooks/useMilestones', () => ({ useMilestones: () => ({ milestones: [] }) }));
 vi.mock('@/src/hooks/usePlans', () => ({ usePlans: () => ({ plans: [] }) }));

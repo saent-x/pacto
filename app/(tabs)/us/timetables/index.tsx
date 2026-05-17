@@ -169,6 +169,7 @@ function TimetablesIndexInner() {
         {/* Hero — slim status row + 7-day timetable strip */}
         <View style={styles.heroWrap}>
           <StatBar
+            accent={C.accent2}
             eyebrow={heroEyebrow}
             meta={
               featured
@@ -259,6 +260,7 @@ function TimetablesIndexInner() {
               title="No timetables yet"
               body="Build a weekly timetable for workouts, meals, study blocks, or any repeating routine."
               actionLabel="New timetable"
+              accent={C.accent2}
               onAction={() => router.push('/sheets/new-timetable' as any)}
             />
           ) : (
@@ -280,7 +282,14 @@ function TimetablesIndexInner() {
                     onPress={() =>
                       router.push(`/(tabs)/us/timetables/${t.id}` as any)
                     }
-                    style={[styles.row, { backgroundColor: C.bgCard }]}
+                    accessibilityLabel={`${t.title}, ${t.itemsCount} ${t.itemsCount === 1 ? 'item' : 'items'}, ${t.share === 'solo' ? 'solo' : 'shared'}`}
+                    accessibilityHint="Open this timetable"
+                    style={[
+                      styles.row,
+                      {
+                        backgroundColor: C.bgCard,
+                      },
+                    ]}
                   >
                     <View
                       style={[styles.iconTile, { backgroundColor: C.accent2Soft }]}

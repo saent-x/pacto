@@ -29,4 +29,8 @@ export { Checkbox } from './Checkbox';
 export { IconButton } from './IconButton';
 export { ActivityHeatmap } from './ActivityHeatmap';
 export { ActivityRings } from './ActivityRings';
+export { MonthlyHeatmap } from './MonthlyHeatmap';
+export { ColorTile } from './ColorTile';
+export type { Tone } from './ColorTile';
+export { CardHalo, HALO_ENABLED } from './CardHalo';
 export { SwipeableRow } from './SwipeableRow';

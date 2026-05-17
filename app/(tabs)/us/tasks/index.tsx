@@ -4,17 +4,16 @@ import { StyleSheet, Text, View } from 'react-native';
 import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import {
   ActionEmptyState,
-  Card,
+  ColorTile,
   ScreenScaffold,
   SectionHead,
   StatBar,
+  type Tone,
 } from '@/src/components/ui/pacto';
-import { Icon } from '@/src/components/ui/Icon';
 import { useTaskLists, type ListRow } from '@/src/hooks/useTaskLists';
-import { useSession } from '@/src/hooks/useSession';
 import { Typography } from '@/src/constants/typography';
+import { alphaColor } from '@/src/lib/color';
 import { useTheme } from '@/src/lib/theme';
-import { pastels } from '@/src/lib/tokens';
 
 export default function TasksScreen() {
   return (
@@ -26,14 +25,14 @@ export default function TasksScreen() {
 
 function TasksScreenInner() {
   const { C } = useTheme();
-  const { user } = useSession();
   const { lists } = useTaskLists();
 
   const stats = useMemo(() => {
     const total = lists.reduce((acc, l) => acc + l.total, 0);
     const done = lists.reduce((acc, l) => acc + l.done, 0);
     const open = total - done;
-    return { total, done, open, listCount: lists.length };
+    const completion = total === 0 ? 0 : done / total;
+    return { total, done, open, listCount: lists.length, completion };
   }, [lists]);
 
   return (
@@ -42,14 +41,16 @@ function TasksScreenInner() {
         {lists.length > 0 ? (
           <View style={styles.heroWrap}>
             <StatBar
+              accent={C.accent2}
               eyebrow={`${stats.listCount} ${stats.listCount === 1 ? 'LIST' : 'LISTS'}  ·  TASKS`}
-              meta="STREAK 14d"
-              metaIcon="zap"
+              meta={stats.total > 0 ? `${Math.round(stats.completion * 100)}% COMPLETE` : undefined}
               primary={
                 <>
                   <Text
-                    style={[Typography.pixelHeroSm, { color: C.inkColor }]}
+                    style={[Typography.pixelHeroLg, { color: C.inkColor }]}
                     numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.72}
                   >
                     {stats.open}
                   </Text>
@@ -60,9 +61,10 @@ function TasksScreenInner() {
                 </>
               }
               microVis={
-                <DailyStrip
-                  seed={user?.id ? hashSeed(user.id + 'tasks') : 31}
+                <ListProgressStrip
+                  lists={lists}
                   fillColor={C.accent}
+                  doneColor={C.accent2}
                   trackColor={C.lineColor}
                 />
               }
@@ -79,6 +81,7 @@ function TasksScreenInner() {
               title="No lists yet"
               body="Start with one list for errands, chores, or anything that needs a clear next step."
               actionLabel="New list"
+              accent={C.accent2}
               onAction={() => router.push('/sheets/new-list' as any)}
             />
           ) : (
@@ -94,119 +97,84 @@ function TasksScreenInner() {
   );
 }
 
+const TASK_TONES_LIGHT: Record<string, Tone> = {
+  peach:    { bg: '#F0A081', ink: '#3A1F14', muted: 'rgba(58, 31, 20, 0.66)' },
+  butter:   { bg: '#E8C95E', ink: '#3A2E08', muted: 'rgba(58, 46, 8, 0.66)' },
+  mint:     { bg: '#94CFAE', ink: '#0F2C1A', muted: 'rgba(15, 44, 26, 0.66)' },
+  sky:      { bg: '#91BDD7', ink: '#0E2230', muted: 'rgba(14, 34, 48, 0.66)' },
+  lavender: { bg: '#AFA1DF', ink: '#1F1635', muted: 'rgba(31, 22, 53, 0.66)' },
+  rose:     { bg: '#D6909D', ink: '#3A1520', muted: 'rgba(58, 21, 32, 0.66)' },
+};
+
 function ListTile({ list }: { list: ListRow }) {
-  const { C } = useTheme();
-  const pct = list.total === 0 ? 0 : list.done / list.total;
-  const tilePastel = (pastels as any)[list.colorKey] ?? pastels.peach;
-  const isDone = pct === 1;
   const open = list.total - list.done;
+  const ratio = list.total === 0 ? 0 : list.done / list.total;
+  const tone = TASK_TONES_LIGHT[list.colorKey] ?? TASK_TONES_LIGHT.peach;
 
   return (
-    <Card
+    <ColorTile
+      tone={tone}
+      title={list.name}
+      icon={list.icon}
+      stat={open}
+      statLabel={`${list.done}/${list.total} DONE`}
+      dotsTotal={7}
+      dotsFilled={Math.round(ratio * 7)}
       onPress={() => router.push(`/(tabs)/us/tasks/${list.id}` as any)}
-      style={[styles.tile, { backgroundColor: C.bgCard, borderColor: C.lineColor }]}
-    >
-      <View style={styles.tileTop}>
-        <View style={[styles.tileIcon, { backgroundColor: tilePastel }]}>
-          <Icon name={list.icon} size={18} color="#2A241B" strokeWidth={2} />
-        </View>
-        <View style={styles.tileCount}>
-          <Text style={[styles.tileCountNum, { color: C.inkColor }]}>
-            {open}
-          </Text>
-          <Text style={[Typography.eyebrowSm, { color: C.ink3, fontSize: 9 }]}>
-            OPEN
-          </Text>
-        </View>
-      </View>
-      <Text
-        style={[Typography.bodyMedium, { color: C.inkColor, marginTop: 12 }]}
-        numberOfLines={2}
-      >
-        {list.name}
-      </Text>
-      <View style={styles.tileFooter}>
-        <View style={[styles.tileBar, { backgroundColor: C.bgSoft }]}>
-          <View
-            style={[
-              styles.tileBarFill,
-              {
-                width: `${Math.round(pct * 100)}%`,
-                backgroundColor: isDone ? C.accent2 : C.inkColor,
-              },
-            ]}
-          />
-        </View>
-        <Text
-          style={[
-            styles.tileCountSm,
-            { color: C.ink3 },
-          ]}
-        >
-          {list.done}/{list.total}
-        </Text>
-      </View>
-    </Card>
+      accessibilityLabel={`${list.name}, ${open} open, ${list.done} done, ${list.total} total`}
+      accessibilityHint="Open this task list"
+    />
   );
 }
 
-function DailyStrip({
-  seed,
+function ListProgressStrip({
+  lists,
   fillColor,
+  doneColor,
   trackColor,
 }: {
-  seed: number;
+  lists: ListRow[];
   fillColor: string;
+  doneColor: string;
   trackColor: string;
 }) {
-  let s = seed * 9301 + 49297;
-  const cells = Array.from({ length: 7 }, () => {
-    s = (s * 9301 + 49297) % 233280;
-    const r = s / 233280;
-    return r < 0.45 ? 0 : r < 0.7 ? 1 : r < 0.88 ? 2 : 3;
+  const cells = lists.slice(0, 8).map((list) => {
+    if (list.total === 0) return { label: list.name, ratio: 0, empty: true };
+    return { label: list.name, ratio: list.done / list.total, empty: false };
   });
-  const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-  const todayIdx = (new Date().getDay() + 6) % 7;
+
+  if (cells.length === 0) return null;
+
   return (
-    <View style={{ flexDirection: 'row', gap: 4 }}>
-      {cells.map((w, i) => {
-        const a = w === 0 ? 0 : w === 1 ? 0.32 : w === 2 ? 0.6 : 0.92;
-        const bg = w === 0 ? trackColor : applyAlpha(fillColor, a);
-        const isToday = i === todayIdx;
+    <View
+      style={styles.progressStrip}
+      accessibilityLabel={`Task list completion: ${cells
+        .map((c) => `${c.label} ${Math.round(c.ratio * 100)} percent`)
+        .join(', ')}`}
+    >
+      {cells.map((cell, i) => {
+        const bg = cell.empty
+          ? trackColor
+          : cell.ratio >= 1
+          ? doneColor
+          : alphaColor(fillColor, Math.max(0.24, cell.ratio));
         return (
-          <View key={i} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
+          <View key={`${cell.label}-${i}`} style={styles.progressCell}>
             <View
               style={{
                 width: '100%',
-                aspectRatio: 1,
+                height: 10,
                 borderRadius: 2,
                 backgroundColor: bg,
-                borderWidth: isToday ? 1.2 : 0,
-                borderColor: isToday ? '#2A241B' : 'transparent',
+                borderWidth: cell.empty ? 1 : 0,
+                borderColor: trackColor,
               }}
             />
-            <Text style={{ fontFamily: 'GeistMono_500Medium', fontSize: 9, color: '#918875' }}>
-              {labels[i]}
-            </Text>
           </View>
         );
       })}
     </View>
   );
-}
-
-function applyAlpha(hex: string, a: number): string {
-  const h = hex.replace('#', '');
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${a})`;
-}
-
-function hashSeed(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return (h % 1000) + 1;
 }
 
 const styles = StyleSheet.create({
@@ -224,56 +192,18 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
   },
-  tile: {
-    width: '48%',
-    padding: 14,
-    borderRadius: 18,
-    borderWidth: 1,
-    minHeight: 138,
-  },
-  tileTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  tileIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tileCount: {
-    alignItems: 'flex-end',
-  },
-  tileCountNum: {
-    fontFamily: Typography.pixelFont,
-    fontSize: 30,
-    lineHeight: 30,
-    letterSpacing: 0,
-  },
-  tileFooter: {
-    marginTop: 'auto',
-    paddingTop: 10,
-  },
   heroMetricLabel: {
     fontFamily: Typography.geistSemiBoldFont,
     fontSize: 18,
     lineHeight: 23,
     letterSpacing: 0,
   },
-  tileBar: {
-    height: 4,
-    borderRadius: 99,
-    overflow: 'hidden',
+  progressStrip: {
+    flexDirection: 'row',
+    gap: 4,
   },
-  tileBarFill: {
-    height: '100%',
-  },
-  tileCountSm: {
-    fontFamily: Typography.pixelFont,
-    fontSize: 12,
-    marginTop: 6,
-    letterSpacing: 0,
+  progressCell: {
+    flex: 1,
+    minWidth: 0,
   },
 });

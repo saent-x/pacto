@@ -23,17 +23,17 @@ import { useFeatureGate } from '@/src/hooks/useFeatureGate';
 import { useSession } from '@/src/hooks/useSession';
 import { useTimetable } from '@/src/hooks/useTimetables';
 import { useTheme } from '@/src/lib/theme';
-import { DAYS_LETTER } from '@/src/lib/timetables-data';
+import { pastels } from '@/src/lib/tokens';
+import { DAYS_LETTER, type Who, normalizeWho } from '@/src/lib/timetables-data';
 
-type Who = 'me' | 'sofia' | 'both';
 type Cat = 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack';
 type Repeat = 'weekly' | 'once';
 
 const CATS: { k: Cat; color: string; ink: string; icon: IconName }[] = [
-  { k: 'Breakfast', color: '#F4A68C', ink: '#3A1F14', icon: 'coffee' },
-  { k: 'Lunch', color: '#A8D8B9', ink: '#0F2C1A', icon: 'feather' },
-  { k: 'Dinner', color: '#F2D86A', ink: '#3A2E08', icon: 'coffee' },
-  { k: 'Snack', color: '#D89BA8', ink: '#3A1520', icon: 'gift' },
+  { k: 'Breakfast', color: pastels.peach, ink: pastels.peachInk, icon: 'coffee' },
+  { k: 'Lunch', color: pastels.mint, ink: pastels.mintInk, icon: 'feather' },
+  { k: 'Dinner', color: pastels.butter, ink: pastels.butterInk, icon: 'coffee' },
+  { k: 'Snack', color: pastels.rose, ink: pastels.roseInk, icon: 'gift' },
 ];
 
 function dateFromHour(startHour: number): Date {
@@ -56,8 +56,7 @@ function categoryFor(raw: string | undefined): Cat {
 }
 
 function whoFor(raw: string | undefined): Who {
-  if (raw === 'me' || raw === 'sofia' || raw === 'both') return raw;
-  return 'both';
+  return normalizeWho(raw);
 }
 
 function repeatFor(raw: string | undefined): Repeat {
@@ -118,7 +117,7 @@ function NewTimetableItemInner() {
   );
   const whoOptions: SegmentOption<Who>[] = [
     { key: 'me', label: 'Me' },
-    { key: 'sofia', label: partnerName },
+    { key: 'partner', label: partnerName },
     { key: 'both', label: 'Both' },
   ];
   const repeatOptions: SegmentOption<Repeat>[] = [
@@ -230,9 +229,9 @@ function NewTimetableItemInner() {
                   flex: 1,
                   paddingVertical: 12,
                   borderRadius: 12,
-                  backgroundColor: sel ? active.color : C.card,
+                  backgroundColor: sel ? active.color : C.bgCard,
                   borderWidth: 1,
-                  borderColor: sel ? active.color : C.line,
+                  borderColor: sel ? active.color : C.lineColor,
                   alignItems: 'center',
                 }}
               >
@@ -240,7 +239,7 @@ function NewTimetableItemInner() {
                   style={{
                     fontFamily: F.displayBold,
                     fontSize: 14,
-                    color: sel ? active.ink : C.mist,
+                    color: sel ? active.ink : C.ink2,
                   }}
                 >
                   {d}

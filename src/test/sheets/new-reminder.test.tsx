@@ -77,20 +77,20 @@ describe('new-reminder sheet', () => {
     await act(async () => { renderer = TestRenderer.create(<NewReminder />); await flush(); });
     expect(findByTestID(renderer.root, 'new-reminder-assignee-both')).toBeDefined();
     expect(findByTestID(renderer.root, 'new-reminder-assignee-me')).toBeDefined();
-    const sofiaBtn = findByTestID(renderer.root, 'new-reminder-assignee-sofia');
-    expect(sofiaBtn).toBeDefined();
-    const texts = sofiaBtn.findAll((n: any) => typeof n.children?.[0] === 'string').map((n: any) => n.children[0]);
+    const partnerBtn = findByTestID(renderer.root, 'new-reminder-assignee-partner');
+    expect(partnerBtn).toBeDefined();
+    const texts = partnerBtn.findAll((n: any) => typeof n.children?.[0] === 'string').map((n: any) => n.children[0]);
     expect(texts).toContain('Sofia');
     act(() => renderer.unmount());
   });
 
-  it('solo mode renders only the Me assignee', async () => {
+  it('solo mode hides the redundant assignee control', async () => {
     sessionState.isSolo = true;
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<NewReminder />); await flush(); });
-    expect(findByTestID(renderer.root, 'new-reminder-assignee-me')).toBeDefined();
+    expect(findByTestID(renderer.root, 'new-reminder-assignee-me')).toBeUndefined();
     expect(findByTestID(renderer.root, 'new-reminder-assignee-both')).toBeUndefined();
-    expect(findByTestID(renderer.root, 'new-reminder-assignee-sofia')).toBeUndefined();
+    expect(findByTestID(renderer.root, 'new-reminder-assignee-partner')).toBeUndefined();
     act(() => renderer.unmount());
   });
 

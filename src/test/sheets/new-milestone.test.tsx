@@ -51,6 +51,7 @@ vi.mock('@/src/hooks/useSession', () => ({ useSession: () => sessionState }));
 import NewMilestone from '@/app/sheets/new-milestone';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { Platform } from 'react-native';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -157,6 +158,20 @@ describe('new-milestone sheet', () => {
 
     expect(milestoneState.create).toHaveBeenCalledTimes(1);
     expect(milestoneState.create.mock.calls[0][0].date).toBe('2030-04-15');
+    act(() => renderer.unmount());
+  });
+
+  it('uses compact native sheet date pickers instead of the full iOS spinner', async () => {
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<NewMilestone />); await flush(); });
+    await act(async () => {
+      findByTestID(renderer.root, 'new-milestone-date').props.onPress();
+      await flush();
+    });
+
+    const picker = findByTestID(renderer.root, 'new-milestone-date-picker-control');
+    expect(picker.props.display).toBe(Platform.OS === 'ios' ? 'compact' : 'default');
+    expect(picker.props.themeVariant).toMatch(/^(light|dark)$/);
     act(() => renderer.unmount());
   });
 
