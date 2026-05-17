@@ -39,7 +39,7 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
         ref={[Function]}
         style={
           {
-            "color": "rgba(146,132,110,1.00)",
+            "color": "rgba(148,144,154,1.00)",
             "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
             "letterSpacing": "1.4px",
@@ -56,7 +56,7 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
         ref={[Function]}
         style={
           {
-            "color": "rgba(44,33,24,1.00)",
+            "color": "rgba(41,45,61,1.00)",
             "fontFamily": "BitcountPropSingle_700Bold",
             "fontSize": "42px",
             "letterSpacing": "-1.2px",
@@ -113,7 +113,7 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
     ref={[Function]}
     style={
       {
-        "color": "rgba(98,84,66,1.00)",
+        "color": "rgba(102,108,122,1.00)",
         "fontFamily": "Geist_400Regular",
         "fontSize": "11px",
         "letterSpacing": "0.4px",
@@ -165,7 +165,7 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
         ref={[Function]}
         style={
           {
-            "color": "rgba(44,33,24,1.00)",
+            "color": "rgba(41,45,61,1.00)",
             "fontFamily": "BitcountPropSingle_700Bold",
             "fontSize": "42px",
             "letterSpacing": "-1.2px",
@@ -178,7 +178,7 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
           style={
             [
               {
-                "color": "#C86F54",
+                "color": "#E06F55",
               },
               {
                 "opacity": 1,
@@ -210,7 +210,7 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
       <Path
         d="M0 4 Q 12 0, 24 4 T 48 4 T 72 4 T 96 4"
         fill="none"
-        stroke="#C86F54"
+        stroke="#E06F55"
         strokeLinecap="round"
         strokeWidth={2}
       />
@@ -246,19 +246,19 @@ exports[`ScreenHeader — both variants coexist > ui/ScreenHeader.tsx — gold a
         ref={[Function]}
         style={
           {
-            "color": "rgba(146,132,110,1.00)",
+            "color": "rgba(148,144,154,1.00)",
           }
         }
       >
         01 · HOME
       </div>
       <div
-        className="css-text-146c3p1 r-fontFamily-wx4ldx r-fontSize-1ui5ee8 r-letterSpacing-f2mvze r-lineHeight-2agvir"
+        className="css-text-146c3p1 r-fontFamily-12w8xmp r-fontSize-1ui5ee8 r-letterSpacing-f2mvze r-lineHeight-2agvir"
         dir="auto"
         ref={[Function]}
         style={
           {
-            "color": "rgba(44,33,24,1.00)",
+            "color": "rgba(41,45,61,1.00)",
           }
         }
       >
@@ -330,12 +330,12 @@ exports[`ScreenHeader — both variants coexist > ui/ScreenHeader.tsx — with b
       ref={[Function]}
     >
       <div
-        className="css-text-146c3p1 r-fontFamily-wx4ldx r-fontSize-1ui5ee8 r-letterSpacing-f2mvze r-lineHeight-2agvir"
+        className="css-text-146c3p1 r-fontFamily-12w8xmp r-fontSize-1ui5ee8 r-letterSpacing-f2mvze r-lineHeight-2agvir"
         dir="auto"
         ref={[Function]}
         style={
           {
-            "color": "rgba(44,33,24,1.00)",
+            "color": "rgba(41,45,61,1.00)",
           }
         }
       >

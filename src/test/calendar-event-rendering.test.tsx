@@ -31,6 +31,7 @@ vi.mock('expo-audio', () => ({
 vi.mock('expo-router', () => ({
   router: { push: vi.fn() },
   useRouter: () => ({ push: vi.fn() }),
+  useLocalSearchParams: () => ({}),
   Stack: { Screen: () => null },
 }));
 

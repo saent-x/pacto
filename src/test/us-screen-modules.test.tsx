@@ -9,6 +9,14 @@ vi.mock('@/src/components/ui/pacto', () => {
   const Reactx = require('react');
   return {
     Card: ({ children }: any) => Reactx.createElement('Card', null, children),
+    CardHalo: ({ children }: any) => Reactx.createElement('CardHalo', null, children),
+    ColorTile: ({ title, stat }: any) =>
+      Reactx.createElement(
+        'ColorTile',
+        null,
+        Reactx.createElement('Text', null, String(title ?? '')),
+        stat != null ? Reactx.createElement('Text', null, String(stat)) : null,
+      ),
     BucketedList: ({ buckets, rowKey, renderRow }: any) =>
       Reactx.createElement(
         'BucketedList',
@@ -63,22 +71,19 @@ vi.mock('@/src/hooks/useMilestones', () => ({ useMilestones: () => ({ milestones
 vi.mock('@/src/hooks/usePlans', () => ({ usePlans: () => ({ plans: [] }) }));
 vi.mock('@/src/hooks/useJournal', () => ({ useJournal: () => ({ entries: [] }) }));
 vi.mock('@/src/hooks/useTimetables', () => ({ useTimetables: () => ({ timetables: [] }) }));
-vi.mock('@/src/lib/theme', () => ({
-  useTheme: () => ({
-    C: {
-      inkColor: '#000',
-      bg: '#fff',
-      accent: '#f00',
-      accent2: '#0f0',
-      accent3: '#00f',
-      ink3: '#888',
-      bgCard: '#fafafa',
-      bgSoft: '#f0f0f0',
-      lineColor: '#eee',
-      accentSoft: '#fee',
-    },
-  }),
-}));
+vi.mock('@/src/lib/theme', async () => {
+  const tokens =
+    await vi.importActual<typeof import('@/src/lib/tokens')>('@/src/lib/tokens');
+  return {
+    useTheme: () => ({
+      mode: 'light' as const,
+      setMode: () => undefined,
+      C: tokens.getTokens('light'),
+      F: tokens.fonts,
+    }),
+    ThemeProvider: ({ children }: any) => children,
+  };
+});
 
 import UsScreen from '@/app/(tabs)/us/index';
 
