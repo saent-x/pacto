@@ -32,6 +32,14 @@ vi.mock('@/src/components/ui/pacto', () => {
   const Reactx = require('react');
   return {
     Card: ({ children }: any) => Reactx.createElement('Card', null, children),
+    CardHalo: ({ children }: any) => Reactx.createElement('CardHalo', null, children),
+    ColorTile: ({ title, stat }: any) =>
+      Reactx.createElement(
+        'ColorTile',
+        null,
+        Reactx.createElement('Text', null, String(title ?? '')),
+        stat != null ? Reactx.createElement('Text', null, String(stat)) : null,
+      ),
     BucketedList: ({ buckets, rowKey, renderRow }: any) =>
       Reactx.createElement(
         'BucketedList',
