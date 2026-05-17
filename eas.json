@@ -13,20 +13,30 @@
     },
     "preview": {
       "distribution": "internal",
+      "env": {
+        "EAS_USE_PRECOMPILED_MODULES": "0",
+        "EXPO_USE_PRECOMPILED_MODULES": "0"
+      },
       "ios": {
         "simulator": false
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EAS_USE_PRECOMPILED_MODULES": "0",
+        "EXPO_USE_PRECOMPILED_MODULES": "0"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      }
     }
   },
   "submit": {
     "production": {
       "ios": {
-        "appleId": "REPLACE_WITH_YOUR_APPLE_ID_EMAIL",
-        "ascAppId": "REPLACE_WITH_NUMERIC_ASC_APP_ID",
-        "appleTeamId": "REPLACE_WITH_10_CHAR_TEAM_ID"
+        "ascAppId": "6770158733",
+        "appleTeamId": "FY8SWUHG89"
       }
     }
   }
