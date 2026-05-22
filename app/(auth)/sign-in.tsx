@@ -17,6 +17,7 @@ import { useTheme } from '@/src/lib/theme';
 import { db } from '@/src/lib/db';
 import { signInWithOAuth } from '@/src/lib/oauth';
 import { isAppleSignInAvailable, signInWithApple } from '@/src/lib/auth-apple';
+import { signInWithGoogle } from '@/src/lib/auth-google';
 
 const CODE_LENGTH = 6;
 
@@ -85,6 +86,18 @@ export default function SignIn() {
       await signInWithOAuth(provider);
     } catch (e: any) {
       setError(e?.message ?? 'Sign-in cancelled');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function doGoogleNative() {
+    setBusy(true);
+    setError(null);
+    try {
+      await signInWithGoogle();
+    } catch (e: any) {
+      setError(e?.message ?? 'Google sign-in failed');
     } finally {
       setBusy(false);
     }
@@ -293,7 +306,7 @@ export default function SignIn() {
               </PressScale>
             )}
             <PressScale
-              onPress={() => doOAuth('google')}
+              onPress={doGoogleNative}
               disabled={busy}
               style={[
                 styles.oauth,

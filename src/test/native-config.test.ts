@@ -1,4 +1,6 @@
 import appConfig from '../../app.json';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 
 describe('native app config', () => {
   const expo = appConfig.expo;
@@ -60,5 +62,16 @@ describe('native app config', () => {
       color: '#FAF8F2',
       defaultChannel: 'default',
     });
+  });
+
+  it('derives native Google Sign-In config from build-time env vars', () => {
+    const dynamicAppConfig = readFileSync(path.join(process.cwd(), 'app.config.js'), 'utf8');
+    const envExample = readFileSync(path.join(process.cwd(), '.env.example'), 'utf8');
+
+    expect(dynamicAppConfig).toContain('@react-native-google-signin/google-signin');
+    expect(dynamicAppConfig).toContain('EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID');
+    expect(dynamicAppConfig).toContain('1054272612711-amsaaam2bqkqbpn3d65aknr47m90l7q3');
+    expect(envExample).toContain('EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=');
+    expect(envExample).toContain('EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=');
   });
 });
