@@ -74,4 +74,12 @@ describe('native app config', () => {
     expect(envExample).toContain('EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=');
     expect(envExample).toContain('EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=');
   });
+
+  it('pins the iOS deployment target required by Expo native modules', () => {
+    const dynamicAppConfig = readFileSync(path.join(process.cwd(), 'app.config.js'), 'utf8');
+
+    expect(dynamicAppConfig).toContain('expo-build-properties');
+    expect(dynamicAppConfig).toContain("const IOS_DEPLOYMENT_TARGET = '16.4'");
+    expect(dynamicAppConfig).toContain('deploymentTarget: IOS_DEPLOYMENT_TARGET');
+  });
 });
