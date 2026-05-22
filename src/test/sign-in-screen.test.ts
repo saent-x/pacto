@@ -6,6 +6,10 @@ const signInSource = readFileSync(
   join(process.cwd(), 'app/(auth)/sign-in.tsx'),
   'utf8',
 );
+const googleAuthSource = readFileSync(
+  join(process.cwd(), 'src/lib/auth-google.ts'),
+  'utf8',
+);
 
 describe('sign-in production surface', () => {
   it('keeps production auth actions and excludes dev prefill UI', () => {
@@ -25,5 +29,13 @@ describe('sign-in production surface', () => {
     expect(signInSource).toContain("width: '100%'");
     expect(signInSource).toContain("textAlign: 'center'");
     expect(signInSource).toContain('includeFontPadding: false');
+  });
+
+  it('uses native Google sign-in clients on iOS and Android', () => {
+    expect(signInSource).toContain('signInWithGoogle');
+    expect(googleAuthSource).toContain("import('@react-native-google-signin/google-signin')");
+    expect(googleAuthSource).toContain('google-ios');
+    expect(googleAuthSource).toContain('google-android');
+    expect(googleAuthSource).toContain('db.auth.signInWithIdToken');
   });
 });
