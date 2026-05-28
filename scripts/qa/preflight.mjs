@@ -135,7 +135,7 @@ function getMockApiHealthPayload() {
   return payload;
 }
 
-function normalizeApiHealth(payload: any) {
+function normalizeApiHealth(payload) {
   const routes = payload?.routes;
   return {
     ok: payload?.ok === true,
@@ -150,7 +150,7 @@ function normalizeApiHealth(payload: any) {
   };
 }
 
-function parseJson(raw: string) {
+function parseJson(raw) {
   try {
     return JSON.parse(raw);
   } catch {
