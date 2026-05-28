@@ -201,6 +201,7 @@ vi.mock('react-native-reanimated', () => {
   const chainable: any = {
     duration: () => chainable,
     delay: () => chainable,
+    easing: () => chainable,
     springify: () => chainable,
     damping: () => chainable,
     stiffness: () => chainable,
@@ -214,6 +215,7 @@ vi.mock('react-native-reanimated', () => {
     createAnimatedComponent: (C: any) => C,
     FadeIn: chainable,
     FadeInDown: chainable,
+    FadeInUp: chainable,
     LinearTransition: chainable,
     ZoomIn: chainable,
     Easing: { inOut: () => 0, out: (fn: any) => fn ?? 0, cubic: (v: any) => v, bezier: () => 0, ease: 0 },
