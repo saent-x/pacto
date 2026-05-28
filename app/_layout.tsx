@@ -1,47 +1,25 @@
 import {
-  BricolageGrotesque_700Bold,
-  BricolageGrotesque_800ExtraBold,
-} from '@expo-google-fonts/bricolage-grotesque';
-import {
-  SpaceGrotesk_500Medium,
-  SpaceGrotesk_700Bold,
-} from '@expo-google-fonts/space-grotesk';
-import {
-  Geist_300Light,
   Geist_400Regular,
   Geist_500Medium,
   Geist_600SemiBold,
   Geist_700Bold,
 } from '@expo-google-fonts/geist';
-import {
-  GeistMono_400Regular,
-  GeistMono_500Medium,
-} from '@expo-google-fonts/geist-mono';
-import {
-  PixelifySans_400Regular,
-  PixelifySans_500Medium,
-  PixelifySans_700Bold,
-} from '@expo-google-fonts/pixelify-sans';
-import {
-  Silkscreen_400Regular,
-  Silkscreen_700Bold,
-} from '@expo-google-fonts/silkscreen';
+import { GeistMono_500Medium } from '@expo-google-fonts/geist-mono';
 import {
   BitcountPropSingle_400Regular,
   BitcountPropSingle_500Medium,
   BitcountPropSingle_700Bold,
 } from '@expo-google-fonts/bitcount-prop-single';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
+import { Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import * as WebBrowser from 'expo-web-browser';
+import { HeaderLeft } from '@/src/components/ui/HeaderLeft';
 import { HeroPactoBadge } from '@/src/components/ui/pacto';
 import { ThemeProvider, useTheme } from '@/src/lib/theme';
 import { SessionProvider } from '@/src/lib/session';
@@ -53,46 +31,22 @@ import { SessionAiAssistantProvider } from '@/src/lib/ai/sessionProvider';
 
 WebBrowser.maybeCompleteAuthSession();
 
-SplashScreen.preventAutoHideAsync().catch(() => undefined);
+// 'fitToContents' makes the native iOS sheet size to its content.
+// Falls back gracefully on Android via expo-router.
+const SHEET_DETENTS = 'fitToContents' as const;
+const SHEET_INITIAL_DETENT_INDEX = 0;
 
 export default function RootLayout() {
   const [loaded] = useFonts({
-    BricolageGrotesque_700Bold,
-    BricolageGrotesque_800ExtraBold,
-    SpaceGrotesk_500Medium,
-    SpaceGrotesk_700Bold,
-    Geist_300Light,
     Geist_400Regular,
     Geist_500Medium,
     Geist_600SemiBold,
     Geist_700Bold,
-    GeistMono_400Regular,
     GeistMono_500Medium,
-    PixelifySans_400Regular,
-    PixelifySans_500Medium,
-    PixelifySans_700Bold,
-    Silkscreen_400Regular,
-    Silkscreen_700Bold,
     BitcountPropSingle_400Regular,
     BitcountPropSingle_500Medium,
     BitcountPropSingle_700Bold,
-    'GeistPixel-Square': require('../assets/fonts/GeistPixel-Square.ttf'),
-    'GeistPixel-Grid': require('../assets/fonts/GeistPixel-Grid.ttf'),
-    'GeistPixel-Line': require('../assets/fonts/GeistPixel-Line.ttf'),
-    'GeistPixel-Circle': require('../assets/fonts/GeistPixel-Circle.ttf'),
-    'GeistPixel-Triangle': require('../assets/fonts/GeistPixel-Triangle.ttf'),
   });
-
-  // Hold the native splash until fonts have loaded — otherwise the splash
-  // hides almost immediately and the brand mark flashes by. With a minimum
-  // visible window the user actually sees pacto branding on cold start.
-  useEffect(() => {
-    if (!loaded) return;
-    const t = setTimeout(() => {
-      SplashScreen.hideAsync().catch(() => undefined);
-    }, 350);
-    return () => clearTimeout(t);
-  }, [loaded]);
 
   // Hold the entire tree until fonts are ready. Without this, components
   // render once with system fallback fonts and a second time after
@@ -127,27 +81,49 @@ export default function RootLayout() {
 
 function FloatingPactoLauncher() {
   const insets = useSafeAreaInsets();
+  const segments = useSegments();
+
+  if (!shouldShowFloatingPactoLauncher(segments)) return null;
 
   return (
     <View
-      pointerEvents="box-none"
       style={{
         position: 'absolute',
         right: 18,
-        bottom: insets.bottom + 84,
+        bottom: insets.bottom + 72,
         zIndex: 50,
+        pointerEvents: 'box-none',
       }}
     >
       <HeroPactoBadge
-        size={58}
-        markSize={54}
+        size={42}
+        markSize={38}
       />
     </View>
   );
 }
 
+export function shouldShowFloatingPactoLauncher(segments: readonly string[]) {
+  if (segments.length === 0) return false;
+  if (segments[0] === '(auth)') return false;
+  if (segments[0] === 'sheets') return false;
+  if (segments[0] === 'notifications') return false;
+  return !segments.some((segment) => segment.startsWith('onboarding'));
+}
+
 function ThemedRoot() {
   const { C, mode } = useTheme();
+  const sheetRouteOptions = {
+    presentation: 'formSheet' as const,
+    headerShown: false,
+    sheetGrabberVisible: true,
+    sheetCornerRadius: 28,
+    sheetAllowedDetents: SHEET_DETENTS,
+    sheetInitialDetentIndex: SHEET_INITIAL_DETENT_INDEX,
+    sheetExpandsWhenScrolledToEdge: true,
+    contentStyle: { backgroundColor: C.bg },
+  };
+
   return (
     <>
       <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
@@ -169,6 +145,7 @@ function ThemedRoot() {
             headerTintColor: C.inkColor,
             headerBackTitle: '',
             headerBackButtonDisplayMode: 'minimal',
+            headerLeft: () => <HeaderLeft mode="back" />,
             title: '',
             headerTitleAlign: 'center',
             contentStyle: { backgroundColor: C.bg },
@@ -176,66 +153,31 @@ function ThemedRoot() {
         />
         <Stack.Screen
           name="sheets/new-reminder"
-          options={{
-            presentation: 'formSheet',
-            headerShown: false,
-            sheetGrabberVisible: true,
-            sheetCornerRadius: 28,
-            sheetAllowedDetents: 'fitToContents',
-            contentStyle: { backgroundColor: C.coal },
-          }}
-        />
-        <Stack.Screen
-          name="sheets/new-entry"
-          options={{
-            presentation: 'formSheet',
-            headerShown: false,
-            sheetGrabberVisible: true,
-            sheetCornerRadius: 28,
-            sheetAllowedDetents: 'fitToContents',
-            contentStyle: { backgroundColor: C.coal },
-          }}
+          options={sheetRouteOptions}
         />
         <Stack.Screen
           name="sheets/new-list"
-          options={{
-            presentation: 'formSheet',
-            headerShown: false,
-            sheetGrabberVisible: true,
-            sheetCornerRadius: 28,
-            sheetAllowedDetents: 'fitToContents',
-            contentStyle: { backgroundColor: C.coal },
-          }}
+          options={sheetRouteOptions}
         />
         {[
-          'sheets/new-note',
           'sheets/new-checkin',
-          'sheets/new-wish',
-          'sheets/new-milestone',
           'sheets/new-plan',
           'sheets/new-task',
           'sheets/profile',
           'sheets/rings-history',
           'sheets/new-timetable',
           'sheets/new-timetable-item',
-          'sheets/currency',
-          'sheets/journal-entry',
           'sheets/memory-composer',
           'sheets/memory-attach-entity',
           'sheets/upgrade',
           'sheets/account',
+          'sheets/journal-entry',
+          'sheets/new-entry',
         ].map((name) => (
           <Stack.Screen
             key={name}
             name={name}
-            options={{
-              presentation: 'formSheet',
-              headerShown: false,
-              sheetGrabberVisible: true,
-              sheetCornerRadius: 28,
-              sheetAllowedDetents: 'fitToContents',
-              contentStyle: { backgroundColor: C.coal },
-            }}
+            options={sheetRouteOptions}
           />
         ))}
       </Stack>

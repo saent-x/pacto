@@ -7,13 +7,20 @@ function startOfDay(d: Date): number {
   return x.getTime();
 }
 
+function validDate(value: string | undefined): Date | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
 function pad(n: number): string {
   return String(n).padStart(2, '0');
 }
 
 export function bucketOfDue(dueAt: string, nowIso?: string): string {
-  const now = nowIso ? new Date(nowIso) : new Date();
-  const due = new Date(dueAt);
+  const now = validDate(nowIso) ?? new Date();
+  const due = validDate(dueAt);
+  if (!due) return 'Later';
   const today = startOfDay(now);
   const dueDay = startOfDay(due);
   const diff = Math.floor((dueDay - today) / 86400000);
@@ -28,7 +35,7 @@ export function bucketOfDue(dueAt: string, nowIso?: string): string {
 const FIXED_ORDER = ['Overdue', 'Today', 'Tomorrow', 'This week'];
 
 export function orderReminderBuckets(labels: string[], nowIso?: string): string[] {
-  const now = nowIso ? new Date(nowIso) : new Date();
+  const now = validDate(nowIso) ?? new Date();
   const monthsFromNow = (abbr: string) => {
     const idx = MONTH_ABBR.indexOf(abbr);
     if (idx === -1) return Infinity;
@@ -45,8 +52,9 @@ export function orderReminderBuckets(labels: string[], nowIso?: string): string[
 }
 
 export function formatWhenChip(dueAt: string, nowIso?: string): string {
-  const due = new Date(dueAt);
-  const now = nowIso ? new Date(nowIso) : new Date();
+  const due = validDate(dueAt);
+  if (!due) return 'No date';
+  const now = validDate(nowIso) ?? new Date();
   const diffDays = Math.floor((startOfDay(due) - startOfDay(now)) / 86400000);
   const hhmm = `${pad(due.getHours())}:${pad(due.getMinutes())}`;
   if (diffDays < 0) return 'Yesterday';
@@ -58,6 +66,7 @@ export function formatWhenChip(dueAt: string, nowIso?: string): string {
 
 export function isOverdue(dueAt: string, isCompleted: boolean, nowIso?: string): boolean {
   if (isCompleted) return false;
-  const now = nowIso ? new Date(nowIso) : new Date();
-  return new Date(dueAt).getTime() < now.getTime();
+  const now = validDate(nowIso) ?? new Date();
+  const due = validDate(dueAt);
+  return due ? due.getTime() < now.getTime() : false;
 }

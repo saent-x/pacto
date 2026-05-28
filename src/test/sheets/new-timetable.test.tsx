@@ -1,10 +1,14 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const paramsState = vi.hoisted(() => ({
+  current: {} as Record<string, string | undefined>,
+}));
+
 vi.mock('expo-router', () => ({
   router: { back: vi.fn(), push: vi.fn() },
   Stack: { Screen: () => null },
-  useLocalSearchParams: () => ({}),
+  useLocalSearchParams: () => paramsState.current,
 }));
 
 vi.mock('expo-haptics', () => ({
@@ -28,6 +32,9 @@ vi.mock('react-native', async () => {
 
 const ttState = vi.hoisted(() => ({
   create: vi.fn(async () => undefined),
+  update: vi.fn(async () => undefined),
+  timetables: [] as any[],
+  isLoading: false,
 }));
 
 const sessionState = vi.hoisted(() => ({
@@ -39,7 +46,12 @@ const sessionState = vi.hoisted(() => ({
 }));
 
 vi.mock('@/src/hooks/useTimetables', () => ({
-  useTimetables: () => ({ create: ttState.create }),
+  useTimetables: () => ({
+    create: ttState.create,
+    update: ttState.update,
+    timetables: ttState.timetables,
+    isLoading: ttState.isLoading,
+  }),
 }));
 vi.mock('@/src/hooks/useSession', () => ({ useSession: () => sessionState }));
 
@@ -54,16 +66,29 @@ const findByTestID = (root: any, id: string) =>
   root.findAll((n: any) => n.props?.testID === id)[0];
 const findSaveBtn = (root: any, opts: { enabled?: boolean } = {}) =>
   root.findAll((n: any) => {
-    if (n.props?.icon !== 'plus') return false;
+    if (!['plus', 'check'].includes(n.props?.icon)) return false;
     if (typeof n.props?.onPress !== 'function') return false;
     if (opts.enabled === true && n.props?.disabled) return false;
     if (opts.enabled === false && !n.props?.disabled) return false;
     return true;
   })[0];
+function nodeText(node: any): string {
+  return node.children
+    .map((child: any) => {
+      if (typeof child === 'string') return child;
+      if (child && typeof child === 'object') return nodeText(child);
+      return '';
+    })
+    .join('');
+}
 
 describe('new-timetable sheet', () => {
   beforeEach(() => {
     ttState.create.mockClear();
+    ttState.update.mockClear();
+    ttState.timetables = [];
+    ttState.isLoading = false;
+    paramsState.current = {};
     (router.back as any).mockClear();
     (Haptics.notificationAsync as any).mockClear();
     alertSpy.mockClear();
@@ -89,7 +114,7 @@ describe('new-timetable sheet', () => {
     act(() => renderer.unmount());
   });
 
-  it('renders 6 template tiles + 3 share options', async () => {
+  it('renders 6 template choices + 3 share options', async () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<NewTimetable />); await flush(); });
     for (const k of ['meals', 'workout', 'study', 'routine', 'sleep', 'custom']) {
@@ -98,6 +123,10 @@ describe('new-timetable sheet', () => {
     for (const s of ['solo', 'partner', 'shared']) {
       expect(findByTestID(renderer.root, `new-timetable-share-${s}`)).toBeDefined();
     }
+    const text = nodeText(renderer.root);
+    expect(text).toContain('Breakfast, lunch, dinner, and snack blocks.');
+    expect(text).toContain('Training sessions, recovery windows, and movement days.');
+    expect(text).toContain('A blank timetable for anything else.');
     act(() => renderer.unmount());
   });
 
@@ -115,6 +144,38 @@ describe('new-timetable sheet', () => {
       await flush();
     });
     expect(findSaveBtn(renderer.root, { enabled: true })).toBeDefined();
+    act(() => renderer.unmount());
+  });
+
+  it('keeps save disabled when the timetable being edited cannot be resolved', async () => {
+    paramsState.current = { id: 'not-a-uuid' };
+    ttState.timetables = [];
+
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<NewTimetable />); await flush(); });
+
+    const text = JSON.stringify(renderer.toJSON());
+    expect(text).toContain('Timetable missing');
+    expect(text).toContain('could not be found');
+    expect(findByTestID(renderer.root, 'new-timetable-title-input')).toBeUndefined();
+    expect(findSaveBtn(renderer.root, { enabled: true })).toBeUndefined();
+    act(() => renderer.unmount());
+  });
+
+  it('shows a loading state for a direct edit route while the timetable is resolving', async () => {
+    paramsState.current = { id: 'tt-1' };
+    ttState.timetables = [];
+    ttState.isLoading = true;
+
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<NewTimetable />); await flush(); });
+
+    const text = JSON.stringify(renderer.toJSON());
+    expect(text).toContain('Loading timetable');
+    expect(text).toContain('Loading this timetable');
+    expect(text).not.toContain('Timetable missing');
+    expect(findByTestID(renderer.root, 'new-timetable-title-input')).toBeUndefined();
+    expect(findSaveBtn(renderer.root, { enabled: true })).toBeUndefined();
     act(() => renderer.unmount());
   });
 
@@ -139,6 +200,37 @@ describe('new-timetable sheet', () => {
     expect(call.template).toBe('workout');
     expect(call.share).toBe('solo');
     expect(Haptics.notificationAsync).toHaveBeenCalledWith('success');
+    expect(router.back).toHaveBeenCalledTimes(1);
+    act(() => renderer.unmount());
+  });
+
+  it('ignores duplicate save taps while timetable creation is pending', async () => {
+    let resolveCreate: () => void = () => undefined;
+    const createPromise = new Promise<void>((resolve) => {
+      resolveCreate = resolve;
+    });
+    ttState.create.mockImplementation(() => createPromise);
+
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<NewTimetable />); await flush(); });
+    await act(async () => {
+      findByTestID(renderer.root, 'new-timetable-title-input').props.onChangeText('Dinner plan');
+      await flush();
+    });
+    await act(async () => {
+      const saveBtn = findSaveBtn(renderer.root, { enabled: true });
+      saveBtn.props.onPress();
+      saveBtn.props.onPress();
+      await flush();
+    });
+
+    expect(ttState.create).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveCreate();
+      await flush();
+    });
+
     expect(router.back).toHaveBeenCalledTimes(1);
     act(() => renderer.unmount());
   });

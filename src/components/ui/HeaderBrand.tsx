@@ -2,6 +2,7 @@ import { View } from 'react-native';
 import { useTheme } from '@/src/lib/theme';
 import { Display, Overline } from './atoms';
 import { PulsingDot } from './pacto/PulsingDot';
+import { shouldAppendAccentDot } from './titlePunctuation';
 
 export function HeaderBrand({
   eyebrow,
@@ -23,7 +24,7 @@ export function HeaderBrand({
       )}
       <Display size={size} style={{ textAlign: 'center', lineHeight: size * 1.15, paddingBottom: 2 }}>
         {title}
-        <PulsingDot color={acc} />
+        {shouldAppendAccentDot(title) ? <PulsingDot color={acc} /> : null}
       </Display>
     </View>
   );

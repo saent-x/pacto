@@ -93,14 +93,14 @@ const styles = StyleSheet.create({
     fontFamily: Typography.displayFont,
     fontSize: 56,
     lineHeight: 56,
-    letterSpacing: -2,
+    letterSpacing: 0,
     fontWeight: '800',
   },
   unit: {
     fontFamily: Typography.displayFont,
     fontSize: 20,
     lineHeight: 24,
-    letterSpacing: -0.5,
+    letterSpacing: 0,
     fontWeight: '800',
   },
   subtitle: {

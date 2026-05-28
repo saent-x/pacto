@@ -55,7 +55,7 @@ export function Card({
           StyleSheet.absoluteFill,
           {
             backgroundColor:
-              mode === 'dark' ? '#282E42D9' : '#FFFDF8D9',
+              mode === 'dark' ? '#22293DD9' : '#FFFDF8D9',
             pointerEvents: 'none',
           },
         ]}

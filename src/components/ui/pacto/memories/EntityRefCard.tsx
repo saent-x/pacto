@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { format, parseISO, isValid, isToday, isYesterday } from 'date-fns';
 import { Icon, IconName } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
@@ -10,10 +10,12 @@ import { useTheme } from '@/src/lib/theme';
 import { alphaColor } from '@/src/lib/color';
 import { getCheckInStateMeta } from '@/src/constants/checkInStates';
 import { useEntityRef, type EntityRefKind } from '@/src/hooks/memories/useEntityRef';
+import { normalizePriority } from '@/src/lib/priority';
 
 type Props = {
   type: EntityRefKind;
   refId: string;
+  spaceId?: string | null;
   /** When all 3 are provided, skips the live entity fetch. */
   title?: string;
   meta?: string;
@@ -22,34 +24,39 @@ type Props = {
 
 const ROUTES: Record<EntityRefKind, (id: string, entity?: any) => string> = {
   task: (id, entity) => {
-    const listId = entity?.list?.[0]?.id ?? entity?.list_id ?? null;
+    const listId = firstRel(entity?.list)?.id ?? entity?.list_id ?? null;
     return listId ? `/(tabs)/us/tasks/${listId}?taskId=${id}` : '/(tabs)/us/tasks';
   },
   reminder: (id) => `/(tabs)/us/reminders?reminderId=${id}`,
   plan: () => '/(tabs)/us/plans',
-  milestone: () => '/(tabs)/us/milestones',
   checkIn: () => '/(tabs)/us/checkins',
-  wishlistItem: () => '/(tabs)/us/wishlists',
   timetable: (id) => `/(tabs)/us/timetables/${id}`,
   journal: () => '/(tabs)/us/journal',
 };
+
+export function entityRefRoute(type: EntityRefKind, id: string, entity?: any): string {
+  return ROUTES[type](id, entity);
+}
+
+function firstRel(value: any): any | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
 
 const FALLBACK_LABELS: Record<EntityRefKind, string> = {
   task: 'Task',
   reminder: 'Reminder',
   plan: 'Target',
-  milestone: 'Milestone',
   checkIn: 'Check-in',
-  wishlistItem: 'Wishlist item',
   timetable: 'Timetable',
   journal: 'Journal entry',
 };
 
-function priorityLevel(p: number | undefined | null): 'none' | 'low' | 'med' | 'high' {
-  if (p == null) return 'none';
-  if (p >= 3) return 'high';
-  if (p === 2) return 'med';
-  if (p === 1) return 'low';
+function priorityLevel(p: unknown): 'none' | 'low' | 'med' | 'high' {
+  const priority = normalizePriority(p);
+  if (priority >= 3) return 'high';
+  if (priority === 2) return 'med';
+  if (priority === 1) return 'low';
   return 'none';
 }
 
@@ -63,17 +70,23 @@ function safeDateFormat(value: string | undefined | null, fmt: string): string |
   }
 }
 
+function safeNumericDate(value: unknown): Date | null {
+  if (typeof value !== 'number' || value <= 0 || !Number.isFinite(value)) return null;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
 /**
  * Embed reference to a tracked entity (task / reminder / plan / etc).
  * Each type renders with the same row structure as its source screen so
  * embeds read consistently with the rest of the app.
  */
-export function EntityRefCard({ type, refId, title, meta, priority }: Props) {
+export function EntityRefCard({ type, refId, spaceId, title, meta, priority }: Props) {
   const { C } = useTheme();
   const skipFetch = title !== undefined && meta !== undefined && priority !== undefined;
-  const { entity } = useEntityRef(skipFetch ? null : type, skipFetch ? null : refId);
+  const { entity } = useEntityRef(skipFetch ? null : type, skipFetch ? null : refId, spaceId);
 
-  const onOpen = () => router.push(ROUTES[type](refId, entity) as any);
+  const onOpen = () => router.push(entityRefRoute(type, refId, entity) as any);
 
   return (
     <PressScale
@@ -101,12 +114,8 @@ function renderRow(
       return <ReminderRow e={e} C={C} />;
     case 'plan':
       return <PlanRow e={e} C={C} />;
-    case 'milestone':
-      return <MilestoneRow e={e} C={C} />;
     case 'checkIn':
       return <CheckInRow e={e} C={C} />;
-    case 'wishlistItem':
-      return <WishlistRow e={e} C={C} />;
     case 'timetable':
       return <TimetableRow e={e} C={C} />;
     case 'journal':
@@ -120,7 +129,7 @@ function TaskRow({ e, C }: { e: any; C: any }) {
   const dueLabel = safeDateFormat(e.dueDate ?? e.due_date, 'MMM d');
   return (
     <>
-      <View pointerEvents="none">
+      <View style={styles.nonInteractive}>
         <Checkbox checked={done} onChange={() => undefined} />
       </View>
       <View style={styles.body}>
@@ -158,7 +167,7 @@ function ReminderRow({ e, C }: { e: any; C: any }) {
   const recurrence = e.recurrence;
   return (
     <>
-      <View pointerEvents="none">
+      <View style={styles.nonInteractive}>
         <Checkbox checked={done} onChange={() => undefined} />
       </View>
       <View style={styles.body}>
@@ -251,37 +260,16 @@ function PlanRow({ e, C }: { e: any; C: any }) {
   );
 }
 
-// ─── Milestone ─────────────────────────────────────────────────────────────
-function MilestoneRow({ e, C }: { e: any; C: any }) {
-  const dateLabel = safeDateFormat(e.date, 'MMM d, yyyy');
-  return (
-    <>
-      <View style={[styles.iconTile, { backgroundColor: alphaColor(C.accent3 ?? C.accent, 0.18) }]}>
-        <Icon name={(e.icon as IconName) ?? 'flag'} size={16} color={C.accent3 ?? C.accent} strokeWidth={2.2} />
-      </View>
-      <View style={styles.body}>
-        <Text style={[Typography.bodyMedium, { color: C.inkColor }]} numberOfLines={1}>
-          {e.title ?? FALLBACK_LABELS.milestone}
-        </Text>
-        {dateLabel ? (
-          <Text style={[Typography.mono, { color: C.ink3, fontSize: 11, marginTop: 2 }]}>
-            {dateLabel}
-          </Text>
-        ) : null}
-      </View>
-    </>
-  );
-}
-
 // ─── Check-in ──────────────────────────────────────────────────────────────
 function CheckInRow({ e, C }: { e: any; C: any }) {
   const mood = getCheckInStateMeta(e.mood);
   const ts = e.createdAt ?? e.created_at;
-  const timeLabel = typeof ts === 'number' && ts > 0 ? format(new Date(ts), 'EEE · h:mm a') : null;
+  const date = safeNumericDate(ts);
+  const timeLabel = date ? format(date, 'EEE · h:mm a') : null;
   return (
     <>
       <View style={[styles.moodTile, { backgroundColor: mood.color }]}>
-        <Image source={mood.image} style={styles.moodImage} resizeMode="contain" />
+        <Icon name={mood.icon} size={18} color={C.inkColor} />
       </View>
       <View style={styles.body}>
         <Text
@@ -313,42 +301,10 @@ function CheckInRow({ e, C }: { e: any; C: any }) {
   );
 }
 
-// ─── Wishlist item ─────────────────────────────────────────────────────────
-function WishlistRow({ e, C }: { e: any; C: any }) {
-  const price =
-    typeof e.price === 'number'
-      ? `${e.currency ?? '$'}${e.price}`
-      : null;
-  return (
-    <>
-      <View style={[styles.iconTile, { backgroundColor: alphaColor(C.peach, 0.22) }]}>
-        <Icon name="gift" size={16} color={C.peachInk} strokeWidth={2.2} />
-      </View>
-      <View style={styles.body}>
-        <Text style={[Typography.bodyMedium, { color: C.inkColor }]} numberOfLines={2}>
-          {e.title ?? FALLBACK_LABELS.wishlistItem}
-        </Text>
-        {price ? (
-          <Text style={[Typography.mono, { color: C.ink3, fontSize: 11, marginTop: 2 }]}>
-            {price}
-          </Text>
-        ) : null}
-      </View>
-      {e.isPurchased ? (
-        <View style={[styles.donePill, { backgroundColor: alphaColor(C.accent2, 0.18) }]}>
-          <Text style={[Typography.eyebrowSm, { color: C.accent2, fontSize: 9 }]}>BOUGHT</Text>
-        </View>
-      ) : null}
-    </>
-  );
-}
-
 // ─── Timetable ─────────────────────────────────────────────────────────────
 function TimetableRow({ e, C }: { e: any; C: any }) {
-  const updatedLabel =
-    typeof e.updatedAt === 'number' && e.updatedAt > 0
-      ? format(new Date(e.updatedAt), 'MMM d')
-      : null;
+  const updatedDate = safeNumericDate(e.updatedAt);
+  const updatedLabel = updatedDate ? format(updatedDate, 'MMM d') : null;
   return (
     <>
       <View style={[styles.iconTile, { backgroundColor: C.accent2Soft }]}>
@@ -397,8 +353,8 @@ function JournalRow({ e, C }: { e: any; C: any }) {
     '(empty)';
   const ts = e.createdAt ?? e.created_at;
   let dateLabel: string | null = null;
-  if (typeof ts === 'number' && ts > 0) {
-    const d = new Date(ts);
+  const d = safeNumericDate(ts);
+  if (d) {
     dateLabel = isToday(d)
       ? format(d, 'h:mm a')
       : isYesterday(d)
@@ -443,6 +399,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   body: { flex: 1, minWidth: 0 },
+  nonInteractive: {
+    pointerEvents: 'none',
+  },
   headRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -480,10 +439,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-  },
-  moodImage: {
-    width: 32,
-    height: 32,
   },
   authorDot: {
     width: 10,

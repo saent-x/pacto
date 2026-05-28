@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { PressScale } from '@/src/components/ui/PressScale';
 import { Typography } from '@/src/constants/typography';
@@ -20,8 +21,9 @@ interface Props {
 
 export function MemoryPoll({ question, options, currentUserId }: Props) {
   const { C } = useTheme();
-  const { cast, revoke } = usePollVote();
-  const totalVotes = options.reduce((sum, o) => sum + (o.voteCount ?? o.votes?.length ?? 0), 0);
+  const { cast, revoke, switchVote } = usePollVote();
+  const votePendingRef = useRef(false);
+  const totalVotes = options.reduce((sum, o) => sum + pollOptionVoteCount(o), 0);
   const myVote = options
     .flatMap((o) => (o.votes ?? []).map((v) => ({ optionId: o.id, voteId: v.id, userId: v.user?.id })))
     .find((v) => v.userId === currentUserId);
@@ -30,13 +32,29 @@ export function MemoryPoll({ question, options, currentUserId }: Props) {
     <View style={styles.wrap}>
       {question ? <Text style={[Typography.body, { color: C.inkColor, marginBottom: 8, fontWeight: '600' }]}>{question}</Text> : null}
       {options.map((o) => {
-        const votes = o.voteCount ?? o.votes?.length ?? 0;
+        const votes = pollOptionVoteCount(o);
         const pct = totalVotes === 0 ? 0 : Math.round((votes / totalVotes) * 100);
         const mine = myVote?.optionId === o.id;
         return (
           <PressScale
             key={o.id}
-            onPress={() => (mine && myVote ? revoke(myVote.voteId!) : cast(o.id))}
+            onPress={async () => {
+              if (votePendingRef.current) return;
+              votePendingRef.current = true;
+              try {
+                if (mine && myVote) {
+                  await revoke(myVote.voteId);
+                  return;
+                }
+                if (myVote) {
+                  await switchVote(myVote.voteId, o.id);
+                  return;
+                }
+                await cast(o.id);
+              } finally {
+                votePendingRef.current = false;
+              }
+            }}
             style={[styles.option, { borderColor: mine ? C.accent : C.ink3 }]}
           >
             <View style={[styles.fill, { width: `${pct}%`, backgroundColor: C.accent + '22' }]} />
@@ -47,6 +65,11 @@ export function MemoryPoll({ question, options, currentUserId }: Props) {
       })}
     </View>
   );
+}
+
+function pollOptionVoteCount(option: Option): number {
+  if (Array.isArray(option.votes)) return option.votes.length;
+  return option.voteCount ?? 0;
 }
 
 const styles = StyleSheet.create({

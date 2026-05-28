@@ -1,12 +1,13 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { addDays, addMonths, endOfDay, format, startOfDay } from 'date-fns';
 import { db } from '@/src/lib/instant';
 import { useSession } from '@/src/hooks/useSession';
 import {
   buildTimelineItems,
-  buildMilestones,
   formatMonthLabel,
 } from '@/src/lib/home/builders';
-import type { MilestoneStripItem, TimelineItem } from '@/src/lib/home/types';
+import type { TimelineItem } from '@/src/lib/home/types';
+import { childRowMatchesParentSpace, relationWhere, uniqueSpaceIds } from '@/src/lib/space-scope';
 import {
   buildTomorrowCard,
   buildWeekStrip,
@@ -34,15 +35,54 @@ type CalendarState = {
 };
 
 const Ctx = createContext<CalendarState | null>(null);
+const CALENDAR_SOURCE_LIMIT = 500;
+const CALENDAR_RECENT_SOURCE_LIMIT = 200;
 
 function todayString() {
-  return new Date().toISOString().slice(0, 10);
+  return format(new Date(), 'yyyy-MM-dd');
+}
+
+function addMonthsIso(date: string, count: number) {
+  const [year, month, day] = date.split('-').map(Number);
+  return format(addMonths(new Date(year, month - 1, day, 12), count), 'yyyy-MM-dd');
+}
+
+function selectedMonthWindow(month: string) {
+  const [year, monthNumber] = month.split('-').map(Number);
+  const monthStart = startOfDay(new Date(year, monthNumber - 1, 1, 12));
+  const start = startOfDay(addDays(monthStart, -7));
+  const end = endOfDay(addDays(addMonths(monthStart, 1), 7));
+  return {
+    startMs: start.getTime(),
+    endMs: end.getTime(),
+    startKey: format(start, 'yyyy-MM-dd'),
+    endKey: format(end, 'yyyy-MM-dd'),
+  };
+}
+
+function boundedSource(
+  baseWhere: Record<string, unknown>,
+  rangeWhere: Record<string, unknown>,
+  order: Record<string, 'asc' | 'desc'>,
+  limit = CALENDAR_SOURCE_LIMIT,
+) {
+  return {
+    $: {
+      where: { ...baseWhere, ...rangeWhere },
+      order,
+      limit,
+    },
+    couple: {},
+  };
 }
 
 export function CalendarProvider({ children }: { children: React.ReactNode }) {
-  const { activeCouple, isFeatureEnabled } = useSession();
+  const { activeCouple, isFeatureEnabled, personalSpaceId, sharedSpaceId } = useSession();
   const coupleId = activeCouple?.couple?.id ?? null;
-  const anniversary = activeCouple?.couple?.anniversary ?? null;
+  const readableSpaceIds = useMemo(
+    () => uniqueSpaceIds([personalSpaceId ?? coupleId, sharedSpaceId ?? coupleId]),
+    [coupleId, personalSpaceId, sharedSpaceId],
+  );
 
   const initial = todayString();
   const [selectedDate, setSelectedDate] = useState(initial);
@@ -52,31 +92,58 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
   const goalsEnabled = isFeatureEnabled('goals');
   const recurringEnabled = isFeatureEnabled('recurring');
   const tasksEnabled = isFeatureEnabled('tasks');
-  const memoriesEnabled = isFeatureEnabled('memories');
 
   const query = useMemo(() => {
-    if (!coupleId) return null;
+    if (readableSpaceIds.length === 0) return null;
 
-    const where = { 'couple.id': coupleId };
-    const sources: Record<string, { $: { where: typeof where } }> = {};
+    const where = relationWhere('couple', readableSpaceIds);
+    const window = selectedMonthWindow(month);
+    const sources: Record<string, any> = {};
 
-    if (calendarEnabled) sources.events = { $: { where } };
-    if (goalsEnabled) sources.plans = { $: { where } };
-    if (recurringEnabled) {
-      sources.reminders = { $: { where } };
-      sources.rituals = { $: { where } };
+    if (calendarEnabled) {
+      sources.events = boundedSource(
+        where,
+        { startsAt: { $gte: window.startMs, $lte: window.endMs } },
+        { startsAt: 'asc' },
+      );
     }
-    if (tasksEnabled) sources.tasks = { $: { where } };
-    if (memoriesEnabled) sources.milestones = { $: { where } };
+    if (goalsEnabled) {
+      sources.plans = boundedSource(
+        where,
+        { targetDate: { $gte: window.startKey, $lte: window.endKey } },
+        { targetDate: 'asc' },
+      );
+    }
+    if (recurringEnabled) {
+      sources.reminders = boundedSource(
+        where,
+        { dueAt: { $gte: window.startMs, $lte: window.endMs } },
+        { dueAt: 'asc' },
+      );
+      sources.rituals = {
+        $: { where, order: { createdAt: 'desc' as const }, limit: CALENDAR_RECENT_SOURCE_LIMIT },
+        couple: {},
+      };
+    }
+    if (tasksEnabled) {
+      sources.tasks = {
+        ...boundedSource(
+          where,
+          { dueDate: { $gte: window.startKey, $lte: window.endKey } },
+          { dueDate: 'asc' },
+        ),
+        list: { couple: {} },
+      };
+    }
 
     return Object.keys(sources).length > 0 ? sources : null;
   }, [
-    coupleId,
+    readableSpaceIds,
+    month,
     calendarEnabled,
     goalsEnabled,
     recurringEnabled,
     tasksEnabled,
-    memoriesEnabled,
   ]);
 
   const { data, isLoading } = (db as any).useQuery(query);
@@ -86,66 +153,53 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
     const timeline = buildTimelineItems({
       now,
       previewDays: 400,
-      events: calendarEnabled ? (data?.events ?? []) : [],
-      plans: goalsEnabled ? (data?.plans ?? []) : [],
-      reminders: recurringEnabled ? (data?.reminders ?? []) : [],
-      tasks: tasksEnabled ? (data?.tasks ?? []) : [],
-      rituals: recurringEnabled ? (data?.rituals ?? []) : [],
+      events: calendarEnabled ? normalizePersonalSpacePrivacy(data?.events ?? [], personalSpaceId) : [],
+      plans: goalsEnabled ? normalizePersonalSpacePrivacy(data?.plans ?? [], personalSpaceId) : [],
+      reminders: recurringEnabled ? normalizePersonalSpacePrivacy(data?.reminders ?? [], personalSpaceId) : [],
+      tasks: tasksEnabled
+        ? normalizePersonalSpacePrivacy(data?.tasks ?? [], personalSpaceId).filter((task) =>
+            childRowMatchesParentSpace(task, 'list'),
+          )
+        : [],
+      rituals: recurringEnabled ? normalizePersonalSpacePrivacy(data?.rituals ?? [], personalSpaceId) : [],
       memories: [],
     });
 
-    const milestones: MilestoneStripItem[] = buildMilestones({
-      now,
-      couple: { id: coupleId ?? '', anniversary: memoriesEnabled ? anniversary : null },
-      milestones: memoriesEnabled ? (data?.milestones ?? []) : [],
-    });
-
-    const heroStats = computeHeroStats({ now, month, items: timeline, milestones });
+    const heroStats = computeHeroStats({ now, month, items: timeline });
     const week = buildWeekStrip({
       selectedDate,
       today: todayString(),
       items: timeline,
-      milestones,
     });
     const agenda = filterAgendaForDate(timeline, selectedDate);
-    const tomorrow = buildTomorrowCard({ selectedDate, items: timeline, milestones });
+    const tomorrow = buildTomorrowCard({ selectedDate, items: timeline });
 
-    return { timeline, milestones, heroStats, week, agenda, tomorrow };
+    return { timeline, heroStats, week, agenda, tomorrow };
   }, [
     data,
-    coupleId,
-    anniversary,
     month,
     selectedDate,
     calendarEnabled,
     goalsEnabled,
     recurringEnabled,
     tasksEnabled,
-    memoriesEnabled,
+    personalSpaceId,
   ]);
 
   const selectDate = useCallback((date: string) => setSelectedDate(date), []);
 
   const goToPreviousMonth = useCallback(() => {
-    setSelectedDate((current) => {
-      const d = new Date(`${current}T12:00:00.000Z`);
-      d.setUTCMonth(d.getUTCMonth() - 1);
-      return d.toISOString().slice(0, 10);
-    });
+    setSelectedDate((current) => addMonthsIso(current, -1));
   }, []);
 
   const goToNextMonth = useCallback(() => {
-    setSelectedDate((current) => {
-      const d = new Date(`${current}T12:00:00.000Z`);
-      d.setUTCMonth(d.getUTCMonth() + 1);
-      return d.toISOString().slice(0, 10);
-    });
+    setSelectedDate((current) => addMonthsIso(current, 1));
   }, []);
 
   const goToToday = useCallback(() => setSelectedDate(todayString()), []);
 
   const value: CalendarState = {
-    isLoading: !!coupleId && isLoading,
+    isLoading: readableSpaceIds.length > 0 && isLoading,
     month,
     monthLabel: formatMonthLabel(month),
     selectedDate,
@@ -161,6 +215,26 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+function normalizePersonalSpacePrivacy<T extends { isPrivate?: boolean; couple?: unknown; list?: unknown }>(
+  rows: T[],
+  personalSpaceId: string | null | undefined,
+): T[] {
+  if (!personalSpaceId) return rows;
+  return rows.map((row) => {
+    const spaceId =
+      firstRel(row.couple)?.id ??
+      firstRel(firstRel(row.list)?.couple)?.id ??
+      null;
+    const isPrivate = row.isPrivate === true || spaceId === personalSpaceId;
+    return row.isPrivate === isPrivate ? row : { ...row, isPrivate };
+  });
+}
+
+function firstRel(value: any): any | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
 }
 
 export function useCalendar(): CalendarState {

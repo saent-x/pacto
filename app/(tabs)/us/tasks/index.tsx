@@ -8,8 +8,8 @@ import {
   ScreenScaffold,
   SectionHead,
   StatBar,
-  type Tone,
 } from '@/src/components/ui/pacto';
+import { Icon, type IconName } from '@/src/components/ui/Icon';
 import { useTaskLists, type ListRow } from '@/src/hooks/useTaskLists';
 import { Typography } from '@/src/constants/typography';
 import { alphaColor } from '@/src/lib/color';
@@ -97,32 +97,53 @@ function TasksScreenInner() {
   );
 }
 
-const TASK_TONES_LIGHT: Record<string, Tone> = {
-  peach:    { bg: '#F0A081', ink: '#3A1F14', muted: 'rgba(58, 31, 20, 0.66)' },
-  butter:   { bg: '#E8C95E', ink: '#3A2E08', muted: 'rgba(58, 46, 8, 0.66)' },
-  mint:     { bg: '#94CFAE', ink: '#0F2C1A', muted: 'rgba(15, 44, 26, 0.66)' },
-  sky:      { bg: '#91BDD7', ink: '#0E2230', muted: 'rgba(14, 34, 48, 0.66)' },
-  lavender: { bg: '#AFA1DF', ink: '#1F1635', muted: 'rgba(31, 22, 53, 0.66)' },
-  rose:     { bg: '#D6909D', ink: '#3A1520', muted: 'rgba(58, 21, 32, 0.66)' },
-};
-
 function ListTile({ list }: { list: ListRow }) {
+  const { C } = useTheme();
   const open = list.total - list.done;
   const ratio = list.total === 0 ? 0 : list.done / list.total;
-  const tone = TASK_TONES_LIGHT[list.colorKey] ?? TASK_TONES_LIGHT.peach;
+  const bg = (C as Record<string, string>)[list.colorKey] ?? C.bgCard;
+  const ink = (C as Record<string, string>)[`${list.colorKey}Ink`] ?? C.inkColor;
+  const tone = { bg, ink, muted: alphaColor(ink, 0.66) };
+  const scopeLabel = list.scope === 'personal'
+    ? 'Personal task list'
+    : list.scope === 'shared'
+      ? 'Shared task list'
+      : null;
+  const scopeIcon: IconName | null = list.scope === 'personal'
+    ? 'lock'
+    : list.scope === 'shared'
+      ? 'users'
+      : null;
 
   return (
     <ColorTile
       tone={tone}
       title={list.name}
-      icon={list.icon}
       stat={open}
       statLabel={`${list.done}/${list.total} DONE`}
       dotsTotal={7}
       dotsFilled={Math.round(ratio * 7)}
       onPress={() => router.push(`/(tabs)/us/tasks/${list.id}` as any)}
-      accessibilityLabel={`${list.name}, ${open} open, ${list.done} done, ${list.total} total`}
+      accessibilityLabel={`${list.name}, ${scopeLabel ? `${scopeLabel}, ` : ''}${open} open, ${list.done} done, ${list.total} total`}
       accessibilityHint="Open this task list"
+      topRight={
+        scopeLabel && scopeIcon ? (
+          <View
+            testID={`task-list-scope-${list.id}`}
+            accessibilityLabel={scopeLabel}
+            accessibilityRole="image"
+            style={[
+              styles.scopeBadge,
+              {
+                backgroundColor: alphaColor(ink, 0.14),
+                borderColor: alphaColor(ink, 0.2),
+              },
+            ]}
+          >
+            <Icon name={scopeIcon} size={14} color={ink} strokeWidth={2.4} />
+          </View>
+        ) : null
+      }
     />
   );
 }
@@ -205,5 +226,13 @@ const styles = StyleSheet.create({
   progressCell: {
     flex: 1,
     minWidth: 0,
+  },
+  scopeBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

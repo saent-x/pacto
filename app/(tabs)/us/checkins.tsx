@@ -1,14 +1,18 @@
 import { router, Stack } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   addDays,
   format,
+  isToday,
+  isYesterday,
+  parseISO,
   startOfDay,
   startOfWeek,
   subDays,
 } from 'date-fns';
+import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import {
   ActionEmptyState,
   Bucket,
@@ -31,16 +35,63 @@ import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
 
 const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const CHECKIN_HISTORY_PAGE_SIZE = 5;
 
 type FilterKey = 'all' | 'mine' | 'theirs';
 
+function checkInDateMs(row: CheckInRecord): number {
+  if (row.checkInDate) {
+    const parsed = startOfDay(parseISO(row.checkInDate)).getTime();
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return timestampMs(row.createdAt) ?? 0;
+}
+
+function timestampMs(value: unknown): number | null {
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return null;
+    const parsed = new Date(value).getTime();
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = new Date(value).getTime();
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function compareCheckIns(a: CheckInRecord, b: CheckInRecord): number {
+  return checkInDateMs(b) - checkInDateMs(a) || b.createdAt - a.createdAt;
+}
+
+function checkInDisplayDateLabel(row: CheckInRecord): string {
+  const timestamp = checkInDateMs(row);
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  if (isToday(date)) {
+    const createdAt = timestampMs(row.createdAt);
+    return createdAt != null ? format(new Date(createdAt), 'EEE · h:mm a') : 'Today';
+  }
+  if (isYesterday(date)) return 'Yesterday';
+  return format(date, 'EEE · MMM d');
+}
+
 export default function CheckinsScreen() {
+  return (
+    <FeatureRouteGuard featureId="checkins">
+      <CheckinsScreenInner />
+    </FeatureRouteGuard>
+  );
+}
+
+function CheckinsScreenInner() {
   const { C } = useTheme();
   const insets = useSafeAreaInsets();
   const { user, partner, mode, members } = useSession();
   const { checkIns, remove } = useCheckIns();
 
   const [filter, setFilter] = useState<FilterKey>('all');
+  const [earlierVisibleCount, setEarlierVisibleCount] = useState(CHECKIN_HISTORY_PAGE_SIZE);
 
   const userId = user?.id ?? '';
   const myName = (user?.displayName ?? user?.email?.split('@')[0] ?? 'You').split(' ')[0];
@@ -60,14 +111,17 @@ export default function CheckinsScreen() {
     const now = new Date();
     const monday = startOfWeek(now, { weekStartsOn: 1 });
     const todayKey = getLocalDateKey(now);
+    const syncCheckIns = mode === 'solo'
+      ? checkIns
+      : checkIns.filter((checkIn) => !checkIn.isPrivate);
     return DAY_LABELS.map((label, i) => {
       const date = addDays(monday, i);
       const dateKey = getLocalDateKey(date);
       const past = dateKey <= todayKey;
-      const mineRec = checkIns.find(
+      const mineRec = syncCheckIns.find(
         (c) => c.authorId === userId && c.checkInDate === dateKey
       );
-      const theirsRec = checkIns.find(
+      const theirsRec = syncCheckIns.find(
         (c) => c.authorId !== userId && c.checkInDate === dateKey
       );
       return {
@@ -79,7 +133,7 @@ export default function CheckinsScreen() {
         theirsColor: theirsRec ? getCheckInStateMeta(theirsRec.mood).color : null,
       };
     });
-  }, [checkIns, userId]);
+  }, [checkIns, mode, userId]);
 
   const stats = useMemo(() => {
     const possibleDays = week.filter((d) => d.past).length;
@@ -114,7 +168,15 @@ export default function CheckinsScreen() {
     });
   }, [checkIns, filter, userId]);
 
-  const buckets = useMemo<Bucket<CheckInRecord>[]>(() => {
+  useEffect(() => {
+    setEarlierVisibleCount(CHECKIN_HISTORY_PAGE_SIZE);
+  }, [filter]);
+
+  const { buckets, hiddenEarlierCount, earlierTotalCount } = useMemo<{
+    buckets: Bucket<CheckInRecord>[];
+    hiddenEarlierCount: number;
+    earlierTotalCount: number;
+  }>(() => {
     const today = startOfDay(new Date()).getTime();
     const yesterday = startOfDay(subDays(new Date(), 1)).getTime();
     const week = startOfDay(subDays(new Date(), 7)).getTime();
@@ -126,7 +188,7 @@ export default function CheckinsScreen() {
       Earlier: [],
     };
     for (const c of visible) {
-      const ts = c.createdAt;
+      const ts = checkInDateMs(c);
       if (ts >= today) groups.Today.push(c);
       else if (ts >= yesterday) groups.Yesterday.push(c);
       else if (ts >= week) groups['This week'].push(c);
@@ -140,14 +202,28 @@ export default function CheckinsScreen() {
       'This week': C.ink2,
       Earlier: C.ink3,
     };
-    return order
+    const visibleBuckets = order
       .filter((k) => groups[k].length > 0)
-      .map((k) => ({
-        label: k,
-        dotColor: dotMap[k],
-        rows: groups[k].slice().sort((a, b) => b.createdAt - a.createdAt),
-      }));
-  }, [visible, C.accent, C.accent2, C.ink2, C.ink3]);
+      .map((k) => {
+        const sorted = groups[k].slice().sort(compareCheckIns);
+        const rows = k === 'Earlier' ? sorted.slice(0, earlierVisibleCount) : sorted;
+        return {
+          label: k,
+          dotColor: dotMap[k],
+          rows,
+          count: sorted.length,
+        };
+      });
+    return {
+      buckets: visibleBuckets,
+      hiddenEarlierCount: Math.max(0, groups.Earlier.length - earlierVisibleCount),
+      earlierTotalCount: groups.Earlier.length,
+    };
+  }, [visible, C.accent, C.accent2, C.ink2, C.ink3, earlierVisibleCount]);
+  const nextEarlierCount = Math.min(CHECKIN_HISTORY_PAGE_SIZE, hiddenEarlierCount);
+  const canCollapseEarlier =
+    hiddenEarlierCount === 0 && earlierTotalCount > CHECKIN_HISTORY_PAGE_SIZE;
+  const canToggleEarlier = hiddenEarlierCount > 0 || canCollapseEarlier;
 
   const filterOptions: { key: FilterKey; label: string }[] =
     mode === 'solo'
@@ -332,85 +408,114 @@ export default function CheckinsScreen() {
               onAction={() => router.push('/sheets/new-checkin' as any)}
             />
           ) : (
-            <BucketedList
-              buckets={buckets}
-              rowKey={(c) => c.id}
-              renderRow={(c) => {
-                const mood = getCheckInStateMeta(c.mood);
-                const isMine = c.authorId === userId;
-                const authorName = isMine
-                  ? myName
-                  : members.find((m) => m.id === c.authorId)?.displayName?.split(' ')[0] ??
-                    'Member';
-                const authorColor = isMine ? C.accent : C.accent2;
-                return (
-                  <SwipeableRow
-                    deleteTitle="Delete check-in?"
-                    deleteMessage="This entry will be removed."
-                    onEdit={
-                      isMine
-                        ? () =>
-                            router.push(
-                              `/sheets/new-checkin?id=${c.id}` as any
-                            )
-                        : undefined
-                    }
-                    onDelete={() => remove(c.id)}
-                  >
-                    <View style={styles.row}>
-                      <View
-                        style={[
-                          styles.moodTile,
-                          { backgroundColor: mood.color },
-                        ]}
-                      >
-                        <Image source={mood.image} style={styles.moodImage} resizeMode="contain" />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <View style={styles.headRow}>
-                          <Text
-                            style={[
-                              {
-                                fontFamily: Typography.geistSemiBoldFont,
-                                fontSize: 14,
-                                color: C.inkColor,
-                                textTransform: 'capitalize',
-                              },
-                            ]}
-                          >
-                            {mood.label}
-                          </Text>
-                          <Text
-                            style={[Typography.eyebrowSm, { color: authorColor, fontSize: 9.5 }]}
-                          >
-                            {authorName.toUpperCase()}
-                          </Text>
-                        </View>
-                        {c.note ? (
-                          <Text
-                            style={[
-                              Typography.caption,
-                              { color: C.ink2, marginTop: 2 },
-                            ]}
-                            numberOfLines={3}
-                          >
-                            {c.note}
-                          </Text>
-                        ) : null}
-                        <Text
+            <>
+              <BucketedList
+                buckets={buckets}
+                presentation="items"
+                swipeableRows
+                rowKey={(c) => c.id}
+                renderRow={(c) => {
+                  const mood = getCheckInStateMeta(c.mood);
+                  const isMine = c.authorId === userId;
+                  const authorName = isMine
+                    ? myName
+                    : members.find((m) => m.id === c.authorId)?.displayName?.split(' ')[0] ??
+                      'Member';
+                  const authorColor = isMine ? C.accent : C.accent2;
+                  return (
+                    <SwipeableRow
+                      deleteTitle="Delete check-in?"
+                      deleteMessage="This entry will be removed."
+                      onEdit={
+                        isMine
+                          ? () =>
+                              router.push(
+                                `/sheets/new-checkin?id=${c.id}` as any
+                              )
+                          : undefined
+                      }
+                      onDelete={isMine ? () => remove(c.id) : undefined}
+                    >
+                      <View style={styles.row}>
+                        <View
                           style={[
-                            Typography.mono,
-                            { color: C.ink3, fontSize: 11, marginTop: 4 },
+                            styles.moodTile,
+                            { backgroundColor: mood.color },
                           ]}
                         >
-                          {format(new Date(c.createdAt), 'EEE · h:mm a')}
-                        </Text>
+                          <Icon name={mood.icon} size={20} color={C.inkColor} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <View style={styles.headRow}>
+                            <Text
+                              style={[
+                                {
+                                  fontFamily: Typography.geistSemiBoldFont,
+                                  fontSize: 14,
+                                  color: C.inkColor,
+                                  textTransform: 'capitalize',
+                                },
+                              ]}
+                            >
+                              {mood.label}
+                            </Text>
+                            <Text
+                              style={[Typography.eyebrowSm, { color: authorColor, fontSize: 9.5 }]}
+                            >
+                              {authorName.toUpperCase()}
+                            </Text>
+                          </View>
+                          {c.note ? (
+                            <Text
+                              style={[
+                                Typography.caption,
+                                { color: C.ink2, marginTop: 2 },
+                              ]}
+                              numberOfLines={3}
+                            >
+                              {c.note}
+                            </Text>
+                          ) : null}
+                          <Text
+                            style={[
+                              Typography.mono,
+                              { color: C.ink3, fontSize: 11, marginTop: 4 },
+                            ]}
+                          >
+                            {checkInDisplayDateLabel(c)}
+                          </Text>
+                        </View>
                       </View>
-                    </View>
-                  </SwipeableRow>
-                );
-              }}
-            />
+                    </SwipeableRow>
+                  );
+                }}
+              />
+              {canToggleEarlier ? (
+                <PressScale
+                  testID={
+                    hiddenEarlierCount > 0
+                      ? 'checkins-show-more-earlier'
+                      : 'checkins-toggle-earlier'
+                  }
+                  onPress={() => {
+                    if (hiddenEarlierCount > 0) {
+                      setEarlierVisibleCount((count) => count + CHECKIN_HISTORY_PAGE_SIZE);
+                    } else {
+                      setEarlierVisibleCount(CHECKIN_HISTORY_PAGE_SIZE);
+                    }
+                  }}
+                  haptic="selection"
+                  style={[
+                    styles.showMoreButton,
+                    { backgroundColor: C.bgSoft, borderColor: C.lineColor },
+                  ]}
+                >
+                  <Text style={[Typography.captionMedium, { color: C.inkColor }]}>
+                    {hiddenEarlierCount > 0 ? `Show ${nextEarlierCount} more` : 'Hide'}
+                  </Text>
+                </PressScale>
+              ) : null}
+            </>
           )}
         </View>
       </ScrollView>
@@ -464,6 +569,15 @@ const styles = StyleSheet.create({
   listWrap: {
     paddingHorizontal: 18,
   },
+  showMoreButton: {
+    minHeight: 44,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 14,
+    marginHorizontal: 8,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -477,10 +591,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  moodImage: {
-    width: 32,
-    height: 32,
   },
   headRow: {
     flexDirection: 'row',

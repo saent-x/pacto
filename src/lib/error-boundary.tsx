@@ -34,9 +34,9 @@ export class ErrorBoundary extends React.Component<
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0E0B0A' },
+  root: { flex: 1, backgroundColor: '#101525' },
   content: { padding: 24, paddingTop: 80 },
-  title: { color: '#E07A68', fontSize: 20, fontWeight: '700', marginBottom: 12 },
-  msg: { color: '#F5EEE3', fontSize: 14, marginBottom: 16 },
-  stack: { color: '#B3A89A', fontSize: 11, fontFamily: 'Menlo' },
+  title: { color: '#E17B5F', fontSize: 20, fontWeight: '700', marginBottom: 12 },
+  msg: { color: '#F7F0E5', fontSize: 14, marginBottom: 16 },
+  stack: { color: '#CFC6B8', fontSize: 11, fontFamily: 'Menlo' },
 });

@@ -1,32 +1,46 @@
 import type {
   TimelineItem,
   FeaturedSignal,
-  MilestoneStripItem,
   MemoryPreview,
   PresenceInfo,
   CalendarDay,
 } from './types';
-
-function startOfUtcDay(timestamp: number) {
-  const day = new Date(timestamp);
-  return Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate());
-}
-
-function endOfUtcDay(timestamp: number) {
-  return startOfUtcDay(timestamp) + 24 * 60 * 60 * 1000 - 1;
-}
+import {
+  addDays as addLocalDays,
+  differenceInCalendarDays,
+  endOfDay,
+  format,
+} from 'date-fns';
 
 function toDateString(timestamp: number) {
-  return new Date(timestamp).toISOString().slice(0, 10);
+  if (!isValidTimestamp(timestamp)) return null;
+  return format(new Date(timestamp), 'yyyy-MM-dd');
+}
+
+function isValidTimestamp(timestamp: number) {
+  return Number.isFinite(timestamp) && Number.isFinite(new Date(timestamp).getTime());
 }
 
 function parseDateOnly(date: string | null) {
   if (!date) return null;
-  return Date.parse(`${date}T12:00:00.000Z`);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  const [year, month, day] = date.split('-').map(Number);
+  if (!year || !month || !day) return null;
+  const parsed = new Date(year, month - 1, day, 12, 0, 0, 0);
+  if (
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
+  ) {
+    return null;
+  }
+  return parsed.getTime();
 }
 
 function daysBetween(now: number, date: string) {
-  return Math.round((parseDateOnly(date)! - startOfUtcDay(now)) / (24 * 60 * 60 * 1000));
+  const parsed = parseDateOnly(date);
+  if (parsed === null) return Number.POSITIVE_INFINITY;
+  return differenceInCalendarDays(new Date(parsed), new Date(now));
 }
 
 function withinPreviewWindow(
@@ -36,7 +50,8 @@ function withinPreviewWindow(
   dateOnly: string | null,
 ) {
   if (occursAt !== null) {
-    return occursAt <= endOfUtcDay(now + previewDays * 24 * 60 * 60 * 1000);
+    if (!isValidTimestamp(occursAt)) return false;
+    return occursAt <= endOfDay(addLocalDays(new Date(now), previewDays)).getTime();
   }
   if (!dateOnly) return false;
   return daysBetween(now, dateOnly) <= previewDays;
@@ -54,6 +69,11 @@ function timelineSort(left: TimelineItem, right: TimelineItem) {
     left.title.localeCompare(right.title) ||
     left.sourceId.localeCompare(right.sourceId)
   );
+}
+
+function firstRel(value: any): any | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
 }
 
 export function buildTimelineItems({
@@ -75,7 +95,7 @@ export function buildTimelineItems({
   rituals: any[];
   memories: MemoryPreview[];
 }) {
-  const today = toDateString(now);
+  const today = toDateString(now) ?? '';
   const items: TimelineItem[] = [];
 
   for (const event of events) {
@@ -114,6 +134,7 @@ export function buildTimelineItems({
   }
 
   for (const reminder of reminders) {
+    if (reminder.isPrivate) continue;
     if (reminder.isCompleted) continue;
     const dueAt = reminder.dueAt;
     if (dueAt == null) continue;
@@ -127,13 +148,14 @@ export function buildTimelineItems({
       subtitle: reminder.description ?? null,
       occursAt: dueAt,
       priority: reminder.priority ?? 0,
-      isPrivate: false,
+      isPrivate: !!reminder.isPrivate,
       isOverdue: dueAt < now,
       isCompleted: !!reminder.isCompleted,
     });
   }
 
   for (const task of tasks) {
+    if (task.isPrivate) continue;
     if (task.isCompleted) continue;
     const dueDate = task.dueDate ?? null;
     if (!dueDate || !withinPreviewWindow(now, previewDays, null, dueDate)) continue;
@@ -141,13 +163,13 @@ export function buildTimelineItems({
       id: `task:${task.id}`,
       type: 'task',
       sourceId: task.id,
-      sourceParentId: task.list?.[0]?.id ?? null,
+      sourceParentId: firstRel(task.list)?.id ?? null,
       sourceTable: 'tasks',
       title: task.title ?? 'Task',
       subtitle: task.notes ?? null,
       occursAt: parseDateOnly(dueDate),
       priority: task.priority ?? 0,
-      isPrivate: false,
+      isPrivate: !!task.isPrivate,
       isOverdue: dueDate < today,
       isCompleted: !!task.isCompleted,
     });
@@ -191,10 +213,8 @@ export function buildTimelineItems({
 
 export function buildMemoryPreviews({
   journalEntries,
-  loveNotes,
 }: {
   journalEntries: any[];
-  loveNotes: any[];
 }): MemoryPreview[] {
   const previews: MemoryPreview[] = [];
 
@@ -210,18 +230,6 @@ export function buildMemoryPreviews({
     });
   }
 
-  for (const note of loveNotes) {
-    if (note.isPrivate) continue;
-    previews.push({
-      sourceId: note.id,
-      sourceTable: 'loveNotes',
-      title: 'Love note',
-      body: note.body ?? '',
-      createdAt: note.createdAt ?? 0,
-      mediaUrls: [],
-    });
-  }
-
   previews.sort(
     (left, right) =>
       right.createdAt - left.createdAt || left.sourceId.localeCompare(right.sourceId),
@@ -230,62 +238,14 @@ export function buildMemoryPreviews({
   return previews;
 }
 
-export function buildMilestones({
-  now,
-  couple,
-  milestones,
-}: {
-  now: number;
-  couple: { id: string; anniversary: string | null };
-  milestones: any[];
-}): MilestoneStripItem[] {
-  const items: MilestoneStripItem[] = [];
-
-  if (couple.anniversary) {
-    const daysUntil = daysBetween(now, couple.anniversary);
-    if (daysUntil >= 0 && daysUntil <= 30) {
-      items.push({
-        id: `countdown:${couple.id}`,
-        type: 'countdown',
-        title: 'Anniversary',
-        subtitle: `${daysUntil} day${daysUntil === 1 ? '' : 's'} to go`,
-        date: couple.anniversary,
-        daysUntil,
-      });
-    }
-  }
-
-  for (const milestone of milestones) {
-    const date = milestone.date;
-    if (!date) continue;
-    const daysUntil = daysBetween(now, date);
-    if (daysUntil < 0 || daysUntil > 30) continue;
-    items.push({
-      id: `milestone:${milestone.id}`,
-      type: 'milestone',
-      title: milestone.title ?? 'Milestone',
-      subtitle: milestone.description ?? null,
-      date,
-      daysUntil,
-    });
-  }
-
-  return items.sort(
-    (left, right) =>
-      left.daysUntil - right.daysUntil || left.title.localeCompare(right.title),
-  );
-}
-
 export function selectFeaturedSignal({
   now,
   presence,
-  milestones,
   memoryPreview,
   checkIns,
 }: {
   now: number;
   presence: PresenceInfo | null;
-  milestones: MilestoneStripItem[];
   memoryPreview: MemoryPreview | null;
   checkIns: any[];
 }): FeaturedSignal | null {
@@ -305,17 +265,6 @@ export function selectFeaturedSignal({
     };
   }
 
-  if (memoryPreview?.sourceTable === 'loveNotes') {
-    return {
-      kind: 'loveNote',
-      sourceId: memoryPreview.sourceId,
-      sourceTable: memoryPreview.sourceTable,
-      title: memoryPreview.title,
-      body: memoryPreview.body,
-      occursAt: memoryPreview.createdAt,
-    };
-  }
-
   if (memoryPreview) {
     return {
       kind: 'memory',
@@ -324,18 +273,6 @@ export function selectFeaturedSignal({
       title: memoryPreview.title,
       body: memoryPreview.body,
       occursAt: memoryPreview.createdAt,
-    };
-  }
-
-  if (milestones[0]) {
-    const countdown = milestones[0];
-    return {
-      kind: 'countdown',
-      sourceId: countdown.id,
-      sourceTable: 'milestones',
-      title: countdown.title,
-      body: `${countdown.daysUntil} day${countdown.daysUntil === 1 ? '' : 's'} until ${countdown.title.toLowerCase()}.`,
-      occursAt: parseDateOnly(countdown.date),
     };
   }
 
@@ -354,54 +291,45 @@ export function selectFeaturedSignal({
 }
 
 function addDays(date: Date, days: number) {
-  return new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + days),
-  );
+  return addLocalDays(date, days);
 }
 
 export function buildCalendarDays({
   now,
   month,
   items,
-  milestones,
 }: {
   now: number;
   month: string;
   items: TimelineItem[];
-  milestones: MilestoneStripItem[];
 }): CalendarDay[] {
   const [year, monthIndex] = month.split('-').map(Number);
-  const monthStart = new Date(Date.UTC(year, monthIndex - 1, 1));
-  const firstGridDay = addDays(monthStart, -monthStart.getUTCDay());
+  const monthStart = new Date(year, monthIndex - 1, 1, 12, 0, 0, 0);
+  const firstGridDay = addDays(monthStart, -monthStart.getDay());
   const today = toDateString(now);
 
   return Array.from({ length: 42 }, (_, index) => {
     const current = addDays(firstGridDay, index);
-    const date = current.toISOString().slice(0, 10);
+    const date = format(current, 'yyyy-MM-dd');
     const dayItems = items.filter((item) => {
       if (item.occursAt === null) return false;
       return toDateString(item.occursAt) === date;
     });
-    const dayMilestones = milestones.filter((m) => m.date === date);
-    const kinds = Array.from(
-      new Set([
-        ...dayItems.map((item) => item.type),
-        ...dayMilestones.map(() => 'milestone' as const),
-      ]),
-    );
+    const kinds = Array.from(new Set(dayItems.map((item) => item.type)));
 
     return {
       date,
-      inMonth: current.getUTCMonth() === monthStart.getUTCMonth(),
+      inMonth: current.getMonth() === monthStart.getMonth(),
       isToday: date === today,
-      itemCount: dayItems.length + dayMilestones.length,
+      itemCount: dayItems.length,
       kinds,
     };
   });
 }
 
 export function formatMonthLabel(month: string) {
-  const monthStart = new Date(Date.parse(`${month}-01T00:00:00.000Z`));
+  const [year, monthNumber] = month.split('-').map(Number);
+  const monthStart = new Date(Date.UTC(year, monthNumber - 1, 1, 12));
   return new Intl.DateTimeFormat('en-US', {
     month: 'long',
     year: 'numeric',

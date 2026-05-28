@@ -171,6 +171,7 @@ describe('Calendar · event + state rendering', () => {
   beforeEach(() => {
     calendarState.isLoading = false;
     calendarState.selectedDate = '2026-04-17';
+    calendarState.today = '2026-04-18';
     calendarState.week = makeWeek();
     calendarState.agenda = [];
     calendarState.heroStats = { total: 0, shared: 0, upcoming: 0, nextInHours: null };
@@ -182,14 +183,16 @@ describe('Calendar · event + state rendering', () => {
     calendarState.week = makeWeek().map((d) => ({ ...d, hasEvent: false }));
     const renderer = await renderCalendar();
     expect(hasText(renderer, 'FRIDAY · 17 APR')).toBe(true);
-    expect(hasText(renderer, 'Nothing on the books for this day.')).toBe(true);
+    expect(hasText(renderer, 'Nothing scheduled for this day.')).toBe(true);
     act(() => renderer.unmount());
   });
 
   it('shows empty-agenda card when no events on selected day', async () => {
     const renderer = await renderCalendar();
     expect(hasText(renderer, 'FRIDAY · 17 APR')).toBe(true);
-    expect(hasText(renderer, 'Nothing on the books for this day.')).toBe(true);
+    expect(hasText(renderer, 'Nothing scheduled for this day.')).toBe(true);
+    expect(hasText(renderer, 'EMPTY SPACE')).toBe(false);
+    expect(hasText(renderer, 'READY')).toBe(false);
     act(() => renderer.unmount());
   });
 
@@ -203,7 +206,7 @@ describe('Calendar · event + state rendering', () => {
     expect(hasText(renderer, 'event title e1')).toBe(true);
     expect(hasText(renderer, 'reminder title r1')).toBe(true);
     expect(hasText(renderer, 'task title t1')).toBe(true);
-    expect(hasText(renderer, 'Nothing on the books for this day.')).toBe(false);
+    expect(hasText(renderer, 'Nothing scheduled for this day.')).toBe(false);
     act(() => renderer.unmount());
   });
 
@@ -231,7 +234,8 @@ describe('Calendar · event + state rendering', () => {
   });
 
   it('uses Today as the empty agenda title for the selected current date', async () => {
-    calendarState.selectedDate = new Date().toISOString().slice(0, 10);
+    calendarState.today = '2026-04-17';
+    calendarState.selectedDate = '2026-04-17';
     const renderer = await renderCalendar();
     expect(hasText(renderer, 'Today')).toBe(true);
     act(() => renderer.unmount());

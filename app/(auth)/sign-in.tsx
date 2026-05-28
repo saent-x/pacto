@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import Svg, { Path } from 'react-native-svg';
 import { Card, HeaderBrand, PactoMark } from '@/src/components/ui/pacto';
 import { Icon } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
@@ -17,24 +18,36 @@ import { useTheme } from '@/src/lib/theme';
 import { db } from '@/src/lib/db';
 import { signInWithOAuth } from '@/src/lib/oauth';
 import { isAppleSignInAvailable, signInWithApple } from '@/src/lib/auth-apple';
+import { signInWithGoogle } from '@/src/lib/auth-google';
 
 const CODE_LENGTH = 6;
+const AUTH_CONTROL_RADIUS = 999;
+const AUTH_BUTTON_BLACK = '#000000';
+const AUTH_BUTTON_TEXT = '#FFFFFF';
 
 type Stage = 'email' | 'code';
 
 export default function SignIn() {
-  const { C, mode } = useTheme();
+  const { C } = useTheme();
   const [stage, setStage] = useState<Stage>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState<string[]>(Array(CODE_LENGTH).fill(''));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const slotRefs = useRef<Array<TextInput | null>>([]);
+  const authBusyRef = useRef(false);
+  const focusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (stage === 'code') {
-      setTimeout(() => slotRefs.current[0]?.focus(), 50);
+      focusTimerRef.current = setTimeout(() => slotRefs.current[0]?.focus(), 50);
     }
+    return () => {
+      if (focusTimerRef.current !== null) {
+        clearTimeout(focusTimerRef.current);
+        focusTimerRef.current = null;
+      }
+    };
   }, [stage]);
 
   function updateEmail(nextEmail: string) {
@@ -42,35 +55,38 @@ export default function SignIn() {
     if (error) setError(null);
   }
 
+  async function runAuthAction(action: () => Promise<void>, fallbackMessage: string) {
+    if (authBusyRef.current) return;
+    authBusyRef.current = true;
+    setBusy(true);
+    setError(null);
+    try {
+      await action();
+    } catch (e: any) {
+      setError(e?.message ?? fallbackMessage);
+    } finally {
+      authBusyRef.current = false;
+      setBusy(false);
+    }
+  }
+
   async function sendCode() {
     if (!email.includes('@')) {
       setError('Enter a valid email');
       return;
     }
-    setBusy(true);
-    setError(null);
-    try {
+    await runAuthAction(async () => {
       await db.auth.sendMagicCode({ email });
       setStage('code');
-    } catch (e: any) {
-      setError(e?.message ?? 'Could not send code');
-    } finally {
-      setBusy(false);
-    }
+    }, 'Could not send code');
   }
 
   async function submitCode() {
     const joined = code.join('');
     if (joined.length !== CODE_LENGTH) return;
-    setBusy(true);
-    setError(null);
-    try {
+    await runAuthAction(async () => {
       await db.auth.signInWithMagicCode({ email, code: joined });
-    } catch (e: any) {
-      setError(e?.message ?? 'Invalid code');
-    } finally {
-      setBusy(false);
-    }
+    }, 'Invalid code');
   }
 
   const [appleAvailable, setAppleAvailable] = useState(false);
@@ -79,27 +95,21 @@ export default function SignIn() {
   }, []);
 
   async function doOAuth(provider: 'apple' | 'google') {
-    setBusy(true);
-    setError(null);
-    try {
+    await runAuthAction(async () => {
       await signInWithOAuth(provider);
-    } catch (e: any) {
-      setError(e?.message ?? 'Sign-in cancelled');
-    } finally {
-      setBusy(false);
-    }
+    }, 'Sign-in cancelled');
+  }
+
+  async function doGoogleNative() {
+    await runAuthAction(async () => {
+      await signInWithGoogle();
+    }, 'Google sign-in failed');
   }
 
   async function doAppleNative() {
-    setBusy(true);
-    setError(null);
-    try {
+    await runAuthAction(async () => {
       await signInWithApple();
-    } catch (e: any) {
-      setError(e?.message ?? 'Apple sign-in failed');
-    } finally {
-      setBusy(false);
-    }
+    }, 'Apple sign-in failed');
   }
 
   const setCodeSlot = (i: number, v: string) => {
@@ -141,7 +151,7 @@ export default function SignIn() {
         <View style={{ height: 18 }} />
         <HeaderBrand eyebrow="WELCOME" title="pacto" size={32} />
         <Text style={[Typography.body, { color: C.ink2, marginTop: 14, textAlign: 'center', maxWidth: 280 }]}>
-          The few people who actually run your day.
+          Coordinate daily life without the admin.
         </Text>
       </View>
 
@@ -150,7 +160,12 @@ export default function SignIn() {
           <Text style={[Typography.eyebrow, { color: C.ink3, marginBottom: 8, marginLeft: 4 }]}>
             Email
           </Text>
-          <Card style={{ padding: 0, borderColor: stage === 'email' ? C.accent : C.lineColor }}>
+          <Card
+            style={[
+              styles.emailCard,
+              { borderColor: stage === 'email' ? C.accent : C.lineColor },
+            ]}
+          >
             <View style={styles.field}>
               <Icon
                 name="mail"
@@ -231,7 +246,7 @@ export default function SignIn() {
               onPress={submitCode}
               disabled={busy || code.some((c) => !c)}
             >
-              {busy ? <ActivityIndicator color={C.bg} /> : 'Verify'}
+              {busy ? <ActivityIndicator color={AUTH_BUTTON_TEXT} /> : 'Verify'}
             </PrimaryButton>
             <PressScale
               onPress={() => {
@@ -261,54 +276,120 @@ export default function SignIn() {
             </View>
 
             {Platform.OS === 'ios' && appleAvailable ? (
-              <AppleAuthentication.AppleAuthenticationButton
-                buttonType={
-                  AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
-                }
-                buttonStyle={
-                  AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
-                }
-                cornerRadius={14}
-                style={styles.appleButton}
-                onPress={doAppleNative}
-              />
+              <AppleNativeButton onPress={doAppleNative} />
             ) : (
-              <PressScale
+              <SocialAuthButton
+                provider="apple"
+                label="Continue with Apple"
                 onPress={() => doOAuth('apple')}
                 disabled={busy}
-                style={[
-                  styles.oauth,
-                  { backgroundColor: mode === 'dark' ? C.bgSoft : C.inkColor },
-                ]}
-              >
-                <Text
-                  style={[
-                    Typography.buttonLabel,
-                    styles.buttonLabel,
-                    { color: mode === 'dark' ? C.inkColor : C.bg },
-                  ]}
-                >
-                  Continue with Apple
-                </Text>
-              </PressScale>
+              />
             )}
-            <PressScale
-              onPress={() => doOAuth('google')}
+            <SocialAuthButton
+              provider="google"
+              label="Continue with Google"
+              onPress={doGoogleNative}
               disabled={busy}
-              style={[
-                styles.oauth,
-                { backgroundColor: C.bgCard, borderColor: C.lineColor, borderWidth: 1 },
-              ]}
-            >
-              <Text style={[Typography.buttonLabel, styles.buttonLabel, { color: C.inkColor }]}>
-                Continue with Google
-              </Text>
-            </PressScale>
-
+            />
           </>
         ) : null}
       </View>
     </ScrollView>
+  );
+}
+
+function AppleNativeButton({ onPress }: { onPress: () => void }) {
+  return (
+    <View style={styles.nativeAppleWrap}>
+      <AppleAuthentication.AppleAuthenticationButton
+        buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+        buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+        cornerRadius={AUTH_CONTROL_RADIUS}
+        style={styles.appleButton}
+        onPress={onPress}
+      />
+    </View>
+  );
+}
+
+function SocialAuthButton({
+  provider,
+  label,
+  onPress,
+  disabled,
+}: {
+  provider: 'apple' | 'google';
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
+  const { C } = useTheme();
+  const isApple = provider === 'apple';
+  const foreground = isApple ? AUTH_BUTTON_TEXT : C.inkColor;
+  const background = isApple ? AUTH_BUTTON_BLACK : C.bgCard;
+
+  return (
+    <PressScale
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={[
+        styles.oauth,
+        {
+          backgroundColor: background,
+          borderColor: isApple ? background : C.lineColor,
+          opacity: disabled ? 0.6 : 1,
+        },
+      ]}
+    >
+      <View
+        style={styles.socialIconSlot}
+      >
+        {isApple ? (
+          <AppleLogo color={foreground} />
+        ) : (
+          <GoogleLogo />
+        )}
+      </View>
+      <Text style={[Typography.buttonLabel, styles.oauthLabel, { color: foreground }]}>
+        {label}
+      </Text>
+    </PressScale>
+  );
+}
+
+function AppleLogo({ color }: { color: string }) {
+  return (
+    <Svg width={18} height={22} viewBox="0 0 24 28">
+      <Path
+        fill={color}
+        d="M19.7 14.8c0-3.1 2.5-4.6 2.6-4.7-1.4-2.1-3.7-2.4-4.5-2.4-1.9-.2-3.7 1.1-4.6 1.1-1 0-2.4-1.1-4-1.1-2 0-3.9 1.2-5 3-2.1 3.7-.5 9.2 1.5 12.2 1 1.5 2.2 3.1 3.8 3.1 1.5-.1 2.1-1 4-1s2.4 1 4 1c1.6 0 2.7-1.5 3.7-3 1.2-1.7 1.7-3.4 1.7-3.5-.1 0-3.2-1.2-3.2-4.8ZM16.5 5.7c.8-1 1.4-2.4 1.2-3.8-1.2.1-2.7.8-3.6 1.8-.8.9-1.4 2.3-1.2 3.7 1.4.1 2.8-.7 3.6-1.7Z"
+      />
+    </Svg>
+  );
+}
+
+function GoogleLogo() {
+  return (
+    <Svg width={21} height={21} viewBox="0 0 24 24">
+      <Path
+        fill="#4285F4"
+        d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5c-.3 1.4-1.1 2.7-2.4 3.5v2.9h3.8c2.2-2 3.6-5 3.6-8.5Z"
+      />
+      <Path
+        fill="#34A853"
+        d="M12 24c3.2 0 5.9-1.1 7.9-3.2l-3.8-2.9c-1.1.7-2.4 1.1-4.1 1.1-3.1 0-5.7-2.1-6.6-4.9H1.5v3C3.5 21.2 7.5 24 12 24Z"
+      />
+      <Path
+        fill="#FBBC05"
+        d="M5.4 14.1c-.2-.7-.4-1.4-.4-2.1s.1-1.5.4-2.1v-3H1.5C.6 8.5 0 10.2 0 12s.6 3.5 1.5 5.1l3.9-3Z"
+      />
+      <Path
+        fill="#EA4335"
+        d="M12 5c1.7 0 3.3.6 4.5 1.8L19.9 3C17.9 1.1 15.2 0 12 0 7.5 0 3.5 2.8 1.5 6.9l3.9 3C6.3 7.1 8.9 5 12 5Z"
+      />
+    </Svg>
   );
 }
 
@@ -329,13 +410,13 @@ function PrimaryButton({
       style={[
         styles.primary,
         {
-          backgroundColor: disabled ? C.ink3 : C.inkColor,
+          backgroundColor: disabled ? C.ink3 : AUTH_BUTTON_BLACK,
           opacity: disabled ? 0.6 : 1,
         },
       ]}
     >
       {typeof children === 'string' ? (
-        <Text style={[Typography.buttonLabel, styles.buttonLabel, { color: C.bg }]}>
+        <Text style={[Typography.buttonLabel, styles.buttonLabel, { color: AUTH_BUTTON_TEXT }]}>
           {children}
         </Text>
       ) : (
@@ -355,8 +436,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    minHeight: 58,
+    paddingHorizontal: 18,
+    paddingVertical: 0,
+  },
+  emailCard: {
+    padding: 0,
+    borderRadius: AUTH_CONTROL_RADIUS,
   },
   slotRow: {
     flexDirection: 'row',
@@ -382,24 +468,45 @@ const styles = StyleSheet.create({
     height: 1,
   },
   oauth: {
-    minHeight: 56,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderRadius: 8,
+    minHeight: 58,
+    paddingVertical: 15,
+    paddingHorizontal: 16,
+    borderRadius: AUTH_CONTROL_RADIUS,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  appleButton: {
+    height: 58,
+    width: '100%',
+  },
+  nativeAppleWrap: {
+    borderRadius: AUTH_CONTROL_RADIUS,
+    overflow: 'hidden',
+  },
+  socialIconSlot: {
+    position: 'absolute',
+    left: 14,
+    width: 34,
+    height: 34,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  appleButton: {
-    height: 48,
-    width: '100%',
+  oauthLabel: {
+    textAlign: 'center',
+    includeFontPadding: false,
   },
   primary: {
     minHeight: 56,
     paddingVertical: 14,
     paddingHorizontal: 18,
-    borderRadius: 8,
+    borderRadius: AUTH_CONTROL_RADIUS,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   buttonLabel: {
     width: '100%',

@@ -9,10 +9,11 @@ interface Props {
   quotedMemoryId: string;
   authorName: string;
   body: string;
+  spaceId?: string | null;
   attachments?: { id: string; type: string; mediaUrl?: string }[];
 }
 
-export function MemoryQuoteEmbed({ quotedMemoryId, authorName, body, attachments }: Props) {
+export function MemoryQuoteEmbed({ quotedMemoryId, authorName, body, spaceId, attachments }: Props) {
   const { C } = useTheme();
   return (
     <PressScale
@@ -21,7 +22,7 @@ export function MemoryQuoteEmbed({ quotedMemoryId, authorName, body, attachments
     >
       <Text style={[Typography.caption, { color: C.ink3, marginBottom: 4 }]}>{authorName}</Text>
       <Text style={[Typography.body, { color: C.inkColor }]}>{body}</Text>
-      {attachments ? <MemoryAttachments attachments={attachments as any} /> : null}
+      {attachments ? <MemoryAttachments attachments={attachments as any} spaceId={spaceId} /> : null}
     </PressScale>
   );
 }

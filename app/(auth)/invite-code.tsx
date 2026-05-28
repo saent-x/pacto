@@ -1,6 +1,6 @@
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Share, StyleSheet, Text, View } from 'react-native';
 import { HeaderBrand, PactoMark } from '@/src/components/ui/pacto';
 import { Icon } from '@/src/components/ui/Icon';
@@ -8,23 +8,43 @@ import { PressScale } from '@/src/components/ui/PressScale';
 import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
 
+const INVITE_CODE_SLOT_SIZE = 52;
+const INVITE_CODE_SLOT_RADIUS = 999;
+const INVITE_CODE_BUTTON_RADIUS = 999;
+
 export default function InviteCodeScreen() {
   const { C } = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams<{ code?: string }>();
   const code = params.code ?? '';
   const [copied, setCopied] = useState(false);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copiedTimerRef.current !== null) clearTimeout(copiedTimerRef.current);
+    };
+  }, []);
 
   async function onCopy() {
-    await Clipboard.setStringAsync(code);
+    try {
+      await Clipboard.setStringAsync(code);
+    } catch {
+      // clipboard unavailable — skip feedback
+    }
+    if (copiedTimerRef.current !== null) clearTimeout(copiedTimerRef.current);
     setCopied(true);
-    setTimeout(() => setCopied(false), 1800);
+    copiedTimerRef.current = setTimeout(() => setCopied(false), 1800);
   }
 
   async function onShare() {
-    await Share.share({
-      message: `Join me on Pacto. Here's the code: ${code}`,
-    });
+    try {
+      await Share.share({
+        message: `Join me on Pacto. Here's the code: ${code}`,
+      });
+    } catch {
+      // user cancelled or share sheet unavailable
+    }
   }
 
   return (
@@ -131,10 +151,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   slot: {
-    width: 48,
-    height: 56,
+    width: INVITE_CODE_SLOT_SIZE,
+    height: INVITE_CODE_SLOT_SIZE,
     borderWidth: 1.5,
-    borderRadius: 8,
+    borderRadius: INVITE_CODE_SLOT_RADIUS,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -147,16 +167,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    minHeight: 40,
     paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 8,
+    paddingHorizontal: 18,
+    borderRadius: INVITE_CODE_BUTTON_RADIUS,
     borderWidth: 1,
+    overflow: 'hidden',
   },
   footer: { marginTop: 'auto', gap: 10 },
   primary: {
+    minHeight: 56,
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: INVITE_CODE_BUTTON_RADIUS,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
 });

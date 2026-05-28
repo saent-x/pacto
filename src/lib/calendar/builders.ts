@@ -1,4 +1,5 @@
-import type { MilestoneStripItem, TimelineItem } from '@/src/lib/home/types';
+import { addDays, format } from 'date-fns';
+import type { TimelineItem } from '@/src/lib/home/types';
 
 export type HeroStats = {
   total: number;
@@ -16,44 +17,48 @@ export type WeekDay = {
 };
 
 export type TomorrowCard = {
-  kind: 'milestone' | 'event';
+  kind: 'event';
   id: string;
   title: string;
   subtitle: string;
-  accent: 'mint' | 'peach' | 'butter';
+  accent: 'peach';
 } | null;
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
 
+function parseDateOnly(isoDate: string) {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  return new Date(year, month - 1, day, 12);
+}
+
 export function toDateString(ts: number) {
-  return new Date(ts).toISOString().slice(0, 10);
+  if (!isValidTimestamp(ts)) return '';
+  return format(new Date(ts), 'yyyy-MM-dd');
+}
+
+function isValidTimestamp(ts: number) {
+  return Number.isFinite(ts) && Number.isFinite(new Date(ts).getTime());
 }
 
 export function addDaysIso(isoDate: string, offset: number) {
-  const d = new Date(`${isoDate}T12:00:00.000Z`);
-  d.setUTCDate(d.getUTCDate() + offset);
-  return d.toISOString().slice(0, 10);
+  return format(addDays(parseDateOnly(isoDate), offset), 'yyyy-MM-dd');
 }
 
 export function computeHeroStats({
   now,
   month,
   items,
-  milestones,
 }: {
   now: number;
   month: string;
   items: TimelineItem[];
-  milestones: MilestoneStripItem[];
 }): HeroStats {
   const inMonth = items.filter(
     (i) => i.occursAt !== null && toDateString(i.occursAt).startsWith(month),
   );
-  const milestonesInMonth = milestones.filter((m) => m.date.startsWith(month));
-  const total = inMonth.length + milestonesInMonth.length;
+  const total = inMonth.length;
 
-  const shared = inMonth.filter((i) => !i.isPrivate).length + milestonesInMonth.length;
+  const shared = inMonth.filter((i) => !i.isPrivate).length;
 
   const upcoming = inMonth.filter((i) => (i.occursAt ?? 0) >= now).length;
 
@@ -70,24 +75,22 @@ export function buildWeekStrip({
   selectedDate,
   today,
   items,
-  milestones,
 }: {
   selectedDate: string;
   today: string;
   items: TimelineItem[];
-  milestones: MilestoneStripItem[];
 }): WeekDay[] {
-  const anchor = new Date(`${selectedDate}T12:00:00.000Z`);
-  const dayOfWeek = anchor.getUTCDay();
+  const anchor = parseDateOnly(selectedDate);
+  const dayOfWeek = anchor.getDay();
   const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
   const weekStartIso = addDaysIso(selectedDate, mondayOffset);
 
   const eventDays = new Set<string>();
   for (const item of items) {
     if (item.occursAt === null) continue;
-    eventDays.add(toDateString(item.occursAt));
+    const date = toDateString(item.occursAt);
+    if (date) eventDays.add(date);
   }
-  for (const m of milestones) eventDays.add(m.date);
 
   return Array.from({ length: 7 }, (_, i) => {
     const date = addDaysIso(weekStartIso, i);
@@ -110,24 +113,11 @@ export function filterAgendaForDate(items: TimelineItem[], date: string): Timeli
 export function buildTomorrowCard({
   selectedDate,
   items,
-  milestones,
 }: {
   selectedDate: string;
   items: TimelineItem[];
-  milestones: MilestoneStripItem[];
 }): TomorrowCard {
   const tomorrow = addDaysIso(selectedDate, 1);
-
-  const milestone = milestones.find((m) => m.date === tomorrow);
-  if (milestone) {
-    return {
-      kind: 'milestone',
-      id: milestone.id,
-      title: milestone.title,
-      subtitle: `${formatShortDate(tomorrow)} · All day`,
-      accent: 'mint',
-    };
-  }
 
   const next = items
     .filter((i) => i.occursAt !== null && toDateString(i.occursAt) === tomorrow)
@@ -142,29 +132,13 @@ export function buildTomorrowCard({
     };
   }
 
-  const futureMilestone = milestones.find((m) => m.date > selectedDate);
-  if (futureMilestone) {
-    const days = Math.round(
-      (new Date(`${futureMilestone.date}T12:00:00.000Z`).getTime() -
-        new Date(`${selectedDate}T12:00:00.000Z`).getTime()) /
-        DAY_MS,
-    );
-    return {
-      kind: 'milestone',
-      id: futureMilestone.id,
-      title: futureMilestone.title,
-      subtitle: `In ${days} day${days === 1 ? '' : 's'}`,
-      accent: 'butter',
-    };
-  }
-
   return null;
 }
 
 export function formatShortDate(iso: string) {
-  const d = new Date(`${iso}T12:00:00.000Z`);
-  const weekday = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()];
-  return `${weekday} ${d.getUTCDate()}`;
+  const d = parseDateOnly(iso);
+  const weekday = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
+  return `${weekday} ${d.getDate()}`;
 }
 
 export function formatTime(ts: number) {
@@ -179,13 +153,13 @@ export function formatAgendaTime(ts: number) {
 }
 
 export function formatAgendaDayHeader(iso: string) {
-  const d = new Date(`${iso}T12:00:00.000Z`);
+  const d = parseDateOnly(iso);
   const weekday = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'][
-    d.getUTCDay()
+    d.getDay()
   ];
   const month = [
     'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
     'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
-  ][d.getUTCMonth()];
-  return `${weekday} · ${d.getUTCDate()} ${month}`;
+  ][d.getMonth()];
+  return `${weekday} · ${d.getDate()} ${month}`;
 }

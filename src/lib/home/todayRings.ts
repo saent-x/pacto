@@ -9,12 +9,14 @@ type TaskLike = {
   dueDate?: string | null;
   isCompleted?: boolean | null;
   completedAt?: number | null;
+  isPrivate?: boolean | null;
 };
 
 type ReminderLike = {
   dueAt?: number | null;
   isCompleted?: boolean | null;
   completedAt?: number | null;
+  isPrivate?: boolean | null;
 };
 
 type PlanLike = {
@@ -29,7 +31,9 @@ type EventLike = {
 };
 
 function localDateKey(value: number | Date) {
-  return format(value, 'yyyy-MM-dd');
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
+  return format(date, 'yyyy-MM-dd');
 }
 
 function isDoneStatus(status: string | null | undefined) {
@@ -55,6 +59,12 @@ export function buildTodayRingSummary({
   reminders: ReminderLike[];
 }): TodayRingSummary {
   const today = localDateKey(now);
+  if (!today) {
+    return {
+      plans: { done: 0, total: 0 },
+      focus: { done: 0, total: 0 },
+    };
+  }
   let plansDone = 0;
   let plansTotal = 0;
   let focusDone = 0;
@@ -75,6 +85,7 @@ export function buildTodayRingSummary({
   }
 
   for (const task of tasks) {
+    if (task.isPrivate) continue;
     const isTodayItem = (task.dueDate ?? null) === today || completedToday(task, today);
     if (!isTodayItem) continue;
     focusTotal += 1;
@@ -82,6 +93,7 @@ export function buildTodayRingSummary({
   }
 
   for (const reminder of reminders) {
+    if (reminder.isPrivate) continue;
     const dueToday = reminder.dueAt != null && localDateKey(reminder.dueAt) === today;
     if (!dueToday && !completedToday(reminder, today)) continue;
     focusTotal += 1;

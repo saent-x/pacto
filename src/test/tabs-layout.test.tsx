@@ -1,6 +1,11 @@
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
+vi.mock('react-native', () => ({
+  Image: () => null,
+  Platform: { OS: 'ios' },
+}));
+
 vi.mock('expo-router/unstable-native-tabs', () => {
   const captured: string[] = [];
   const icons: Record<string, unknown> = {};
@@ -23,6 +28,14 @@ vi.mock('expo-router/unstable-native-tabs', () => {
   (NativeTabs as any).__captured = captured;
   (NativeTabs as any).__icons = icons;
   return { NativeTabs };
+});
+
+vi.mock('expo-router/js-tabs', () => {
+  function Tabs({ children }: { children?: React.ReactNode }) {
+    return children;
+  }
+  Tabs.Screen = () => null;
+  return { Tabs, default: Tabs };
 });
 
 vi.mock('@/src/lib/theme', () => ({ useTheme: () => ({ C: { inkColor: '#000' } }) }));

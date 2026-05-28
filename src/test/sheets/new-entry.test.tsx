@@ -1,10 +1,14 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const routeParams = vi.hoisted(() => ({
+  value: {} as { id?: string },
+}));
+
 vi.mock('expo-router', () => ({
   router: { back: vi.fn(), push: vi.fn() },
   Stack: { Screen: () => null },
-  useLocalSearchParams: () => ({}),
+  useLocalSearchParams: () => routeParams.value,
 }));
 
 vi.mock('expo-haptics', () => ({
@@ -28,6 +32,9 @@ vi.mock('react-native', async () => {
 
 const journalState = vi.hoisted(() => ({
   create: vi.fn(async () => undefined),
+  update: vi.fn(async () => undefined),
+  allEntries: [] as any[],
+  isLoading: false,
 }));
 
 const sessionState = vi.hoisted(() => ({
@@ -39,11 +46,16 @@ const sessionState = vi.hoisted(() => ({
 }));
 
 vi.mock('@/src/hooks/useJournal', () => ({
-  useJournal: () => ({ create: journalState.create }),
+  useJournal: () => ({
+    create: journalState.create,
+    update: journalState.update,
+    allEntries: journalState.allEntries,
+    isLoading: journalState.isLoading,
+  }),
 }));
 vi.mock('@/src/hooks/useSession', () => ({ useSession: () => sessionState }));
 
-import NewEntry from '@/app/sheets/new-entry';
+import { JournalEntryFormScreen as NewEntry } from '@/src/components/journal/JournalEntryFormScreen';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
@@ -64,6 +76,10 @@ const findSaveBtn = (root: any, opts: { enabled?: boolean } = {}) =>
 describe('new-entry sheet', () => {
   beforeEach(() => {
     journalState.create.mockClear();
+    journalState.update.mockClear();
+    journalState.allEntries = [];
+    journalState.isLoading = false;
+    routeParams.value = {};
     (router.back as any).mockClear();
     (Haptics.notificationAsync as any).mockClear();
     alertSpy.mockClear();
@@ -71,11 +87,11 @@ describe('new-entry sheet', () => {
     sessionState.partner = { id: 'u-sofia', displayName: 'Sofia', avatarUrl: null };
   });
 
-  it('renders all 5 mood pills', async () => {
+  it('does not render the old journal mood picker', async () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<NewEntry />); await flush(); });
     for (const k of ['great', 'good', 'okay', 'low', 'rough']) {
-      expect(findByTestID(renderer.root, `new-entry-mood-${k}`)).toBeDefined();
+      expect(findByTestID(renderer.root, `new-entry-mood-${k}`)).toBeUndefined();
     }
     act(() => renderer.unmount());
   });
@@ -92,7 +108,7 @@ describe('new-entry sheet', () => {
     act(() => renderer.unmount());
   });
 
-  it('happy path: title + body + mood + private → create called with trimmed payload', async () => {
+  it('happy path: title + body + private → create called with trimmed payload and no mood', async () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<NewEntry />); await flush(); });
     await act(async () => {
@@ -104,10 +120,6 @@ describe('new-entry sheet', () => {
       await flush();
     });
     await act(async () => {
-      findByTestID(renderer.root, 'new-entry-mood-low').props.onPress();
-      await flush();
-    });
-    await act(async () => {
       findByTestID(renderer.root, 'new-entry-private-toggle').props.onPress();
       await flush();
     });
@@ -115,11 +127,134 @@ describe('new-entry sheet', () => {
     const call = journalState.create.mock.calls[0][0];
     expect(call.title).toBe('Saturday');
     expect(call.body).toBe('long day');
-    expect(call.mood).toBe('low');
+    expect(call).not.toHaveProperty('mood');
     expect(call.is_private).toBe(true);
     expect(call.entry_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(Haptics.notificationAsync).toHaveBeenCalledWith('success');
     expect(router.back).toHaveBeenCalledTimes(1);
+    act(() => renderer.unmount());
+  });
+
+  it('ignores duplicate save taps while journal entry creation is pending', async () => {
+    let resolveCreate: () => void = () => undefined;
+    const createPromise = new Promise<void>((resolve) => {
+      resolveCreate = resolve;
+    });
+    journalState.create.mockImplementationOnce(() => createPromise);
+
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<NewEntry />); await flush(); });
+    await act(async () => {
+      findByTestID(renderer.root, 'new-entry-body-input').props.onChangeText('one entry only');
+      await flush();
+    });
+
+    await act(async () => {
+      const saveBtn = findSaveBtn(renderer.root, { enabled: true });
+      saveBtn.props.onPress();
+      saveBtn.props.onPress();
+      await flush();
+    });
+
+    expect(journalState.create).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveCreate();
+      await flush();
+    });
+
+    expect(router.back).toHaveBeenCalledTimes(1);
+    act(() => renderer.unmount());
+  });
+
+  it('edit path hydrates the entry and updates instead of creating', async () => {
+    routeParams.value = { id: 'entry-1' };
+    journalState.allEntries = [
+      {
+        id: 'entry-1',
+        title: 'Old title',
+        body: 'Old body',
+        author_id: 'u-me',
+        mood: 'okay',
+        is_private: true,
+        entry_date: '2026-05-18',
+      },
+    ];
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<NewEntry />); await flush(); });
+    expect(findByTestID(renderer.root, 'new-entry-title-input').props.value).toBe('Old title');
+    expect(findByTestID(renderer.root, 'new-entry-body-input').props.value).toBe('Old body');
+
+    await act(async () => {
+      findByTestID(renderer.root, 'new-entry-body-input').props.onChangeText('updated body  ');
+      await flush();
+    });
+    await act(async () => { findSaveBtn(renderer.root, { enabled: true }).props.onPress(); await flush(); });
+
+    expect(journalState.update).toHaveBeenCalledWith('entry-1', {
+      title: 'Old title',
+      body: 'updated body',
+      is_private: true,
+      entry_date: '2026-05-18',
+    });
+    expect(journalState.create).not.toHaveBeenCalled();
+    expect(router.back).toHaveBeenCalledTimes(1);
+    act(() => renderer.unmount());
+  });
+
+  it('does not pass a malformed legacy entry date through untouched edit saves', async () => {
+    routeParams.value = { id: 'entry-bad-date' };
+    journalState.allEntries = [
+      {
+        id: 'entry-bad-date',
+        title: 'Old title',
+        body: 'Old body',
+        author_id: 'u-me',
+        mood: null,
+        is_private: true,
+        entry_date: '2026-04-31',
+      },
+    ];
+
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<NewEntry />); await flush(); });
+    await act(async () => {
+      findByTestID(renderer.root, 'new-entry-body-input').props.onChangeText('updated body');
+      await flush();
+    });
+    await act(async () => { findSaveBtn(renderer.root, { enabled: true }).props.onPress(); await flush(); });
+
+    expect(journalState.update.mock.calls[0]).toEqual([
+      'entry-bad-date',
+      expect.not.objectContaining({
+        entry_date: expect.any(String),
+      }),
+    ]);
+    expect(JSON.stringify(journalState.update.mock.calls[0][1])).not.toContain('2026-04-31');
+
+    act(() => renderer.unmount());
+  });
+
+  it('does not present a partner-authored entry as editable from a direct edit route', async () => {
+    routeParams.value = { id: 'entry-1' };
+    journalState.allEntries = [
+      {
+        id: 'entry-1',
+        title: 'Partner title',
+        body: 'Partner body',
+        author_id: 'u-sofia',
+        is_private: false,
+        entry_date: '2026-05-18',
+      },
+    ];
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<NewEntry />); await flush(); });
+
+    expect(findByTestID(renderer.root, 'new-entry-title-input')).toBeUndefined();
+    expect(findByTestID(renderer.root, 'new-entry-body-input')).toBeUndefined();
+    expect(findSaveBtn(renderer.root)).toBeUndefined();
+    expect(journalState.update).not.toHaveBeenCalled();
+
     act(() => renderer.unmount());
   });
 
@@ -135,7 +270,7 @@ describe('new-entry sheet', () => {
     act(() => renderer.unmount());
   });
 
-  it('solo mode hides Private toggle and forces is_private:false', async () => {
+  it('solo mode hides Private toggle and saves as a private personal entry', async () => {
     sessionState.isSolo = true;
     sessionState.partner = null as any;
     let renderer: any;
@@ -147,7 +282,7 @@ describe('new-entry sheet', () => {
     });
     await act(async () => { findSaveBtn(renderer.root, { enabled: true }).props.onPress(); await flush(); });
     const call = journalState.create.mock.calls[0][0];
-    expect(call.is_private).toBe(false);
+    expect(call.is_private).toBe(true);
     act(() => renderer.unmount());
   });
 

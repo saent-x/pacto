@@ -12,7 +12,7 @@ const { iconSpy, routerBack, routerReplace, canGoBack } = vi.hoisted(() => ({
 vi.mock('@/src/lib/theme', () => ({
   useTheme: () => ({
     C: { card: '#1D1815', bone: '#F5EEE3', fog: '#80746A' },
-    F: { bodyBold: 'SpaceGrotesk_700Bold', displayBold: 'BricolageGrotesque_800ExtraBold' },
+    F: { bodyBold: 'Geist_700Bold', displayBold: 'BitcountPropSingle_700Bold' },
     mode: 'dark',
     setMode: () => undefined,
   }),

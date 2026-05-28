@@ -174,4 +174,37 @@ describe('assistant overlay', () => {
     expect(recorder.stop).toHaveBeenCalledTimes(1);
     expect(assistantLoop.processAudioRecording).toHaveBeenCalledWith('file:///assistant-recording.m4a');
   });
+
+  it('ignores duplicate recording submits while processing is pending', async () => {
+    const stopResolvers: Array<() => void> = [];
+    recorder.stop.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          stopResolvers.push(resolve);
+        }),
+    );
+    assistantLoop.processAudioRecording.mockImplementation(async () => undefined);
+    const tree = renderWithAssistant();
+
+    const trigger = findHostByTestID(tree.root, 'pacto-ai-trigger');
+    await act(async () => {
+      await trigger.props.onPress({});
+    });
+
+    const submit = findHostByTestID(tree.root, 'pacto-ai-submit-recording');
+    await act(async () => {
+      submit.props.onPress();
+      submit.props.onPress();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(recorder.stop).toHaveBeenCalledTimes(1);
+
+    stopResolvers.forEach((resolve) => resolve());
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(assistantLoop.processAudioRecording).toHaveBeenCalledTimes(1);
+  });
 });

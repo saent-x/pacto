@@ -9,13 +9,20 @@ import { SheetShell } from '@/src/components/ui/SheetShell';
 import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
 import {
+  ActionEmptyState,
   BucketedList,
   Checkbox,
   PriorityDot,
   type Bucket,
 } from '@/src/components/ui/pacto';
 import { useEntityAttachment, type AttachableEntity } from '@/src/hooks/memories/useEntityAttachment';
-import { addMemoryDraftAttachment } from '@/src/hooks/memories/useMemoryComposer';
+import {
+  addMemoryDraftAttachment,
+  resolveComposerTargetSpace,
+  useMemoryComposer,
+} from '@/src/hooks/memories/useMemoryComposer';
+import { useSession } from '@/src/hooks/useSession';
+import { normalizePriority } from '@/src/lib/priority';
 
 const TYPES: AttachableEntity[] = [
   'task',
@@ -52,8 +59,11 @@ export default function MemoryAttachEntitySheet() {
 
 function MemoryAttachEntityContent() {
   const { C } = useTheme();
+  const session = useSession();
+  const { draft } = useMemoryComposer();
+  const targetSpace = resolveComposerTargetSpace(session, draft);
   const [type, setType] = useState<AttachableEntity>('task');
-  const { entities } = useEntityAttachment(type);
+  const { entities } = useEntityAttachment(type, { targetSpaceId: targetSpace?.id });
   const buckets: Bucket<any>[] = entities.length
     ? [{ label: LABELS[type], dotColor: C.accent2, rows: entities }]
     : [];
@@ -110,9 +120,12 @@ function MemoryAttachEntityContent() {
 
       <View style={styles.listWrap}>
         {buckets.length === 0 ? (
-          <View style={[styles.empty, { backgroundColor: C.bgCard, borderColor: C.lineColor }]}>
-            <Text style={[Typography.caption, { color: C.ink3 }]}>Nothing to attach yet.</Text>
-          </View>
+          <ActionEmptyState
+            icon={ICONS[type]}
+            title="Nothing to attach yet"
+            body="Create an item first, then come back here to link it into a memory."
+            accent={C.accent2}
+          />
         ) : (
           <BucketedList
             buckets={buckets}
@@ -123,7 +136,11 @@ function MemoryAttachEntityContent() {
                 item={item}
                 type={type}
                 onPress={() => {
-                  addMemoryDraftAttachment({ type, refId: item.id });
+                  addMemoryDraftAttachment({
+                    type,
+                    refId: item.id,
+                    spaceId: firstRel(item.couple)?.id ?? targetSpace?.id,
+                  });
                   router.back();
                 }}
               />
@@ -133,6 +150,11 @@ function MemoryAttachEntityContent() {
       </View>
     </SheetShell>
   );
+}
+
+function firstRel(value: any): any | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
 }
 
 function AttachRow({
@@ -158,7 +180,7 @@ function AttachRow({
       style={[styles.row, { backgroundColor: C.bgCard }]}
     >
       {isCheckable ? (
-        <View pointerEvents="none" style={styles.checkWrap}>
+        <View style={styles.checkWrap}>
           <Checkbox checked={checked} onChange={() => undefined} />
         </View>
       ) : (
@@ -226,11 +248,11 @@ function summarizeAttachItem(type: AttachableEntity, item: any): { title: string
   }
 }
 
-function priorityLevel(p: number | undefined | null): 'none' | 'low' | 'med' | 'high' {
-  if (p == null) return 'none';
-  if (p >= 3) return 'high';
-  if (p === 2) return 'med';
-  if (p === 1) return 'low';
+function priorityLevel(p: unknown): 'none' | 'low' | 'med' | 'high' {
+  const priority = normalizePriority(p);
+  if (priority >= 3) return 'high';
+  if (priority === 2) return 'med';
+  if (priority === 1) return 'low';
   return 'none';
 }
 
@@ -267,14 +289,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  empty: {
-    minHeight: 88,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 18,
-    borderWidth: 1,
-    borderRadius: 18,
-  },
   listWrap: {
     paddingHorizontal: 2,
     paddingBottom: 8,
@@ -288,6 +302,7 @@ const styles = StyleSheet.create({
   },
   checkWrap: {
     paddingTop: 1,
+    pointerEvents: 'none',
   },
   iconTile: {
     width: 30,

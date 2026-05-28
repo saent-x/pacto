@@ -33,6 +33,7 @@ export async function compressImage(uri: string): Promise<CompressedImage> {
 
 export interface UploadParams {
   spaceId: string;
+  userId: string;
   type: 'image' | 'gif';
   uri: string;
   rawSize?: number;
@@ -50,7 +51,7 @@ async function uploadAndGetUrl(
   path: string,
   uri: string,
   contentType: string,
-): Promise<string> {
+): Promise<{ mediaUrl: string; bytes: number }> {
   const res = await fetch(uri);
   const blob = await res.blob();
   const file = new File([blob], path.split('/').pop()!, { type: contentType });
@@ -60,13 +61,24 @@ async function uploadAndGetUrl(
   });
   const url = result?.data?.$files?.[0]?.url as string | undefined;
   if (!url) throw new Error('upload succeeded but no URL returned');
-  return url;
+  return { mediaUrl: url, bytes: blob.size };
+}
+
+export function buildMemoryMediaPath(params: {
+  spaceId: string;
+  userId: string;
+  type: 'image' | 'gif';
+  id?: string;
+}) {
+  const ext = params.type === 'gif' ? 'gif' : 'jpg';
+  return `users/${params.userId}/spaces/${params.spaceId}/memories/${params.id ?? ulid()}.${ext}`;
 }
 
 export function useMediaUpload() {
   const upload = useCallback(
     async ({
       spaceId,
+      userId,
       type,
       uri,
       rawSize,
@@ -75,25 +87,25 @@ export function useMediaUpload() {
         if (rawSize && rawSize > MAX_GIF_BYTES) {
           throw new Error(`GIF exceeds ${MAX_GIF_BYTES / 1024 / 1024}MB cap`);
         }
-        const path = `spaces/${spaceId}/memories/${ulid()}.gif`;
-        const mediaUrl = await uploadAndGetUrl(path, uri, 'image/gif');
+        const path = buildMemoryMediaPath({ spaceId, userId, type });
+        const uploaded = await uploadAndGetUrl(path, uri, 'image/gif');
         return {
-          mediaUrl,
+          mediaUrl: uploaded.mediaUrl,
           mediaPath: path,
-          mediaSize: rawSize ?? 0,
+          mediaSize: rawSize ?? uploaded.bytes,
         };
       }
       const compressed = await compressImage(uri);
-      const path = `spaces/${spaceId}/memories/${ulid()}.jpg`;
-      const mediaUrl = await uploadAndGetUrl(
+      const path = buildMemoryMediaPath({ spaceId, userId, type });
+      const uploaded = await uploadAndGetUrl(
         path,
         compressed.uri,
         'image/jpeg',
       );
       return {
-        mediaUrl,
+        mediaUrl: uploaded.mediaUrl,
         mediaPath: path,
-        mediaSize: compressed.bytes,
+        mediaSize: compressed.bytes > 0 ? compressed.bytes : uploaded.bytes,
         mediaWidth: compressed.width,
         mediaHeight: compressed.height,
       };

@@ -36,11 +36,13 @@ function TasksStack() {
           headerTitle: () => <HeaderBrand eyebrow="TASKS" title="tasks" />,
           headerLeft: () => (
             <PressScale
-              onPress={() => router.push('/notifications' as any)}
+              onPress={() => router.back()}
               hitSlop={12}
+              haptic="impact"
+              pressedScale={0.96}
               style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' }}
             >
-              <Icon name="bell" size={22} color={C.inkColor} strokeWidth={2.2} />
+              <Icon name="chevronLeft" size={22} color={C.inkColor} strokeWidth={2.2} />
             </PressScale>
           ),
           headerRight: () => <NavAddBtn href="/sheets/new-list" />,

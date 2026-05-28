@@ -12,22 +12,38 @@ interface Props {
   replyCount: number;
   repostCount: number;
   hasReacted?: boolean;
+  canReact?: boolean;
+  canRepost?: boolean;
+  canShare?: boolean;
   onReact?: () => void;
   onReply?: () => void;
   onRepost?: () => void;
   onShare?: () => void;
 }
 
-export function MemoryActions({ mode, reactionCount, replyCount, repostCount, hasReacted, onReact, onReply, onRepost, onShare }: Props) {
+export function MemoryActions({
+  mode,
+  reactionCount,
+  replyCount,
+  repostCount,
+  hasReacted,
+  canReact = true,
+  canRepost = true,
+  canShare = true,
+  onReact,
+  onReply,
+  onRepost,
+  onShare,
+}: Props) {
   const { C } = useTheme();
   const isSolo = mode === 'solo';
 
   return (
     <View style={styles.row}>
-      {!isSolo ? (
+      {!isSolo && canReact ? (
         <PressScale onPress={onReact} hitSlop={8} style={styles.action}>
           {/* heartFill not in icon set — use heart for both states; color change distinguishes */}
-          <Icon name="heart" size={18} color={hasReacted ? '#e0245e' : C.ink3} />
+          <Icon name="heart" size={18} color={hasReacted ? C.accent : C.ink3} />
           {reactionCount > 0 ? <Text style={[Typography.caption, { color: C.ink3, marginLeft: 6 }]}>{reactionCount}</Text> : null}
         </PressScale>
       ) : null}
@@ -35,15 +51,17 @@ export function MemoryActions({ mode, reactionCount, replyCount, repostCount, ha
         <Icon name="messageCircle" size={18} color={C.ink3} />
         {replyCount > 0 ? <Text style={[Typography.caption, { color: C.ink3, marginLeft: 6 }]}>{replyCount}</Text> : null}
       </PressScale>
-      {!isSolo ? (
+      {!isSolo && canRepost ? (
         <PressScale onPress={onRepost} hitSlop={8} style={styles.action}>
           <Icon name="repeat" size={18} color={C.ink3} />
           {repostCount > 0 ? <Text style={[Typography.caption, { color: C.ink3, marginLeft: 6 }]}>{repostCount}</Text> : null}
         </PressScale>
       ) : null}
-      <PressScale onPress={onShare} hitSlop={8} style={styles.action}>
-        <Icon name="send" size={18} color={C.ink3} />
-      </PressScale>
+      {canShare ? (
+        <PressScale onPress={onShare} hitSlop={8} style={styles.action}>
+          <Icon name="send" size={18} color={C.ink3} />
+        </PressScale>
+      ) : null}
     </View>
   );
 }

@@ -39,7 +39,7 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
         ref={[Function]}
         style={
           {
-            "color": "rgba(148,144,154,1.00)",
+            "color": "rgba(131,125,141,1.00)",
             "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
             "letterSpacing": "1.4px",
@@ -56,10 +56,10 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
         ref={[Function]}
         style={
           {
-            "color": "rgba(41,45,61,1.00)",
+            "color": "rgba(33,36,55,1.00)",
             "fontFamily": "BitcountPropSingle_700Bold",
             "fontSize": "42px",
-            "letterSpacing": "-1.2px",
+            "letterSpacing": "0px",
             "lineHeight": "41.16px",
           }
         }
@@ -113,8 +113,8 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
     ref={[Function]}
     style={
       {
-        "color": "rgba(102,108,122,1.00)",
-        "fontFamily": "Geist_400Regular",
+        "color": "rgba(88,97,116,1.00)",
+        "fontFamily": "Geist_500Medium",
         "fontSize": "11px",
         "letterSpacing": "0.4px",
         "marginTop": "10px",
@@ -165,10 +165,10 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
         ref={[Function]}
         style={
           {
-            "color": "rgba(41,45,61,1.00)",
+            "color": "rgba(33,36,55,1.00)",
             "fontFamily": "BitcountPropSingle_700Bold",
             "fontSize": "42px",
-            "letterSpacing": "-1.2px",
+            "letterSpacing": "0px",
             "lineHeight": "41.16px",
           }
         }
@@ -178,7 +178,7 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
           style={
             [
               {
-                "color": "#E06F55",
+                "color": "#D96B52",
               },
               {
                 "opacity": 1,
@@ -210,7 +210,7 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
       <Path
         d="M0 4 Q 12 0, 24 4 T 48 4 T 72 4 T 96 4"
         fill="none"
-        stroke="#E06F55"
+        stroke="#D96B52"
         strokeLinecap="round"
         strokeWidth={2}
       />
@@ -246,19 +246,19 @@ exports[`ScreenHeader — both variants coexist > ui/ScreenHeader.tsx — gold a
         ref={[Function]}
         style={
           {
-            "color": "rgba(148,144,154,1.00)",
+            "color": "rgba(131,125,141,1.00)",
           }
         }
       >
         01 · HOME
       </div>
       <div
-        className="css-text-146c3p1 r-fontFamily-12w8xmp r-fontSize-1ui5ee8 r-letterSpacing-f2mvze r-lineHeight-2agvir"
+        className="css-text-146c3p1 r-fontFamily-wx4ldx r-fontSize-1ui5ee8 r-letterSpacing-oxtfae r-lineHeight-2agvir"
         dir="auto"
         ref={[Function]}
         style={
           {
-            "color": "rgba(41,45,61,1.00)",
+            "color": "rgba(33,36,55,1.00)",
           }
         }
       >
@@ -270,7 +270,7 @@ exports[`ScreenHeader — both variants coexist > ui/ScreenHeader.tsx — gold a
         ref={[Function]}
         style={
           {
-            "backgroundColor": "rgba(228,178,74,1.00)",
+            "backgroundColor": "rgba(167,123,45,1.00)",
             "borderBottomLeftRadius": "1px",
             "borderBottomRightRadius": "1px",
             "borderTopLeftRadius": "1px",
@@ -330,12 +330,12 @@ exports[`ScreenHeader — both variants coexist > ui/ScreenHeader.tsx — with b
       ref={[Function]}
     >
       <div
-        className="css-text-146c3p1 r-fontFamily-12w8xmp r-fontSize-1ui5ee8 r-letterSpacing-f2mvze r-lineHeight-2agvir"
+        className="css-text-146c3p1 r-fontFamily-wx4ldx r-fontSize-1ui5ee8 r-letterSpacing-oxtfae r-lineHeight-2agvir"
         dir="auto"
         ref={[Function]}
         style={
           {
-            "color": "rgba(41,45,61,1.00)",
+            "color": "rgba(33,36,55,1.00)",
           }
         }
       >
@@ -360,7 +360,7 @@ exports[`ScreenHeader — both variants coexist > ui/ScreenHeader.tsx — with b
           <Path
             d="M0 4 Q 12.5 0, 25 4 T 50 4 T 75 4 T 100 4"
             fill="none"
-            stroke="#E4B24A"
+            stroke="#A77B2D"
             strokeLinecap="round"
             strokeWidth={2}
           />

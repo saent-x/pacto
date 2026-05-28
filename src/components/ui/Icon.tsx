@@ -19,6 +19,7 @@ type Props = {
   color?: string;
   strokeWidth?: number;
   style?: StyleProp<ImageStyle>;
+  testID?: string;
 };
 
 const ICONS: Record<IconName, ImageSourcePropType> = {
@@ -91,12 +92,13 @@ const ICONS: Record<IconName, ImageSourcePropType> = {
   sparkle: require('../../../assets/images/icons/sparkle.png'),
 };
 
-export function Icon({ name, size = 20, color = '#fff', style }: Props) {
+export function Icon({ name, size = 20, color = '#fff', style, testID }: Props) {
   const source = ICONS[name];
   if (!source) return null;
 
   return (
     <Image
+      testID={testID}
       source={source}
       style={[
         {

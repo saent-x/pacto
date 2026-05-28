@@ -31,12 +31,12 @@ export function PushBootstrap() {
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
-      if (next === 'active' && tokenRef.current) {
-        touchDeviceLastSeen(tokenRef.current);
+      if (next === 'active' && tokenRef.current && user?.id) {
+        touchDeviceLastSeen(tokenRef.current, user.id);
       }
     });
     return () => sub.remove();
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     let cancelled = false;

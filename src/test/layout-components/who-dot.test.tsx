@@ -4,8 +4,14 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/src/lib/theme', () => ({
   useTheme: () => ({
-    C: { ink: '#0E0B0A' },
-    F: { displayBold: 'BricolageGrotesque_800ExtraBold' },
+    C: {
+      ink: '#0E0B0A',
+      peach: '#D88B74',
+      peachInk: '#3A1F14',
+      lavender: '#A89BC8',
+      lavenderInk: '#1F1635',
+    },
+    F: { displayBold: 'BitcountPropSingle_700Bold' },
     mode: 'dark',
     setMode: () => undefined,
   }),
@@ -35,7 +41,7 @@ describe('WhoDot', () => {
 
     const bubble = tree.root.findAllByType(View)[0];
     expect(bubble.props.style).toMatchObject({
-      backgroundColor: '#F4A68C',
+      backgroundColor: '#D88B74',
       width: 18,
       height: 18,
       borderRadius: 9,
@@ -51,7 +57,7 @@ describe('WhoDot', () => {
 
     const bubble = tree.root.findAllByType(View)[0];
     expect(bubble.props.style).toMatchObject({
-      backgroundColor: '#B8A8E8',
+      backgroundColor: '#A89BC8',
     });
   });
 

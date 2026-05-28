@@ -53,7 +53,7 @@ function GlassBackground({ style }: { style?: any }) {
           style={[
             StyleSheet.absoluteFill,
             {
-              backgroundColor: mode === 'dark' ? '#171B2A99' : '#FFFDF8B3',
+              backgroundColor: mode === 'dark' ? '#10152599' : '#FFFDF8B3',
             },
           ]}
         />
@@ -62,7 +62,7 @@ function GlassBackground({ style }: { style?: any }) {
           style={[
             styles.sheetHighlight,
             {
-              backgroundColor: mode === 'dark' ? '#F7F1E833' : '#FFFDF8E6',
+              backgroundColor: mode === 'dark' ? '#F7F0E533' : '#FFFDF8E6',
             },
           ]}
         />

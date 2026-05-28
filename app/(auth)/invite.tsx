@@ -11,15 +11,24 @@ import { ensureUserRow, joinSpaceByCode } from '@/src/lib/space-actions';
 import { isValidInviteCode } from '@/src/lib/invite-code';
 
 const SLOTS = 6;
+const INVITE_CODE_SLOT_SIZE = 52;
+const INVITE_CODE_SLOT_RADIUS = 999;
 
 export default function Invite() {
   const { C } = useTheme();
   const router = useRouter();
-  const { user } = useSession();
+  const session = useSession();
+  const { user } = session;
   const [code, setCode] = useState<string[]>(Array(SLOTS).fill(''));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const refs = useRef<Array<TextInput | null>>([]);
+  const joiningRef = useRef(false);
+  const replacingSoloPact =
+    session.status === 'ready' &&
+    session.isSolo &&
+    !!session.space?.id &&
+    !!session.membership?.id;
 
   const setSlot = (i: number, v: string) => {
     const cleaned = v.replace(/[^a-z0-9]/gi, '').toUpperCase();
@@ -46,18 +55,27 @@ export default function Invite() {
   const filled = code.every((c) => c);
 
   async function submit() {
+    if (joiningRef.current) return;
     if (!user || !isValidInviteCode(joined)) {
       setError('Invalid code');
       return;
     }
+    joiningRef.current = true;
     setBusy(true);
     setError(null);
     try {
       await ensureUserRow({ userId: user.id, email: user.email });
-      await joinSpaceByCode({ userId: user.id, code: joined });
+      await joinSpaceByCode({
+        userId: user.id,
+        code: joined,
+      });
+      router.replace('/(tabs)/home' as any);
     } catch (e: any) {
-      setError('Code no longer valid');
+      console.warn('[invite] joinSpaceByCode failed', e);
+      const msg = e?.body?.message || e?.message || '';
+      setError(msg ? `Couldn't join: ${msg}` : 'Code no longer valid');
     } finally {
+      joiningRef.current = false;
       setBusy(false);
     }
   }
@@ -94,7 +112,9 @@ export default function Invite() {
             { color: C.ink2, marginTop: 12, textAlign: 'center', maxWidth: 300 },
           ]}
         >
-          Six characters — case doesn't matter.
+          {replacingSoloPact
+            ? 'Six characters. Your solo base stays with you.'
+            : "Six characters — case doesn't matter."}
         </Text>
       </View>
 
@@ -169,10 +189,10 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   slot: {
-    width: 44,
-    height: 56,
+    width: INVITE_CODE_SLOT_SIZE,
+    height: INVITE_CODE_SLOT_SIZE,
     borderWidth: 1.5,
-    borderRadius: 8,
+    borderRadius: INVITE_CODE_SLOT_RADIUS,
     textAlign: 'center',
     fontSize: 24,
   },

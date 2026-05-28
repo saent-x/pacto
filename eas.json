@@ -27,6 +27,9 @@
         "EAS_USE_PRECOMPILED_MODULES": "0",
         "EXPO_USE_PRECOMPILED_MODULES": "0"
       },
+      "ios": {
+        "simulator": false
+      },
       "android": {
         "buildType": "app-bundle"
       }
@@ -37,6 +40,10 @@
       "ios": {
         "ascAppId": "6770158733",
         "appleTeamId": "FY8SWUHG89"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./secrets/google-play-service-account.json",
+        "track": "internal"
       }
     }
   }

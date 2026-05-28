@@ -22,7 +22,16 @@ vi.mock('expo-router', () => ({
   router: routerSpy,
   useRouter: () => routerSpy,
   useLocalSearchParams: () => ({}),
-  Stack: { Screen: () => null },
+  Stack: {
+    Screen: ({ options }: any) => {
+      const Reactx = require('react');
+      return Reactx.createElement(
+        Reactx.Fragment,
+        null,
+        typeof options?.headerTitle === 'function' ? options.headerTitle() : null,
+      );
+    },
+  },
   Link: ({ children }: any) => <>{children}</>,
 }));
 
@@ -49,11 +58,30 @@ vi.mock('@/src/components/ui/pacto', () => {
     SectionHead: ({ children }: any) => Reactx.createElement('MockText', null, children),
     Avatar: (props: any) => Reactx.createElement('MockView', props),
     CardHalo: ({ children, style }: any) => Reactx.createElement('MockView', { style }, children),
-    ColorTile: ({ children, onPress, testID, style }: any) =>
+    ColorTile: ({ children, onPress, testID, style, title, stat, statLabel }: any) => {
+      const body = Reactx.createElement(
+        Reactx.Fragment,
+        null,
+        title != null ? Reactx.createElement('MockText', null, String(title)) : null,
+        stat != null ? Reactx.createElement('MockText', null, String(stat)) : null,
+        statLabel != null ? Reactx.createElement('MockText', null, String(statLabel)) : null,
+        children,
+      );
+      return (
       onPress
-        ? Reactx.createElement('MockPressable', { onPress, testID, style }, children)
-        : Reactx.createElement('MockView', { testID, style }, children),
+        ? Reactx.createElement('MockPressable', { onPress, testID, style }, body)
+        : Reactx.createElement('MockView', { testID, style }, body)
+      );
+    },
     MonthlyHeatmap: (props: any) => Reactx.createElement('MockView', { ...props, testID: 'monthly-heatmap' }),
+    PriorityPill: (props: any) => Reactx.createElement('MockView', { ...props, testID: 'priority-pill' }),
+    priorityLevelFromNumber: (p: number | null | undefined) => {
+      const n = Number(p ?? 0);
+      if (n >= 3) return 'high';
+      if (n === 2) return 'med';
+      if (n === 1) return 'low';
+      return 'none';
+    },
   };
 });
 
@@ -175,7 +203,6 @@ const homeState = vi.hoisted(() => ({
     dateKey: '2026-04-22',
   },
   hero: null,
-  milestones: [],
   memories: [],
   memoryPreview: null,
   activity: [] as any[],
@@ -300,13 +327,12 @@ describe('HomeRoute', () => {
     sessionState.activeCouple = null;
     sessionState.isSolo = false;
     sessionState.isCouple = true;
-    sessionState.space = { id: 'sp1', kind: 'couple', name: null, anniversary: null, inviteCode: null };
+    sessionState.space = { id: 'sp1', kind: 'couple', name: null, inviteCode: null };
     sessionState.partner = null;
     sessionState.user = { id: 'me', email: 'a@b', displayName: 'Mattia', avatarUrl: null };
     sessionState.profile = { id: 'me', displayName: 'Mattia', avatarUrl: null };
     sessionState.isFeatureEnabled = vi.fn(() => true);
     homeState.timeline = [];
-    homeState.milestones = [];
     homeState.memories = [];
     homeState.memoryPreview = null;
     homeState.activity = [
@@ -344,13 +370,52 @@ describe('HomeRoute', () => {
     act(() => renderer.unmount());
   });
 
+  it('does not seed quick stats progress when there are no tasks or reminders', async () => {
+    homeState.activity = [];
+    homeState.timeline = [];
+    homeState.todaySummary = { plans: { done: 0, total: 0 }, focus: { done: 0, total: 0 } };
+
+    const renderer = await renderHome();
+    const text = allText(renderer).join('\n');
+
+    expect(text).toContain('Tasks this week');
+    expect(text).toContain('NO TASKS');
+    expect(text).toContain('0 done');
+    expect(text).not.toContain('0/1');
+    expect(text).not.toContain('+1% TRACKED');
+
+    act(() => renderer.unmount());
+  });
+
+  it('uses the email username in the header when a new account has no display name', async () => {
+    sessionState.user = {
+      id: 'me',
+      email: 'new.account@example.com',
+      displayName: null,
+      avatarUrl: null,
+    };
+    sessionState.profile = {
+      id: 'me',
+      displayName: null,
+      avatarUrl: null,
+    };
+
+    const renderer = await renderHome();
+    const texts = allText(renderer);
+
+    expect(texts).toContain('new.account');
+    expect(texts).not.toContain('there');
+
+    act(() => renderer.unmount());
+  });
+
   it('keeps weather compact and requests Expo location when tapped', async () => {
     const renderer = await renderHome();
     const weatherCard = findByTestID(renderer, 'home-weather-card')[0];
 
     expect(weatherCard).toBeDefined();
     expect(flattenStyle(weatherCard.props.style)).toEqual(
-      expect.arrayContaining([expect.objectContaining({ minHeight: 109 })]),
+      expect.arrayContaining([expect.objectContaining({ minHeight: 101 })]),
     );
 
     await act(async () => {
@@ -360,6 +425,29 @@ describe('HomeRoute', () => {
 
     expect(locationMock.requestForegroundPermissionsAsync).toHaveBeenCalledTimes(1);
     expect(locationMock.getCurrentPositionAsync).toHaveBeenCalledWith({ accuracy: 3 });
+
+    act(() => renderer.unmount());
+  });
+
+  it('keeps the current signal icon color distinct from the weather icon', async () => {
+    checkInsState.myTodayCheckIn = {
+      id: 'checkin-low',
+      authorId: 'me',
+      mood: 'low',
+      note: null,
+      energy: 2,
+      isPrivate: false,
+      checkInDate: checkInsState.today,
+      createdAt: Date.now(),
+    };
+
+    const renderer = await renderHome();
+    const signalIcon = findByTestID(renderer, 'home-checkin-signal-icon')[0];
+    const weatherIcon = findByTestID(renderer, 'home-weather-icon')[0];
+
+    expect(signalIcon.props.color).toBeDefined();
+    expect(weatherIcon.props.color).toBeDefined();
+    expect(signalIcon.props.color).not.toBe(weatherIcon.props.color);
 
     act(() => renderer.unmount());
   });
@@ -381,7 +469,7 @@ describe('HomeRoute', () => {
     act(() => renderer.unmount());
   });
 
-  it('labels milestone data as memory dates inside the redesigned home stack', async () => {
+  it('does not surface retired memory-date cards in the redesigned home stack', async () => {
     homeState.timeline = [
       {
         id: 'task:next',
@@ -396,23 +484,12 @@ describe('HomeRoute', () => {
         isOverdue: false,
       },
     ];
-    homeState.milestones = [
-      {
-        id: 'milestone:anniversary',
-        type: 'milestone',
-        title: 'Anniversary',
-        subtitle: null,
-        date: '2026-06-10',
-        daysUntil: 39,
-      },
-    ];
 
     const renderer = await renderHome();
     const texts = allText(renderer);
     const text = texts.join('\n');
 
-    expect(text).toContain('MEMORY DATE');
-    expect(text).toContain('Anniversary');
+    expect(text).not.toContain('MEMORY DATE');
     expect(text).not.toContain('Tasks, targets, reminders, and memory dates due in the next 30 days.');
     expect(text).not.toContain('MILESTONES');
     expect(texts.indexOf('QUICK STATS')).toBeGreaterThanOrEqual(0);
@@ -488,6 +565,32 @@ describe('HomeRoute', () => {
     expect(findByTestID(imageRenderer, 'home-coming-cover-fallback')).toHaveLength(0);
 
     act(() => imageRenderer.unmount());
+  });
+
+  it('renders up-next rows without a leading icon slot', async () => {
+    homeState.timeline = [
+      {
+        id: 'task:no-leading-icon',
+        type: 'task',
+        sourceId: 'no-leading-icon',
+        sourceTable: 'tasks',
+        title: 'Task row without icon',
+        subtitle: null,
+        occursAt: localDayAt(1, 13),
+        priority: 3,
+        isPrivate: false,
+        isOverdue: false,
+      },
+    ];
+
+    const renderer = await renderHome();
+    const row = findByTestID(renderer, 'home-timeline-task-no-leading-icon')[0];
+    const iconImages = row.findAll((node: any) => node.props?.resizeMode === 'contain' && node.props?.tintColor);
+
+    expect(iconImages).toHaveLength(0);
+    expect(findByTestID(renderer, 'priority-pill')).toHaveLength(1);
+
+    act(() => renderer.unmount());
   });
 
   it('renders only current local date items under Today', async () => {
@@ -651,8 +754,32 @@ describe('HomeRoute', () => {
     act(() => renderer.unmount());
   });
 
-  it('routes love-note memory rows to a memories destination when journal is disabled', async () => {
-    sessionState.isFeatureEnabled = vi.fn((featureId: string) => featureId !== 'journal');
+  it('timeline event item routes to Calendar with its selected date', async () => {
+    const occursAt = new Date(2026, 3, 17, 18, 30, 0, 0);
+    homeState.timeline = [
+      {
+        id: 'event:5',
+        type: 'event',
+        sourceId: '5',
+        sourceTable: 'events',
+        title: 'Dinner booking',
+        subtitle: null,
+        occursAt: occursAt.getTime(),
+        priority: 0,
+        isPrivate: false,
+        isOverdue: false,
+      },
+    ];
+    const renderer = await renderHome();
+    const btn = findByTestID(renderer, 'home-timeline-event-5')[0];
+    await act(async () => {
+      await activateNode(btn);
+    });
+    expect(routerSpy.push).toHaveBeenCalledWith('/(tabs)/calendar?date=2026-04-17');
+    act(() => renderer.unmount());
+  });
+
+  it('filters retired memory rows out of the home timeline', async () => {
     const occursAt = new Date();
     occursAt.setHours(11, 0, 0, 0);
     homeState.timeline = [
@@ -660,7 +787,7 @@ describe('HomeRoute', () => {
         id: 'memory:love-note-1',
         type: 'memory',
         sourceId: 'love-note-1',
-        sourceTable: 'loveNotes',
+        sourceTable: 'retiredMemory',
         title: 'Love note',
         subtitle: 'You made the morning easier.',
         occursAt: occursAt.getTime(),
@@ -671,14 +798,8 @@ describe('HomeRoute', () => {
     ];
 
     const renderer = await renderHome();
-    const btn = findByTestID(renderer, 'home-timeline-memory-love-note-1')[0];
-    expect(btn).toBeDefined();
-    await act(async () => {
-      await activateNode(btn);
-    });
-
-    expect(routerSpy.push).toHaveBeenCalledWith('/(tabs)/us/notes');
-    expect(routerSpy.push).not.toHaveBeenCalledWith('/(tabs)/us/journal');
+    expect(findByTestID(renderer, 'home-timeline-memory-love-note-1')).toHaveLength(0);
+    expect(allText(renderer)).not.toContain('Love note');
     act(() => renderer.unmount());
   });
 

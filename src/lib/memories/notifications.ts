@@ -1,5 +1,9 @@
 import { db } from '@/src/lib/instant';
-import { sendPushToUser } from '@/src/lib/push';
+import {
+  sendMemoryNotificationViaRelay,
+  sendPushToUser,
+  type MemoryNotificationKind,
+} from '@/src/lib/push';
 
 export interface ReactionPayload {
   actor: string;
@@ -59,6 +63,13 @@ export async function notifyMemoryReaction(args: {
   actorName: string;
   debouncer?: ReactionDebouncer;
 }): Promise<void> {
+  if (!args.debouncer && await tryTrustedMemoryRelay({
+    kind: 'memoryReaction',
+    sourceMemoryId: args.memoryId,
+  })) {
+    return;
+  }
+
   const target = await getMemoryNotificationTarget(args.memoryId);
   if (!target || target.authorId === args.actorUserId) return;
 
@@ -72,6 +83,14 @@ export async function notifyMemoryRepost(args: {
   actorName: string;
   routeMemoryId: string;
 }): Promise<void> {
+  if (await tryTrustedMemoryRelay({
+    kind: 'memoryRepost',
+    sourceMemoryId: args.sourceMemoryId,
+    routeMemoryId: args.routeMemoryId,
+  })) {
+    return;
+  }
+
   const target = await getMemoryNotificationTarget(args.sourceMemoryId);
   if (!target || target.authorId === args.actorUserId) return;
 
@@ -89,6 +108,14 @@ export async function notifyMemoryQuote(args: {
   actorName: string;
   routeMemoryId: string;
 }): Promise<void> {
+  if (await tryTrustedMemoryRelay({
+    kind: 'memoryQuote',
+    sourceMemoryId: args.sourceMemoryId,
+    routeMemoryId: args.routeMemoryId,
+  })) {
+    return;
+  }
+
   const target = await getMemoryNotificationTarget(args.sourceMemoryId);
   if (!target || target.authorId === args.actorUserId) return;
 
@@ -110,6 +137,7 @@ async function getMemoryNotificationTarget(memoryId: string): Promise<{
     },
   });
   const memory = data?.memories?.[0];
+  if (memory?.isPrivate === true) return null;
   const author = firstRel<{ id?: string }>(memory?.author);
   return typeof author?.id === 'string' ? { authorId: author.id } : null;
 }
@@ -117,6 +145,19 @@ async function getMemoryNotificationTarget(memoryId: string): Promise<{
 function firstRel<T>(rel: T | T[] | undefined): T | undefined {
   if (!rel) return undefined;
   return Array.isArray(rel) ? rel[0] : rel;
+}
+
+async function tryTrustedMemoryRelay(args: {
+  kind: MemoryNotificationKind;
+  sourceMemoryId: string;
+  routeMemoryId?: string;
+}): Promise<boolean> {
+  try {
+    return await sendMemoryNotificationViaRelay(args);
+  } catch (error) {
+    console.warn('[memories] trusted memory push relay failed', error);
+    return true;
+  }
 }
 
 const defaultReactionDebouncer = new ReactionDebouncer({

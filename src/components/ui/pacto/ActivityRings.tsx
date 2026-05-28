@@ -146,7 +146,7 @@ function Ring({
             cx={cx}
             cy={cy}
             r={r}
-            stroke={metrics[i]?.color ?? '#2C2118'}
+            stroke={metrics[i]?.color ?? '#212437'}
             strokeWidth={stroke[i]}
             value={values[i] ?? 0}
             delay={staggerDelay + i * 110}
@@ -193,7 +193,7 @@ export function ActivityRings({
               color: C.inkColor,
               marginTop: 6,
               textTransform: 'uppercase',
-              letterSpacing: -0.4,
+              letterSpacing: 0,
               lineHeight: 36,
             }}
             numberOfLines={1}

@@ -20,6 +20,7 @@ import { useTimetables, type TimetableRow } from '@/src/hooks/useTimetables';
 import { useSession } from '@/src/hooks/useSession';
 import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
+import { normalizeTemplateKey, tmplByKey } from '@/src/lib/timetables-data';
 
 type FilterKey = 'all' | 'solo' | 'shared';
 
@@ -32,13 +33,9 @@ function withAlpha(hex: string, a: number): string {
   return `rgba(${r}, ${g}, ${b}, ${Math.max(0, Math.min(1, a))})`;
 }
 
-const TEMPLATE_LABEL: Record<string, string> = {
-  custom: 'Custom',
-  weekly: 'Weekly',
-  fitness: 'Fitness',
-  study: 'Study',
-  routine: 'Routine',
-};
+function templateMeta(template: string, title?: string) {
+  return tmplByKey(normalizeTemplateKey(template, title));
+}
 
 export default function TimetablesIndex() {
   return (
@@ -173,7 +170,7 @@ function TimetablesIndexInner() {
             eyebrow={heroEyebrow}
             meta={
               featured
-                ? `${(TEMPLATE_LABEL[featured.template] ?? 'Custom').toUpperCase()} · ${featured.share === 'solo' ? 'SOLO' : 'SHARED'}${featured.updatedAt ? ` · ${format(new Date(featured.updatedAt), 'MMM d').toUpperCase()}` : ''}`
+                ? `${templateMeta(featured.template, featured.title).shortLabel.toUpperCase()} · ${featured.share === 'solo' ? 'SOLO' : 'SHARED'}${featured.updatedAt ? ` · ${format(new Date(featured.updatedAt), 'MMM d').toUpperCase()}` : ''}`
                 : undefined
             }
             primary={
@@ -266,103 +263,17 @@ function TimetablesIndexInner() {
           ) : (
             <BucketedList
               buckets={buckets}
+              presentation="items"
+              swipeableRows
               rowKey={(t) => t.id}
               renderRow={(t) => (
-                <SwipeableRow
-                  deleteTitle="Delete timetable?"
-                  deleteMessage={`"${t.title}" and all its items will be removed.`}
-                  onEdit={() =>
-                    router.push(
-                      `/sheets/new-timetable?id=${t.id}` as any
-                    )
-                  }
+                <TimetableListRow
+                  timetable={t}
+                  onOpen={() => router.push(`/(tabs)/us/timetables/${t.id}` as any)}
+                  onEdit={() => router.push(`/sheets/new-timetable?id=${t.id}` as any)}
                   onDelete={() => remove(t.id)}
-                >
-                  <PressScale
-                    onPress={() =>
-                      router.push(`/(tabs)/us/timetables/${t.id}` as any)
-                    }
-                    accessibilityLabel={`${t.title}, ${t.itemsCount} ${t.itemsCount === 1 ? 'item' : 'items'}, ${t.share === 'solo' ? 'solo' : 'shared'}`}
-                    accessibilityHint="Open this timetable"
-                    style={[
-                      styles.row,
-                      {
-                        backgroundColor: C.bgCard,
-                      },
-                    ]}
-                  >
-                    <View
-                      style={[styles.iconTile, { backgroundColor: C.accent2Soft }]}
-                    >
-                      <Icon
-                        name="grid"
-                        size={16}
-                        color={C.accent2}
-                        strokeWidth={2.2}
-                      />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <View style={styles.headRow}>
-                        <Text
-                          style={[
-                            Typography.bodyMedium,
-                            { color: C.inkColor, flex: 1 },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {t.title}
-                        </Text>
-                        <Text
-                          style={[
-                            Typography.eyebrowSm,
-                            { color: C.ink3, fontSize: 9.5 },
-                          ]}
-                        >
-                          {t.itemsCount}{' '}
-                          {t.itemsCount === 1 ? 'ITEM' : 'ITEMS'}
-                        </Text>
-                      </View>
-                      <View style={styles.metaRow}>
-                        <Text
-                          style={[
-                            Typography.eyebrowSm,
-                            { color: C.accent2, fontSize: 9.5 },
-                          ]}
-                        >
-                          {(TEMPLATE_LABEL[t.template] ?? 'CUSTOM').toUpperCase()}
-                        </Text>
-                        <Text
-                          style={[
-                            Typography.eyebrowSm,
-                            {
-                              color:
-                                t.share === 'solo' ? C.ink3 : C.accent,
-                              fontSize: 9.5,
-                            },
-                          ]}
-                        >
-                          · {t.share === 'solo' ? 'SOLO' : 'SHARED'}
-                        </Text>
-                        {t.updatedAt ? (
-                          <Text
-                            style={[
-                              Typography.mono,
-                              { color: C.ink3, fontSize: 11 },
-                            ]}
-                          >
-                            · {format(new Date(t.updatedAt), 'MMM d')}
-                          </Text>
-                        ) : null}
-                      </View>
-                    </View>
-                    <Icon
-                      name="chevronRight"
-                      size={14}
-                      color={C.ink3}
-                      strokeWidth={2.2}
-                    />
-                  </PressScale>
-                </SwipeableRow>
+                  colors={C}
+                />
               )}
             />
           )}
@@ -436,3 +347,116 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
 });
+
+type TimetableListRowProps = {
+  timetable: TimetableRow;
+  onOpen: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  colors: ReturnType<typeof useTheme>['C'];
+};
+
+function TimetableListRow({
+  timetable: t,
+  onOpen,
+  onEdit,
+  onDelete,
+  colors: C,
+}: TimetableListRowProps) {
+  const meta = templateMeta(t.template, t.title);
+
+  return (
+    <SwipeableRow
+      deleteTitle="Delete timetable?"
+      deleteMessage={`"${t.title}" and all its items will be removed.`}
+      onEdit={onEdit}
+      onDelete={onDelete}
+    >
+      <PressScale
+        onPress={onOpen}
+        accessibilityLabel={`${t.title}, ${t.itemsCount} ${
+          t.itemsCount === 1 ? 'item' : 'items'
+        }, ${t.share === 'solo' ? 'solo' : 'shared'}`}
+        accessibilityHint="Open this timetable"
+        style={styles.row}
+      >
+        <View
+          testID={`timetable-row-icon-tile-${t.id}`}
+          style={[
+            styles.iconTile,
+            {
+              backgroundColor: meta.color,
+              borderColor: withAlpha(meta.ink, 0.2),
+            },
+          ]}
+        >
+          <Icon
+            testID={`timetable-row-icon-${t.id}`}
+            name={meta.icon}
+            size={17}
+            color={meta.ink}
+            strokeWidth={2.2}
+          />
+        </View>
+        <View style={{ flex: 1 }}>
+          <View style={styles.headRow}>
+            <Text
+              style={[
+                Typography.bodyMedium,
+                { color: C.inkColor, flex: 1 },
+              ]}
+              numberOfLines={1}
+            >
+              {t.title}
+            </Text>
+            <Text
+              style={[
+                Typography.eyebrowSm,
+                { color: C.ink3, fontSize: 9.5 },
+              ]}
+            >
+              {t.itemsCount} {t.itemsCount === 1 ? 'ITEM' : 'ITEMS'}
+            </Text>
+          </View>
+          <View style={styles.metaRow}>
+            <Text
+              style={[
+                Typography.eyebrowSm,
+                { color: meta.ink, fontSize: 9.5 },
+              ]}
+            >
+              {meta.shortLabel.toUpperCase()}
+            </Text>
+            <Text
+              style={[
+                Typography.eyebrowSm,
+                {
+                  color: t.share === 'solo' ? C.ink3 : C.accent,
+                  fontSize: 9.5,
+                },
+              ]}
+            >
+              · {t.share === 'solo' ? 'SOLO' : 'SHARED'}
+            </Text>
+            {t.updatedAt ? (
+              <Text
+                style={[
+                  Typography.mono,
+                  { color: C.ink3, fontSize: 11 },
+                ]}
+              >
+                · {format(new Date(t.updatedAt), 'MMM d')}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+        <Icon
+          name="chevronRight"
+          size={14}
+          color={C.ink3}
+          strokeWidth={2.2}
+        />
+      </PressScale>
+    </SwipeableRow>
+  );
+}

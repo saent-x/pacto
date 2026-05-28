@@ -1,44 +1,50 @@
-import type { ImageSourcePropType } from 'react-native';
 import type { IconName } from '@/src/components/ui/Icon';
 
-export type CheckInStateId = 'rough' | 'low' | 'steady' | 'soft';
+export type CheckInStateId = 'rough' | 'low' | 'okay' | 'steady' | 'good' | 'great';
 
 export type CheckInStateMeta = {
   id: CheckInStateId;
   label: string;
   color: string;
   icon: IconName;
-  image: ImageSourcePropType;
 };
 
 export const CHECK_IN_STATES: CheckInStateMeta[] = [
   {
     id: 'rough',
-    label: 'rough',
-    color: '#D6BFB6',
-    icon: 'zap',
-    image: require('../../assets/images/checkins/checkin-rough.png'),
+    label: 'Rough',
+    color: '#D96B52',
+    icon: 'droplet',
   },
   {
     id: 'low',
-    label: 'low',
-    color: '#C9D6E2',
-    icon: 'cloudRain',
-    image: require('../../assets/images/checkins/checkin-low.png'),
+    label: 'Low',
+    color: '#8CB5CD',
+    icon: 'moon',
+  },
+  {
+    id: 'okay',
+    label: 'Okay',
+    color: '#9C7530',
+    icon: 'minus',
   },
   {
     id: 'steady',
-    label: 'steady',
-    color: '#E8DEC9',
-    icon: 'minus',
-    image: require('../../assets/images/checkins/checkin-steady.png'),
+    label: 'Steady',
+    color: '#72AA9C',
+    icon: 'activity',
   },
   {
-    id: 'soft',
-    label: 'soft',
-    color: '#D8E2C7',
-    icon: 'cloud',
-    image: require('../../assets/images/checkins/checkin-soft.png'),
+    id: 'good',
+    label: 'Good',
+    color: '#637F55',
+    icon: 'star',
+  },
+  {
+    id: 'great',
+    label: 'Great',
+    color: '#A89BC8',
+    icon: 'sparkle',
   },
 ];
 
@@ -48,25 +54,27 @@ const BY_ID = Object.fromEntries(CHECK_IN_STATES.map((state) => [state.id, state
 >;
 
 const LEGACY_ALIASES: Record<string, CheckInStateId> = {
-  '1': 'soft',
-  '2': 'steady',
-  '3': 'low',
-  '4': 'rough',
-  good: 'soft',
-  great: 'soft',
-  glowing: 'soft',
+  '1': 'rough',
+  '2': 'low',
+  '3': 'okay',
+  '4': 'steady',
+  '5': 'good',
+  '6': 'great',
+  soft: 'good',
+  happy: 'great',
+  glowing: 'great',
   okay: 'steady',
   down: 'low',
   struggling: 'rough',
 };
 
 export function normalizeCheckInState(value: string | null | undefined): CheckInStateId {
-  if (!value) return 'steady';
+  if (!value) return 'okay';
 
   const key = value.trim().toLowerCase();
   if (key in BY_ID) return key as CheckInStateId;
 
-  return LEGACY_ALIASES[key] ?? 'steady';
+  return LEGACY_ALIASES[key] ?? 'okay';
 }
 
 export function getCheckInStateMeta(value: string | null | undefined): CheckInStateMeta {

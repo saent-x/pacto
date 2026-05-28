@@ -99,20 +99,11 @@ export default function UsLayout() {
                     avatarUrl: partner?.avatarUrl,
                   }}
                   size={28}
+                  gap={-14}
                 />
               )}
             </PressScale>
           ),
-        }}
-      />
-      <Stack.Screen
-        name="notes"
-        options={{
-          ...baseModule,
-          headerTitle: () => (
-            <HeaderBrand eyebrow={spaceLabel} title="notes" />
-          ),
-          headerRight: () => (moduleEnabled('memories') ? <NavAddBtn href="/sheets/new-note" /> : null),
         }}
       />
       <Stack.Screen
@@ -123,26 +114,6 @@ export default function UsLayout() {
             <HeaderBrand eyebrow={spaceLabel} title="check-ins" />
           ),
           headerRight: () => (moduleEnabled('checkins') ? <NavAddBtn href="/sheets/new-checkin" /> : null),
-        }}
-      />
-      <Stack.Screen
-        name="wishlists"
-        options={{
-          ...baseModule,
-          headerTitle: () => (
-            <HeaderBrand eyebrow={spaceLabel} title="wishlist" />
-          ),
-          headerRight: () => (moduleEnabled('wishlist') ? <NavAddBtn href="/sheets/new-wish" /> : null),
-        }}
-      />
-      <Stack.Screen
-        name="milestones"
-        options={{
-          ...baseModule,
-          headerTitle: () => (
-            <HeaderBrand eyebrow={spaceLabel} title="milestones" />
-          ),
-          headerRight: () => (moduleEnabled('memories') ? <NavAddBtn href="/sheets/new-milestone" /> : null),
         }}
       />
       <Stack.Screen
@@ -162,7 +133,7 @@ export default function UsLayout() {
           headerTitle: () => (
             <HeaderBrand eyebrow={spaceLabel} title="journal" />
           ),
-          headerRight: () => (moduleEnabled('journal') ? <NavAddBtn href="/sheets/new-entry" icon="edit" /> : null),
+          headerRight: () => (moduleEnabled('journal') ? <NavAddBtn href="/sheets/journal-entry" icon="edit" /> : null),
         }}
       />
       <Stack.Screen

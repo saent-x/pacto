@@ -1,64 +1,73 @@
 import * as Haptics from 'expo-haptics';
+import { format } from 'date-fns';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Text } from 'react-native';
 import { FeatureUnavailable } from '@/src/components/features/FeatureUnavailable';
 import { PrimaryButton } from '@/src/components/ui/atoms';
-import { Icon, IconName } from '@/src/components/ui/Icon';
 import {
-  SheetColorGrid,
-  SheetIconGrid,
-  SheetPreviewCard,
+  SheetDateField,
+  SheetIconLabelPicker,
+  SheetRow,
   SheetSection,
   SheetShell,
   SheetTitleField,
-  type IconOption,
+  type IconLabelOption,
 } from '@/src/components/ui/SheetShell';
 import { useFeatureGate } from '@/src/hooks/useFeatureGate';
 import { usePlans } from '@/src/hooks/usePlans';
-import { alphaColor } from '@/src/lib/color';
+import { useSession } from '@/src/hooks/useSession';
+import {
+  TARGET_COLOR_KEYS,
+  colorValueForKey,
+  pickRandomUnusedColorKey,
+  resolveColorKey,
+  type TargetColorKey,
+} from '@/src/lib/color-cycle';
 import { useTheme } from '@/src/lib/theme';
 
-const ICONS: IconOption<IconName>[] = [
-  { key: 'compass', icon: 'compass' },
-  { key: 'mapPin', icon: 'mapPin' },
-  { key: 'home', icon: 'home' },
-  { key: 'heart', icon: 'heart' },
-  { key: 'gift', icon: 'gift' },
-  { key: 'star', icon: 'star' },
-  { key: 'coffee', icon: 'coffee' },
-  { key: 'camera', icon: 'camera' },
-  { key: 'briefcase', icon: 'briefcase' },
-  { key: 'book', icon: 'book' },
-];
+type Priority = 'low' | 'med' | 'high';
+type Visibility = 'personal' | 'shared';
 
-type Bucket = 'Soon' | 'Ongoing' | 'Later' | 'Someday';
-
-const BUCKET_CANON: Record<Bucket, string> = {
-  Soon: 'This month',
-  Ongoing: 'Ongoing',
-  Later: 'Later this year',
-  Someday: 'Someday',
+const PRIORITY_NUM: Record<Priority, number> = {
+  low: 1,
+  med: 2,
+  high: 3,
 };
 
-const BUCKETS: { key: Bucket; icon: IconName }[] = [
-  { key: 'Soon', icon: 'zap' },
-  { key: 'Ongoing', icon: 'repeat' },
-  { key: 'Later', icon: 'clock' },
-  { key: 'Someday', icon: 'star' },
-];
+function priorityFromNumber(value: unknown): Priority {
+  const n = Number(value ?? 2);
+  if (n >= 3) return 'high';
+  if (n <= 1) return 'low';
+  return 'med';
+}
 
-function bucketFromCanon(canonical: string | null | undefined): Bucket {
-  switch (canonical) {
-    case 'Ongoing':
-      return 'Ongoing';
-    case 'Later this year':
-      return 'Later';
-    case 'Someday':
-      return 'Someday';
-    default:
-      return 'Soon';
-  }
+function dateFromIso(value: unknown): Date {
+  if (typeof value !== 'string' || value.length === 0) return new Date();
+  if (!isValidDateKey(value)) return new Date();
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day, 12, 0, 0, 0);
+}
+
+function bucketForTargetDate(date: Date, now = new Date()): string {
+  if (date.getFullYear() !== now.getFullYear()) return 'Someday';
+  if (date.getMonth() === now.getMonth()) return 'This month';
+  return 'Later this year';
+}
+
+function isValidDateKey(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
 }
 
 export default function NewPlan() {
@@ -70,39 +79,92 @@ export default function NewPlan() {
 function NewPlanInner() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEdit = Boolean(id);
-  const { C, F } = useTheme();
-  const { create, update, plans } = usePlans();
+  const { C } = useTheme();
+  const { create, update, plans, isLoading } = usePlans();
+  const { isSolo } = useSession();
   const existing = useMemo(
     () => (isEdit && id ? plans.find((p) => p.id === id) : undefined),
     [isEdit, id, plans],
   );
-  const colorOptions = useMemo(
-    () => [C.sky, C.peach, C.butter, C.mint, C.rose, C.lavender, C.gold].map((v) => ({ key: v, value: v })),
-    [C],
+  const defaultColorKey = useMemo(
+    () => pickRandomUnusedColorKey(TARGET_COLOR_KEYS, plans, C),
+    [C, plans],
+  );
+  const existingColorKey = useMemo(
+    () => resolveColorKey(existing, TARGET_COLOR_KEYS, C),
+    [C, existing],
+  );
+  const priorityOptions = useMemo<IconLabelOption<Priority>[]>(
+    () => [
+      { key: 'low', priorityLevel: 'low', label: 'Low', color: C.ink3 },
+      { key: 'med', priorityLevel: 'med', label: 'Medium', color: C.butter },
+      { key: 'high', priorityLevel: 'high', label: 'High', color: C.accent },
+    ],
+    [C.accent, C.butter, C.ink3],
+  );
+  const visibilityOptions = useMemo<IconLabelOption<Visibility>[]>(
+    () => [
+      { key: 'personal', icon: 'lock', label: 'Just me', color: C.sky },
+      { key: 'shared', icon: 'users', label: 'Together', color: C.gold },
+    ],
+    [C.gold, C.sky],
   );
   const [title, setTitle] = useState(existing?.title ?? '');
-  const [icon, setIcon] = useState<IconName>((existing?.icon as IconName) ?? 'compass');
-  const [color, setColor] = useState<string>(existing?.color ?? C.sky);
-  const [bucket, setBucket] = useState<Bucket>(
-    existing ? bucketFromCanon(existing.bucket) : 'Soon',
+  const [colorKey, setColorKey] = useState<TargetColorKey>(
+    existingColorKey ?? defaultColorKey,
   );
+  const [priority, setPriority] = useState<Priority>(
+    priorityFromNumber(existing?.priority),
+  );
+  const [visibility, setVisibility] = useState<Visibility>(
+    existing?.isPrivate || isSolo ? 'personal' : 'shared',
+  );
+  const [targetDate, setTargetDate] = useState<Date>(() => dateFromIso(existing?.targetDate));
+  const [targetDateTouched, setTargetDateTouched] = useState(false);
   const [saving, setSaving] = useState(false);
-  const previewInk = C.peachInk;
+  const savingRef = useRef(false);
+  const color = colorValueForKey(C, colorKey);
+  const existingTargetDateValid = isValidDateKey(existing?.targetDate);
 
-  const canSave = title.trim().length > 0 && !saving;
+  const canSave = title.trim().length > 0 && (!isEdit || !!existing) && !saving;
+
+  useEffect(() => {
+    if (isEdit && existingColorKey) {
+      setColorKey(existingColorKey);
+      return;
+    }
+    if (!isEdit) setColorKey(defaultColorKey);
+  }, [defaultColorKey, existingColorKey, isEdit]);
+
+  useEffect(() => {
+    if (!isEdit || !existing) return;
+    setTitle(String(existing.title ?? ''));
+    setPriority(priorityFromNumber(existing.priority));
+    setTargetDate(dateFromIso(existing.targetDate));
+    setTargetDateTouched(false);
+    setVisibility(existing.isPrivate || isSolo ? 'personal' : 'shared');
+  }, [existing, isEdit, isSolo]);
 
   const onSave = async () => {
-    if (!canSave) return;
+    if (!canSave || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
+      const shouldPersistTargetDate = !isEdit || targetDateTouched || existingTargetDateValid;
+      const targetDateValue = shouldPersistTargetDate ? format(targetDate, 'yyyy-MM-dd') : null;
+      const inferredBucket = targetDateValue
+        ? bucketForTargetDate(targetDate)
+        : existing?.bucket ?? existing?.category ?? 'Someday';
       const payload = {
         title: title.trim(),
         description: null,
-        category: BUCKET_CANON[bucket],
-        bucket: BUCKET_CANON[bucket],
-        icon,
+        category: inferredBucket,
+        bucket: inferredBucket,
         color,
-        priority: existing?.priority ?? 0,
+        colorKey,
+        priority: PRIORITY_NUM[priority],
+        isPrivate: isSolo ? true : visibility === 'personal',
+        targetDate: targetDateValue,
         status: existing?.status ?? 'active',
       };
       if (isEdit && id) {
@@ -116,9 +178,26 @@ function NewPlanInner() {
       console.warn('[new-plan] save failed', err);
       Alert.alert('Save failed', 'Try again.');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
+
+  if (isEdit && !existing) {
+    return (
+      <SheetShell
+        eyebrow="TARGET"
+        eyebrowColor={color}
+        title={isLoading ? 'Loading target' : 'Target missing'}
+      >
+        <Text style={{ color: C.ink2 }}>
+          {isLoading
+            ? 'Loading this target…'
+            : 'This target could not be found or is no longer available in this space.'}
+        </Text>
+      </SheetShell>
+    );
+  }
 
   return (
     <SheetShell
@@ -131,49 +210,6 @@ function NewPlanInner() {
         </PrimaryButton>
       }
     >
-      <SheetPreviewCard bg={color} ink={previewInk}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <View style={{ flex: 1 }}>
-            <Text
-              style={{
-                fontSize: 9,
-                fontFamily: F.bodyBold,
-                letterSpacing: 1.4,
-                opacity: 0.5,
-                color: previewInk,
-                textTransform: 'uppercase',
-              }}
-            >
-              {bucket}
-            </Text>
-            <Text
-              style={{
-                fontFamily: F.displayBold,
-                fontSize: 20,
-                color: previewInk,
-                letterSpacing: 0,
-                lineHeight: 22,
-                marginTop: 4,
-              }}
-            >
-              {title || 'Your target title'}
-            </Text>
-          </View>
-          <View
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 12,
-              backgroundColor: alphaColor(previewInk, 0.14),
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Icon name={icon} size={16} color={previewInk} />
-          </View>
-        </View>
-      </SheetPreviewCard>
-
       <SheetSection title="Title" first>
         <SheetTitleField
           testID="new-plan-title-input"
@@ -184,34 +220,39 @@ function NewPlanInner() {
         />
       </SheetSection>
 
-      <SheetSection title="Bucket">
-        <SheetIconGrid
-          options={BUCKETS}
-          selected={bucket}
-          onChange={setBucket}
-          accent={color}
-          testIDPrefix="new-plan-bucket"
+      <SheetSection title="When">
+        <SheetRow>
+          <SheetDateField
+            pressTestID="new-plan-target-date"
+            value={targetDate}
+            onChange={(value) => {
+              setTargetDateTouched(true);
+              setTargetDate(value);
+            }}
+            accent={color}
+          />
+        </SheetRow>
+      </SheetSection>
+
+      <SheetSection title="Priority">
+        <SheetIconLabelPicker
+          options={priorityOptions}
+          selected={priority}
+          onChange={setPriority}
+          testIDPrefix="new-plan-priority"
         />
       </SheetSection>
 
-      <SheetSection title="Icon">
-        <SheetIconGrid
-          options={ICONS}
-          selected={icon}
-          onChange={setIcon}
-          accent={color}
-          testIDPrefix="new-plan-icon"
-        />
-      </SheetSection>
-
-      <SheetSection title="Color">
-        <SheetColorGrid
-          colors={colorOptions}
-          selected={color}
-          onChange={setColor}
-          testIDPrefix="new-plan-color"
-        />
-      </SheetSection>
+      {!isSolo && (
+        <SheetSection title="Visibility">
+          <SheetIconLabelPicker
+            options={visibilityOptions}
+            selected={visibility}
+            onChange={setVisibility}
+            testIDPrefix="new-plan-visibility"
+          />
+        </SheetSection>
+      )}
     </SheetShell>
   );
 }

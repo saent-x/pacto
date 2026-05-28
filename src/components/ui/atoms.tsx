@@ -140,7 +140,7 @@ export function Display({
           fontSize: size,
           color: color ?? C.bone,
           lineHeight: size * 0.95,
-          letterSpacing: -1,
+          letterSpacing: 0,
         },
         style,
       ]}
@@ -291,8 +291,8 @@ export function Pill({
         style={[
           {
             backgroundColor: active ? activeBg ?? bg ?? C.goldSoft : 'transparent',
-            borderWidth: active ? 0 : 1,
-            borderColor: C.line,
+            borderWidth: 1,
+            borderColor: active ? activeColor ?? color ?? C.gold : C.line,
             borderRadius: 999,
             paddingVertical: padV,
             paddingHorizontal: padH,
@@ -568,7 +568,7 @@ export function ProgressRing({
             fontFamily: F.displayBold,
             fontSize: size * 0.26,
             color: labelColor ?? C.peachInk,
-            letterSpacing: -0.5,
+            letterSpacing: 0,
             fontVariant: ['tabular-nums'],
           }}
         >
@@ -800,7 +800,7 @@ export function ScreenHeader({
               fontFamily: F.displayBold,
               fontSize: 42,
               color: C.bone,
-              letterSpacing: -1.2,
+              letterSpacing: 0,
               lineHeight: 42 * 0.98,
             }}
           >

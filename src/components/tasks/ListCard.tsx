@@ -8,7 +8,6 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { Icon } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
 import { useTheme } from '@/src/lib/theme';
 import type { ListRow } from '@/src/hooks/useTaskLists';
@@ -47,25 +46,13 @@ export function ListCard({
           justifyContent: 'space-between',
         }}
       >
-        <View
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 12,
-            backgroundColor: 'rgba(0,0,0,0.12)',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Icon name={list.icon} size={18} color={ink} />
-        </View>
         <View>
           <Text
             style={{
               fontFamily: F.displayBold,
               fontSize: 18,
               color: ink,
-              letterSpacing: -0.4,
+              letterSpacing: 0,
               lineHeight: 20,
               marginBottom: 10,
             }}

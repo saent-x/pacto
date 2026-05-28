@@ -3,12 +3,11 @@ import { db } from '@/src/lib/instant';
 import { pastels } from '@/src/lib/tokens';
 import type { IconName } from '@/src/components/ui/Icon';
 import { useSession } from './useSession';
+import { childRowMatchesParentSpace, relationWhere, uniqueSpaceIds } from '@/src/lib/space-scope';
 
 export type NotificationKind =
-  | 'loveNote'
   | 'checkIn'
   | 'reminder'
-  | 'milestone'
   | 'timetable'
   | 'memory';
 
@@ -33,6 +32,41 @@ export type NotificationBucket = {
 };
 
 const DAY_MS = 86_400_000;
+const NOTIFICATION_SOURCE_LIMIT = 100;
+
+function timestampMs(value: unknown): number | null {
+  if (value instanceof Date) {
+    const timestamp = value.getTime();
+    return Number.isFinite(timestamp) ? timestamp : null;
+  }
+  if (typeof value === 'number') {
+    return Number.isFinite(value) && Number.isFinite(new Date(value).getTime()) ? value : null;
+  }
+  if (typeof value === 'string' && value.trim()) {
+    if (!hasValidDatePrefix(value)) return null;
+    const timestamp = new Date(value).getTime();
+    return Number.isFinite(timestamp) ? timestamp : null;
+  }
+  return null;
+}
+
+function hasValidDatePrefix(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (!match) return true;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
+function notificationTimestamp(value: unknown): number {
+  return timestampMs(value) ?? 0;
+}
 
 function startOfDay(ts: number): number {
   const d = new Date(ts);
@@ -52,7 +86,10 @@ function bucketOf(createdAt: number, now: number): BucketLabel {
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 
-export function formatTime(createdAt: number, now: number): string {
+export function formatTime(createdAtValue: unknown, nowValue: unknown): string {
+  const createdAt = timestampMs(createdAtValue);
+  const now = timestampMs(nowValue) ?? Date.now();
+  if (createdAt == null) return 'Unknown';
   const b = bucketOf(createdAt, now);
   if (b === 'Today') {
     const d = new Date(createdAt);
@@ -73,20 +110,27 @@ export function formatTime(createdAt: number, now: number): string {
   return `${d.getDate()}/${d.getMonth() + 1}`;
 }
 
+function dueTimeLabel(dueAt: unknown): string {
+  const timestamp = timestampMs(dueAt);
+  if (timestamp == null) return 'Due date missing';
+  const due = new Date(timestamp);
+  const h = due.getHours();
+  const m = due.getMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = ((h + 11) % 12) + 1;
+  return `Due ${h12}:${m.toString().padStart(2, '0')} ${ampm}`;
+}
+
 const BUCKET_ORDER: BucketLabel[] = ['Today', 'Yesterday', 'This week', 'Earlier'];
 
 type QueryShape = {
-  loveNotes: Array<{
-    id: string;
-    body: string;
-    createdAt: number;
-    author?: Array<{ id: string }> | { id: string };
-  }>;
   checkIns: Array<{
     id: string;
     mood?: string;
+    isPrivate?: boolean;
     createdAt: number;
     author?: Array<{ id: string; displayName?: string }> | { id: string; displayName?: string };
+    couple?: Array<{ id: string }> | { id: string };
   }>;
   reminders: Array<{
     id: string;
@@ -94,17 +138,23 @@ type QueryShape = {
     dueAt: number;
     createdAt: number;
     isCompleted?: boolean;
-  }>;
-  milestones: Array<{
-    id: string;
-    title: string;
-    date: string;
-    createdAt: number;
+    couple?: Array<{ id: string }> | { id: string };
+    createdBy?: Array<{ id: string; displayName?: string }> | { id: string; displayName?: string };
   }>;
   timetableItems: Array<{
     id: string;
     title: string;
     createdAt: number;
+    couple?: Array<{ id: string }> | { id: string };
+    timetable?: Array<{
+      id: string;
+      couple?: Array<{ id: string }> | { id: string };
+      createdBy?: Array<{ id: string; displayName?: string }> | { id: string; displayName?: string };
+    }> | {
+      id: string;
+      couple?: Array<{ id: string }> | { id: string };
+      createdBy?: Array<{ id: string; displayName?: string }> | { id: string; displayName?: string };
+    };
   }>;
   memories: Array<{
     id: string;
@@ -114,6 +164,7 @@ type QueryShape = {
     notifyMembers?: boolean;
     createdAt: number;
     author?: Array<{ id: string; displayName?: string }> | { id: string; displayName?: string };
+    space?: Array<{ id: string }> | { id: string };
   }>;
 };
 
@@ -122,55 +173,104 @@ function firstRel<T>(rel: Array<T> | T | undefined): T | undefined {
   return Array.isArray(rel) ? rel[0] : rel;
 }
 
+function isExplicitPartnerPersonalRow(
+  spaceId: string | null | undefined,
+  ownerId: string | null | undefined,
+  personalSpaceId: string | null | undefined,
+  userId: string | null | undefined,
+) {
+  return Boolean(personalSpaceId && spaceId === personalSpaceId && ownerId && ownerId !== userId);
+}
+
+function privateFromOwningSpace(
+  value: unknown,
+  spaceId: string | null | undefined,
+  personalSpaceId: string | null | undefined,
+) {
+  return value === true || Boolean(personalSpaceId && spaceId === personalSpaceId);
+}
+
 export function useNotifications() {
-  const { activeCouple, membership, user, partner } = useSession();
+  const {
+    activeCouple,
+    membership,
+    soloMembership,
+    sharedMembership,
+    user,
+    partner,
+    personalSpaceId,
+    sharedSpaceId,
+  } = useSession();
   const coupleId = activeCouple?.couple?.id ?? null;
+  const readableSpaceIds = uniqueSpaceIds([personalSpaceId ?? coupleId, sharedSpaceId ?? coupleId]);
   const membershipId = membership?.id ?? null;
   const lastReadAt = membership?.lastNotificationsReadAt ?? 0;
+  const personalReadAt = soloMembership?.lastNotificationsReadAt ?? lastReadAt;
+  const sharedReadAt = sharedMembership?.lastNotificationsReadAt ?? lastReadAt;
   const partnerName = partner?.displayName ?? 'Partner';
   const userId = user?.id ?? null;
 
   const { data, isLoading: queryLoading, error } = db.useQuery(
-    coupleId
+    readableSpaceIds.length > 0
       ? {
-          loveNotes: { $: { where: { 'couple.id': coupleId } }, author: {} },
-          checkIns: { $: { where: { 'couple.id': coupleId } }, author: {} },
-          reminders: { $: { where: { 'couple.id': coupleId } } },
-          milestones: { $: { where: { 'couple.id': coupleId } } },
-          timetableItems: { $: { where: { 'couple.id': coupleId } } },
-          memories: { $: { where: { 'space.id': coupleId } }, author: {} },
+          checkIns: {
+            $: {
+              where: relationWhere('couple', readableSpaceIds),
+              order: { createdAt: 'desc' as const },
+              limit: NOTIFICATION_SOURCE_LIMIT,
+            },
+            author: {},
+            couple: {},
+          },
+          reminders: {
+            $: {
+              where: relationWhere('couple', readableSpaceIds),
+              order: { createdAt: 'desc' as const },
+              limit: NOTIFICATION_SOURCE_LIMIT,
+            },
+            couple: {},
+            createdBy: {},
+          },
+          timetableItems: {
+            $: {
+              where: relationWhere('couple', readableSpaceIds),
+              order: { createdAt: 'desc' as const },
+              limit: NOTIFICATION_SOURCE_LIMIT,
+            },
+            couple: {},
+            timetable: { couple: {}, createdBy: {} },
+          },
+          memories: {
+            $: {
+              where: relationWhere('space', readableSpaceIds),
+              order: { createdAt: 'desc' as const },
+              limit: NOTIFICATION_SOURCE_LIMIT,
+            },
+            author: {},
+            space: {},
+          },
         }
       : null,
   );
 
-  const now = Date.now();
-
   const items = useMemo<NotificationItem[]>(() => {
     if (!data) return [];
+    const now = Date.now();
     const q = data as Partial<QueryShape>;
     const out: NotificationItem[] = [];
-
-    for (const n of q.loveNotes ?? []) {
-      const authorId = firstRel(n.author)?.id;
-      const fromPartner = authorId && authorId !== userId;
-      out.push({
-        id: `loveNote:${n.id}`,
-        kind: 'loveNote',
-        icon: 'heart',
-        color: pastels.rose,
-        title: fromPartner ? `${partnerName} sent you a note` : 'Note sent',
-        sub: fromPartner ? 'Tap to read' : 'Delivered',
-        createdAt: n.createdAt,
-        time: formatTime(n.createdAt, now),
-        unread: n.createdAt > lastReadAt,
-        route: '/(tabs)/us/notes',
-      });
-    }
+    const readAtForSpace = (spaceId: string | null | undefined) => {
+      if (spaceId && spaceId === personalSpaceId) return personalReadAt ?? 0;
+      if (spaceId && spaceId === sharedSpaceId) return sharedReadAt ?? 0;
+      return lastReadAt;
+    };
 
     for (const c of q.checkIns ?? []) {
       const author = firstRel(c.author);
+      const spaceId = firstRel(c.couple)?.id;
       const fromPartner = author?.id && author.id !== userId;
+      if (privateFromOwningSpace(c.isPrivate, spaceId, personalSpaceId) && fromPartner) continue;
       const mood = c.mood ? ` · ${c.mood}` : '';
+      const createdAt = notificationTimestamp(c.createdAt);
       out.push({
         id: `checkIn:${c.id}`,
         kind: 'checkIn',
@@ -180,50 +280,41 @@ export function useNotifications() {
         sub: fromPartner
           ? `${author?.displayName ?? partnerName} just checked in`
           : 'You checked in',
-        createdAt: c.createdAt,
+        createdAt,
         time: formatTime(c.createdAt, now),
-        unread: c.createdAt > lastReadAt,
+        unread: createdAt > readAtForSpace(spaceId),
         route: '/(tabs)/us/checkins',
       });
     }
 
     for (const r of q.reminders ?? []) {
       if (r.isCompleted) continue;
-      const due = new Date(r.dueAt);
-      const h = due.getHours();
-      const m = due.getMinutes();
-      const ampm = h >= 12 ? 'PM' : 'AM';
-      const h12 = ((h + 11) % 12) + 1;
+      const spaceId = firstRel(r.couple)?.id;
+      const creatorId = firstRel(r.createdBy)?.id;
+      if (isExplicitPartnerPersonalRow(spaceId, creatorId, personalSpaceId, userId)) continue;
+      const createdAt = notificationTimestamp(r.createdAt);
       out.push({
         id: `reminder:${r.id}`,
         kind: 'reminder',
         icon: 'bell',
         color: pastels.lavender,
         title: `Reminder · ${r.title}`,
-        sub: `Due ${h12}:${m.toString().padStart(2, '0')} ${ampm}`,
-        createdAt: r.createdAt,
+        sub: dueTimeLabel(r.dueAt),
+        createdAt,
         time: formatTime(r.createdAt, now),
-        unread: r.createdAt > lastReadAt,
+        unread: createdAt > readAtForSpace(spaceId),
         route: '/(tabs)/us/reminders',
       });
     }
 
-    for (const ms of q.milestones ?? []) {
-      out.push({
-        id: `milestone:${ms.id}`,
-        kind: 'milestone',
-        icon: 'flag',
-        color: pastels.peach,
-        title: ms.title,
-        sub: ms.date,
-        createdAt: ms.createdAt,
-        time: formatTime(ms.createdAt, now),
-        unread: ms.createdAt > lastReadAt,
-        route: '/(tabs)/us/milestones',
-      });
-    }
-
-    for (const t of q.timetableItems ?? []) {
+    for (const t of (q.timetableItems ?? []).filter((item) =>
+      childRowMatchesParentSpace(item, 'timetable'),
+    )) {
+      const timetable = firstRel(t.timetable);
+      const spaceId = firstRel(t.couple)?.id ?? firstRel(timetable?.couple)?.id;
+      const timetableCreatorId = firstRel(timetable?.createdBy)?.id;
+      if (isExplicitPartnerPersonalRow(spaceId, timetableCreatorId, personalSpaceId, userId)) continue;
+      const createdAt = notificationTimestamp(t.createdAt);
       out.push({
         id: `timetable:${t.id}`,
         kind: 'timetable',
@@ -231,19 +322,21 @@ export function useNotifications() {
         color: pastels.peach,
         title: 'Timetable updated',
         sub: `${t.title} added`,
-        createdAt: t.createdAt,
+        createdAt,
         time: formatTime(t.createdAt, now),
-        unread: t.createdAt > lastReadAt,
+        unread: createdAt > readAtForSpace(spaceId),
         route: '/(tabs)/us/timetables',
       });
     }
 
     for (const m of q.memories ?? []) {
       const author = firstRel(m.author);
+      const spaceId = firstRel(m.space)?.id;
       const fromPartner = author?.id && author.id !== userId;
-      if (m.isPrivate && fromPartner) continue;
+      if (privateFromOwningSpace(m.isPrivate, spaceId, personalSpaceId) && fromPartner) continue;
       if (fromPartner && m.notifyMembers === false) continue;
       const preview = m.body?.trim();
+      const createdAt = notificationTimestamp(m.createdAt);
       out.push({
         id: `memory:${m.id}`,
         kind: 'memory',
@@ -255,18 +348,19 @@ export function useNotifications() {
           ? `${author?.displayName ?? partnerName} added a memory`
           : 'Memory posted',
         sub: preview ? preview.slice(0, 90) : 'Open memory',
-        createdAt: m.createdAt,
+        createdAt,
         time: formatTime(m.createdAt, now),
-        unread: m.createdAt > lastReadAt,
+        unread: createdAt > readAtForSpace(spaceId),
         route: `/(tabs)/memories/${m.id}`,
       });
     }
 
     out.sort((a, b) => b.createdAt - a.createdAt);
     return out;
-  }, [data, lastReadAt, now, partnerName, userId]);
+  }, [data, lastReadAt, partnerName, personalReadAt, personalSpaceId, sharedReadAt, sharedSpaceId, userId]);
 
   const buckets = useMemo<NotificationBucket[]>(() => {
+    const now = Date.now();
     const map = new Map<BucketLabel, NotificationItem[]>();
     for (const item of items) {
       const b = bucketOf(item.createdAt, now);
@@ -277,7 +371,7 @@ export function useNotifications() {
     return BUCKET_ORDER
       .filter((label) => (map.get(label)?.length ?? 0) > 0)
       .map((label) => ({ label, items: map.get(label)! }));
-  }, [items, now]);
+  }, [items]);
 
   const unreadCount = useMemo(
     () => items.reduce((acc, it) => acc + (it.unread ? 1 : 0), 0),
@@ -285,18 +379,30 @@ export function useNotifications() {
   );
 
   const markAllRead = useCallback(async () => {
-    if (!membershipId) return;
-    await db.transact(
-      db.tx.memberships[membershipId].update({
-        lastNotificationsReadAt: Date.now(),
-      }),
-    );
-  }, [membershipId]);
+    const ids = uniqueSpaceIds([
+      soloMembership?.id,
+      sharedMembership?.id,
+      membershipId,
+    ]);
+    if (ids.length === 0) return;
+    const readAt = Date.now();
+    try {
+      await db.transact(
+        ids.map((id) =>
+          db.tx.memberships[id].update({
+            lastNotificationsReadAt: readAt,
+          }),
+        ),
+      );
+    } catch (err) {
+      console.warn('[useNotifications] markAllRead failed:', err);
+    }
+  }, [membershipId, sharedMembership?.id, soloMembership?.id]);
 
   return {
     buckets,
     unreadCount,
-    isLoading: !!coupleId && queryLoading,
+    isLoading: readableSpaceIds.length > 0 && queryLoading,
     error,
     markAllRead,
   };

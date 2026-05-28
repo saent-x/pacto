@@ -9,7 +9,8 @@ import {
   Bucket,
   Checkbox,
   Pill,
-  PriorityDot,
+  PriorityPill,
+  priorityLevelFromNumber,
   ScopeChip,
   StatBar,
   SwipeableRow,
@@ -80,9 +81,9 @@ function RemindersScreenInner() {
   const visible: Reminder[] = useMemo(() => {
     return reminders.filter((r) => {
       if (filter === 'Overdue') return isOverdue(r.due_at, r.is_completed);
-      if (filter === 'Mine') return r.assigned_to === youId;
-      if (filter === 'Theirs') return r.assigned_to && r.assigned_to === partnerId;
-      if (filter === 'Shared') return !r.assigned_to;
+      if (filter === 'Mine') return r.scope === 'personal' || r.assigned_to === youId;
+      if (filter === 'Theirs') return r.scope !== 'personal' && r.assigned_to && r.assigned_to === partnerId;
+      if (filter === 'Shared') return r.scope !== 'personal' && !r.assigned_to;
       return true;
     });
   }, [reminders, filter, youId, partnerId]);
@@ -115,6 +116,7 @@ function RemindersScreenInner() {
   }, [visible, C.accent, C.inkColor, C.ink2]);
 
   const scopeFor = (r: Reminder): 'mine' | 'partner' | 'shared' => {
+    if (r.scope === 'personal') return 'mine';
     if (!r.assigned_to) return 'shared';
     if (r.assigned_to === youId) return 'mine';
     if (r.assigned_to === partnerId) return 'partner';
@@ -214,6 +216,8 @@ function RemindersScreenInner() {
           ) : (
             <BucketedList
               buckets={buckets}
+              presentation="items"
+              swipeableRows
               rowKey={(r) => r.id}
               renderRow={(r) => (
                 <SwipeableRow
@@ -227,13 +231,7 @@ function RemindersScreenInner() {
                   }
                   onDelete={() => remove(r.id)}
                 >
-                  <View
-                    style={[
-                      styles.row,
-                      styles.rowPadding,
-                      { backgroundColor: C.bgCard },
-                    ]}
-                  >
+                  <View style={[styles.row, styles.rowPadding]}>
                     <Checkbox
                       checked={r.is_completed}
                       onChange={() => toggleComplete(r)}
@@ -263,7 +261,7 @@ function RemindersScreenInner() {
                             </Text>
                           </View>
                         ) : null}
-                        <PriorityDot level={priorityLevel(r.priority)} />
+                        <PriorityPill level={priorityLevelFromNumber(r.priority)} compact />
                         <ScopeChip scope={scopeFor(r)} mode={mode} partnerName={partnerName} />
                       </View>
                     </View>
@@ -278,13 +276,6 @@ function RemindersScreenInner() {
       </ScrollView>
     </View>
   );
-}
-
-function priorityLevel(p: number): 'none' | 'low' | 'med' | 'high' {
-  if (p >= 3) return 'high';
-  if (p === 2) return 'med';
-  if (p === 1) return 'low';
-  return 'none';
 }
 
 function ReminderDueStrip({
@@ -362,7 +353,7 @@ const styles = StyleSheet.create({
     fontFamily: Typography.pixelFont,
     fontSize: 54,
     lineHeight: 54,
-    letterSpacing: -1,
+    letterSpacing: 0,
   },
   bellTile: {
     width: 44,

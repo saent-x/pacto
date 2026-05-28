@@ -17,8 +17,8 @@ export function WhoDot({
 }) {
   const { C, F } = useTheme();
   const font = Math.round(size * 0.5);
-  const peach = { bg: '#F4A68C', fg: '#3A1F14', letter: meInitial.charAt(0).toUpperCase() };
-  const lav = { bg: '#B8A8E8', fg: '#1F1635', letter: partnerInitial.charAt(0).toUpperCase() };
+  const peach = { bg: C.peach, fg: C.peachInk, letter: meInitial.charAt(0).toUpperCase() };
+  const lav = { bg: C.lavender, fg: C.lavenderInk, letter: partnerInitial.charAt(0).toUpperCase() };
   const bubble = (cfg: typeof peach, overlap = false) => (
     <View
       style={{

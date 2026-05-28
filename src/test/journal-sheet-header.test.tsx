@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 vi.mock('expo-router', () => ({
   router: { back: vi.fn(), push: vi.fn() },
   Stack: { Screen: () => null },
+  useLocalSearchParams: () => ({}),
 }));
 
 vi.mock('expo-haptics', () => ({
@@ -21,7 +22,12 @@ vi.mock('react-native-safe-area-context', () => ({
 }));
 
 vi.mock('@/src/hooks/useJournal', () => ({
-  useJournal: () => ({ create: vi.fn(async () => undefined) }),
+  useJournal: () => ({
+    create: vi.fn(async () => undefined),
+    update: vi.fn(async () => undefined),
+    allEntries: [],
+    isLoading: false,
+  }),
 }));
 
 vi.mock('@/src/hooks/useSession', () => ({
@@ -33,7 +39,7 @@ vi.mock('@/src/hooks/useSession', () => ({
   }),
 }));
 
-import NewEntry from '@/app/sheets/new-entry';
+import { JournalEntryFormScreen as NewEntry } from '@/src/components/journal/JournalEntryFormScreen';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -47,8 +53,8 @@ function findByTestID(root: any, id: string) {
   return root.findAll((node: any) => node.props?.testID === id)[0];
 }
 
-describe('new-entry sheet header', () => {
-  it('renders the current SheetShell header and entry inputs', async () => {
+describe('journal entry full-screen header', () => {
+  it('renders the journal entry header and inputs', async () => {
     let renderer: any;
     await act(async () => {
       renderer = TestRenderer.create(<NewEntry />);

@@ -28,6 +28,9 @@ describe('bucketOf', () => {
     expect(bucketOf('2026-05-03', TODAY_ISO)).toBe('MAY');
     expect(bucketOf('2026-06-10', TODAY_ISO)).toBe('JUN');
   });
+  it('treats impossible due dates as Later instead of rolling them into a real date', () => {
+    expect(bucketOf('2026-04-31', TODAY_ISO)).toBe('Later');
+  });
 });
 
 describe('orderBuckets', () => {
@@ -45,4 +48,6 @@ describe('formatDueChip', () => {
   it('returns TOMORROW for +1', () => expect(formatDueChip('2026-04-23', TODAY_ISO)).toBe('TOMORROW'));
   it('formats month + zero-padded day for future dates', () =>
     expect(formatDueChip('2026-05-03', TODAY_ISO)).toBe('MAY 03'));
+  it('hides impossible due-date chips instead of rolling them into a real date', () =>
+    expect(formatDueChip('2026-04-31', TODAY_ISO)).toBeNull());
 });

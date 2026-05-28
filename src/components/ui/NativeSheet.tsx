@@ -60,7 +60,7 @@ export function NativeSheetContainer({
           StyleSheet.absoluteFill,
           {
             backgroundColor:
-              mode === 'dark' ? 'rgba(22,19,17,0.85)' : 'rgba(255,255,255,0.9)',
+              mode === 'dark' ? 'rgba(16,21,37,0.86)' : 'rgba(255,250,242,0.92)',
           },
         ]}
       />

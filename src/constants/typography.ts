@@ -1,33 +1,33 @@
 import { TextStyle, Platform } from 'react-native';
 
 // ─── Pacto type system ─────────────────────────────────────────────
-// Display: Pixelify Sans (bit-like / 8-bit pixel face) — hero titles, brand wordmark, big counters
-// Body: Geist — UI rows, paragraphs, buttons, dialogue
-// Mono: Geist Mono — eyebrow tags, metadata, codes, timestamps
+// Display: Bitcount Prop Single — brand titles, wordmark, big counters
+// Body: Geist Medium+ — UI rows, paragraphs, buttons, dialogue
+// Mono: Geist Mono Medium — eyebrow tags, metadata, codes, timestamps
 //
 // Design source: /tmp/pacto-design/coupl-design-ii/project/index.html (see :root tokens)
 // "Maya & Jordan"-style hero title uses the pixel display family across every top-level screen.
 
-// Display family: Geist Pixel (Square variant) — Vercel's pixel display
-// face. Loaded as a local font asset; only one weight is shipped, so all
-// three tokens point at the same family. https://github.com/vercel/geist-pixel-font
-const pixelRegular = 'GeistPixel-Square';
-const pixelMedium = 'GeistPixel-Square';
-const pixelBold = 'GeistPixel-Square';
+// Display family: Bitcount Prop Single. It keeps the pixel language but has real
+// weights, which gives Pacto a clearer hierarchy than the previous single-weight
+// pixel face.
+const pixelRegular = 'BitcountPropSingle_400Regular';
+const pixelMedium = 'BitcountPropSingle_500Medium';
+const pixelBold = 'BitcountPropSingle_700Bold';
 
-const geistLight = 'Geist_300Light';
-const geistRegular = 'Geist_400Regular';
+const geistLight = 'Geist_400Regular';
+const geistRegular = 'Geist_500Medium';
 const geistMedium = 'Geist_500Medium';
 const geistSemiBold = 'Geist_600SemiBold';
 const geistBold = 'Geist_700Bold';
 
-const geistMonoRegular = 'GeistMono_400Regular';
+const geistMonoRegular = 'GeistMono_500Medium';
 const geistMonoMedium = 'GeistMono_500Medium';
 
-// Legacy families — kept as fallbacks for screens not yet rebuilt against the new system.
-// Once Phase 6+7+8+10 are done, these can be removed alongside the legacy expo-google-fonts packages.
-const legacyDisplay = 'BricolageGrotesque_800ExtraBold';
-const legacyDisplayBold = 'BricolageGrotesque_700Bold';
+// Legacy aliases now resolve into the active system so older screens inherit
+// the same visual language without needing per-screen migrations.
+const legacyDisplay = pixelBold;
+const legacyDisplayBold = pixelBold;
 
 const sansFallback = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
 const monoFallback = Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' });
@@ -39,25 +39,25 @@ export const Typography = {
     fontFamily: pixelBold,
     fontSize: 30,
     lineHeight: 32,
-    letterSpacing: -0.5,
+    letterSpacing: 0,
   } as TextStyle,
   pixelHeroLg: {
     fontFamily: pixelBold,
     fontSize: 38,
     lineHeight: 40,
-    letterSpacing: -0.6,
+    letterSpacing: 0,
   } as TextStyle,
   pixelHeroSm: {
     fontFamily: pixelBold,
     fontSize: 24,
     lineHeight: 26,
-    letterSpacing: -0.4,
+    letterSpacing: 0,
   } as TextStyle,
   pixelCounter: {
     fontFamily: pixelBold,
     fontSize: 48,
     lineHeight: 50,
-    letterSpacing: -1,
+    letterSpacing: 0,
   } as TextStyle,
   pixelLabel: {
     fontFamily: pixelMedium,
@@ -88,25 +88,25 @@ export const Typography = {
     fontFamily: geistRegular,
     fontSize: 15,
     lineHeight: 22,
-    letterSpacing: -0.05,
+    letterSpacing: 0,
   } as TextStyle,
   bodyMedium: {
     fontFamily: geistMedium,
     fontSize: 15,
     lineHeight: 22,
-    letterSpacing: -0.05,
+    letterSpacing: 0,
   } as TextStyle,
   bodyLg: {
     fontFamily: geistRegular,
     fontSize: 17,
     lineHeight: 24,
-    letterSpacing: -0.1,
+    letterSpacing: 0,
   } as TextStyle,
   subheading: {
     fontFamily: geistSemiBold,
     fontSize: 16,
     lineHeight: 22,
-    letterSpacing: -0.05,
+    letterSpacing: 0,
   } as TextStyle,
   caption: {
     fontFamily: geistRegular,
@@ -136,7 +136,7 @@ export const Typography = {
     fontFamily: geistSemiBold,
     fontSize: 14,
     lineHeight: 18,
-    letterSpacing: -0.05,
+    letterSpacing: 0,
   } as TextStyle,
   pillLabel: {
     fontFamily: geistMedium,
@@ -195,31 +195,31 @@ export const Typography = {
     fontFamily: pixelBold,
     fontSize: 38,
     lineHeight: 40,
-    letterSpacing: -0.6,
+    letterSpacing: 0,
   } as TextStyle,
   largeTitle: {
     fontFamily: pixelBold,
     fontSize: 30,
     lineHeight: 34,
-    letterSpacing: -0.5,
+    letterSpacing: 0,
   } as TextStyle,
   title: {
     fontFamily: pixelBold,
     fontSize: 26,
     lineHeight: 30,
-    letterSpacing: -0.4,
+    letterSpacing: 0,
   } as TextStyle,
   heading: {
     fontFamily: pixelMedium,
     fontSize: 22,
     lineHeight: 26,
-    letterSpacing: -0.3,
+    letterSpacing: 0,
   } as TextStyle,
   headingRegular: {
     fontFamily: geistSemiBold,
     fontSize: 18,
     lineHeight: 24,
-    letterSpacing: -0.1,
+    letterSpacing: 0,
   } as TextStyle,
   overline: {
     fontFamily: geistMonoMedium,
@@ -234,19 +234,19 @@ export const Typography = {
     fontFamily: geistRegular,
     fontSize: 22,
     lineHeight: 30,
-    letterSpacing: -0.2,
+    letterSpacing: 0,
   } as TextStyle,
   editorialLargeTitle: {
     fontFamily: pixelBold,
     fontSize: 32,
     lineHeight: 36,
-    letterSpacing: -0.5,
+    letterSpacing: 0,
   } as TextStyle,
   editorialLargeTitleBold: {
     fontFamily: pixelBold,
     fontSize: 32,
     lineHeight: 36,
-    letterSpacing: -0.5,
+    letterSpacing: 0,
   } as TextStyle,
 
   // Legacy chunky keys — re-pointed at pixel
@@ -254,31 +254,31 @@ export const Typography = {
     fontFamily: pixelBold,
     fontSize: 38,
     lineHeight: 40,
-    letterSpacing: -0.6,
+    letterSpacing: 0,
   } as TextStyle,
   displayChunkyLg: {
     fontFamily: pixelBold,
     fontSize: 48,
     lineHeight: 50,
-    letterSpacing: -1,
+    letterSpacing: 0,
   } as TextStyle,
   displayChunkyXl: {
     fontFamily: pixelBold,
     fontSize: 64,
     lineHeight: 60,
-    letterSpacing: -1.5,
+    letterSpacing: 0,
   } as TextStyle,
   displayChunkySm: {
     fontFamily: pixelBold,
     fontSize: 26,
     lineHeight: 30,
-    letterSpacing: -0.4,
+    letterSpacing: 0,
   } as TextStyle,
   displayChunkyBold: {
     fontFamily: pixelBold,
     fontSize: 22,
     lineHeight: 26,
-    letterSpacing: -0.3,
+    letterSpacing: 0,
   } as TextStyle,
 
   // ─── Family references ───────────────────────────────────────────

@@ -1,13 +1,12 @@
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { Alert, View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Text, View } from 'react-native';
 import { FeatureUnavailable } from '@/src/components/features/FeatureUnavailable';
 import { PrimaryButton } from '@/src/components/ui/atoms';
-import { IconName } from '@/src/components/ui/Icon';
 import {
   SheetDateField,
-  SheetIconGrid,
+  SheetIconLabelPicker,
   SheetLabel,
   SheetRow,
   SheetSection,
@@ -15,7 +14,7 @@ import {
   SheetShell,
   SheetTimeField,
   SheetTitleField,
-  type IconOption,
+  type IconLabelOption,
   type SegmentOption,
 } from '@/src/components/ui/SheetShell';
 import { useReminders } from '@/src/hooks/useReminders';
@@ -23,18 +22,10 @@ import { useFeatureGate } from '@/src/hooks/useFeatureGate';
 import { useSession } from '@/src/hooks/useSession';
 import { useTheme } from '@/src/lib/theme';
 
-type CatKey = 'General' | 'DateNight' | 'Anniversary' | 'Health' | 'Bills' | 'Travel';
 type Repeat = 'None' | 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
+type StoredRepeat = 'daily' | 'weekly' | 'monthly' | 'yearly';
 type Assignee = 'both' | 'me' | 'partner';
-
-const CATS: (IconOption<CatKey> & { label: string })[] = [
-  { key: 'General', icon: 'bookmark', label: 'General' },
-  { key: 'DateNight', icon: 'heart', label: 'Date night' },
-  { key: 'Anniversary', icon: 'gift', label: 'Anniversary' },
-  { key: 'Health', icon: 'activity', label: 'Health' },
-  { key: 'Bills', icon: 'creditCard', label: 'Bills' },
-  { key: 'Travel', icon: 'mapPin', label: 'Travel' },
-];
+type Visibility = 'personal' | 'shared';
 
 const REPEAT_OPTS: SegmentOption<Repeat>[] = [
   { key: 'None', label: 'None' },
@@ -44,7 +35,65 @@ const REPEAT_OPTS: SegmentOption<Repeat>[] = [
   { key: 'Yearly', label: 'Yearly' },
 ];
 
-// solo-mode: assignee restricted to ['me'] — initial 'me'
+function defaultDueDate() {
+  const d = new Date(Date.now() + 60 * 60000);
+  d.setSeconds(0, 0);
+  return d;
+}
+
+function dateFromIso(value: unknown): Date {
+  if (typeof value !== 'string' || value.length === 0) return defaultDueDate();
+  if (!isValidTimestampString(value)) return defaultDueDate();
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? defaultDueDate() : parsed;
+}
+
+function hasValidDatePrefix(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (!match) return true;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
+function isValidTimestampString(value: unknown): value is string {
+  if (typeof value !== 'string' || value.length === 0) return false;
+  if (!hasValidDatePrefix(value)) return false;
+  return Number.isFinite(new Date(value).getTime());
+}
+
+function repeatFromValue(value: unknown): Repeat {
+  if (typeof value !== 'string' || value.length === 0) return 'None';
+  const normalized = value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+  return REPEAT_OPTS.some((option) => option.key === normalized)
+    ? (normalized as Repeat)
+    : 'None';
+}
+
+function storedRepeatValue(repeat: Repeat): StoredRepeat | null {
+  if (repeat === 'None') return null;
+  return repeat.toLowerCase() as StoredRepeat;
+}
+
+function assigneeFromReminder(
+  reminder: { assigned_to?: string | null } | null | undefined,
+  userId?: string | null,
+  partnerId?: string | null,
+  isSolo?: boolean,
+): Assignee {
+  if (isSolo) return 'me';
+  if (!reminder?.assigned_to) return 'both';
+  if (reminder.assigned_to === userId) return 'me';
+  if (reminder.assigned_to === partnerId) return 'partner';
+  return 'both';
+}
+
 export default function NewReminder() {
   const gate = useFeatureGate('recurring');
   if (!gate.enabled) return gate.feature ? <FeatureUnavailable feature={gate.feature} /> : null;
@@ -52,22 +101,29 @@ export default function NewReminder() {
 }
 
 function NewReminderInner() {
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const isEdit = Boolean(id);
   const { C } = useTheme();
   const { user, activeCouple, isSolo } = useSession();
-  const { create } = useReminders();
+  const { create, update, reminders, isLoading } = useReminders();
+  const partnerId = activeCouple?.partner?.id ?? null;
+  const existing = useMemo(
+    () => (isEdit && id ? reminders.find((reminder) => reminder.id === id) : undefined),
+    [id, isEdit, reminders],
+  );
 
-  const [title, setTitle] = useState('');
-  const [assignee, setAssignee] = useState<Assignee>(isSolo ? 'me' : 'both');
-  const [cat, setCat] = useState<CatKey>('General');
-  const [repeat, setRepeat] = useState<Repeat>('None');
-  const [due, setDue] = useState<Date>(() => {
-    const d = new Date(Date.now() + 60 * 60000);
-    d.setSeconds(0, 0);
-    return d;
-  });
-  const [dateOpen, setDateOpen] = useState(false);
-  const [timeOpen, setTimeOpen] = useState(false);
+  const [title, setTitle] = useState(existing?.title ?? '');
+  const [assignee, setAssignee] = useState<Assignee>(
+    assigneeFromReminder(existing, user?.id, partnerId, isSolo),
+  );
+  const [repeat, setRepeat] = useState<Repeat>(repeatFromValue(existing?.recurrence));
+  const [visibility, setVisibility] = useState<Visibility>(
+    existing?.scope === 'personal' || isSolo ? 'personal' : 'shared',
+  );
+  const [due, setDue] = useState<Date>(() => dateFromIso(existing?.due_at));
+  const [dueTouched, setDueTouched] = useState(false);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
   const partnerName = activeCouple?.partner?.displayName ?? 'Partner';
   const assigneeOptions: SegmentOption<Assignee>[] = useMemo(
@@ -81,46 +137,104 @@ function NewReminderInner() {
           ],
     [isSolo, partnerName],
   );
+  const visibilityOptions = useMemo<IconLabelOption<Visibility>[]>(
+    () => [
+      { key: 'personal', icon: 'lock', label: 'Just me', color: C.sky },
+      { key: 'shared', icon: 'users', label: 'Together', color: C.gold },
+    ],
+    [C.gold, C.sky],
+  );
+  const effectiveVisibility: Visibility = isSolo ? 'personal' : visibility;
+  const canSave = title.trim().length > 0 && (!isEdit || !!existing) && !saving;
+  const existingDueValid = isValidTimestampString(existing?.due_at);
 
-  const catLabel = CATS.find((c) => c.key === cat)?.label ?? 'General';
+  useEffect(() => {
+    if (isSolo) {
+      setVisibility('personal');
+      setAssignee('me');
+    }
+  }, [isSolo]);
+
+  useEffect(() => {
+    if (!isEdit || !existing) return;
+    setTitle(String(existing.title ?? ''));
+    setAssignee(assigneeFromReminder(existing, user?.id, partnerId, isSolo));
+    setRepeat(repeatFromValue(existing.recurrence));
+    setVisibility(existing.scope === 'personal' || isSolo ? 'personal' : 'shared');
+    setDue(dateFromIso(existing.due_at));
+    setDueTouched(false);
+  }, [existing, isEdit, isSolo, partnerId, user?.id]);
+
+  const onVisibilityChange = (next: Visibility) => {
+    setVisibility(next);
+    if (next === 'personal') setAssignee('me');
+  };
 
   const onSave = async () => {
-    if (!title.trim() || saving) return;
+    if (!canSave || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     const assignedId =
-      assignee === 'both'
+      effectiveVisibility === 'personal'
+        ? user?.id ?? null
+        : assignee === 'both'
         ? null
         : assignee === 'me'
           ? user?.id ?? null
-          : activeCouple?.partner?.id ?? null;
+          : partnerId;
     try {
-      await create({
+      const basePayload = {
         title: title.trim(),
         description: null,
-        due_at: due.toISOString(),
         priority: 2,
-        category: catLabel,
-        recurrence: repeat === 'None' ? null : repeat.toLowerCase(),
+        recurrence: storedRepeatValue(repeat),
         assigned_to: assignedId,
-      });
+        scope: effectiveVisibility,
+      };
+      if (isEdit && id) {
+        const shouldPersistDue = dueTouched || existingDueValid;
+        await update(id, {
+          ...basePayload,
+          ...(shouldPersistDue ? { due_at: due.toISOString() } : {}),
+        });
+      } else {
+        await create({ ...basePayload, due_at: due.toISOString() });
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (err) {
       console.warn('[new-reminder] save failed', err);
       Alert.alert('Save failed', 'Try again.');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
 
+  if (isEdit && !existing) {
+    return (
+      <SheetShell
+        eyebrow="REMINDER"
+        eyebrowColor={C.reminders}
+        title={isLoading ? 'Loading reminder' : 'Reminder missing'}
+      >
+        <Text style={{ color: C.ink2 }}>
+          {isLoading
+            ? 'Loading this reminder…'
+            : 'This reminder could not be found or is no longer available in this space.'}
+        </Text>
+      </SheetShell>
+    );
+  }
+
   return (
     <SheetShell
-      eyebrow="NEW REMINDER"
+      eyebrow={isEdit ? 'EDIT REMINDER' : 'NEW REMINDER'}
       eyebrowColor={C.reminders}
-      title="New reminder"
+      title={isEdit ? 'Edit reminder' : 'New reminder'}
       footer={
-        <PrimaryButton icon="check" onPress={onSave} disabled={!title.trim() || saving}>
-          {saving ? 'Saving…' : 'Save reminder'}
+        <PrimaryButton icon="check" onPress={onSave} disabled={!canSave}>
+          {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Save reminder'}
         </PrimaryButton>
       }
     >
@@ -139,38 +253,35 @@ function NewReminderInner() {
           <SheetDateField
             pressTestID="new-reminder-date"
             value={due}
-            onChange={setDue}
-            accent={C.reminders}
-            open={dateOpen}
-            onPress={() => {
-              setDateOpen((v) => !v);
-              setTimeOpen(false);
+            onChange={(value) => {
+              setDueTouched(true);
+              setDue(value);
             }}
+            accent={C.reminders}
             minimumDate={new Date()}
           />
           <SheetTimeField
             pressTestID="new-reminder-time"
             value={due}
-            onChange={setDue}
-            accent={C.reminders}
-            open={timeOpen}
-            onPress={() => {
-              setTimeOpen((v) => !v);
-              setDateOpen(false);
+            onChange={(value) => {
+              setDueTouched(true);
+              setDue(value);
             }}
+            accent={C.reminders}
           />
         </SheetRow>
       </SheetSection>
 
-      <SheetSection title="Category">
-        <SheetIconGrid
-          options={CATS}
-          selected={cat}
-          onChange={setCat}
-          accent={C.reminders}
-          testIDPrefix="new-reminder-cat"
-        />
-      </SheetSection>
+      {!isSolo ? (
+        <SheetSection title="Visibility">
+          <SheetIconLabelPicker
+            options={visibilityOptions}
+            selected={visibility}
+            onChange={onVisibilityChange}
+            testIDPrefix="new-reminder-visibility"
+          />
+        </SheetSection>
+      ) : null}
 
       <SheetSection title="Repeat">
         <SheetSegment
@@ -182,7 +293,7 @@ function NewReminderInner() {
         />
       </SheetSection>
 
-      {assigneeOptions.length > 1 ? (
+      {assigneeOptions.length > 1 && effectiveVisibility === 'shared' ? (
         <View style={{ marginTop: 22 }}>
           <SheetLabel style={{ marginBottom: 10 }}>Assign to</SheetLabel>
           <SheetSegment

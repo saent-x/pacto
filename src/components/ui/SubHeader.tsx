@@ -55,7 +55,7 @@ export function SubHeader({
               fontFamily: F.displayBold,
               fontSize: 24,
               color: C.bone,
-              letterSpacing: -0.6,
+              letterSpacing: 0,
               lineHeight: 26,
             }}
           >

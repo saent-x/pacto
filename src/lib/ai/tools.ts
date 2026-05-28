@@ -9,12 +9,42 @@ import type {
   AiToolResult,
 } from './types';
 import { AI_DOMAINS } from './types';
+import { PRIORITY_MAX, PRIORITY_MIN } from '@/src/lib/priority';
 
 const unknownRecordSchema = z.record(z.string(), z.unknown());
-const dateKeySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}/, 'Use YYYY-MM-DD dates');
+const dateKeySchema = z.string().refine(isValidDateKey, 'Use a real YYYY-MM-DD date');
+const timestampSchema = z.number().int().nonnegative().refine(isValidTimestampMs, 'Use a valid timestamp');
 const optionalText = z.string().min(1).nullable().optional();
 const optionalNumber = z.number().finite().nullable().optional();
 const optionalBoolean = z.boolean().nullable().optional();
+const optionalScope = z.enum(['personal', 'shared']).optional();
+const reminderRecurrenceSchema = z.enum(['daily', 'weekly', 'monthly', 'yearly']).nullable().optional();
+const planStatusSchema = z.enum(['active', 'planning', 'done', 'paused']).optional();
+const pastelKeySchema = z.enum(['peach', 'mint', 'butter', 'rose', 'sky', 'lavender', 'gold', 'journal']).optional();
+const prioritySchema = z.number().int().min(PRIORITY_MIN).max(PRIORITY_MAX).optional();
+const timetableTemplateSchema = z.enum(['meals', 'workout', 'study', 'routine', 'sleep', 'custom']).optional();
+const timetableShareSchema = z.enum(['solo', 'partner', 'shared']).optional();
+const timetableItemDaySchema = z.number().int().min(0).max(6);
+const timetableItemStartHourSchema = z.number().min(0).lt(24);
+const timetableItemDurationSchema = z.number().positive().max(24 * 60);
+
+function isValidDateKey(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
+function isValidTimestampMs(value: number): boolean {
+  return Number.isFinite(new Date(value).getTime());
+}
 
 const readInputSchema = z
   .object({
@@ -27,11 +57,12 @@ const readInputSchema = z
 const reminderSchema = z.object({
   title: z.string().min(1),
   description: optionalText,
-  dueAt: z.number().int().nonnegative(),
-  recurrence: optionalText,
-  priority: z.number().int().min(0).max(5).optional(),
+  dueAt: timestampSchema,
+  recurrence: reminderRecurrenceSchema,
+  priority: prioritySchema,
   category: optionalText,
   assignedTo: optionalText,
+  scope: optionalScope,
 });
 
 const taskSchema = z.object({
@@ -39,32 +70,64 @@ const taskSchema = z.object({
   notes: optionalText,
   category: optionalText,
   dueDate: dateKeySchema.nullable().optional(),
-  priority: z.number().int().min(0).max(5).optional(),
+  priority: prioritySchema,
   sortOrder: z.number().int().min(0).optional(),
   assignedTo: optionalText,
   listId: optionalText,
+  scope: optionalScope,
+});
+const taskCreateSchema = taskSchema.refine((value) => typeof value.listId === 'string' && value.listId.length > 0, {
+  path: ['listId'],
+  message: 'Task creates require listId so the task appears in a task list',
+});
+const taskUpdateSchema = taskSchema.partial().superRefine((value, ctx) => {
+  if (Object.keys(value).length === 0) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Update input must contain at least one field',
+    });
+  }
+  if (
+    Object.prototype.hasOwnProperty.call(value, 'scope') &&
+    !Object.prototype.hasOwnProperty.call(value, 'listId')
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['listId'],
+      message: 'Task scope updates require listId because tasks inherit their space from the parent list',
+    });
+  }
 });
 
 const taskListSchema = z.object({
   name: z.string().min(1),
-  icon: optionalText,
-  colorKey: optionalText,
+  colorKey: pastelKeySchema,
   category: optionalText,
+  scope: optionalScope,
+});
+const taskListUpdateSchema = taskListSchema.partial().superRefine((value, ctx) => {
+  if (Object.keys(value).length === 0) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Update input must contain at least one field',
+    });
+  }
+  if (Object.prototype.hasOwnProperty.call(value, 'scope')) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['scope'],
+      message: 'Task-list scope updates must use the task-list sheet so child tasks move with the list',
+    });
+  }
 });
 
 const eventSchema = z.object({
   title: z.string().min(1),
   description: optionalText,
-  startsAt: z.number().int().nonnegative(),
-  endsAt: z.number().int().nonnegative().nullable().optional(),
-  priority: z.number().int().min(0).max(5).optional(),
+  startsAt: timestampSchema,
+  endsAt: timestampSchema.nullable().optional(),
+  priority: prioritySchema,
   isPrivate: optionalBoolean,
-});
-
-const loveNoteSchema = z.object({
-  body: z.string().min(1),
-  isPrivate: optionalBoolean,
-  vibe: optionalText,
 });
 
 const checkInSchema = z.object({
@@ -74,36 +137,6 @@ const checkInSchema = z.object({
   checkInDate: dateKeySchema,
 });
 
-const wishlistSchema = z.object({
-  name: z.string().min(1),
-  icon: optionalText,
-  color: optionalText,
-});
-
-const wishlistItemSchema = z.object({
-  title: z.string().min(1),
-  description: optionalText,
-  url: optionalText,
-  price: optionalNumber,
-  currency: optionalText,
-  tag: optionalText,
-  isPurchased: optionalBoolean,
-  priority: z.number().int().min(0).max(5).optional(),
-  sortOrder: z.number().int().min(0).optional(),
-  wishlistId: optionalText,
-  purchasedBy: optionalText,
-});
-
-const milestoneSchema = z.object({
-  title: z.string().min(1),
-  description: optionalText,
-  date: dateKeySchema,
-  icon: optionalText,
-  color: optionalText,
-  repeatYearly: optionalBoolean,
-  quote: optionalText,
-});
-
 const planSchema = z.object({
   title: z.string().min(1),
   description: optionalText,
@@ -111,10 +144,9 @@ const planSchema = z.object({
   category: optionalText,
   targetDate: dateKeySchema.nullable().optional(),
   budget: optionalNumber,
-  status: optionalText,
-  priority: z.number().int().min(0).max(5).optional(),
+  status: planStatusSchema,
+  priority: prioritySchema,
   isPrivate: optionalBoolean,
-  icon: optionalText,
   color: optionalText,
   bucket: optionalText,
 });
@@ -131,8 +163,8 @@ const journalEntrySchema = z.object({
 
 const timetableSchema = z.object({
   title: z.string().min(1),
-  template: optionalText,
-  share: optionalText,
+  template: timetableTemplateSchema,
+  share: timetableShareSchema,
 });
 
 const timetableItemSchema = z.object({
@@ -141,13 +173,29 @@ const timetableItemSchema = z.object({
   icon: optionalText,
   color: optionalText,
   ink: optionalText,
-  day: z.number().int().min(0).max(6).nullable().optional(),
-  startHour: z.number().min(0).max(24).nullable().optional(),
-  duration: z.number().positive().nullable().optional(),
+  day: timetableItemDaySchema.optional(),
+  startHour: timetableItemStartHourSchema.optional(),
+  duration: timetableItemDurationSchema.optional(),
   who: optionalText,
   repeat: optionalText,
   star: optionalBoolean,
   timetableId: optionalText,
+});
+const timetableItemCreateSchema = timetableItemSchema.superRefine((value, ctx) => {
+  if (typeof value.timetableId !== 'string' || value.timetableId.length === 0) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['timetableId'],
+      message: 'Timetable item creates require timetableId so the block appears in a timetable',
+    });
+  }
+  if (value.day === undefined || value.startHour === undefined || value.duration === undefined) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['schedule'],
+      message: 'Timetable item creates require day, startHour, and duration',
+    });
+  }
 });
 
 type DomainConfig = {
@@ -157,6 +205,7 @@ type DomainConfig = {
   createSchema: z.ZodObject<any>;
   creatorLink?: string;
   relationInputs?: Record<string, string>;
+  spaceOwnerRelationInputs?: string[];
   defaults?: (input: Record<string, unknown>, ctx: AiMutationContext) => Record<string, unknown>;
 };
 
@@ -182,6 +231,7 @@ const DOMAIN_CONFIGS: Record<AiDomain, DomainConfig> = {
     createSchema: taskSchema,
     creatorLink: 'createdBy',
     relationInputs: { assignedTo: 'assignedTo', listId: 'list' },
+    spaceOwnerRelationInputs: ['listId'],
     defaults: (input, ctx) => ({
       isCompleted: false,
       priority: input.priority ?? 0,
@@ -206,14 +256,6 @@ const DOMAIN_CONFIGS: Record<AiDomain, DomainConfig> = {
     creatorLink: 'createdBy',
     defaults: (_input, ctx) => ({ createdAt: ctx.now, updatedAt: ctx.now }),
   },
-  loveNotes: {
-    domain: 'loveNotes',
-    entity: 'loveNotes',
-    singular: 'love note',
-    createSchema: loveNoteSchema,
-    creatorLink: 'author',
-    defaults: (_input, ctx) => ({ createdAt: ctx.now, updatedAt: ctx.now }),
-  },
   checkIns: {
     domain: 'checkIns',
     entity: 'checkIns',
@@ -221,37 +263,6 @@ const DOMAIN_CONFIGS: Record<AiDomain, DomainConfig> = {
     createSchema: checkInSchema,
     creatorLink: 'author',
     defaults: (_input, ctx) => ({ createdAt: ctx.now, updatedAt: ctx.now }),
-  },
-  wishlists: {
-    domain: 'wishlists',
-    entity: 'wishlists',
-    singular: 'wishlist',
-    createSchema: wishlistSchema,
-    creatorLink: 'createdBy',
-    defaults: (_input, ctx) => ({ createdAt: ctx.now, updatedAt: ctx.now }),
-  },
-  wishlistItems: {
-    domain: 'wishlistItems',
-    entity: 'wishlistItems',
-    singular: 'wishlist item',
-    createSchema: wishlistItemSchema,
-    creatorLink: 'addedBy',
-    relationInputs: { wishlistId: 'wishlist', purchasedBy: 'purchasedBy' },
-    defaults: (input, ctx) => ({
-      isPurchased: input.isPurchased ?? false,
-      priority: input.priority ?? 0,
-      sortOrder: input.sortOrder ?? ctx.sortOrder ?? 0,
-      createdAt: ctx.now,
-      updatedAt: ctx.now,
-    }),
-  },
-  milestones: {
-    domain: 'milestones',
-    entity: 'milestones',
-    singular: 'milestone',
-    createSchema: milestoneSchema,
-    creatorLink: 'createdBy',
-    defaults: (_input, ctx) => ({ repeatYearly: false, createdAt: ctx.now, updatedAt: ctx.now }),
   },
   plans: {
     domain: 'plans',
@@ -283,6 +294,7 @@ const DOMAIN_CONFIGS: Record<AiDomain, DomainConfig> = {
     singular: 'timetable item',
     createSchema: timetableItemSchema,
     relationInputs: { timetableId: 'timetable' },
+    spaceOwnerRelationInputs: ['timetableId'],
     defaults: (_input, ctx) => ({ createdAt: ctx.now, updatedAt: ctx.now }),
   },
 };
@@ -312,6 +324,7 @@ export function parseAiToolCall(raw: unknown): AiToolCall {
   if (!input.success) {
     throw new Error(`Invalid ${call.domain} ${call.operation} input: ${formatZodError(input.error)}`);
   }
+  assertValidParsedToolInput(call.domain, call.operation, input.data);
 
   return {
     id: call.id ?? `${call.domain}-${call.operation}-${Date.now()}`,
@@ -321,6 +334,22 @@ export function parseAiToolCall(raw: unknown): AiToolCall {
     input: stripUndefined(input.data),
     confidence: call.confidence,
   };
+}
+
+function assertValidParsedToolInput(
+  domain: AiDomain,
+  operation: AiToolOperation,
+  input: Record<string, unknown>,
+) {
+  if (operation === 'delete') return;
+  if (
+    domain === 'events' &&
+    typeof input.startsAt === 'number' &&
+    typeof input.endsAt === 'number' &&
+    input.endsAt < input.startsAt
+  ) {
+    throw new Error('Invalid events input: endsAt must be after startsAt');
+  }
 }
 
 export function buildActionDraft(toolCall: AiToolCall, options: { now?: number } = {}): AiActionDraft {
@@ -354,15 +383,22 @@ export function buildMutationPlan(draft: AiActionDraft, ctx: AiMutationContext):
   if (!targetId) {
     throw new Error(`${operation} ${draft.domain} requires targetId`);
   }
+  assertExistingMutationTargetReadable(config, operation, targetId, ctx);
 
   const input = draft.toolCall.input;
+  const links = operation === 'delete' ? {} : buildMutationLinks(input, config, ctx, operation, targetId);
   const data =
     operation === 'delete'
       ? {}
-      : stripUndefined({
-          ...stripRelationInputs(input, config.relationInputs),
-          ...(operation === 'create' ? config.defaults?.(input, ctx) : { updatedAt: ctx.now }),
-        });
+      : canonicalizeDataForTargetSpace(
+          stripUndefined({
+            ...stripRelationInputs(input, config.relationInputs),
+            ...(operation === 'create' ? config.defaults?.(input, ctx) : { updatedAt: ctx.now }),
+          }),
+          config,
+          links,
+          ctx,
+        );
 
   return {
     domain: draft.domain,
@@ -370,7 +406,7 @@ export function buildMutationPlan(draft: AiActionDraft, ctx: AiMutationContext):
     operation,
     targetId,
     data,
-    links: operation === 'create' ? buildCreateLinks(input, config, ctx) : buildRelationLinks(input, config),
+    links,
     unlinks: {},
   };
 }
@@ -427,41 +463,242 @@ function getInputSchema(domain: AiDomain, operation: AiToolOperation) {
   if (operation === 'delete') return unknownRecordSchema;
 
   const createSchema = DOMAIN_CONFIGS[domain].createSchema;
-  if (operation === 'create') return createSchema;
+  if (operation === 'create') {
+    if (domain === 'tasks') return taskCreateSchema;
+    if (domain === 'timetableItems') return timetableItemCreateSchema;
+    return createSchema;
+  }
+
+  if (domain === 'tasks') return taskUpdateSchema;
+  if (domain === 'taskLists') return taskListUpdateSchema;
 
   return createSchema.partial().refine((value) => Object.keys(value).length > 0, {
     message: 'Update input must contain at least one field',
   });
 }
 
-function buildCreateLinks(input: Record<string, unknown>, config: DomainConfig, ctx: AiMutationContext) {
-  return {
-    couple: ctx.coupleId,
-    ...(config.creatorLink ? { [config.creatorLink]: ctx.userId } : {}),
-    ...buildRelationLinks(input, config),
-  };
-}
-
-function buildRelationLinks(input: Record<string, unknown>, config: DomainConfig) {
+function buildMutationLinks(
+  input: Record<string, unknown>,
+  config: DomainConfig,
+  ctx: AiMutationContext,
+  operation: AiToolOperation,
+  targetId: string,
+) {
   const links: Record<string, string> = {};
+  const spaceId = resolveMutationSpaceId(input, config, ctx, operation);
+  if (spaceId) {
+    assertPersonalRelinkOwnership(input, config, ctx, operation, targetId, spaceId);
+    links.couple = spaceId;
+  }
+  const relationSpaceId = links.couple ?? existingMutationTargetSpaceId(config, operation, targetId, ctx);
+  if (operation === 'create' && config.creatorLink) {
+    links[config.creatorLink] = ctx.userId;
+  }
   for (const [inputKey, linkName] of Object.entries(config.relationInputs ?? {})) {
     const value = input[inputKey];
     if (typeof value === 'string' && value.length > 0) {
-      links[linkName] = value;
+      if (linkName === 'assignedTo') {
+        const assignedTo = assigneeForAiMutation(value, relationSpaceId, config, ctx);
+        if (!assignedTo) continue;
+        links[linkName] = assignedTo;
+      } else {
+        links[linkName] = value;
+      }
     }
   }
   return links;
+}
+
+function assigneeForAiMutation(
+  assignedTo: string,
+  targetSpaceId: string | null | undefined,
+  config: DomainConfig,
+  ctx: AiMutationContext,
+) {
+  if (targetSpaceId && ctx.personalSpaceId && targetSpaceId === ctx.personalSpaceId && assignedTo !== ctx.userId) {
+    return null;
+  }
+  const assignableUserIds = new Set([ctx.userId, ...(ctx.assignableUserIds ?? [])].filter(Boolean));
+  if (!assignableUserIds.has(assignedTo)) {
+    throw new Error(`Invalid ${config.singular} assignee`);
+  }
+  return assignedTo;
+}
+
+function existingMutationTargetSpaceId(
+  config: DomainConfig,
+  operation: AiToolOperation,
+  targetId: string,
+  ctx: AiMutationContext,
+) {
+  if (operation === 'create') return null;
+  return ctx.targetSpaceById?.[config.domain]?.[targetId] ?? null;
+}
+
+function resolveMutationSpaceId(
+  input: Record<string, unknown>,
+  config: DomainConfig,
+  ctx: AiMutationContext,
+  operation: AiToolOperation,
+) {
+  if (operation === 'delete') return null;
+  const relationSpaceId = resolveRelationSpaceId(input, config, ctx);
+  if (relationSpaceId) return relationSpaceId;
+
+  const canMoveByPrivacy =
+    config.domain === 'events' ||
+    config.domain === 'checkIns' ||
+    config.domain === 'plans' ||
+    config.domain === 'journalEntries';
+  const canMoveByShare = config.domain === 'timetables';
+  const canMoveByScope = config.domain === 'reminders' || config.domain === 'taskLists';
+  const intent = mutationSpaceMoveIntent(input, {
+    canMoveByPrivacy,
+    canMoveByShare,
+    canMoveByScope,
+  });
+  if (operation !== 'create' && !intent.hasMoveInput) return null;
+
+  if (intent.wantsPersonal) {
+    if (ctx.personalSpaceId) return ctx.personalSpaceId;
+    if (ctx.sharedSpaceId) throw new Error('Personal space not available');
+    return ctx.coupleId ?? null;
+  }
+  return ctx.sharedSpaceId ?? ctx.coupleId ?? ctx.personalSpaceId ?? null;
+}
+
+function assertPersonalRelinkOwnership(
+  input: Record<string, unknown>,
+  config: DomainConfig,
+  ctx: AiMutationContext,
+  operation: AiToolOperation,
+  targetId: string,
+  targetSpaceId: string,
+) {
+  if (operation !== 'update') return;
+  if (!ctx.personalSpaceId || targetSpaceId !== ctx.personalSpaceId) return;
+  const canMoveByPrivacy =
+    config.domain === 'events' ||
+    config.domain === 'checkIns' ||
+    config.domain === 'plans' ||
+    config.domain === 'journalEntries';
+  const canMoveByShare = config.domain === 'timetables';
+  const canMoveByScope = config.domain === 'reminders' || config.domain === 'taskLists';
+  const intent = mutationSpaceMoveIntent(input, {
+    canMoveByPrivacy,
+    canMoveByShare,
+    canMoveByScope,
+  });
+  if (!intent.wantsPersonal) return;
+
+  const ownerId = ctx.targetOwnerById?.[config.domain]?.[targetId] ?? null;
+  if (ownerId !== ctx.userId) {
+    throw new Error(`Cannot move another member ${config.singular} into personal space`);
+  }
+}
+
+function mutationSpaceMoveIntent(
+  input: Record<string, unknown>,
+  options: {
+    canMoveByPrivacy: boolean;
+    canMoveByShare: boolean;
+    canMoveByScope: boolean;
+  },
+) {
+  const hasPrivacy = options.canMoveByPrivacy && Object.prototype.hasOwnProperty.call(input, 'isPrivate');
+  const hasShare = options.canMoveByShare && Object.prototype.hasOwnProperty.call(input, 'share');
+  const hasScope = options.canMoveByScope && Object.prototype.hasOwnProperty.call(input, 'scope');
+  return {
+    hasMoveInput: hasPrivacy || hasShare || hasScope,
+    wantsPersonal: input.isPrivate === true || input.share === 'solo' || input.scope === 'personal',
+  };
+}
+
+function resolveRelationSpaceId(
+  input: Record<string, unknown>,
+  config: DomainConfig,
+  ctx: AiMutationContext,
+) {
+  for (const inputKey of config.spaceOwnerRelationInputs ?? []) {
+    const value = input[inputKey];
+    if (typeof value !== 'string' || value.length === 0) continue;
+    const spaceId = ctx.relationSpaceById?.[value];
+    if (typeof spaceId === 'string' && spaceId.length > 0) {
+      return spaceId;
+    }
+    throw new Error(`${parentRelationName(inputKey)} not found`);
+  }
+  return null;
+}
+
+function parentRelationName(inputKey: string) {
+  if (inputKey === 'listId') return 'parent list';
+  if (inputKey === 'timetableId') return 'parent timetable';
+  return 'parent record';
+}
+
+function canonicalizeDataForTargetSpace(
+  data: Record<string, unknown>,
+  config: DomainConfig,
+  links: Record<string, string>,
+  ctx: AiMutationContext,
+) {
+  const targetSpaceId = links.couple;
+  if (!targetSpaceId || !ctx.personalSpaceId || targetSpaceId !== ctx.personalSpaceId) {
+    return data;
+  }
+
+  if (
+    config.domain === 'events' ||
+    config.domain === 'checkIns' ||
+    config.domain === 'plans' ||
+    config.domain === 'journalEntries'
+  ) {
+    return { ...data, isPrivate: true };
+  }
+
+  if (config.domain === 'timetables') {
+    return { ...data, share: 'solo' };
+  }
+
+  return data;
+}
+
+function assertExistingMutationTargetReadable(
+  config: DomainConfig,
+  operation: AiToolOperation,
+  targetId: string,
+  ctx: AiMutationContext,
+) {
+  if (operation === 'create') return;
+  const targetSpaceId = ctx.targetSpaceById?.[config.domain]?.[targetId] ?? null;
+  const readableSpaceIds = uniqueMutationSpaceIds([
+    ctx.personalSpaceId,
+    ctx.sharedSpaceId,
+    ctx.coupleId,
+  ]);
+  if (!targetSpaceId || !readableSpaceIds.includes(targetSpaceId)) {
+    throw new Error(`${config.singular} not found`);
+  }
+}
+
+function uniqueMutationSpaceIds(ids: Array<string | null | undefined>) {
+  return ids.filter((value, index, all): value is string =>
+    typeof value === 'string' &&
+    value.length > 0 &&
+    all.indexOf(value) === index,
+  );
 }
 
 function stripRelationInputs(
   input: Record<string, unknown>,
   relationInputs: Record<string, string> | undefined,
 ) {
-  if (!relationInputs) return input;
   const output = { ...input };
-  for (const key of Object.keys(relationInputs)) {
+  for (const key of Object.keys(relationInputs ?? {})) {
     delete output[key];
   }
+  delete output.scope;
   return output;
 }
 

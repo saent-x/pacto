@@ -5,10 +5,11 @@ import { Typography } from '@/src/constants/typography';
 
 type Props = {
   eyebrow?: string;
-  title: string;
+  title?: string;
   caption?: string;
   size?: 'sm' | 'md' | 'lg';
   right?: ReactNode;
+  accent?: string;
 };
 
 /**
@@ -20,8 +21,10 @@ type Props = {
  *
  * Design source: /tmp/pacto-design/coupl-design-ii/project/screens.jsx (SoftHero)
  */
-export function PixelHero({ eyebrow, title, caption, size = 'md', right }: Props) {
+export function PixelHero({ eyebrow, title, caption, size = 'md', right, accent }: Props) {
   const { C } = useTheme();
+  const active = accent ?? C.accent;
+  const hasTitle = Boolean(title);
   const titleStyle = {
     sm: Typography.pixelHeroSm,
     md: Typography.pixelHero,
@@ -29,16 +32,21 @@ export function PixelHero({ eyebrow, title, caption, size = 'md', right }: Props
   }[size];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, !hasTitle && !caption ? styles.containerCompact : null]}>
       <View style={styles.body}>
         {eyebrow ? (
-          <Text style={[Typography.eyebrow, { color: C.ink3, marginBottom: 6 }]}>
-            {eyebrow}
+          <View style={[styles.eyebrowRow, !hasTitle ? styles.eyebrowRowCompact : null]}>
+            <View style={[styles.eyebrowMark, { backgroundColor: active }]} />
+            <Text style={[Typography.eyebrow, { color: C.ink3 }]} numberOfLines={1}>
+              {eyebrow}
+            </Text>
+          </View>
+        ) : null}
+        {hasTitle ? (
+          <Text style={[titleStyle, { color: C.inkColor }]} numberOfLines={2}>
+            {title}
           </Text>
         ) : null}
-        <Text style={[titleStyle, { color: C.inkColor }]} numberOfLines={2}>
-          {title}
-        </Text>
         {caption ? (
           <Text style={[Typography.body, { color: C.ink2, marginTop: 6 }]} numberOfLines={2}>
             {caption}
@@ -60,9 +68,26 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 14,
   },
+  containerCompact: {
+    paddingBottom: 8,
+  },
   body: {
     flex: 1,
     minWidth: 0,
+  },
+  eyebrowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 7,
+  },
+  eyebrowRowCompact: {
+    marginBottom: 0,
+  },
+  eyebrowMark: {
+    width: 18,
+    height: 6,
+    borderRadius: 2,
   },
   right: {
     flexShrink: 0,

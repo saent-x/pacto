@@ -75,7 +75,7 @@ export function Avatar({ person, size = 36, ring, style }: AvatarProps) {
             fontFamily: Typography.geistSemiBoldFont,
             fontSize: size * 0.42,
             color: '#2A241B',
-            letterSpacing: -0.5,
+            letterSpacing: 0,
           }}
         >
           {initial}
@@ -117,7 +117,7 @@ export function CrewStack({ people, size = 32 }: CrewProps) {
           { initial: 'M', color: C.accent },
           { initial: 'J', color: C.accent2 },
           { initial: 'L', color: C.accent3 },
-          { initial: 'R', color: '#A89BD4' },
+          { initial: 'R', color: C.lavender },
         ];
   const dotSize = Math.max(18, size * 0.82);
   const outerDotSize = dotSize + 4;

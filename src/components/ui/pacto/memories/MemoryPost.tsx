@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import {
   Alert,
   Image,
@@ -14,10 +14,13 @@ import { formatDistanceToNowStrict } from 'date-fns';
 import { Avatar } from '@/src/components/ui/pacto/Avatar';
 import { EntityRefCard } from './EntityRefCard';
 import { MemoriesIcon, type MemoriesIconName } from './MemoriesIcon';
+import { MemoryPoll } from './MemoryPoll';
 import { PressScale } from '@/src/components/ui/PressScale';
 import { Typography } from '@/src/constants/typography';
 import { useSession } from '@/src/hooks/useSession';
 import { useMemoryActions } from '@/src/hooks/memories/useMemoryActions';
+import { setMemoryComposerDraft } from '@/src/hooks/memories/useMemoryComposer';
+import { isEntityRefKind, resolveEntityRefScopeId } from '@/src/hooks/memories/useEntityRef';
 import { memoryShareUrl } from '@/src/lib/share-links';
 import { useTheme } from '@/src/lib/theme';
 
@@ -30,20 +33,28 @@ export interface MemoryPostMemory {
   createdAt: number;
   isPinned?: boolean;
   isPrivate?: boolean;
+  space?: { id: string } | { id: string }[];
   reactionCount?: number;
   replyCount?: number;
   repostCount?: number;
   author?: { id: string; displayName?: string; avatarUrl?: string };
   attachments?: any[];
   reactions?: { id: string; user?: { id: string } }[];
+  poll?: { id: string; question?: string; options: any[] }[] | { id: string; question?: string; options: any[] };
   replyTo?: { id: string; author?: { displayName?: string; avatarUrl?: string } };
   quoteOf?: { id: string; body: string; author?: { displayName?: string; avatarUrl?: string } };
   repostOf?: {
     id: string;
     body: string;
     createdAt: number;
+    reactionCount?: number;
+    replyCount?: number;
+    repostCount?: number;
     author?: { id: string; displayName?: string; avatarUrl?: string };
     attachments?: any[];
+    reactions?: { id: string; user?: { id: string } }[];
+    poll?: { id: string; question?: string; options: any[] }[] | { id: string; question?: string; options: any[] };
+    quoteOf?: { id: string; body: string; author?: { displayName?: string; avatarUrl?: string } };
   };
   /** Optional preview of the most recent reply to this memory, used to render the threaded avatar. */
   replyPreview?: { who: string; body: string; avatarUrl?: string };
@@ -67,10 +78,12 @@ export function MemoryPost({ memory, variant, isLast }: Props) {
   const { C } = useTheme();
   const session = useSession() as any;
   const me = session?.user;
+  const isReply = variant === 'reply';
   const mode: 'solo' | 'pair' | 'couple' | 'crew' =
     session?.mode ?? session?.space?.kind ?? 'solo';
   const isSolo = mode === 'solo';
   const actions = useMemoryActions();
+  const deletePendingRef = useRef(false);
 
   // ── Repost rendering: surface the original memory inside this card ─────
   if (memory.kind === 'repost' && memory.repostOf) {
@@ -87,9 +100,9 @@ export function MemoryPost({ memory, variant, isLast }: Props) {
           memory={{
             ...memory.repostOf,
             kind: 'post',
-            reactionCount: memory.reactionCount,
-            replyCount: memory.replyCount,
-            repostCount: memory.repostCount,
+            reactions: memory.repostOf.reactions,
+            poll: memory.repostOf.poll,
+            quoteOf: memory.repostOf.quoteOf,
           } as MemoryPostMemory}
           variant={variant}
           isLast
@@ -103,6 +116,10 @@ export function MemoryPost({ memory, variant, isLast }: Props) {
   const hasReply = !!memory.replyPreview;
   const hasReacted = !!memory.reactions?.some((r) => r.user?.id === me?.id);
   const time = useMemo(() => formatTime(memory.createdAt), [memory.createdAt]);
+  const poll = Array.isArray(memory.poll) ? memory.poll[0] : memory.poll;
+  const memorySpaceId = firstRel(memory.space)?.id ?? null;
+  const isPrivateMemory = !!memory.isPrivate || memorySpaceId === session?.personalSpaceId;
+  const canUseSharedActions = !isSolo && !isPrivateMemory;
 
   const onPress =
     variant === 'feed'
@@ -110,21 +127,32 @@ export function MemoryPost({ memory, variant, isLast }: Props) {
       : undefined;
 
   const onReact = () => {
-    if (isSolo) return;
+    if (!canUseSharedActions) return;
     if (hasReacted) {
       const mine = memory.reactions?.find((r) => r.user?.id === me?.id);
       if (mine) actions.unreact(mine.id);
     } else {
-      actions.react(memory.id);
+      actions.react(memory.id, 'heart', { isPrivate: isPrivateMemory });
     }
   };
-  const onReply = () =>
+  const onReply = () => {
+    if (isPrivateMemory) {
+      setMemoryComposerDraft((current: any) => ({
+        ...current,
+        mode: 'reply',
+        parentId: memory.id,
+        isPrivate: true,
+        notifyMembers: false,
+      }));
+    }
     router.push(`/sheets/memory-composer?mode=reply&parentId=${memory.id}` as any);
+  };
   const onRepost = () => {
-    if (isSolo) return;
-    actions.repost(memory.id);
+    if (!canUseSharedActions) return;
+    actions.repost(memory.id, { isPrivate: isPrivateMemory });
   };
   const onShare = () => {
+    if (isPrivateMemory) return;
     Share.share({ message: memoryShareUrl(memory.id) });
   };
 
@@ -136,6 +164,7 @@ export function MemoryPost({ memory, variant, isLast }: Props) {
       onResponderRelease={onPress}
       style={[
         styles.row,
+        isReply && styles.replyPostRow,
         {
           backgroundColor: C.bg,
           borderBottomColor: C.line2 ?? C.lineColor,
@@ -144,18 +173,24 @@ export function MemoryPost({ memory, variant, isLast }: Props) {
       ]}
     >
       {/* Avatar gutter with thread line */}
-      <View style={styles.gutter}>
+      <View style={[styles.gutter, isReply && styles.replyGutter]}>
         <Avatar
           person={{
             initial: authorName.charAt(0).toUpperCase(),
             color: C.accent,
             avatarUrl: author?.avatarUrl,
           }}
-          size={40}
+          size={isReply ? 32 : 40}
         />
         {hasReply || variant !== 'feed' ? (
           <>
-            <View style={[styles.threadLine, { backgroundColor: C.line2 ?? C.lineColor }]} />
+            <View
+              style={[
+                styles.threadLine,
+                isReply && styles.replyThreadLine,
+                { backgroundColor: C.line2 ?? C.lineColor },
+              ]}
+            />
             {hasReply ? (
               <Avatar
                 person={{
@@ -172,9 +207,12 @@ export function MemoryPost({ memory, variant, isLast }: Props) {
 
       {/* Body column */}
       <View style={styles.body}>
-        <View style={styles.headerRow}>
+        <View style={[styles.headerRow, isReply && styles.replyHeaderRow]}>
           <View style={styles.headerLeft}>
-            <Text style={[styles.name, { color: C.inkColor }]} numberOfLines={1}>
+            <Text
+              style={[styles.name, isReply && styles.replyNameText, { color: C.inkColor }]}
+              numberOfLines={1}
+            >
               {authorName}
             </Text>
             {memory.isPinned ? (
@@ -183,7 +221,7 @@ export function MemoryPost({ memory, variant, isLast }: Props) {
             {memory.isPrivate ? (
               <Text style={[styles.metaTag, { color: C.ink3 }]}>· private</Text>
             ) : null}
-            <Text style={[styles.time, { color: C.ink3 }]} numberOfLines={1}>
+            <Text style={[styles.time, isReply && styles.replyTimeText, { color: C.ink3 }]} numberOfLines={1}>
               {time}
             </Text>
           </View>
@@ -212,7 +250,15 @@ export function MemoryPost({ memory, variant, isLast }: Props) {
                         {
                           text: 'Delete',
                           style: 'destructive',
-                          onPress: () => actions.remove(memory.id),
+                          onPress: async () => {
+                            if (deletePendingRef.current) return;
+                            deletePendingRef.current = true;
+                            try {
+                              await actions.remove(memory.id);
+                            } finally {
+                              deletePendingRef.current = false;
+                            }
+                          },
                         },
                       ],
                     );
@@ -222,14 +268,14 @@ export function MemoryPost({ memory, variant, isLast }: Props) {
               ]);
             }}
             accessibilityLabel="Post options"
-            style={styles.dotsBtn}
+            style={[styles.dotsBtn, isReply && styles.replyDotsBtn]}
           >
-            <MemoriesIcon name="dots" size={18} color={C.ink3} />
+            <MemoriesIcon name="dots" size={isReply ? 16 : 18} color={C.ink3} />
           </PressScale>
         </View>
 
         {memory.body ? (
-          <Body body={memory.body} color={C.inkColor} />
+          <Body body={memory.body} color={C.inkColor} compact={isReply} />
         ) : null}
 
         {memory.attachments && memory.attachments.length > 0 ? (
@@ -242,6 +288,7 @@ export function MemoryPost({ memory, variant, isLast }: Props) {
                 a.type !== 'image' &&
                 a.type !== 'gif' &&
                 a.type !== 'video' &&
+                isEntityRefKind(a.type) &&
                 !!a.refId,
             );
             return (
@@ -254,6 +301,7 @@ export function MemoryPost({ memory, variant, isLast }: Props) {
                         key={a.id ?? `${a.type}-${a.refId}`}
                         type={a.type}
                         refId={a.refId}
+                        spaceId={resolveEntityRefScopeId(memorySpaceId, a.spaceId)}
                       />
                     ))}
                   </View>
@@ -261,6 +309,15 @@ export function MemoryPost({ memory, variant, isLast }: Props) {
               </>
             );
           })()
+        ) : null}
+
+        {poll ? (
+          <MemoryPoll
+            pollId={poll.id}
+            question={poll.question}
+            options={poll.options ?? []}
+            currentUserId={me?.id}
+          />
         ) : null}
 
         {memory.quoteOf ? (
@@ -273,10 +330,11 @@ export function MemoryPost({ memory, variant, isLast }: Props) {
         ) : null}
 
         {/* Action row */}
-        <View style={styles.actionRow}>
-          {!isSolo ? (
+        <View style={[styles.actionRow, isReply && styles.replyActionRow]}>
+          {canUseSharedActions ? (
             <ActionBtn
               icon="heart"
+              size={isReply ? 16 : 18}
               count={memory.reactionCount ?? 0}
               active={hasReacted}
               activeColor={C.accent}
@@ -287,21 +345,31 @@ export function MemoryPost({ memory, variant, isLast }: Props) {
           ) : null}
           <ActionBtn
             icon="reply"
+            size={isReply ? 16 : 18}
             count={memory.replyCount ?? 0}
             idleColor={C.ink2}
             countColor={C.ink3}
             onPress={onReply}
           />
-          {!isSolo ? (
+          {canUseSharedActions ? (
             <ActionBtn
               icon="repost"
+              size={isReply ? 16 : 18}
               count={memory.repostCount ?? 0}
               idleColor={C.ink2}
               countColor={C.ink3}
               onPress={onRepost}
             />
           ) : null}
-          <ActionBtn icon="send" idleColor={C.ink2} countColor={C.ink3} onPress={onShare} />
+          {!isPrivateMemory ? (
+            <ActionBtn
+              icon="send"
+              size={isReply ? 16 : 18}
+              idleColor={C.ink2}
+              countColor={C.ink3}
+              onPress={onShare}
+            />
+          ) : null}
         </View>
 
         {hasReply ? (
@@ -345,13 +413,13 @@ function formatTime(ts: number): string {
   }
 }
 
-function Body({ body, color }: { body: string; color: string }) {
+function Body({ body, color, compact }: { body: string; color: string; compact?: boolean }) {
   const { C } = useTheme();
   // Highlight #hashtags in the accent ink; URLs stay in body color (no inline
   // tap target — the whole post is pressable).
   const tokens = useMemo(() => splitHashtags(body), [body]);
   return (
-    <Text style={[styles.bodyText, { color }]} selectable>
+    <Text style={[styles.bodyText, compact && styles.replyBodyText, { color }]} selectable>
       {tokens.map((tk, i) =>
         tk.kind === 'tag' ? (
           <Text key={i} style={{ color: C.accent, fontFamily: 'Geist_500Medium' }}>
@@ -442,11 +510,9 @@ function MediaCarousel({ attachments }: { attachments: any[] }) {
 
 function entityTone(type: string | undefined, C: any): string {
   switch (type) {
-    case 'milestone': return C.accent3 ?? C.accent;
-    case 'plan': return C.accent ?? '#eee';
-    case 'checkIn': return C.accent2 ?? '#eee';
-    case 'wishlistItem': return C.accent3 ?? '#eee';
-    default: return C.bgCard ?? '#eee';
+    case 'plan': return C.accent ?? C.lineColor;
+    case 'checkIn': return C.accent2 ?? C.lineColor;
+    default: return C.bgCard ?? C.lineColor;
   }
 }
 
@@ -467,8 +533,14 @@ function QuotePreview({ quoted, onPress }: { quoted: any; onPress: () => void })
   );
 }
 
+function firstRel<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
+
 interface ActionBtnProps {
   icon: MemoriesIconName;
+  size?: number;
   count?: number;
   active?: boolean;
   activeColor?: string;
@@ -477,12 +549,12 @@ interface ActionBtnProps {
   onPress?: () => void;
 }
 
-function ActionBtn({ icon, count, active, activeColor, idleColor, countColor, onPress }: ActionBtnProps) {
+function ActionBtn({ icon, size = 18, count, active, activeColor, idleColor, countColor, onPress }: ActionBtnProps) {
   return (
     <PressScale onPress={onPress} hitSlop={8} style={styles.actionBtn}>
       <MemoriesIcon
         name={icon}
-        size={18}
+        size={size}
         color={active && activeColor ? activeColor : idleColor}
         stroke={active ? 2 : 1.6}
         filled={!!(active && icon === 'heart')}
@@ -502,12 +574,23 @@ const styles = StyleSheet.create({
     paddingBottom: 13,
     gap: 10,
   },
+  replyPostRow: {
+    marginLeft: 28,
+    paddingTop: 12,
+    paddingBottom: 10,
+    paddingLeft: 0,
+    gap: 9,
+  },
   gutter: {
     flexDirection: 'column',
     alignItems: 'center',
     flexShrink: 0,
     paddingTop: 1,
     width: AVATAR_COL_W,
+  },
+  replyGutter: {
+    width: 34,
+    paddingTop: 0,
   },
   threadLine: {
     flex: 1,
@@ -518,6 +601,13 @@ const styles = StyleSheet.create({
     minHeight: 26,
     opacity: 0.72,
   },
+  replyThreadLine: {
+    width: 1.5,
+    minHeight: 20,
+    marginTop: 7,
+    marginBottom: 7,
+    opacity: 0.48,
+  },
   body: { flex: 1, minWidth: 0 },
   headerRow: {
     flexDirection: 'row',
@@ -525,6 +615,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 6,
     minHeight: 25,
+  },
+  replyHeaderRow: {
+    minHeight: 22,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -539,16 +632,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     lineHeight: 20,
   },
+  replyNameText: {
+    fontSize: 14,
+    lineHeight: 18,
+  },
   metaTag: {
-    fontFamily: 'GeistMono_400Regular',
+    fontFamily: 'GeistMono_500Medium',
     fontSize: 10,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
   time: {
-    fontFamily: 'GeistMono_400Regular',
+    fontFamily: 'GeistMono_500Medium',
     fontSize: 12,
     lineHeight: 20,
+  },
+  replyTimeText: {
+    fontSize: 11,
+    lineHeight: 18,
   },
   dotsBtn: {
     width: 34,
@@ -557,11 +658,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: -4,
   },
+  replyDotsBtn: {
+    width: 28,
+    height: 24,
+    marginTop: -3,
+  },
   bodyText: {
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'Geist_500Medium',
     fontSize: 16,
     lineHeight: 23,
     marginTop: 1,
+  },
+  replyBodyText: {
+    fontSize: 15,
+    lineHeight: 21,
+    marginTop: 0,
   },
   entityStack: {
     gap: 8,
@@ -583,7 +694,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   placeholderText: {
-    fontFamily: 'GeistMono_400Regular',
+    fontFamily: 'GeistMono_500Medium',
     fontSize: 10,
     letterSpacing: 1.6,
   },
@@ -595,11 +706,11 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   quoteAuthor: {
-    fontFamily: 'GeistMono_400Regular',
+    fontFamily: 'GeistMono_500Medium',
     fontSize: 12,
   },
   quoteBody: {
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'Geist_500Medium',
     fontSize: 14,
     lineHeight: 19,
   },
@@ -609,6 +720,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
   },
+  replyActionRow: {
+    marginTop: 8,
+    gap: 12,
+  },
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -617,7 +732,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   actionCount: {
-    fontFamily: 'GeistMono_400Regular',
+    fontFamily: 'GeistMono_500Medium',
     fontSize: 12,
   },
   replyPreview: {
@@ -633,7 +748,7 @@ const styles = StyleSheet.create({
   },
   replyBody: {
     flex: 1,
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'Geist_500Medium',
     fontSize: 13,
     lineHeight: 18,
   },
@@ -648,7 +763,7 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   repostHeaderText: {
-    fontFamily: 'GeistMono_400Regular',
+    fontFamily: 'GeistMono_500Medium',
     fontSize: 11,
     letterSpacing: 0.5,
   },

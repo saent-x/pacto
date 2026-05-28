@@ -1,8 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { useTheme } from '@/src/lib/theme';
-import { Typography } from '@/src/constants/typography';
-import { Spacing } from '@/src/constants/spacing';
+import { StyleSheet, View } from 'react-native';
+import { ActionEmptyState } from '@/src/components/ui/pacto/ActionEmptyState';
+import type { IconName } from '@/src/components/ui/Icon';
 
 interface EmptyStateProps {
   icon?: string;
@@ -15,34 +14,24 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({
+  icon,
   title,
   description,
 }: EmptyStateProps) {
-  const { C } = useTheme();
-
   return (
-    <View style={styles.card}>
-      <Text style={[styles.title, { color: C.mist }]}>{title}</Text>
-      <Text style={[styles.body, { color: C.fog }]}>
-        {description}
-      </Text>
+    <View style={styles.wrap}>
+      <ActionEmptyState
+        icon={(icon as IconName) || 'sparkle'}
+        title={title}
+        body={description}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    paddingVertical: Spacing['2xl'],
-    paddingHorizontal: Spacing.xl,
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  title: {
-    ...Typography.subheading,
-    textAlign: 'center',
-  },
-  body: {
-    ...Typography.body,
-    textAlign: 'center',
+  wrap: {
+    paddingHorizontal: 18,
+    paddingVertical: 18,
   },
 });

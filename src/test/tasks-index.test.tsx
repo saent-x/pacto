@@ -109,4 +109,20 @@ describe('TasksList index', () => {
 
     act(() => renderer.unmount());
   });
+
+  it('marks personal and shared task lists in the mixed Spaces view', async () => {
+    state.lists = [
+      { id: 'solo-list', name: 'Solo errands', colorKey: 'sky', scope: 'personal', category: null, done: 0, total: 2, createdAt: 1 },
+      { id: 'shared-list', name: 'House list', colorKey: 'gold', scope: 'shared', category: null, done: 1, total: 3, createdAt: 2 },
+    ];
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<TasksList />); await flush(); });
+
+    expect(renderer.root.findByProps({ testID: 'task-list-scope-solo-list' }).props.accessibilityLabel)
+      .toBe('Personal task list');
+    expect(renderer.root.findByProps({ testID: 'task-list-scope-shared-list' }).props.accessibilityLabel)
+      .toBe('Shared task list');
+
+    act(() => renderer.unmount());
+  });
 });

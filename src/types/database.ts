@@ -36,6 +36,7 @@ export type Reminder = {
   completed_by: string | null;
   priority: number;
   category: string | null;
+  scope?: 'personal' | 'shared';
   created_at: string;
   updated_at: string;
 };
@@ -49,6 +50,7 @@ export type JournalEntry = {
   mood: string | null;
   is_private: boolean;
   media_urls: string[];
+  media_paths: string[];
   tags: string[];
   entry_date: string;
   created_at: string;

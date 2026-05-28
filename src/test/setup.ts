@@ -133,11 +133,56 @@ vi.mock('react-native-svg', () => {
   };
 });
 
+// @shopify/flash-list (v2) ships ESM/Flow-style imports (e.g. `import typeof`
+// re-exported from react-native internals) that Vitest's parser can't handle,
+// so importing it crashes test loading. Stub it with a passthrough that renders
+// like a list (header → rows or empty → footer) and forwards every prop —
+// including onScroll — so tests can drive the scroll handler via
+// findByType(FlashList).props.onScroll, mirroring the real FlatList contract.
+vi.mock('@shopify/flash-list', () => {
+  const ReactFL = require('react') as typeof import('react');
+  function FlashList(props: any) {
+    const {
+      data,
+      renderItem,
+      keyExtractor,
+      ListHeaderComponent,
+      ListFooterComponent,
+      ListEmptyComponent,
+    } = props ?? {};
+    const items: any[] = Array.isArray(data) ? data : [];
+    const renderNode = (node: any) =>
+      typeof node === 'function' ? ReactFL.createElement(node) : node ?? null;
+    const rows =
+      items.length > 0
+        ? items.map((item, index) =>
+            ReactFL.createElement(
+              ReactFL.Fragment,
+              { key: keyExtractor ? keyExtractor(item, index) : index },
+              renderItem ? renderItem({ item, index }) : null,
+            ),
+          )
+        : renderNode(ListEmptyComponent);
+    return ReactFL.createElement(
+      'FlashList',
+      props,
+      renderNode(ListHeaderComponent),
+      rows,
+      renderNode(ListFooterComponent),
+    );
+  }
+  return { __esModule: true, FlashList, FlashListRef: function FlashListRef() {} };
+});
+
 // SheetShell imports DateTimePicker at module scope. Its web build uses
 // Flow-style type imports that Vitest's parser can't handle. Stub it.
 vi.mock('@react-native-community/datetimepicker', () => ({
   __esModule: true,
   default: () => null,
+  DateTimePickerAndroid: {
+    open: vi.fn(),
+    dismiss: vi.fn(async () => true),
+  },
 }));
 
 vi.mock('react-native-gesture-handler/ReanimatedSwipeable', () => ({

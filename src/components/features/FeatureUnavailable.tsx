@@ -1,4 +1,3 @@
-import { router } from 'expo-router';
 import { StyleProp, ViewStyle } from 'react-native';
 import { ActionEmptyState } from '@/src/components/ui/pacto/ActionEmptyState';
 import type { FeatureEntry } from '@/src/lib/features/registry';
@@ -13,9 +12,7 @@ export function FeatureUnavailable({ feature, style }: Props) {
     <ActionEmptyState
       icon={feature.icon}
       title={`${feature.label} is unavailable`}
-      body="Turn this feature on from feature settings to use it in this space."
-      actionLabel="Open Features"
-      onAction={() => router.push('/sheets/profile-features')}
+      body="This feature is not available for this pact type."
       style={style}
     />
   );

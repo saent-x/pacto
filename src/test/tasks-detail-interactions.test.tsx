@@ -237,6 +237,43 @@ describe('Task list detail interactions', () => {
     act(() => renderer.unmount());
   });
 
+  it('renders due dates as human-readable labels instead of raw ISO dates', async () => {
+    taskState.tasks = [makeTask({ due_date: '2099-05-21' })];
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<TaskListDetail />); await flush(); });
+    const labels = renderer.root
+      .findAll((n: any) => typeof n.children?.[0] === 'string')
+      .map((n: any) => n.children.join(''));
+    expect(labels).toContain('MAY 21');
+    expect(labels).not.toContain('2099-05-21');
+    act(() => renderer.unmount());
+  });
+
+  it('labels unassigned tasks in a personal list as mine instead of shared', async () => {
+    listState.lists = [
+      {
+        id: 'l1',
+        name: 'Private errands',
+        icon: 'lock',
+        colorKey: 'peach',
+        category: 'Personal',
+        done: 0,
+        total: 1,
+        createdAt: 1,
+        scope: 'personal',
+      },
+    ];
+    taskState.tasks = [makeTask({ assigned_to: null })];
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<TaskListDetail />); await flush(); });
+    const labels = renderer.root
+      .findAll((n: any) => typeof n.children?.[0] === 'string')
+      .map((n: any) => n.children.join(''));
+    expect(labels).toContain('mine');
+    expect(labels).not.toContain('shared');
+    act(() => renderer.unmount());
+  });
+
   it('toggles complete when the checkbox is tapped', async () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<TaskListDetail />); await flush(); });
@@ -283,6 +320,20 @@ describe('Task list detail interactions', () => {
       .findAll((n: any) => typeof n.children?.[0] === 'string')
       .map((n: any) => n.children.join(''));
     expect(labels).toContain('Nothing on this list');
+    act(() => renderer.unmount());
+  });
+
+  it('hides add controls when the task list route does not resolve', async () => {
+    listState.lists = [];
+    taskState.tasks = [];
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<TaskListDetail />); await flush(); });
+    const labels = renderer.root
+      .findAll((n: any) => typeof n.children?.[0] === 'string')
+      .map((n: any) => n.children.join(''));
+    expect(labels).toContain('List not found');
+    expect(labels).not.toContain('Nothing on this list');
+    expect(renderer.root.findAll((n: any) => n.props?.accessibilityLabel === 'Add task')).toHaveLength(0);
     act(() => renderer.unmount());
   });
 

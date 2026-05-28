@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { MilestoneStripItem, TimelineItem } from "@/src/lib/home/types";
-import {
-  routeForMilestoneItem,
-  routeForTimelineItem,
-} from "@/src/lib/homeNavigation";
+import type { TimelineItem } from "@/src/lib/home/types";
+import { routeForTimelineItem } from "@/src/lib/homeNavigation";
 
 function makeTimelineItem(
   overrides: Partial<TimelineItem> = {},
@@ -26,8 +23,15 @@ function makeTimelineItem(
 
 describe("homeNavigation", () => {
   it("maps timeline items to their home destinations", () => {
-    expect(routeForTimelineItem(makeTimelineItem({ type: "event" }))).toBe(
-      "/(tabs)/calendar",
+    expect(
+      routeForTimelineItem(
+        makeTimelineItem({
+          type: "event",
+          occursAt: new Date(2026, 3, 17, 20, 0, 0, 0).getTime(),
+        }),
+      ),
+    ).toBe(
+      "/(tabs)/calendar?date=2026-04-17",
     );
     expect(routeForTimelineItem(makeTimelineItem({ type: "plan" }))).toBe(
       "/(tabs)/us/plans",
@@ -43,8 +47,15 @@ describe("homeNavigation", () => {
         makeTimelineItem({ type: "task", sourceParentId: "list-1" }),
       ),
     ).toBe("/(tabs)/us/tasks/list-1?taskId=source-1");
-    expect(routeForTimelineItem(makeTimelineItem({ type: "ritual" }))).toBe(
-      "/(tabs)/calendar",
+    expect(
+      routeForTimelineItem(
+        makeTimelineItem({
+          type: "ritual",
+          occursAt: new Date(2026, 3, 18, 9, 0, 0, 0).getTime(),
+        }),
+      ),
+    ).toBe(
+      "/(tabs)/calendar?date=2026-04-18",
     );
     expect(
       routeForTimelineItem(
@@ -53,23 +64,8 @@ describe("homeNavigation", () => {
     ).toBe("/(tabs)/us/journal");
     expect(
       routeForTimelineItem(
-        makeTimelineItem({ type: "memory", sourceTable: "loveNotes" }),
+        makeTimelineItem({ type: "memory", sourceTable: "retiredMemory" }),
       ),
-    ).toBe("/(tabs)/us/notes");
-  });
-
-  it("returns a milestones route for countdown cards", () => {
-    const milestone: MilestoneStripItem = {
-      id: "milestone-1",
-      type: "countdown",
-      title: "Anniversary",
-      subtitle: null,
-      date: "2026-05-01",
-      daysUntil: 20,
-    };
-
-    expect(routeForMilestoneItem(milestone)).toBe(
-      "/(tabs)/us/milestones",
-    );
+    ).toBeNull();
   });
 });

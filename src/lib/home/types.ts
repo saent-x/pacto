@@ -17,21 +17,12 @@ export type TimelineItem = {
 };
 
 export type FeaturedSignal = {
-  kind: 'checkIn' | 'loveNote' | 'memory' | 'countdown' | 'presence';
+  kind: 'checkIn' | 'memory' | 'presence';
   sourceId: string;
   sourceTable: string;
   title: string;
   body: string;
   occursAt: number | null;
-};
-
-export type MilestoneStripItem = {
-  id: string;
-  type: 'countdown' | 'milestone';
-  title: string;
-  subtitle: string | null;
-  date: string;
-  daysUntil: number;
 };
 
 export type MemoryPreview = {
@@ -56,7 +47,6 @@ export type PresenceInfo = {
 export type HomeView = {
   hero: FeaturedSignal | null;
   timeline: TimelineItem[];
-  milestones: MilestoneStripItem[];
   memories: MemoryPreview[];
   memoryPreview: MemoryPreview | null;
   presence: PresenceInfo | null;
@@ -69,7 +59,7 @@ export type CalendarDay = {
   inMonth: boolean;
   isToday: boolean;
   itemCount: number;
-  kinds: Array<TimelineItem['type'] | 'milestone'>;
+  kinds: TimelineItem['type'][];
 };
 
 export type CalendarView = {
@@ -78,5 +68,4 @@ export type CalendarView = {
   selectedDate: string | null;
   days: CalendarDay[];
   agenda: TimelineItem[];
-  milestones: MilestoneStripItem[];
 };
