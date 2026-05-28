@@ -266,9 +266,9 @@ export default function UsScreen() {
         />
 
         <View style={styles.statsSection}>
-          <View style={styles.togetherPanel}>
-            <View style={styles.togetherBody}>
-              <View style={[styles.togetherLeft, { borderRightColor: C.lineColor }]}>
+          <View style={styles.statsPanel}>
+            <View style={styles.statsPanelBody}>
+              <View style={[styles.statsPanelLeft, { borderRightColor: C.lineColor }]}>
                 <Text style={[Typography.eyebrow, { color: C.ink3 }]}>{statsEyebrow}</Text>
                 <View style={styles.statNumberRow}>
                   <Text style={[styles.statNumber, { color: C.inkColor }]}>
@@ -288,7 +288,7 @@ export default function UsScreen() {
                   </Text>
                 )}
               </View>
-              <View style={styles.togetherRight}>
+              <View style={styles.statsPanelRight}>
                 <Text style={[Typography.eyebrow, { color: C.ink3 }]}>STREAK</Text>
                 <View style={styles.streakValueBlock}>
                   <Text style={[styles.streakValue, { color: C.inkColor }]} numberOfLines={1}>
@@ -467,25 +467,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingBottom: 24,
   },
-  togetherPanel: {
+  statsPanel: {
     borderRadius: 24,
     overflow: 'hidden',
   },
-  togetherBody: {
+  statsPanelBody: {
     flexDirection: 'row',
     paddingHorizontal: 24,
     paddingTop: 18,
     paddingBottom: 18,
     gap: 16,
   },
-  togetherLeft: {
+  statsPanelLeft: {
     paddingRight: 16,
     borderRightWidth: 1,
     flex: 1,
     minWidth: 0,
     justifyContent: 'center',
   },
-  togetherRight: {
+  statsPanelRight: {
     flex: 1,
     minHeight: 70,
   },

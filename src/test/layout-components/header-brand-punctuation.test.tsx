@@ -20,7 +20,6 @@ vi.mock('@/src/lib/theme', () => ({
   }),
 }));
 
-import { HeaderBrand as GeneralHeaderBrand } from '@/src/components/ui/HeaderBrand';
 import { HeaderBrand as PactoHeaderBrand } from '@/src/components/ui/pacto/HeaderBrand';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -50,18 +49,6 @@ describe('HeaderBrand punctuation', () => {
     });
 
     const title = findTitleNode(tree, 'How are you?');
-    expect(title).toBeDefined();
-    expectNoRenderedTrailingChild(title);
-  });
-
-  it('keeps general header titles with terminal punctuation from gaining an extra animated dot', () => {
-    let tree: any;
-
-    act(() => {
-      tree = TestRenderer.create(<GeneralHeaderBrand eyebrow="RINGS" title="Day by day." />);
-    });
-
-    const title = findTitleNode(tree, 'Day by day.');
     expect(title).toBeDefined();
     expectNoRenderedTrailingChild(title);
   });

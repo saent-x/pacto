@@ -14,7 +14,10 @@ import {
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '@/src/components/ui/pacto';
+import { Icon } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
+import { PulsingDot } from '@/src/components/ui/pacto/PulsingDot';
+import { shouldAppendAccentDot } from '@/src/components/ui/titlePunctuation';
 import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
 import { useSession } from '@/src/hooks/useSession';
@@ -301,18 +304,23 @@ export function MemoryComposer() {
       style={[styles.root, { backgroundColor: (C as any).coal ?? C.bg }]}
     >
       {/* Sheet header */}
-      <View style={[styles.header, { borderBottomColor: C.lineColor }]}>
-        <PressScale onPress={() => router.back()} hitSlop={12} style={styles.headerBtn}>
-          <MemoriesIcon
-            name="plus"
-            size={20}
-            color={C.ink3}
-            stroke={1.6}
-            style={{ transform: [{ rotate: '45deg' }] }}
-          />
+      <View style={styles.header}>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.headerTitle, { color: C.inkColor }]}>
+            {headerTitle}
+            {shouldAppendAccentDot(headerTitle) ? <PulsingDot color={C.accent} /> : null}
+          </Text>
+        </View>
+        <PressScale
+          onPress={() => router.back()}
+          hitSlop={8}
+          style={[
+            styles.closeBtn,
+            { backgroundColor: C.bgSoft, borderColor: (C as any).line2 ?? C.lineColor },
+          ]}
+        >
+          <Icon name="x" size={18} color={C.inkColor} />
         </PressScale>
-        <Text style={[styles.headerTitle, { color: C.inkColor }]}>{headerTitle}</Text>
-        <View style={styles.headerBtn} />
       </View>
 
       <ScrollView
@@ -571,24 +579,27 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    alignItems: 'flex-start',
+    gap: 16,
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 16,
   },
-  headerBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  closeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
   },
   headerTitle: {
-    fontFamily: 'Geist_600SemiBold',
-    fontSize: 15,
-    fontWeight: '600',
+    fontFamily: Typography.pixelFont,
+    fontSize: 28,
+    lineHeight: 32,
+    letterSpacing: 0,
+    textTransform: 'uppercase',
   },
   authorRow: {
     flexDirection: 'row',

@@ -1,11 +1,11 @@
 import { router } from 'expo-router';
 import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import {
   ActionEmptyState,
   ColorTile,
-  ScreenScaffold,
   SectionHead,
   StatBar,
 } from '@/src/components/ui/pacto';
@@ -25,6 +25,7 @@ export default function TasksScreen() {
 
 function TasksScreenInner() {
   const { C } = useTheme();
+  const insets = useSafeAreaInsets();
   const { lists } = useTaskLists();
 
   const stats = useMemo(() => {
@@ -37,7 +38,11 @@ function TasksScreenInner() {
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <ScreenScaffold horizontalPadding={0}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingTop: insets.top + 60, paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+      >
         {lists.length > 0 ? (
           <View style={styles.heroWrap}>
             <StatBar
@@ -92,7 +97,7 @@ function TasksScreenInner() {
             </View>
           )}
         </View>
-      </ScreenScaffold>
+      </ScrollView>
     </View>
   );
 }
