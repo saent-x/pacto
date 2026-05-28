@@ -3,8 +3,15 @@ import { Platform } from 'react-native';
 import { db } from './db';
 import { signInWithOAuth } from './oauth';
 
-const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
-const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+const FALLBACK_GOOGLE_IOS_CLIENT_ID =
+  '1054272612711-amsaaam2bqkqbpn3d65aknr47m90l7q3.apps.googleusercontent.com';
+const FALLBACK_GOOGLE_WEB_CLIENT_ID =
+  '1054272612711-dt5uipdp21nko253c760060a5a8931cg.apps.googleusercontent.com';
+
+const GOOGLE_IOS_CLIENT_ID =
+  process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? FALLBACK_GOOGLE_IOS_CLIENT_ID;
+const GOOGLE_WEB_CLIENT_ID =
+  process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? FALLBACK_GOOGLE_WEB_CLIENT_ID;
 
 type GoogleSignInModule = typeof import('@react-native-google-signin/google-signin');
 
@@ -54,8 +61,8 @@ function configureGoogleSignin({ GoogleSignin }: GoogleSignInModule) {
 
   try {
     GoogleSignin.configure({
-      ...(GOOGLE_IOS_CLIENT_ID ? { iosClientId: GOOGLE_IOS_CLIENT_ID } : {}),
-      ...(GOOGLE_WEB_CLIENT_ID ? { webClientId: GOOGLE_WEB_CLIENT_ID } : {}),
+      iosClientId: GOOGLE_IOS_CLIENT_ID,
+      webClientId: GOOGLE_WEB_CLIENT_ID,
     });
   } catch (error) {
     if (isMissingNativeGoogleModuleError(error)) {
@@ -68,12 +75,7 @@ function configureGoogleSignin({ GoogleSignin }: GoogleSignInModule) {
 }
 
 export async function signInWithGoogle(): Promise<void> {
-  if (Platform.OS === 'web') {
-    await signInWithOAuth('google');
-    return;
-  }
-
-  if (isExpoGo()) {
+  if (Platform.OS === 'web' || isExpoGo()) {
     await signInWithOAuth('google');
     return;
   }

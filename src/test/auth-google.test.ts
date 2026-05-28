@@ -46,7 +46,10 @@ describe('Google auth runtime selection', () => {
     await signInWithGoogle();
 
     expect(signInWithOAuth).not.toHaveBeenCalled();
-    expect(configure).toHaveBeenCalled();
+    expect(configure).toHaveBeenCalledWith({
+      iosClientId: expect.stringContaining('.apps.googleusercontent.com'),
+      webClientId: expect.stringContaining('.apps.googleusercontent.com'),
+    });
     expect(hasPlayServices).toHaveBeenCalledWith({ showPlayServicesUpdateDialog: true });
     expect(signInWithIdToken).toHaveBeenCalledWith({
       clientName: 'google-android',

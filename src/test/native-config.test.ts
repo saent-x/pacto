@@ -184,4 +184,25 @@ describe('native app config', () => {
       },
     });
   });
+
+  it('pins the iOS deployment target required by Expo native modules', () => {
+    const dynamicAppConfig = readFileSync(path.join(process.cwd(), 'app.config.js'), 'utf8');
+
+    expect(dynamicAppConfig).toContain('expo-build-properties');
+    expect(dynamicAppConfig).toContain("const IOS_DEPLOYMENT_TARGET = '16.4'");
+    expect(dynamicAppConfig).toContain('deploymentTarget: IOS_DEPLOYMENT_TARGET');
+  });
+
+  it('patches the Google Sign-In Expo adapter to the same iOS target', () => {
+    const googleSignInPatch = readFileSync(
+      path.join(
+        process.cwd(),
+        'patches/@react-native-google-signin+google-signin+16.1.2.patch',
+      ),
+      'utf8',
+    );
+
+    expect(googleSignInPatch).toContain("-  s.platform       = :ios, '13.4'");
+    expect(googleSignInPatch).toContain("+  s.platform       = :ios, '16.4'");
+  });
 });

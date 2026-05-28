@@ -2,15 +2,13 @@ const appJson = require('./app.config.base.json');
 
 const GOOGLE_CLIENT_ID_SUFFIX = '.apps.googleusercontent.com';
 const GOOGLE_IOS_SCHEME_PREFIX = 'com.googleusercontent.apps.';
+const IOS_DEPLOYMENT_TARGET = '16.4';
+const DEFAULT_GOOGLE_IOS_CLIENT_ID =
+  '1054272612711-amsaaam2bqkqbpn3d65aknr47m90l7q3.apps.googleusercontent.com';
 
-function googleIosUrlSchemeFromEnv(env = process.env) {
-  if (env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME) {
-    return env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME;
-  }
-
-  const iosClientId = env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
-  if (iosClientId?.endsWith(GOOGLE_CLIENT_ID_SUFFIX)) {
-    return `${GOOGLE_IOS_SCHEME_PREFIX}${iosClientId.slice(
+function googleIosUrlSchemeFromClientId(clientId) {
+  if (clientId?.endsWith(GOOGLE_CLIENT_ID_SUFFIX)) {
+    return `${GOOGLE_IOS_SCHEME_PREFIX}${clientId.slice(
       0,
       -GOOGLE_CLIENT_ID_SUFFIX.length
     )}`;
@@ -19,12 +17,34 @@ function googleIosUrlSchemeFromEnv(env = process.env) {
   return undefined;
 }
 
+function googleIosUrlSchemeFromEnv(env = process.env) {
+  if (env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME) {
+    return env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME;
+  }
+
+  return googleIosUrlSchemeFromClientId(
+    env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? DEFAULT_GOOGLE_IOS_CLIENT_ID
+  );
+}
+
 module.exports = () => {
   const googleIosUrlScheme = googleIosUrlSchemeFromEnv();
-  const plugins = appJson.expo.plugins.filter((plugin) => {
+  const plugins = (appJson.expo.plugins ?? []).filter((plugin) => {
     const pluginName = Array.isArray(plugin) ? plugin[0] : plugin;
-    return pluginName !== '@react-native-google-signin/google-signin';
+    return ![
+      '@react-native-google-signin/google-signin',
+      'expo-build-properties',
+    ].includes(pluginName);
   });
+
+  plugins.push([
+    'expo-build-properties',
+    {
+      ios: {
+        deploymentTarget: IOS_DEPLOYMENT_TARGET,
+      },
+    },
+  ]);
 
   if (googleIosUrlScheme) {
     plugins.push([
