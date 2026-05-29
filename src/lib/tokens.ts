@@ -1,83 +1,83 @@
-// Pacto design tokens — brand-spec palette
+// Pacto design tokens — Editorial Navy palette
 // Synced with src/constants/colors.ts. This file is read by useTheme() / theme.tsx.
 
 // Hex values are OKLCH-authored and converted for React Native style support.
-// Light reads as warm cream paper. Dark reads as deep navy ink.
+// Light reads as warm editorial paper. Dark reads as deep navy ink.
 
 // ─── Full palette tokens (light) ─────────────────────────────────
-const L_BG = '#F8F2E7';
-const L_BG_SOFT = '#EFE5D5';
+const L_BG = '#FAF7F1';
+const L_BG_SOFT = '#F4EFE7';
 const L_BG_CARD = '#FFFDF8';
-const L_INK = '#292D3D';
-const L_INK_2 = '#666C7A';
-const L_INK_3 = '#94909A';
-const L_LINE = '#E3D8C9';
-const L_LINE_2 = '#D4C7B5';
-const L_ACCENT = '#E06F55';
-const L_ACCENT_2 = '#76A99B';
-const L_ACCENT_3 = '#D5B55B';
-const L_ACCENT_SOFT = '#F5D7CE';
-const L_ACCENT_2_SOFT = '#DCEBE5';
-const L_ACCENT_3_SOFT = '#F1E0AB';
+const L_INK = '#212437';
+const L_INK_2 = '#586174';
+const L_INK_3 = '#837D8D';
+const L_LINE = '#D8CEBD';
+const L_LINE_2 = '#C9BBA8';
+const L_ACCENT = '#D96B52';
+const L_ACCENT_2 = '#72AA9C';
+const L_ACCENT_3 = '#A77B2D';
+const L_ACCENT_SOFT = '#F1D7CD';
+const L_ACCENT_2_SOFT = '#DDEBE5';
+const L_ACCENT_3_SOFT = '#ECE1C8';
 
 // ─── Full palette tokens (dark) ──────────────────────────────────
-const D_BG = '#171B2A';
-const D_BG_SOFT = '#222738';
-const D_BG_CARD = '#282E42';
-const D_INK = '#F7F1E8';
-const D_INK_2 = '#C9C3BB';
-const D_INK_3 = '#A29B92';
-const D_LINE = '#3A415A';
-const D_LINE_2 = '#4A526B';
-const D_ACCENT = '#E28568';
-const D_ACCENT_2 = '#86BAAA';
-const D_ACCENT_3 = '#E0BE66';
-const D_ACCENT_SOFT = '#55333A';
-const D_ACCENT_2_SOFT = '#2E4A49';
-const D_ACCENT_3_SOFT = '#55482C';
+const D_BG = '#101525';
+const D_BG_SOFT = '#192034';
+const D_BG_CARD = '#22293D';
+const D_INK = '#F7F0E5';
+const D_INK_2 = '#CFC6B8';
+const D_INK_3 = '#8F98AA';
+const D_LINE = '#343D52';
+const D_LINE_2 = '#46506A';
+const D_ACCENT = '#E17B5F';
+const D_ACCENT_2 = '#82B8AA';
+const D_ACCENT_3 = '#CFB569';
+const D_ACCENT_SOFT = '#4E3037';
+const D_ACCENT_2_SOFT = '#2D4947';
+const D_ACCENT_3_SOFT = '#50452F';
 
 const lightPalette = {
-  peach: '#F0A081',
+  peach: '#D88B74',
   peachInk: '#3B1D12',
-  lavender: '#C3A4D8',
+  lavender: '#A89BC8',
   lavenderInk: '#211735',
-  butter: '#E8C95E',
+  butter: '#C5A954',
   butterInk: '#3A2B07',
-  mint: '#94CFAE',
+  mint: '#7FB39C',
   mintInk: '#102C1C',
-  rose: '#D6909D',
+  rose: '#C47C8C',
   roseInk: '#3A1420',
-  sky: '#A9CBE3',
+  sky: '#8CB5CD',
   skyInk: '#0F2634',
-  reminders: '#9A7CC8',
-  tasks: '#5F9B7B',
-  journal: '#B7785D',
-  wish: '#C99135',
-  plans: '#789D57',
-  error: '#BD5948',
-  success: '#6D965A',
+  reminders: '#8A79AE',
+  tasks: '#689C86',
+  journal: '#AA735F',
+  wish: '#A77B2D',
+  plans: '#75915C',
+  error: '#B95748',
+  success: '#637F55',
 };
 
 const darkPalette = {
-  peach: '#D07A62',
+  peach: '#C97761',
   peachInk: '#FAE5D8',
-  lavender: '#B698D7',
+  lavender: '#A995CE',
   lavenderInk: '#F0EAFE',
-  butter: '#C9A94E',
+  butter: '#CBB05F',
   butterInk: '#FFF0BE',
-  mint: '#72AB8E',
+  mint: '#77AA93',
   mintInk: '#DDF3E5',
-  rose: '#B87586',
+  rose: '#B87686',
   roseInk: '#F9DFE6',
-  sky: '#8EB4CE',
+  sky: '#82ACC7',
   skyInk: '#E0F0F8',
-  reminders: '#B89BE0',
-  tasks: '#7CBC9A',
-  journal: '#D08F70',
-  wish: '#D8A64C',
-  plans: '#95BC74',
-  error: '#E27B68',
-  success: '#91C477',
+  reminders: '#B09ED4',
+  tasks: '#82B79D',
+  journal: '#C68870',
+  wish: '#CAA258',
+  plans: '#90B471',
+  error: '#E07161',
+  success: '#8FC175',
 };
 
 const darkTokens = {
@@ -101,16 +101,16 @@ const darkTokens = {
   ink: D_BG,
   coal: D_BG_SOFT,
   card: D_BG_CARD,
-  cardHi: '#323A51',
+  cardHi: '#2A3247',
   line: D_LINE,
   lineHi: D_LINE_2,
   bone: D_INK,
   mist: D_INK_2,
   fog: D_INK_3,
-  ash: '#777F92',
+  ash: '#768199',
   gold: D_ACCENT,
-  goldDim: '#B96650',
-  goldSoft: '#4E3138',
+  goldDim: '#B89049',
+  goldSoft: '#4E3037',
 };
 
 const lightTokens = {
@@ -140,32 +140,32 @@ const lightTokens = {
   bone: L_INK,
   mist: L_INK_2,
   fog: L_INK_3,
-  ash: '#B1A798',
+  ash: '#A89C8B',
   gold: L_ACCENT,
-  goldDim: '#B85D45',
-  goldSoft: '#F2D8C8',
+  goldDim: '#8C6424',
+  goldSoft: '#ECE1C8',
 };
 
 export const pastels = {
-  peach: '#F0A081',
+  peach: '#D88B74',
   peachInk: '#3A1F14',
-  lavender: '#AFA1DF',
+  lavender: '#A89BC8',
   lavenderInk: '#1F1635',
-  butter: '#E8C95E',
+  butter: '#C5A954',
   butterInk: '#3A2E08',
-  mint: '#94CFAE',
+  mint: '#7FB39C',
   mintInk: '#0F2C1A',
-  rose: '#D6909D',
+  rose: '#C47C8C',
   roseInk: '#3A1520',
-  sky: '#91BDD7',
+  sky: '#8CB5CD',
   skyInk: '#0E2230',
-  reminders: '#8B78C0',
-  tasks: '#5F9B7B',
-  journal: '#B7785D',
-  wish: '#C99135',
-  plans: '#789D57',
-  error: '#BD5948',
-  success: '#6D965A',
+  reminders: '#8A79AE',
+  tasks: '#689C86',
+  journal: '#AA735F',
+  wish: '#B28B3F',
+  plans: '#75915C',
+  error: '#B95748',
+  success: '#637F55',
 };
 
 export type ThemeMode = 'light' | 'dark';
@@ -185,19 +185,19 @@ export const fonts = {
   pixel: 'BitcountPropSingle_700Bold',
   pixelMedium: 'BitcountPropSingle_500Medium',
   pixelRegular: 'BitcountPropSingle_400Regular',
-  geist: 'Geist_400Regular',
+  geist: 'Geist_500Medium',
   geistMedium: 'Geist_500Medium',
   geistSemiBold: 'Geist_600SemiBold',
   geistBold: 'Geist_700Bold',
-  geistLight: 'Geist_300Light',
-  geistMono: 'GeistMono_400Regular',
+  geistLight: 'Geist_400Regular',
+  geistMono: 'GeistMono_500Medium',
   geistMonoMedium: 'GeistMono_500Medium',
 
   // ─── Legacy aliases ─────────────────────────────────────────
   display: 'BitcountPropSingle_700Bold',
   displayBold: 'BitcountPropSingle_700Bold',
-  body: 'Geist_400Regular',
+  body: 'Geist_500Medium',
   bodyBold: 'Geist_700Bold',
-  serif: 'Geist_400Regular',
-  mono: 'GeistMono_400Regular',
+  serif: 'Geist_500Medium',
+  mono: 'GeistMono_500Medium',
 } as const;

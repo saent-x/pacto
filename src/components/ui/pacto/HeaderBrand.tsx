@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '@/src/lib/theme';
 import { Typography } from '@/src/constants/typography';
 import { PulsingDot } from './PulsingDot';
+import { shouldAppendAccentDot } from '../titlePunctuation';
 
 type Props = {
   eyebrow?: string;
@@ -15,8 +16,8 @@ type Props = {
  * Native-header title block — eyebrow (Geist Mono uppercase) above a
  * compact pixel-font title with an accent-colored period suffix.
  *
- * Matches the legacy HeaderBrand convention: render `<title>.` where the
- * trailing dot is tinted with the accent color (terracotta by default).
+ * Matches the legacy HeaderBrand convention: render an accent trailing dot
+ * unless the supplied title already carries terminal punctuation.
  */
 export function HeaderBrand({ eyebrow, title, accent, align = 'center', size = 22 }: Props) {
   const { C } = useTheme();
@@ -41,7 +42,7 @@ export function HeaderBrand({ eyebrow, title, accent, align = 'center', size = 2
         ]}
       >
         {title}
-        <PulsingDot color={acc} />
+        {shouldAppendAccentDot(title) ? <PulsingDot color={acc} /> : null}
       </Text>
     </View>
   );

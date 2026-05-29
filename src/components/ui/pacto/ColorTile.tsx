@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { PressScale } from '@/src/components/ui/PressScale';
 import { Icon, IconName } from '@/src/components/ui/Icon';
 import { Typography } from '@/src/constants/typography';
@@ -9,6 +9,7 @@ export type Tone = {
   bg: string;
   ink: string;
   muted: string;
+  border?: string;
 };
 
 type Props = {
@@ -23,7 +24,7 @@ type Props = {
   accessibilityLabel?: string;
   accessibilityHint?: string;
   disabled?: boolean;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   topRight?: ReactNode;
 };
 
@@ -60,7 +61,11 @@ export function ColorTile({
       accessibilityHint={accessibilityHint}
       style={[
         styles.tile,
-        { backgroundColor: tone.bg, opacity: disabled ? 0.55 : 1 },
+        {
+          backgroundColor: tone.bg,
+          borderColor: tone.border ?? alphaColor(tone.ink, 0.14),
+          opacity: disabled ? 0.55 : 1,
+        },
         style,
       ]}
     >
@@ -74,7 +79,7 @@ export function ColorTile({
         {topRight ? (
           topRight
         ) : icon ? (
-          <Icon name={icon} size={20} color={alphaColor(tone.ink, 0.85)} strokeWidth={2.2} />
+          <Icon name={icon} size={23} color={alphaColor(tone.ink, 0.85)} strokeWidth={2.2} />
         ) : null}
       </View>
 
@@ -87,7 +92,7 @@ export function ColorTile({
                 color: tone.ink,
                 fontSize: 32,
                 lineHeight: 34,
-                letterSpacing: -0.6,
+                letterSpacing: 0,
                 fontVariant: ['tabular-nums'],
               },
             ]}
@@ -134,6 +139,7 @@ const styles = StyleSheet.create({
     minHeight: 144,
     padding: 14,
     borderRadius: 20,
+    borderWidth: 1,
     overflow: 'hidden',
     justifyContent: 'space-between',
   },
@@ -147,7 +153,7 @@ const styles = StyleSheet.create({
     fontFamily: Typography.geistSemiBoldFont,
     fontSize: 14,
     lineHeight: 18,
-    letterSpacing: -0.1,
+    letterSpacing: 0,
     flexShrink: 1,
   },
   middle: {

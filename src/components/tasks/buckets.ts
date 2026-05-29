@@ -6,28 +6,43 @@ function startOfDay(d: Date): number {
   return x.getTime();
 }
 
-function parseIsoDate(iso: string): Date {
+function parseIsoDate(iso: string): Date | null {
   // Interpret 'YYYY-MM-DD' as local midnight to match due-date semantics.
-  return new Date(`${iso}T00:00:00`);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(year, month - 1, day, 0, 0, 0, 0);
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+  return date;
 }
 
 export function bucketOf(dueDate: string | null, todayIso?: string): string {
   if (!dueDate) return 'Later';
-  const now = todayIso ? parseIsoDate(todayIso) : new Date();
+  const now = (todayIso ? parseIsoDate(todayIso) : null) ?? new Date();
+  const parsedDue = parseIsoDate(dueDate);
+  if (!parsedDue) return 'Later';
   const today = startOfDay(now);
-  const due = startOfDay(parseIsoDate(dueDate));
+  const due = startOfDay(parsedDue);
   const diff = Math.floor((due - today) / 86400000);
   if (diff < 0) return 'Overdue';
   if (diff === 0) return 'Today';
   if (diff === 1) return 'Tomorrow';
   if (diff < 7) return 'This week';
-  return MONTH_ABBR[parseIsoDate(dueDate).getMonth()];
+  return MONTH_ABBR[parsedDue.getMonth()];
 }
 
 const FIXED_ORDER = ['Overdue', 'Today', 'Tomorrow', 'This week'];
 
 export function orderBuckets(labels: string[], todayIso?: string): string[] {
-  const now = todayIso ? parseIsoDate(todayIso) : new Date();
+  const now = (todayIso ? parseIsoDate(todayIso) : null) ?? new Date();
   const monthsFromNow = (abbr: string) => {
     const idx = MONTH_ABBR.indexOf(abbr);
     if (idx === -1) return Infinity;
@@ -46,7 +61,8 @@ export function orderBuckets(labels: string[], todayIso?: string): string[] {
 export function formatDueChip(dueDate: string | null, todayIso?: string): string | null {
   if (!dueDate) return null;
   const d = parseIsoDate(dueDate);
-  const now = todayIso ? parseIsoDate(todayIso) : new Date();
+  if (!d) return null;
+  const now = (todayIso ? parseIsoDate(todayIso) : null) ?? new Date();
   const today = startOfDay(now);
   const due = startOfDay(d);
   const diff = Math.floor((due - today) / 86400000);

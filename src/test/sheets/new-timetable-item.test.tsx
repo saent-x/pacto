@@ -32,6 +32,10 @@ vi.mock('react-native', async () => {
 
 const ttiState = vi.hoisted(() => ({
   add: vi.fn(async () => undefined),
+  update: vi.fn(async () => undefined),
+  timetable: { id: 'tt-1', template: 'meals', title: 'Meal plan' } as any,
+  items: [] as any[],
+  isLoading: false,
 }));
 
 const sessionState = vi.hoisted(() => ({
@@ -43,7 +47,13 @@ const sessionState = vi.hoisted(() => ({
 }));
 
 vi.mock('@/src/hooks/useTimetables', () => ({
-  useTimetable: (_id: string | null) => ({ add: ttiState.add, update: vi.fn(), items: [] }),
+  useTimetable: (_id: string | null) => ({
+    timetable: ttiState.timetable,
+    add: ttiState.add,
+    update: ttiState.update,
+    items: ttiState.items,
+    isLoading: ttiState.isLoading,
+  }),
 }));
 vi.mock('@/src/hooks/useSession', () => ({ useSession: () => sessionState }));
 
@@ -58,7 +68,7 @@ const findByTestID = (root: any, id: string) =>
   root.findAll((n: any) => n.props?.testID === id)[0];
 const findSaveBtn = (root: any, opts: { enabled?: boolean } = {}) =>
   root.findAll((n: any) => {
-    if (n.props?.icon !== 'plus') return false;
+    if (!['plus', 'check'].includes(n.props?.icon)) return false;
     if (typeof n.props?.onPress !== 'function') return false;
     if (opts.enabled === true && n.props?.disabled) return false;
     if (opts.enabled === false && !n.props?.disabled) return false;
@@ -68,10 +78,14 @@ const findSaveBtn = (root: any, opts: { enabled?: boolean } = {}) =>
 describe('new-timetable-item sheet', () => {
   beforeEach(() => {
     ttiState.add.mockClear();
+    ttiState.update.mockClear();
     (router.back as any).mockClear();
     (Haptics.notificationAsync as any).mockClear();
     alertSpy.mockClear();
     paramsState.value = { timetableId: 'tt-1' };
+    ttiState.timetable = { id: 'tt-1', template: 'meals', title: 'Meal plan' };
+    ttiState.items = [];
+    ttiState.isLoading = false;
     sessionState.isSolo = false;
     sessionState.partner = { id: 'u-sofia', displayName: 'Sofia', avatarUrl: null };
   });
@@ -94,10 +108,10 @@ describe('new-timetable-item sheet', () => {
     act(() => renderer.unmount());
   });
 
-  it('renders 4 cats + duration field + 7 days + 3 presets + 3 who + 2 repeat', async () => {
+  it('renders meal-plan types + duration field + 7 days + 3 presets + 3 who + 2 repeat', async () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<NewTimetableItem />); await flush(); });
-    for (const k of ['Breakfast', 'Lunch', 'Dinner', 'Snack']) {
+    for (const k of ['none', 'breakfast', 'lunch', 'dinner', 'snack']) {
       expect(findByTestID(renderer.root, `new-timetable-item-cat-${k}`)).toBeDefined();
     }
     expect(findByTestID(renderer.root, 'new-timetable-item-dur-input')).toBeDefined();
@@ -119,15 +133,175 @@ describe('new-timetable-item sheet', () => {
     act(() => renderer.unmount());
   });
 
+  it('shows curated type options for workout timetables', async () => {
+    ttiState.timetable = { id: 'tt-1', template: 'workout', title: 'Workout' };
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<NewTimetableItem />); await flush(); });
+    for (const k of ['breakfast', 'lunch', 'dinner', 'snack']) {
+      expect(findByTestID(renderer.root, `new-timetable-item-cat-${k}`)).toBeUndefined();
+    }
+    for (const k of ['none', 'strength', 'cardio', 'mobility', 'recovery']) {
+      expect(findByTestID(renderer.root, `new-timetable-item-cat-${k}`)).toBeDefined();
+    }
+    await act(async () => {
+      findByTestID(renderer.root, 'new-timetable-item-title-input').props.onChangeText('Leg day');
+      await flush();
+    });
+    await act(async () => {
+      findByTestID(renderer.root, 'new-timetable-item-cat-cardio').props.onPress();
+      await flush();
+    });
+    await act(async () => { findSaveBtn(renderer.root, { enabled: true }).props.onPress(); await flush(); });
+    const call = ttiState.add.mock.calls[0][0];
+    expect(call.category).toBe('cardio');
+    expect(call.icon).toBe('zap');
+    act(() => renderer.unmount());
+  });
+
+  it('shows curated type options for study, routine, sleep, and custom timetables', async () => {
+    const cases = [
+      { template: 'study', keys: ['none', 'focus', 'reading', 'admin', 'break'] },
+      { template: 'routine', keys: ['none', 'morning', 'reset', 'chore', 'reflection'] },
+      { template: 'sleep', keys: ['none', 'wind-down', 'bedtime', 'wake-up', 'nap'] },
+      { template: 'custom', keys: ['none', 'block', 'task', 'reminder', 'note'] },
+    ];
+    for (const c of cases) {
+      ttiState.timetable = { id: 'tt-1', template: c.template, title: c.template };
+      let renderer: any;
+      await act(async () => { renderer = TestRenderer.create(<NewTimetableItem />); await flush(); });
+      for (const k of c.keys) {
+        expect(findByTestID(renderer.root, `new-timetable-item-cat-${k}`)).toBeDefined();
+      }
+      act(() => renderer.unmount());
+    }
+  });
+
   it('Save disabled when no timetableId param', async () => {
     paramsState.value = {};
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<NewTimetableItem />); await flush(); });
+    const text = JSON.stringify(renderer.toJSON());
+    expect(text).toContain('Timetable missing');
+    expect(text).toContain('could not be found');
+    expect(findByTestID(renderer.root, 'new-timetable-item-title-input')).toBeUndefined();
+    expect(findSaveBtn(renderer.root, { enabled: true })).toBeUndefined();
+    act(() => renderer.unmount());
+  });
+
+  it('Save disabled when the timetable id cannot be resolved', async () => {
+    paramsState.value = { timetableId: 'not-a-uuid' };
+    ttiState.timetable = null;
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<NewTimetableItem />); await flush(); });
+    const text = JSON.stringify(renderer.toJSON());
+    expect(text).toContain('Timetable missing');
+    expect(text).toContain('could not be found');
+    expect(findByTestID(renderer.root, 'new-timetable-item-title-input')).toBeUndefined();
+    expect(findSaveBtn(renderer.root, { enabled: true })).toBeUndefined();
+    act(() => renderer.unmount());
+  });
+
+  it('shows a loading state while the parent timetable is resolving', async () => {
+    paramsState.value = { timetableId: 'tt-1' };
+    ttiState.timetable = null;
+    ttiState.isLoading = true;
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<NewTimetableItem />); await flush(); });
+    const text = JSON.stringify(renderer.toJSON());
+    expect(text).toContain('Loading timetable');
+    expect(text).toContain('Loading this timetable');
+    expect(text).not.toContain('Timetable missing');
+    expect(findByTestID(renderer.root, 'new-timetable-item-title-input')).toBeUndefined();
+    expect(findSaveBtn(renderer.root, { enabled: true })).toBeUndefined();
+    act(() => renderer.unmount());
+  });
+
+  it('Save disabled when the timetable item being edited cannot be resolved', async () => {
+    paramsState.value = { timetableId: 'tt-1', id: 'missing-item' };
+    ttiState.items = [];
+
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<NewTimetableItem />); await flush(); });
+
+    const text = JSON.stringify(renderer.toJSON());
+    expect(text).toContain('Item missing');
+    expect(text).toContain('could not be found');
+    expect(findByTestID(renderer.root, 'new-timetable-item-title-input')).toBeUndefined();
+    expect(findSaveBtn(renderer.root, { enabled: true })).toBeUndefined();
+    expect(ttiState.update).not.toHaveBeenCalled();
+    act(() => renderer.unmount());
+  });
+
+  it('shows a loading state while the edited timetable item is resolving', async () => {
+    paramsState.value = { timetableId: 'tt-1', id: 'item-1' };
+    ttiState.items = [];
+    ttiState.isLoading = true;
+
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<NewTimetableItem />); await flush(); });
+
+    const text = JSON.stringify(renderer.toJSON());
+    expect(text).toContain('Loading item');
+    expect(text).toContain('Loading this timetable item');
+    expect(text).not.toContain('Item missing');
+    expect(findByTestID(renderer.root, 'new-timetable-item-title-input')).toBeUndefined();
+    expect(findSaveBtn(renderer.root, { enabled: true })).toBeUndefined();
+    act(() => renderer.unmount());
+  });
+
+  it('hydrates edit fields when the timetable item resolves after initial render', async () => {
+    paramsState.value = { timetableId: 'tt-1', id: 'item-1' };
+    ttiState.items = [];
+    ttiState.isLoading = true;
+
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<NewTimetableItem />); await flush(); });
+    expect(JSON.stringify(renderer.toJSON())).toContain('Loading item');
+    expect(findByTestID(renderer.root, 'new-timetable-item-title-input')).toBeUndefined();
+
     await act(async () => {
-      findByTestID(renderer.root, 'new-timetable-item-title-input').props.onChangeText('Risotto');
+      ttiState.items = [
+        {
+          id: 'item-1',
+          title: 'Late dinner',
+          cat: 'dinner',
+          start: 20.5,
+          dur: 1,
+          day: 5,
+          who: 'partner',
+          repeat: 'once',
+        },
+      ];
+      ttiState.isLoading = false;
+      renderer.update(<NewTimetableItem />);
       await flush();
     });
-    expect(findSaveBtn(renderer.root, { enabled: true })).toBeUndefined();
+
+    expect(findByTestID(renderer.root, 'new-timetable-item-title-input').props.value).toBe('Late dinner');
+    expect(findByTestID(renderer.root, 'new-timetable-item-cat-dinner').props.accessibilityState).toMatchObject({
+      selected: true,
+    });
+    expect(findByTestID(renderer.root, 'new-timetable-item-who-partner').props.active).toBe(true);
+    expect(findByTestID(renderer.root, 'new-timetable-item-repeat-once').props.active).toBe(true);
+    expect(findByTestID(renderer.root, 'new-timetable-item-day-4').props.accessibilityState).toMatchObject({
+      selected: true,
+    });
+    expect(findSaveBtn(renderer.root, { enabled: true })).toBeDefined();
+
+    await act(async () => { findSaveBtn(renderer.root, { enabled: true }).props.onPress(); await flush(); });
+
+    expect(ttiState.update).toHaveBeenCalledWith(
+      'item-1',
+      expect.objectContaining({
+        title: 'Late dinner',
+        category: 'dinner',
+        day: 5,
+        duration: 60,
+        who: 'partner',
+        repeat: 'once',
+      }),
+    );
+
     act(() => renderer.unmount());
   });
 
@@ -155,14 +329,18 @@ describe('new-timetable-item sheet', () => {
       await flush();
     });
     await act(async () => {
-      findByTestID(renderer.root, 'new-timetable-item-cat-Lunch').props.onPress();
+      findByTestID(renderer.root, 'new-timetable-item-cat-lunch').props.onPress();
       await flush();
     });
-    await act(async () => {
-      findByTestID(renderer.root, 'new-timetable-item-dur-input').props.onChangeText('45');
-      await flush();
-    });
-    // start with [2]; add day 4
+    // Stepper: default 90, step -5 nine times = 45
+    for (let i = 0; i < 9; i++) {
+      await act(async () => {
+        findByTestID(renderer.root, 'new-timetable-item-dur-input-minus').props.onPress();
+        await flush();
+      });
+    }
+    // UI days are Monday-first; storage days are Sunday-first.
+    // Start with Wednesday (UI 2 → storage 3); add Friday (UI 4 → storage 5).
     await act(async () => {
       findByTestID(renderer.root, 'new-timetable-item-day-4').props.onPress();
       await flush();
@@ -179,7 +357,7 @@ describe('new-timetable-item sheet', () => {
     expect(ttiState.add).toHaveBeenCalledTimes(2);
     const first = ttiState.add.mock.calls[0][0];
     const second = ttiState.add.mock.calls[1][0];
-    expect([first.day, second.day].sort()).toEqual([2, 4]);
+    expect([first.day, second.day].sort()).toEqual([3, 5]);
     expect(first.title).toBe('Risotto');
     expect(first.category).toBe('lunch');
     expect(first.duration).toBe(45);
@@ -193,7 +371,38 @@ describe('new-timetable-item sheet', () => {
     act(() => renderer.unmount());
   });
 
-  it('preset "Weekdays" selects day 0..4', async () => {
+  it('ignores duplicate save taps while timetable item creation is pending', async () => {
+    let resolveAdd: () => void = () => undefined;
+    const addPromise = new Promise<void>((resolve) => {
+      resolveAdd = resolve;
+    });
+    ttiState.add.mockImplementation(() => addPromise);
+
+    let renderer: any;
+    await act(async () => { renderer = TestRenderer.create(<NewTimetableItem />); await flush(); });
+    await act(async () => {
+      findByTestID(renderer.root, 'new-timetable-item-title-input').props.onChangeText('Risotto');
+      await flush();
+    });
+    await act(async () => {
+      const saveBtn = findSaveBtn(renderer.root, { enabled: true });
+      saveBtn.props.onPress();
+      saveBtn.props.onPress();
+      await flush();
+    });
+
+    expect(ttiState.add).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveAdd();
+      await flush();
+    });
+
+    expect(router.back).toHaveBeenCalledTimes(1);
+    act(() => renderer.unmount());
+  });
+
+  it('preset "Weekdays" stores Monday-Friday in Sunday-first day ids', async () => {
     let renderer: any;
     await act(async () => { renderer = TestRenderer.create(<NewTimetableItem />); await flush(); });
     await act(async () => {
@@ -208,7 +417,7 @@ describe('new-timetable-item sheet', () => {
     await act(async () => { findSaveBtn(renderer.root, { enabled: true }).props.onPress(); await flush(); });
     expect(ttiState.add).toHaveBeenCalledTimes(5);
     const days = ttiState.add.mock.calls.map((c: any) => c[0].day).sort();
-    expect(days).toEqual([0, 1, 2, 3, 4]);
+    expect(days).toEqual([1, 2, 3, 4, 5]);
     act(() => renderer.unmount());
   });
 

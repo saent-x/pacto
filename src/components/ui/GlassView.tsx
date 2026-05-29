@@ -33,8 +33,8 @@ export function GlassView({
 
   const bgColor =
     mode === 'dark'
-      ? `rgba(22, 19, 17, ${0.55 * opacity})`
-      : `rgba(242, 237, 231, ${0.5 * opacity})`;
+      ? `rgba(16, 21, 37, ${0.55 * opacity})`
+      : `rgba(255, 250, 242, ${0.52 * opacity})`;
 
   const borderColor =
     mode === 'dark'
@@ -54,8 +54,8 @@ export function GlassView({
           styles.container,
           {
             backgroundColor: mode === 'dark'
-              ? `rgba(22, 19, 17, ${0.85 * opacity})`
-              : `rgba(242, 237, 231, ${0.85 * opacity})`,
+              ? `rgba(16, 21, 37, ${0.86 * opacity})`
+              : `rgba(255, 250, 242, ${0.88 * opacity})`,
             borderColor,
           },
           style,

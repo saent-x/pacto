@@ -10,7 +10,7 @@ interface Props {
 export function QuotaBadge({ percent, isOverThreshold }: Props) {
   const { C } = useTheme();
   if (percent < 70) return null;
-  const color = isOverThreshold ? '#c0392b' : C.ink3;
+  const color = isOverThreshold ? C.error : C.ink3;
   return (
     <View style={styles.wrap}>
       <Text style={[Typography.caption, { color }]}>{`Storage: ${percent}% used`}</Text>

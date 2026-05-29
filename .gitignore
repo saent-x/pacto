@@ -29,6 +29,7 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
+secrets/
 
 # Metro
 .metro-health-check*
@@ -53,6 +54,8 @@ tmp/
 /ios
 /android
 
-docs/
+docs/*
+!docs/qa/
+!docs/qa/**
 .claude/
 .env

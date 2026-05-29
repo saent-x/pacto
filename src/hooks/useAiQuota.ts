@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { db } from '@/src/lib/instant';
+import { safeInstantId } from '@/src/lib/instant-id';
 import { PLAN_LIMITS, planOf } from '@/src/lib/plan';
 
 function currentMonthKey(): string {
@@ -10,10 +11,11 @@ function currentMonthKey(): string {
 export function useAiQuota(spaceId: string | null | undefined) {
   const monthKey = currentMonthKey();
   const query = useMemo(() => {
-    if (!spaceId) return null;
+    const safeSpaceId = safeInstantId(spaceId);
+    if (!safeSpaceId) return null;
     return {
       spaces: {
-        $: { where: { id: spaceId } },
+        $: { where: { id: safeSpaceId } },
         aiUsage: { $: { where: { monthKey } } },
       },
     };
@@ -21,7 +23,7 @@ export function useAiQuota(spaceId: string | null | undefined) {
 
   const { data } = db.useQuery(query);
   const space = (data as any)?.spaces?.[0];
-  const used = space?.aiUsage?.[0]?.turns ?? 0;
+  const used = usageTurns(space?.aiUsage);
   const cap = PLAN_LIMITS[planOf(space ?? null)].aiTurnsPerMonth;
 
   if (cap === 'unlimited') {
@@ -33,4 +35,14 @@ export function useAiQuota(spaceId: string | null | undefined) {
     remaining: Math.max(0, cap - used),
     isExhausted: used >= cap,
   };
+}
+
+function usageTurns(aiUsage: unknown): number {
+  const rows = Array.isArray(aiUsage) ? aiUsage : aiUsage ? [aiUsage] : [];
+  return rows.reduce((max, row: any) => {
+    const turns = row?.turns;
+    return typeof turns === 'number' && Number.isFinite(turns) && turns > 0
+      ? Math.max(max, turns)
+      : max;
+  }, 0);
 }

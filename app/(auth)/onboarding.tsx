@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   Avatar,
@@ -13,23 +13,69 @@ import { Icon } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
 import { PulsingDot } from '@/src/components/ui/pacto/PulsingDot';
 import { Typography } from '@/src/constants/typography';
-import { DEFAULT_AVATARS } from '@/src/constants/defaultAvatars';
+import { DEFAULT_AVATARS, randomDefaultAvatarId } from '@/src/constants/defaultAvatars';
 import { useTheme } from '@/src/lib/theme';
+import { useSession } from '@/src/lib/session';
+import { createSpace, ensureUserRow } from '@/src/lib/space-actions';
 
 type Mode = 'solo' | 'pair' | 'crew';
+const ONBOARDING_BUTTON_RADIUS = 999;
 
 export default function Onboarding() {
   const router = useRouter();
   const { C } = useTheme();
+  const { user } = useSession();
   const [mode, setMode] = useState<Mode | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const creatingRef = useRef(false);
 
   function pick(mode: Mode) {
     setMode(mode);
+    setError(null);
   }
 
-  function continueToFeatures() {
-    if (!mode) return;
-    router.push({ pathname: '/(auth)/onboarding-features', params: { mode } } as any);
+  async function createPact() {
+    if (!mode || busy || creatingRef.current) return;
+    if (!user) {
+      router.replace('/(auth)/sign-in' as any);
+      return;
+    }
+
+    creatingRef.current = true;
+    setBusy(true);
+    setError(null);
+    try {
+      await ensureUserRow({
+        userId: user.id,
+        email: user.email,
+        avatarUrl: user.avatarUrl ?? randomDefaultAvatarId(),
+      });
+      if (mode === 'solo') {
+        router.replace('/(tabs)/home' as any);
+        return;
+      }
+      // Schema-side kind value is still 'solo'/'couple' until the mode
+      // migration is complete; session normalizes this back to solo/pair/crew.
+      const result = await createSpace({
+        userId: user.id,
+        kind: mode === 'crew' ? 'crew' : 'couple',
+        mode,
+      });
+
+      if (result.inviteCode) {
+        router.push({
+          pathname: '/(auth)/invite-code',
+          params: { code: result.inviteCode },
+        } as any);
+      }
+    } catch (e: any) {
+      console.warn('[onboarding] failed', e);
+      setError(e?.message ?? e?.body?.message ?? 'Could not create pact');
+    } finally {
+      creatingRef.current = false;
+      setBusy(false);
+    }
   }
 
   function goJoin() {
@@ -98,24 +144,30 @@ export default function Onboarding() {
         />
       </View>
 
+      {error ? (
+        <Text style={[Typography.caption, { color: C.error, marginTop: 14, textAlign: 'center' }]}>
+          {error}
+        </Text>
+      ) : null}
+
       <PressScale
         testID="onboarding-continue"
-        onPress={continueToFeatures}
-        disabled={!mode}
+        onPress={createPact}
+        disabled={!mode || busy}
         accessibilityLabel="Continue onboarding"
         style={[
           styles.createButton,
           {
-            backgroundColor: mode ? C.accent : C.line2,
-            opacity: mode ? 1 : 0.62,
+            backgroundColor: mode && !busy ? C.accent : C.line2,
+            opacity: mode && !busy ? 1 : 0.62,
           },
         ]}
-        haptic="selection"
+        haptic="success"
       >
-        <Text style={[Typography.bodyMedium, { color: mode ? C.bg : C.ink3 }]}>
-          Continue
+        <Text style={[Typography.bodyMedium, { color: mode && !busy ? C.bg : C.ink3 }]}>
+          {busy ? 'Creating...' : 'Continue'}
         </Text>
-        <Icon name="arrowRight" size={16} color={mode ? C.bg : C.ink3} />
+        <Icon name="arrowRight" size={16} color={mode && !busy ? C.bg : C.ink3} />
       </PressScale>
 
       <PressScale
@@ -179,7 +231,7 @@ function ModeCard({
                   fontSize: 22,
                   lineHeight: 24,
                   color: C.inkColor,
-                  letterSpacing: -0.3,
+                  letterSpacing: 0,
                   marginTop: 4,
                 },
               ]}
@@ -215,7 +267,7 @@ const styles = StyleSheet.create({
   createButton: {
     marginTop: 24,
     minHeight: 52,
-    borderRadius: 8,
+    borderRadius: ONBOARDING_BUTTON_RADIUS,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

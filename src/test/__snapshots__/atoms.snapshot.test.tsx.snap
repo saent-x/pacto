@@ -52,7 +52,7 @@ exports[`atoms snapshots > Avatar — default 1`] = `
   style={
     {
       "alignItems": "center",
-      "backgroundColor": "rgba(240,160,129,1.00)",
+      "backgroundColor": "rgba(216,139,116,1.00)",
       "borderBottomColor": "rgba(0,0,0,0.00)",
       "borderBottomLeftRadius": "18px",
       "borderBottomRightRadius": "18px",
@@ -97,7 +97,7 @@ exports[`atoms snapshots > Badge — default 1`] = `
     {
       "alignItems": "center",
       "alignSelf": "flex-start",
-      "backgroundColor": "rgba(242,216,200,1.00)",
+      "backgroundColor": "rgba(236,225,200,1.00)",
       "borderBottomLeftRadius": "999px",
       "borderBottomRightRadius": "999px",
       "borderTopLeftRadius": "999px",
@@ -117,7 +117,7 @@ exports[`atoms snapshots > Badge — default 1`] = `
     ref={[Function]}
     style={
       {
-        "color": "rgba(224,111,85,1.00)",
+        "color": "rgba(217,107,82,1.00)",
         "fontFamily": "Geist_700Bold",
         "fontSize": "10px",
         "letterSpacing": "0.6px",
@@ -143,7 +143,7 @@ exports[`atoms snapshots > BlockCard — pressable 1`] = `
   role="button"
   style={
     {
-      "backgroundColor": "rgba(240,160,129,1.00)",
+      "backgroundColor": "rgba(216,139,116,1.00)",
       "borderBottomLeftRadius": "22px",
       "borderBottomRightRadius": "22px",
       "borderTopLeftRadius": "22px",
@@ -177,7 +177,7 @@ exports[`atoms snapshots > BlockCard — static 1`] = `
   ref={[Function]}
   style={
     {
-      "backgroundColor": "rgba(240,160,129,1.00)",
+      "backgroundColor": "rgba(216,139,116,1.00)",
       "borderBottomLeftRadius": "22px",
       "borderBottomRightRadius": "22px",
       "borderTopLeftRadius": "22px",
@@ -201,58 +201,6 @@ exports[`atoms snapshots > BlockCard — static 1`] = `
 </div>
 `;
 
-exports[`atoms snapshots > CouplRings — custom size + colors 1`] = `
-<Svg
-  height={64}
-  opacity={0.8}
-  viewBox="0 0 40 40"
-  width={64}
->
-  <Circle
-    cx={15}
-    cy={20}
-    fill="none"
-    r={11}
-    stroke="#f00"
-    strokeWidth={2}
-  />
-  <Circle
-    cx={25}
-    cy={20}
-    fill="none"
-    r={11}
-    stroke="#00f"
-    strokeWidth={2}
-  />
-</Svg>
-`;
-
-exports[`atoms snapshots > CouplRings — default 1`] = `
-<Svg
-  height={36}
-  opacity={1}
-  viewBox="0 0 40 40"
-  width={36}
->
-  <Circle
-    cx={15}
-    cy={20}
-    fill="none"
-    r={11}
-    stroke="#F0A081"
-    strokeWidth={2}
-  />
-  <Circle
-    cx={25}
-    cy={20}
-    fill="none"
-    r={11}
-    stroke="#C3A4D8"
-    strokeWidth={2}
-  />
-</Svg>
-`;
-
 exports[`atoms snapshots > DarkCard — borderless + custom padding 1`] = `
 <div
   className="css-view-g5y9jx"
@@ -261,15 +209,15 @@ exports[`atoms snapshots > DarkCard — borderless + custom padding 1`] = `
   style={
     {
       "backgroundColor": "rgba(255,253,248,1.00)",
-      "borderBottomColor": "rgba(227,216,201,1.00)",
+      "borderBottomColor": "rgba(216,206,189,1.00)",
       "borderBottomLeftRadius": "22px",
       "borderBottomRightRadius": "22px",
       "borderBottomWidth": "0px",
-      "borderLeftColor": "rgba(227,216,201,1.00)",
+      "borderLeftColor": "rgba(216,206,189,1.00)",
       "borderLeftWidth": "0px",
-      "borderRightColor": "rgba(227,216,201,1.00)",
+      "borderRightColor": "rgba(216,206,189,1.00)",
       "borderRightWidth": "0px",
-      "borderTopColor": "rgba(227,216,201,1.00)",
+      "borderTopColor": "rgba(216,206,189,1.00)",
       "borderTopLeftRadius": "22px",
       "borderTopRightRadius": "22px",
       "borderTopWidth": "0px",
@@ -298,15 +246,15 @@ exports[`atoms snapshots > DarkCard — default 1`] = `
   style={
     {
       "backgroundColor": "rgba(255,253,248,1.00)",
-      "borderBottomColor": "rgba(227,216,201,1.00)",
+      "borderBottomColor": "rgba(216,206,189,1.00)",
       "borderBottomLeftRadius": "22px",
       "borderBottomRightRadius": "22px",
       "borderBottomWidth": "1px",
-      "borderLeftColor": "rgba(227,216,201,1.00)",
+      "borderLeftColor": "rgba(216,206,189,1.00)",
       "borderLeftWidth": "1px",
-      "borderRightColor": "rgba(227,216,201,1.00)",
+      "borderRightColor": "rgba(216,206,189,1.00)",
       "borderRightWidth": "1px",
-      "borderTopColor": "rgba(227,216,201,1.00)",
+      "borderTopColor": "rgba(216,206,189,1.00)",
       "borderTopLeftRadius": "22px",
       "borderTopRightRadius": "22px",
       "borderTopWidth": "1px",
@@ -350,7 +298,7 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
       style={
         {
           "alignItems": "center",
-          "borderBottomColor": "rgba(227,216,201,1.00)",
+          "borderBottomColor": "rgba(216,206,189,1.00)",
           "borderBottomWidth": "1px",
           "flexDirection": "row",
           "gap": "10px",
@@ -366,7 +314,7 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
         ref={[Function]}
         style={
           {
-            "backgroundColor": "rgba(224,111,85,1.00)",
+            "backgroundColor": "rgba(217,107,82,1.00)",
             "borderBottomLeftRadius": "3px",
             "borderBottomRightRadius": "3px",
             "borderTopLeftRadius": "3px",
@@ -382,7 +330,7 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
         ref={[Function]}
         style={
           {
-            "color": "rgba(41,45,61,1.00)",
+            "color": "rgba(33,36,55,1.00)",
             "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
             "letterSpacing": "1.6px",
@@ -398,7 +346,7 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
         ref={[Function]}
         style={
           {
-            "color": "rgba(148,144,154,1.00)",
+            "color": "rgba(131,125,141,1.00)",
             "flex": 1,
             "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
@@ -444,7 +392,7 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
       style={
         {
           "alignItems": "center",
-          "borderBottomColor": "rgba(227,216,201,1.00)",
+          "borderBottomColor": "rgba(216,206,189,1.00)",
           "borderBottomWidth": "1px",
           "flexDirection": "row",
           "gap": "10px",
@@ -460,7 +408,7 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
         ref={[Function]}
         style={
           {
-            "backgroundColor": "rgba(224,111,85,1.00)",
+            "backgroundColor": "rgba(217,107,82,1.00)",
             "borderBottomLeftRadius": "3px",
             "borderBottomRightRadius": "3px",
             "borderTopLeftRadius": "3px",
@@ -476,7 +424,7 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
         ref={[Function]}
         style={
           {
-            "color": "rgba(41,45,61,1.00)",
+            "color": "rgba(33,36,55,1.00)",
             "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
             "letterSpacing": "1.6px",
@@ -492,7 +440,7 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
         ref={[Function]}
         style={
           {
-            "color": "rgba(148,144,154,1.00)",
+            "color": "rgba(131,125,141,1.00)",
             "flex": 1,
             "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
@@ -543,7 +491,7 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
       style={
         {
           "alignItems": "center",
-          "borderBottomColor": "rgba(227,216,201,1.00)",
+          "borderBottomColor": "rgba(216,206,189,1.00)",
           "borderBottomWidth": "1px",
           "flexDirection": "row",
           "gap": "10px",
@@ -560,7 +508,7 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
         ref={[Function]}
         style={
           {
-            "backgroundColor": "rgba(224,111,85,1.00)",
+            "backgroundColor": "rgba(217,107,82,1.00)",
             "borderBottomLeftRadius": "3px",
             "borderBottomRightRadius": "3px",
             "borderTopLeftRadius": "3px",
@@ -576,7 +524,7 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
         ref={[Function]}
         style={
           {
-            "color": "rgba(41,45,61,1.00)",
+            "color": "rgba(33,36,55,1.00)",
             "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
             "letterSpacing": "1.6px",
@@ -592,7 +540,7 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
         ref={[Function]}
         style={
           {
-            "color": "rgba(148,144,154,1.00)",
+            "color": "rgba(131,125,141,1.00)",
             "flex": 1,
             "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
@@ -651,7 +599,7 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
               suppressHydrationWarning={true}
             >
               <feFlood
-                floodColor="#94909A"
+                floodColor="#837D8D"
               />
               <feComposite
                 in2="SourceAlpha"
@@ -674,18 +622,18 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
       style={
         {
           "alignItems": "center",
-          "borderBottomColor": "rgba(227,216,201,1.00)",
+          "borderBottomColor": "rgba(216,206,189,1.00)",
           "borderBottomLeftRadius": "14px",
           "borderBottomRightRadius": "14px",
           "borderBottomStyle": "dashed",
           "borderBottomWidth": "1px",
-          "borderLeftColor": "rgba(227,216,201,1.00)",
+          "borderLeftColor": "rgba(216,206,189,1.00)",
           "borderLeftStyle": "dashed",
           "borderLeftWidth": "1px",
-          "borderRightColor": "rgba(227,216,201,1.00)",
+          "borderRightColor": "rgba(216,206,189,1.00)",
           "borderRightStyle": "dashed",
           "borderRightWidth": "1px",
-          "borderTopColor": "rgba(227,216,201,1.00)",
+          "borderTopColor": "rgba(216,206,189,1.00)",
           "borderTopLeftRadius": "14px",
           "borderTopRightRadius": "14px",
           "borderTopStyle": "dashed",
@@ -706,7 +654,7 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
         ref={[Function]}
         style={
           {
-            "color": "rgba(102,108,122,1.00)",
+            "color": "rgba(88,97,116,1.00)",
             "fontFamily": "Geist_700Bold",
             "fontSize": "12px",
           }
@@ -766,7 +714,7 @@ exports[`atoms snapshots > DateSectioned — third section auto-collapsed 1`] = 
               suppressHydrationWarning={true}
             >
               <feFlood
-                floodColor="#666C7A"
+                floodColor="#586174"
               />
               <feComposite
                 in2="SourceAlpha"
@@ -804,7 +752,7 @@ exports[`atoms snapshots > DateSectioned — two sections, both open 1`] = `
       style={
         {
           "alignItems": "center",
-          "borderBottomColor": "rgba(227,216,201,1.00)",
+          "borderBottomColor": "rgba(216,206,189,1.00)",
           "borderBottomWidth": "1px",
           "flexDirection": "row",
           "gap": "10px",
@@ -820,7 +768,7 @@ exports[`atoms snapshots > DateSectioned — two sections, both open 1`] = `
         ref={[Function]}
         style={
           {
-            "backgroundColor": "rgba(224,111,85,1.00)",
+            "backgroundColor": "rgba(217,107,82,1.00)",
             "borderBottomLeftRadius": "3px",
             "borderBottomRightRadius": "3px",
             "borderTopLeftRadius": "3px",
@@ -836,7 +784,7 @@ exports[`atoms snapshots > DateSectioned — two sections, both open 1`] = `
         ref={[Function]}
         style={
           {
-            "color": "rgba(41,45,61,1.00)",
+            "color": "rgba(33,36,55,1.00)",
             "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
             "letterSpacing": "1.6px",
@@ -852,7 +800,7 @@ exports[`atoms snapshots > DateSectioned — two sections, both open 1`] = `
         ref={[Function]}
         style={
           {
-            "color": "rgba(148,144,154,1.00)",
+            "color": "rgba(131,125,141,1.00)",
             "flex": 1,
             "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
@@ -905,7 +853,7 @@ exports[`atoms snapshots > DateSectioned — two sections, both open 1`] = `
       style={
         {
           "alignItems": "center",
-          "borderBottomColor": "rgba(227,216,201,1.00)",
+          "borderBottomColor": "rgba(216,206,189,1.00)",
           "borderBottomWidth": "1px",
           "flexDirection": "row",
           "gap": "10px",
@@ -921,7 +869,7 @@ exports[`atoms snapshots > DateSectioned — two sections, both open 1`] = `
         ref={[Function]}
         style={
           {
-            "backgroundColor": "rgba(224,111,85,1.00)",
+            "backgroundColor": "rgba(217,107,82,1.00)",
             "borderBottomLeftRadius": "3px",
             "borderBottomRightRadius": "3px",
             "borderTopLeftRadius": "3px",
@@ -937,7 +885,7 @@ exports[`atoms snapshots > DateSectioned — two sections, both open 1`] = `
         ref={[Function]}
         style={
           {
-            "color": "rgba(41,45,61,1.00)",
+            "color": "rgba(33,36,55,1.00)",
             "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
             "letterSpacing": "1.6px",
@@ -953,7 +901,7 @@ exports[`atoms snapshots > DateSectioned — two sections, both open 1`] = `
         ref={[Function]}
         style={
           {
-            "color": "rgba(148,144,154,1.00)",
+            "color": "rgba(131,125,141,1.00)",
             "flex": 1,
             "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
@@ -992,10 +940,10 @@ exports[`atoms snapshots > Display — numeric size 1`] = `
   ref={[Function]}
   style={
     {
-      "color": "rgba(41,45,61,1.00)",
+      "color": "rgba(33,36,55,1.00)",
       "fontFamily": "BitcountPropSingle_700Bold",
       "fontSize": "40px",
-      "letterSpacing": "-1px",
+      "letterSpacing": "0px",
       "lineHeight": "38px",
     }
   }
@@ -1094,7 +1042,7 @@ exports[`atoms snapshots > IconTile — default 1`] = `
   style={
     {
       "alignItems": "center",
-      "backgroundColor": "rgba(242,216,200,1.00)",
+      "backgroundColor": "rgba(236,225,200,1.00)",
       "borderBottomLeftRadius": "11px",
       "borderBottomRightRadius": "11px",
       "borderTopLeftRadius": "11px",
@@ -1155,7 +1103,7 @@ exports[`atoms snapshots > IconTile — default 1`] = `
           suppressHydrationWarning={true}
         >
           <feFlood
-            floodColor="#E06F55"
+            floodColor="#D96B52"
           />
           <feComposite
             in2="SourceAlpha"
@@ -1175,7 +1123,7 @@ exports[`atoms snapshots > Overline — default 1`] = `
   ref={[Function]}
   style={
     {
-      "color": "rgba(148,144,154,1.00)",
+      "color": "rgba(131,125,141,1.00)",
       "fontFamily": "Geist_700Bold",
       "fontSize": "10px",
       "letterSpacing": "1.4px",
@@ -1185,6 +1133,58 @@ exports[`atoms snapshots > Overline — default 1`] = `
 >
   Hello
 </div>
+`;
+
+exports[`atoms snapshots > PactoRings — custom size + colors 1`] = `
+<Svg
+  height={64}
+  opacity={0.8}
+  viewBox="0 0 40 40"
+  width={64}
+>
+  <Circle
+    cx={15}
+    cy={20}
+    fill="none"
+    r={11}
+    stroke="#f00"
+    strokeWidth={2}
+  />
+  <Circle
+    cx={25}
+    cy={20}
+    fill="none"
+    r={11}
+    stroke="#00f"
+    strokeWidth={2}
+  />
+</Svg>
+`;
+
+exports[`atoms snapshots > PactoRings — default 1`] = `
+<Svg
+  height={36}
+  opacity={1}
+  viewBox="0 0 40 40"
+  width={36}
+>
+  <Circle
+    cx={15}
+    cy={20}
+    fill="none"
+    r={11}
+    stroke="#D88B74"
+    strokeWidth={2}
+  />
+  <Circle
+    cx={25}
+    cy={20}
+    fill="none"
+    r={11}
+    stroke="#A89BC8"
+    strokeWidth={2}
+  />
+</Svg>
 `;
 
 exports[`atoms snapshots > Pill — active sm 1`] = `
@@ -1216,19 +1216,19 @@ exports[`atoms snapshots > Pill — active sm 1`] = `
     style={
       {
         "alignSelf": "flex-start",
-        "backgroundColor": "rgba(242,216,200,1.00)",
-        "borderBottomColor": "rgba(227,216,201,1.00)",
+        "backgroundColor": "rgba(236,225,200,1.00)",
+        "borderBottomColor": "rgba(217,107,82,1.00)",
         "borderBottomLeftRadius": "999px",
         "borderBottomRightRadius": "999px",
-        "borderBottomWidth": "0px",
-        "borderLeftColor": "rgba(227,216,201,1.00)",
-        "borderLeftWidth": "0px",
-        "borderRightColor": "rgba(227,216,201,1.00)",
-        "borderRightWidth": "0px",
-        "borderTopColor": "rgba(227,216,201,1.00)",
+        "borderBottomWidth": "1px",
+        "borderLeftColor": "rgba(217,107,82,1.00)",
+        "borderLeftWidth": "1px",
+        "borderRightColor": "rgba(217,107,82,1.00)",
+        "borderRightWidth": "1px",
+        "borderTopColor": "rgba(217,107,82,1.00)",
         "borderTopLeftRadius": "999px",
         "borderTopRightRadius": "999px",
-        "borderTopWidth": "0px",
+        "borderTopWidth": "1px",
         "paddingBottom": "6px",
         "paddingLeft": "12px",
         "paddingRight": "12px",
@@ -1244,7 +1244,7 @@ exports[`atoms snapshots > Pill — active sm 1`] = `
       ref={[Function]}
       style={
         {
-          "color": "rgba(224,111,85,1.00)",
+          "color": "rgba(217,107,82,1.00)",
           "fontFamily": "Geist_700Bold",
           "fontSize": "11px",
           "letterSpacing": "0.3px",
@@ -1288,15 +1288,15 @@ exports[`atoms snapshots > Pill — inactive md 1`] = `
       {
         "alignSelf": "flex-start",
         "backgroundColor": "rgba(0,0,0,0.00)",
-        "borderBottomColor": "rgba(227,216,201,1.00)",
+        "borderBottomColor": "rgba(216,206,189,1.00)",
         "borderBottomLeftRadius": "999px",
         "borderBottomRightRadius": "999px",
         "borderBottomWidth": "1px",
-        "borderLeftColor": "rgba(227,216,201,1.00)",
+        "borderLeftColor": "rgba(216,206,189,1.00)",
         "borderLeftWidth": "1px",
-        "borderRightColor": "rgba(227,216,201,1.00)",
+        "borderRightColor": "rgba(216,206,189,1.00)",
         "borderRightWidth": "1px",
-        "borderTopColor": "rgba(227,216,201,1.00)",
+        "borderTopColor": "rgba(216,206,189,1.00)",
         "borderTopLeftRadius": "999px",
         "borderTopRightRadius": "999px",
         "borderTopWidth": "1px",
@@ -1315,7 +1315,7 @@ exports[`atoms snapshots > Pill — inactive md 1`] = `
       ref={[Function]}
       style={
         {
-          "color": "rgba(102,108,122,1.00)",
+          "color": "rgba(88,97,116,1.00)",
           "fontFamily": "Geist_700Bold",
           "fontSize": "12px",
           "letterSpacing": "0.3px",
@@ -1407,7 +1407,7 @@ exports[`atoms snapshots > PrimaryButton — disabled with icon 1`] = `
           suppressHydrationWarning={true}
         >
           <feFlood
-            floodColor="#94909A"
+            floodColor="#837D8D"
           />
           <feComposite
             in2="SourceAlpha"
@@ -1423,7 +1423,7 @@ exports[`atoms snapshots > PrimaryButton — disabled with icon 1`] = `
     ref={[Function]}
     style={
       {
-        "color": "rgba(148,144,154,1.00)",
+        "color": "rgba(131,125,141,1.00)",
         "fontFamily": "BitcountPropSingle_700Bold",
         "fontSize": "16px",
         "letterSpacing": "0.3px",
@@ -1449,7 +1449,7 @@ exports[`atoms snapshots > PrimaryButton — enabled, no icon 1`] = `
   style={
     {
       "alignItems": "center",
-      "backgroundColor": "rgba(224,111,85,1.00)",
+      "backgroundColor": "rgba(217,107,82,1.00)",
       "borderBottomLeftRadius": "999px",
       "borderBottomRightRadius": "999px",
       "borderTopLeftRadius": "999px",
@@ -1520,15 +1520,15 @@ exports[`atoms snapshots > ProgressRing — default 1`] = `
       >
         <Stop
           offset="0%"
-          stopColor="#F0A081"
+          stopColor="#D88B74"
         />
         <Stop
           offset="50%"
-          stopColor="#E8C95E"
+          stopColor="#C5A954"
         />
         <Stop
           offset="100%"
-          stopColor="#C3A4D8"
+          stopColor="#A89BC8"
         />
       </LinearGradient>
     </Defs>
@@ -1638,7 +1638,7 @@ exports[`atoms snapshots > ProgressRing — with label + custom colors 1`] = `
         "fontFamily": "BitcountPropSingle_700Bold",
         "fontSize": "31.200000000000003px",
         "fontVariant": "tabular-nums",
-        "letterSpacing": "-0.5px",
+        "letterSpacing": "0px",
         "position": "absolute",
       }
     }
@@ -1759,15 +1759,15 @@ exports[`atoms snapshots > RoundBtn — default border 1`] = `
     {
       "alignItems": "center",
       "backgroundColor": "rgba(255,253,248,1.00)",
-      "borderBottomColor": "rgba(227,216,201,1.00)",
+      "borderBottomColor": "rgba(216,206,189,1.00)",
       "borderBottomLeftRadius": "20px",
       "borderBottomRightRadius": "20px",
       "borderBottomWidth": "1px",
-      "borderLeftColor": "rgba(227,216,201,1.00)",
+      "borderLeftColor": "rgba(216,206,189,1.00)",
       "borderLeftWidth": "1px",
-      "borderRightColor": "rgba(227,216,201,1.00)",
+      "borderRightColor": "rgba(216,206,189,1.00)",
       "borderRightWidth": "1px",
-      "borderTopColor": "rgba(227,216,201,1.00)",
+      "borderTopColor": "rgba(216,206,189,1.00)",
       "borderTopLeftRadius": "20px",
       "borderTopRightRadius": "20px",
       "borderTopWidth": "1px",
@@ -1829,7 +1829,7 @@ exports[`atoms snapshots > RoundBtn — default border 1`] = `
           suppressHydrationWarning={true}
         >
           <feFlood
-            floodColor="#292D3D"
+            floodColor="#212437"
           />
           <feComposite
             in2="SourceAlpha"
@@ -1881,7 +1881,7 @@ exports[`atoms snapshots > ScreenHeader — eyebrow + meta + custom accent 1`] =
         ref={[Function]}
         style={
           {
-            "color": "rgba(148,144,154,1.00)",
+            "color": "rgba(131,125,141,1.00)",
             "fontFamily": "Geist_700Bold",
             "fontSize": "10px",
             "letterSpacing": "1.4px",
@@ -1898,10 +1898,10 @@ exports[`atoms snapshots > ScreenHeader — eyebrow + meta + custom accent 1`] =
         ref={[Function]}
         style={
           {
-            "color": "rgba(41,45,61,1.00)",
+            "color": "rgba(33,36,55,1.00)",
             "fontFamily": "BitcountPropSingle_700Bold",
             "fontSize": "42px",
-            "letterSpacing": "-1.2px",
+            "letterSpacing": "0px",
             "lineHeight": "41.16px",
           }
         }
@@ -1955,8 +1955,8 @@ exports[`atoms snapshots > ScreenHeader — eyebrow + meta + custom accent 1`] =
     ref={[Function]}
     style={
       {
-        "color": "rgba(102,108,122,1.00)",
-        "fontFamily": "Geist_400Regular",
+        "color": "rgba(88,97,116,1.00)",
+        "fontFamily": "Geist_500Medium",
         "fontSize": "11px",
         "letterSpacing": "0.4px",
         "marginTop": "10px",
@@ -2007,10 +2007,10 @@ exports[`atoms snapshots > ScreenHeader — title only 1`] = `
         ref={[Function]}
         style={
           {
-            "color": "rgba(41,45,61,1.00)",
+            "color": "rgba(33,36,55,1.00)",
             "fontFamily": "BitcountPropSingle_700Bold",
             "fontSize": "42px",
-            "letterSpacing": "-1.2px",
+            "letterSpacing": "0px",
             "lineHeight": "41.16px",
           }
         }
@@ -2020,7 +2020,7 @@ exports[`atoms snapshots > ScreenHeader — title only 1`] = `
           style={
             [
               {
-                "color": "#E06F55",
+                "color": "#D96B52",
               },
               {
                 "opacity": 1,
@@ -2052,7 +2052,7 @@ exports[`atoms snapshots > ScreenHeader — title only 1`] = `
       <Path
         d="M0 4 Q 12 0, 24 4 T 48 4 T 72 4 T 96 4"
         fill="none"
-        stroke="#E06F55"
+        stroke="#D96B52"
         strokeLinecap="round"
         strokeWidth={2}
       />
@@ -2083,7 +2083,7 @@ exports[`atoms snapshots > SectionHeader — label only 1`] = `
     ref={[Function]}
     style={
       {
-        "color": "rgba(148,144,154,1.00)",
+        "color": "rgba(131,125,141,1.00)",
         "fontFamily": "Geist_700Bold",
         "fontSize": "10px",
         "letterSpacing": "1.4px",
@@ -2118,7 +2118,7 @@ exports[`atoms snapshots > SectionHeader — with action 1`] = `
     ref={[Function]}
     style={
       {
-        "color": "rgba(148,144,154,1.00)",
+        "color": "rgba(131,125,141,1.00)",
         "fontFamily": "Geist_700Bold",
         "fontSize": "10px",
         "letterSpacing": "1.4px",
@@ -2151,7 +2151,7 @@ exports[`atoms snapshots > StickyDate — collapsible closed 1`] = `
   style={
     {
       "alignItems": "center",
-      "borderBottomColor": "rgba(227,216,201,1.00)",
+      "borderBottomColor": "rgba(216,206,189,1.00)",
       "borderBottomWidth": "1px",
       "flexDirection": "row",
       "gap": "10px",
@@ -2168,7 +2168,7 @@ exports[`atoms snapshots > StickyDate — collapsible closed 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundColor": "rgba(224,111,85,1.00)",
+        "backgroundColor": "rgba(217,107,82,1.00)",
         "borderBottomLeftRadius": "3px",
         "borderBottomRightRadius": "3px",
         "borderTopLeftRadius": "3px",
@@ -2184,7 +2184,7 @@ exports[`atoms snapshots > StickyDate — collapsible closed 1`] = `
     ref={[Function]}
     style={
       {
-        "color": "rgba(41,45,61,1.00)",
+        "color": "rgba(33,36,55,1.00)",
         "fontFamily": "Geist_700Bold",
         "fontSize": "10px",
         "letterSpacing": "1.6px",
@@ -2200,7 +2200,7 @@ exports[`atoms snapshots > StickyDate — collapsible closed 1`] = `
     ref={[Function]}
     style={
       {
-        "color": "rgba(148,144,154,1.00)",
+        "color": "rgba(131,125,141,1.00)",
         "flex": 1,
         "fontFamily": "Geist_700Bold",
         "fontSize": "10px",
@@ -2259,7 +2259,7 @@ exports[`atoms snapshots > StickyDate — collapsible closed 1`] = `
           suppressHydrationWarning={true}
         >
           <feFlood
-            floodColor="#94909A"
+            floodColor="#837D8D"
           />
           <feComposite
             in2="SourceAlpha"
@@ -2285,7 +2285,7 @@ exports[`atoms snapshots > StickyDate — collapsible open 1`] = `
   style={
     {
       "alignItems": "center",
-      "borderBottomColor": "rgba(227,216,201,1.00)",
+      "borderBottomColor": "rgba(216,206,189,1.00)",
       "borderBottomWidth": "1px",
       "flexDirection": "row",
       "gap": "10px",
@@ -2302,7 +2302,7 @@ exports[`atoms snapshots > StickyDate — collapsible open 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundColor": "rgba(224,111,85,1.00)",
+        "backgroundColor": "rgba(217,107,82,1.00)",
         "borderBottomLeftRadius": "3px",
         "borderBottomRightRadius": "3px",
         "borderTopLeftRadius": "3px",
@@ -2318,7 +2318,7 @@ exports[`atoms snapshots > StickyDate — collapsible open 1`] = `
     ref={[Function]}
     style={
       {
-        "color": "rgba(41,45,61,1.00)",
+        "color": "rgba(33,36,55,1.00)",
         "fontFamily": "Geist_700Bold",
         "fontSize": "10px",
         "letterSpacing": "1.6px",
@@ -2334,7 +2334,7 @@ exports[`atoms snapshots > StickyDate — collapsible open 1`] = `
     ref={[Function]}
     style={
       {
-        "color": "rgba(148,144,154,1.00)",
+        "color": "rgba(131,125,141,1.00)",
         "flex": 1,
         "fontFamily": "Geist_700Bold",
         "fontSize": "10px",
@@ -2393,7 +2393,7 @@ exports[`atoms snapshots > StickyDate — collapsible open 1`] = `
           suppressHydrationWarning={true}
         >
           <feFlood
-            floodColor="#94909A"
+            floodColor="#837D8D"
           />
           <feComposite
             in2="SourceAlpha"
@@ -2414,7 +2414,7 @@ exports[`atoms snapshots > StickyDate — static label 1`] = `
   style={
     {
       "alignItems": "center",
-      "borderBottomColor": "rgba(227,216,201,1.00)",
+      "borderBottomColor": "rgba(216,206,189,1.00)",
       "borderBottomWidth": "1px",
       "flexDirection": "row",
       "gap": "10px",
@@ -2430,7 +2430,7 @@ exports[`atoms snapshots > StickyDate — static label 1`] = `
     ref={[Function]}
     style={
       {
-        "backgroundColor": "rgba(224,111,85,1.00)",
+        "backgroundColor": "rgba(217,107,82,1.00)",
         "borderBottomLeftRadius": "3px",
         "borderBottomRightRadius": "3px",
         "borderTopLeftRadius": "3px",
@@ -2446,7 +2446,7 @@ exports[`atoms snapshots > StickyDate — static label 1`] = `
     ref={[Function]}
     style={
       {
-        "color": "rgba(41,45,61,1.00)",
+        "color": "rgba(33,36,55,1.00)",
         "fontFamily": "Geist_700Bold",
         "fontSize": "10px",
         "letterSpacing": "1.6px",
@@ -2462,7 +2462,7 @@ exports[`atoms snapshots > StickyDate — static label 1`] = `
     ref={[Function]}
     style={
       {
-        "color": "rgba(148,144,154,1.00)",
+        "color": "rgba(131,125,141,1.00)",
         "flex": 1,
         "fontFamily": "Geist_700Bold",
         "fontSize": "10px",
@@ -2501,7 +2501,7 @@ exports[`atoms snapshots > TripleRing — custom values 1`] = `
     cy={70}
     fill="none"
     r={66}
-    stroke="#F0A081"
+    stroke="#D88B74"
     strokeDasharray="414.6902302738527 414.6902302738527"
     strokeDashoffset={290.2831611916969}
     strokeLinecap="round"
@@ -2520,7 +2520,7 @@ exports[`atoms snapshots > TripleRing — custom values 1`] = `
     cy={70}
     fill="none"
     r={54}
-    stroke="#E8C95E"
+    stroke="#C5A954"
     strokeDasharray="339.29200658769764 339.29200658769764"
     strokeDashoffset={135.71680263507906}
     strokeLinecap="round"
@@ -2539,7 +2539,7 @@ exports[`atoms snapshots > TripleRing — custom values 1`] = `
     cy={70}
     fill="none"
     r={42}
-    stroke="#C3A4D8"
+    stroke="#A89BC8"
     strokeDasharray="263.89378290154264 263.89378290154264"
     strokeDashoffset={26.38937829015426}
     strokeLinecap="round"
@@ -2575,7 +2575,7 @@ exports[`atoms snapshots > TripleRing — default 1`] = `
     cy={48}
     fill="none"
     r={43}
-    stroke="#F0A081"
+    stroke="#D88B74"
     strokeDasharray="270.1769682087222 270.1769682087222"
     strokeDashoffset={48.63185427757001}
     strokeLinecap="round"
@@ -2594,7 +2594,7 @@ exports[`atoms snapshots > TripleRing — default 1`] = `
     cy={48}
     fill="none"
     r={30}
-    stroke="#E8C95E"
+    stroke="#C5A954"
     strokeDasharray="188.49555921538757 188.49555921538757"
     strokeDashoffset={65.97344572538564}
     strokeLinecap="round"
@@ -2613,7 +2613,7 @@ exports[`atoms snapshots > TripleRing — default 1`] = `
     cy={48}
     fill="none"
     r={17}
-    stroke="#C3A4D8"
+    stroke="#A89BC8"
     strokeDasharray="106.81415022205297 106.81415022205297"
     strokeDashoffset={10.681415022205295}
     strokeLinecap="round"
@@ -2649,7 +2649,7 @@ exports[`atoms snapshots > WavyUnderline — default 1`] = `
   <Path
     d="M0 4 Q 16.25 0, 32.5 4 T 65 4 T 97.5 4 T 130 4"
     fill="none"
-    stroke="#E06F55"
+    stroke="#D96B52"
     strokeLinecap="round"
     strokeWidth={2}
   />
@@ -2668,7 +2668,7 @@ exports[`atoms snapshots > contains a View for composition sanity 1`] = `
     ref={[Function]}
     style={
       {
-        "color": "rgba(148,144,154,1.00)",
+        "color": "rgba(131,125,141,1.00)",
         "fontFamily": "Geist_700Bold",
         "fontSize": "10px",
         "letterSpacing": "1.4px",

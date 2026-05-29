@@ -148,6 +148,25 @@ describe('Reminders screen interactions', () => {
     act(() => renderer.unmount());
   });
 
+  it('treats personal-space reminders as Mine even without an assignee', async () => {
+    reminderState.reminders = [
+      makeReminder({ id: 'personal', title: 'Personal space row', assigned_to: null, scope: 'personal' }),
+      makeReminder({ id: 'shared', title: 'Shared space row', assigned_to: null, scope: 'shared' }),
+    ];
+    reminderState.upcoming = reminderState.reminders;
+    const renderer = await renderScreen();
+
+    await act(async () => {
+      findPressableByText(renderer.root, 'Mine').props.onPress();
+      await flush();
+    });
+
+    const labels = readText(renderer.root);
+    expect(labels).toContain('Personal space row');
+    expect(labels).not.toContain('Shared space row');
+    act(() => renderer.unmount());
+  });
+
   it('toggles complete when the checkbox changes', async () => {
     reminderState.reminders = [makeReminder()];
     reminderState.upcoming = reminderState.reminders;

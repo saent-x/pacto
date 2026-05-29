@@ -56,6 +56,8 @@ vi.mock('@/src/lib/session', () => ({
   useSession: () => sessionState,
 }));
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { INTRO_SEEN_KEY } from '@/src/lib/intro';
 import Index from '@/app/index';
 
 const TestRenderer: any = require('react-test-renderer');
@@ -69,9 +71,11 @@ const allText = (root: any) =>
     .map((n: any) => n.children.join(''));
 
 describe('root index routing + boot visual', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     routerSpy.replace.mockClear();
     sessionState.status = 'loading';
+    await AsyncStorage.clear();
+    await AsyncStorage.setItem(INTRO_SEEN_KEY, '1');
   });
 
   afterEach(() => {
@@ -92,14 +96,28 @@ describe('root index routing + boot visual', () => {
     act(() => renderer.unmount());
   });
 
-  it('unauthed status redirects to sign-in', async () => {
+  it('unauthed status with intro seen redirects to sign-in', async () => {
     sessionState.status = 'unauthed';
     let renderer: any;
     await act(async () => {
       renderer = TestRenderer.create(<Index />);
       await flush();
+      await flush();
     });
     expect(routerSpy.replace).toHaveBeenCalledWith('/(auth)/sign-in');
+    act(() => renderer.unmount());
+  });
+
+  it('unauthed status without intro seen redirects to intro', async () => {
+    sessionState.status = 'unauthed';
+    await AsyncStorage.removeItem(INTRO_SEEN_KEY);
+    let renderer: any;
+    await act(async () => {
+      renderer = TestRenderer.create(<Index />);
+      await flush();
+      await flush();
+    });
+    expect(routerSpy.replace).toHaveBeenCalledWith('/(auth)/intro');
     act(() => renderer.unmount());
   });
 
@@ -108,6 +126,7 @@ describe('root index routing + boot visual', () => {
     let renderer: any;
     await act(async () => {
       renderer = TestRenderer.create(<Index />);
+      await flush();
       await flush();
     });
     expect(routerSpy.replace).toHaveBeenCalledWith('/(auth)/onboarding');
@@ -119,6 +138,7 @@ describe('root index routing + boot visual', () => {
     let renderer: any;
     await act(async () => {
       renderer = TestRenderer.create(<Index />);
+      await flush();
       await flush();
     });
     expect(routerSpy.replace).toHaveBeenCalledWith('/(tabs)/home');

@@ -1,5 +1,5 @@
 import type { FeatureId } from '@/src/lib/features/registry';
-import { getDefaultFeatureIds, sanitizeFeatureIds } from '@/src/lib/features/registry';
+import { getDefaultFeatureIds } from '@/src/lib/features/registry';
 import type { SpaceKindWire, SpaceMode } from './session';
 
 export type CreateSpaceFeatureParams = {
@@ -10,10 +10,7 @@ export type CreateSpaceFeatureParams = {
 
 export function resolveCreateSpaceFeatureIds(params: CreateSpaceFeatureParams): FeatureId[] {
   const mode = resolveCreateSpaceKind(params);
-
-  return params.enabledFeatures
-    ? sanitizeFeatureIds(params.enabledFeatures, mode)
-    : getDefaultFeatureIds(mode);
+  return getDefaultFeatureIds(mode);
 }
 
 export function resolveCreateSpaceKind(

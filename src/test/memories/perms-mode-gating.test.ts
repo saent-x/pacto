@@ -28,11 +28,17 @@ describe('memories perms', () => {
     expect(expr).toMatch(/'crew'/);
   });
 
-  it('mediaQuotaUsage and aiUsage are server-managed (no create/update/delete from clients)', () => {
-    for (const ent of ['mediaQuotaUsage', 'aiUsage']) {
-      expect(r[ent].allow.create).toBe('false');
-      expect(r[ent].allow.update).toBe('false');
-      expect(r[ent].allow.delete).toBe('false');
+  it('mediaQuotaUsage can be initialized by space members but not updated by clients', () => {
+    expect(r.mediaQuotaUsage.allow.create).toContain("auth.id in data.ref('space.memberships.user.id')");
+    expect(r.mediaQuotaUsage.allow.create).toContain("data.ref('space.mediaQuota.id')[0] == null");
+    expect(r.mediaQuotaUsage.allow.create).toContain('newData.bytesUsed == 0');
+    expect(r.mediaQuotaUsage.allow.update).toBe('false');
+    expect(r.mediaQuotaUsage.allow.delete).toBe('false');
+  });
+
+  it('aiUsage is server-managed (no create/update/delete from clients)', () => {
+    for (const action of ['create', 'update', 'delete']) {
+      expect(r.aiUsage.allow[action]).toBe('false');
     }
   });
 

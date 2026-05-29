@@ -1,6 +1,5 @@
 export { Button } from './Button';
 export { Input } from './Input';
-export { Card } from './Card';
 export { Badge } from './Badge';
 export { EmptyState } from './EmptyState';
 export { GlassView } from './GlassView';
@@ -42,9 +41,9 @@ export { SubscreenHero } from './SubscreenHero';
 // the existing `WarmPill`/`WarmAvatar` convention.
 export {
   Badge as WarmBadge,
-  CouplRings,
+  PactoRings,
   DateSectioned,
   PrimaryButton,
-  ScreenHeader as CouplScreenHeader,
+  ScreenHeader as PactoScreenHeader,
   StickyDate,
 } from './atoms';

@@ -12,11 +12,12 @@ describe('space action feature resolution', () => {
     expect(resolveCreateSpaceFeatureIds({ kind: 'couple' })).toEqual([
       'tasks',
       'calendar',
-      'wishlist',
-      'memories',
+      'memoryFeed',
       'journal',
       'checkins',
       'recurring',
+      'timetable',
+      'goals',
     ]);
   });
 
@@ -24,33 +25,40 @@ describe('space action feature resolution', () => {
     expect(resolveCreateSpaceFeatureIds({ kind: 'couple', mode: 'crew' })).toEqual([
       'tasks',
       'calendar',
-      'wishlist',
-      'memories',
+      'memoryFeed',
       'recurring',
       'timetable',
       'goals',
     ]);
   });
 
-  it('sanitizes explicit ids by the provided mode', () => {
+  it('ignores explicit ids and enables all supported features for the mode', () => {
     expect(
       resolveCreateSpaceFeatureIds({
         kind: 'couple',
         mode: 'crew',
         enabledFeatures: ['journal', 'checkins', 'vision', 'tasks', 'tasks'],
       }),
-    ).toEqual(['tasks']);
+    ).toEqual([
+      'tasks',
+      'calendar',
+      'memoryFeed',
+      'recurring',
+      'timetable',
+      'goals',
+    ]);
   });
 
   it('uses pair defaults when upgrading solo to couple', () => {
     expect(resolveUpgradeSoloToCoupleFeatureIds()).toEqual([
       'tasks',
       'calendar',
-      'wishlist',
-      'memories',
+      'memoryFeed',
       'journal',
       'checkins',
       'recurring',
+      'timetable',
+      'goals',
     ]);
   });
 

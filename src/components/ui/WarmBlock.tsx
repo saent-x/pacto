@@ -1,5 +1,5 @@
 /**
- * Warm Block atoms — signature design language for Coupl.
+ * Warm Block atoms — signature design language for Pacto.
  *
  * Pastel slab cards, chunky display type, triple ring, gold rule,
  * wavy underline, icon tiles. Use these everywhere.

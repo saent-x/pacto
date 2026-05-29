@@ -6,6 +6,7 @@ const _schema = i.schema({
       email: i.string().unique().indexed(),
       displayName: i.string().optional(),
       avatarUrl: i.string().optional(),
+      avatarPath: i.string().optional(),
       birthday: i.string().optional(),
       createdAt: i.number().optional(),
     }),
@@ -13,7 +14,6 @@ const _schema = i.schema({
       kind: i.string(),                                     // 'solo' | 'couple' | 'pair' | 'crew'
       enabledFeatures: i.json().optional(),
       name: i.string().optional(),
-      anniversary: i.string().optional(),
       inviteCode: i.string().optional().unique().indexed(),
       createdAt: i.number(),
       updatedAt: i.number(),
@@ -47,29 +47,29 @@ const _schema = i.schema({
       priority: i.number().optional(),
       isPrivate: i.boolean().optional(),
       createdAt: i.number().indexed(),
-      updatedAt: i.number().optional(),
+      updatedAt: i.number().optional().indexed(),
     }),
     plans: i.entity({
       title: i.string(),
       description: i.string().optional(),
       notes: i.string().optional(),
       category: i.string().optional(),
-      targetDate: i.string().optional(),
+      targetDate: i.string().optional().indexed(),
       budget: i.number().optional(),
       status: i.string().optional(),                        // 'active' | 'done' | 'cancelled' | ...
       priority: i.number().optional(),
       isPrivate: i.boolean().optional(),
-      icon: i.string().optional(),
       color: i.string().optional(),
+      colorKey: i.string().optional(),
       bucket: i.string().optional(),
       createdAt: i.number().indexed(),
-      updatedAt: i.number().optional(),
+      updatedAt: i.number().optional().indexed(),
     }),
     rituals: i.entity({
       title: i.string(),
       description: i.string().optional(),
       cadence: i.string().optional(),
-      dueDate: i.string().optional(),
+      dueDate: i.string().optional().indexed(),
       nextOccurrenceAt: i.number().optional(),
       priority: i.number().optional(),
       isActive: i.boolean().optional(),
@@ -80,11 +80,10 @@ const _schema = i.schema({
     checkIns: i.entity({
       mood: i.string().optional(),
       note: i.string().optional(),
-      energy: i.number().optional(),
       isPrivate: i.boolean().optional(),
       checkInDate: i.string().indexed(),
       createdAt: i.number().indexed(),
-      updatedAt: i.number().optional(),
+      updatedAt: i.number().optional().indexed(),
     }),
     reminders: i.entity({
       title: i.string(),
@@ -96,7 +95,7 @@ const _schema = i.schema({
       priority: i.number().optional(),
       category: i.string().optional(),
       createdAt: i.number().indexed(),
-      updatedAt: i.number().optional(),
+      updatedAt: i.number().optional().indexed(),
     }),
     tasks: i.entity({
       title: i.string(),
@@ -104,26 +103,25 @@ const _schema = i.schema({
       category: i.string().optional(),                      // free-form grouping key; taskList link below is the redesign's first-class grouping
       isCompleted: i.boolean().optional(),
       completedAt: i.number().optional(),
-      dueDate: i.string().optional(),
+      dueDate: i.string().optional().indexed(),
       priority: i.number().optional(),
       sortOrder: i.number().optional(),
       createdAt: i.number().indexed(),
-      updatedAt: i.number().optional(),
+      updatedAt: i.number().optional().indexed(),
     }),
     taskLists: i.entity({
       name: i.string(),
-      icon: i.string().optional(),
       colorKey: i.string().optional(),
       category: i.string().optional(),
       createdAt: i.number().indexed(),
-      updatedAt: i.number().optional(),
+      updatedAt: i.number().optional().indexed(),
     }),
     milestones: i.entity({
       title: i.string(),
       description: i.string().optional(),
       date: i.string().indexed(),
-      icon: i.string().optional(),
       color: i.string().optional(),
+      colorKey: i.string().optional(),
       repeatYearly: i.boolean().optional(),
       quote: i.string().optional(),
       createdAt: i.number().indexed(),
@@ -135,10 +133,11 @@ const _schema = i.schema({
       mood: i.string().optional(),
       isPrivate: i.boolean().optional(),
       mediaUrls: i.json().optional(),
+      mediaPaths: i.json().optional(),
       tags: i.json().optional(),
       entryDate: i.string().indexed(),
       createdAt: i.number().indexed(),
-      updatedAt: i.number().optional(),
+      updatedAt: i.number().optional().indexed(),
     }),
     loveNotes: i.entity({
       body: i.string(),
@@ -157,7 +156,6 @@ const _schema = i.schema({
     }),
     wishlists: i.entity({
       name: i.string(),
-      icon: i.string().optional(),
       color: i.string().optional(),
       createdAt: i.number().indexed(),
       updatedAt: i.number().optional(),
@@ -181,7 +179,7 @@ const _schema = i.schema({
       template: i.string().optional(),                      // 'meals' | 'workout' | 'study' | 'routine' | 'sleep' | 'custom'
       share: i.string().optional(),                         // 'solo' | 'partner' | 'shared'
       createdAt: i.number().indexed(),
-      updatedAt: i.number().optional(),
+      updatedAt: i.number().optional().indexed(),
     }),
     timetableItems: i.entity({
       title: i.string(),
@@ -196,7 +194,7 @@ const _schema = i.schema({
       repeat: i.string().optional(),                        // 'weekly' | 'once'
       star: i.boolean().optional(),
       createdAt: i.number().indexed(),
-      updatedAt: i.number().optional(),
+      updatedAt: i.number().optional().indexed(),
     }),
     ringsHistory: i.entity({
       dateKey: i.string().indexed(),
@@ -237,6 +235,7 @@ const _schema = i.schema({
     memoryAttachments: i.entity({
       type: i.string(),
       refId: i.string().optional(),
+      spaceId: i.string().optional(),
       mediaUrl: i.string().optional(),
       mediaPath: i.string().optional(),
       mediaWidth: i.number().optional(),
@@ -274,6 +273,10 @@ const _schema = i.schema({
     spaceCreator: {
       forward: { on: 'spaces', has: 'one', label: 'createdBy' },
       reverse: { on: '$users', has: 'many', label: 'createdSpaces' },
+    },
+    userBaseSoloSpace: {
+      forward: { on: '$users', has: 'one', label: 'baseSoloSpace' },
+      reverse: { on: 'spaces', has: 'many', label: 'baseUsers' },
     },
     membershipUser: {
       forward: { on: 'memberships', has: 'one', label: 'user' },
@@ -364,7 +367,7 @@ const _schema = i.schema({
       reverse: { on: '$users', has: 'many', label: 'completedTasks' },
     },
     taskList: {
-      forward: { on: 'tasks', has: 'one', label: 'list' },
+      forward: { on: 'tasks', has: 'one', label: 'list', onDelete: 'cascade' },
       reverse: { on: 'taskLists', has: 'many', label: 'tasks' },
     },
 

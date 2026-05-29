@@ -1,4 +1,4 @@
-import type { MilestoneStripItem, TimelineItem } from "@/src/lib/home/types";
+import type { TimelineItem } from "@/src/lib/home/types";
 import type { FeatureId } from "@/src/lib/features/registry";
 
 type IsFeatureEnabled = (featureId: FeatureId) => boolean;
@@ -11,7 +11,7 @@ export function routeForTimelineItem(
 ): string | null {
   switch (item.type) {
     case "event":
-      return isFeatureEnabled("calendar") ? "/(tabs)/calendar" : null;
+      return isFeatureEnabled("calendar") ? calendarRouteForTimelineItem(item) : null;
     case "plan":
       return isFeatureEnabled("goals") ? "/(tabs)/us/plans" : null;
     case "reminder":
@@ -22,16 +22,12 @@ export function routeForTimelineItem(
         ? `/(tabs)/us/tasks/${item.sourceParentId}?taskId=${item.sourceId}`
         : "/(tabs)/us/tasks";
     case "ritual":
-      return isFeatureEnabled("recurring") && isFeatureEnabled("calendar") ? "/(tabs)/calendar" : null;
+      return isFeatureEnabled("recurring") && isFeatureEnabled("calendar")
+        ? calendarRouteForTimelineItem(item)
+        : null;
     case "memory": {
       if (item.sourceTable === "journalEntries") {
         return isFeatureEnabled("journal") ? "/(tabs)/us/journal" : null;
-      }
-      if (item.sourceTable === "loveNotes" || item.sourceTable === "memories") {
-        return isFeatureEnabled("memories") ? "/(tabs)/us/notes" : null;
-      }
-      if (item.sourceTable === "milestones") {
-        return isFeatureEnabled("memories") ? "/(tabs)/us/milestones" : null;
       }
       return null;
     }
@@ -40,6 +36,17 @@ export function routeForTimelineItem(
   }
 }
 
-export function routeForMilestoneItem(_item: MilestoneStripItem): string {
-  return "/(tabs)/us/milestones";
+function calendarRouteForTimelineItem(item: TimelineItem): string {
+  const date = localDateParamFromTimestamp(item.occursAt);
+  return date ? `/(tabs)/calendar?date=${date}` : "/(tabs)/calendar";
+}
+
+function localDateParamFromTimestamp(timestamp: number | null): string | null {
+  if (timestamp === null || !Number.isFinite(timestamp)) return null;
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return null;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }

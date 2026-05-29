@@ -26,6 +26,24 @@ describe('buildTodayRingSummary', () => {
     expect(summary.focus).toEqual({ done: 2, total: 4 });
   });
 
+  it('omits private tasks and reminders from focus totals', () => {
+    const summary = buildTodayRingSummary({
+      now,
+      tasks: [
+        { id: 'private-task', dueDate: '2026-04-23', isCompleted: false, isPrivate: true },
+        { id: 'shared-task', dueDate: '2026-04-23', isCompleted: false, isPrivate: false },
+      ],
+      reminders: [
+        { id: 'private-reminder', dueAt: laterToday, isCompleted: false, isPrivate: true },
+        { id: 'shared-reminder', dueAt: laterToday, isCompleted: false, isPrivate: false },
+      ],
+      plans: [],
+      events: [],
+    });
+
+    expect(summary.focus).toEqual({ done: 0, total: 2 });
+  });
+
   it('counts tasks and reminders completed today even when not due today', () => {
     const summary = buildTodayRingSummary({
       now,
@@ -63,5 +81,31 @@ describe('buildTodayRingSummary', () => {
     });
 
     expect(summary.plans).toEqual({ done: 2, total: 4 });
+  });
+
+  it('ignores finite timestamps outside the JavaScript date range in today rings', () => {
+    const summary = buildTodayRingSummary({
+      now,
+      tasks: [
+        { id: 'bad-task-completion', dueDate: null, isCompleted: true, completedAt: 8_640_000_000_000_001 },
+      ],
+      reminders: [
+        {
+          id: 'bad-reminder',
+          dueAt: 8_640_000_000_000_001,
+          isCompleted: true,
+          completedAt: 8_640_000_000_000_001,
+        },
+      ],
+      plans: [],
+      events: [
+        { id: 'bad-event', startsAt: 8_640_000_000_000_001, isPrivate: false },
+      ],
+    });
+
+    expect(summary).toEqual({
+      plans: { done: 0, total: 0 },
+      focus: { done: 0, total: 0 },
+    });
   });
 });

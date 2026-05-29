@@ -11,6 +11,13 @@ vi.mock('@/src/components/ui/pacto', () => {
   return {
     Card: ({ children }: any) => Reactx.createElement('Card', null, children),
     CardHalo: ({ children }: any) => Reactx.createElement('CardHalo', null, children),
+    PixelHero: ({ eyebrow, title }: any) =>
+      Reactx.createElement(
+        'PixelHero',
+        null,
+        Reactx.createElement('Text', null, String(eyebrow ?? '')),
+        Reactx.createElement('Text', null, String(title ?? '')),
+      ),
     ColorTile: ({ title, stat }: any) =>
       Reactx.createElement(
         'ColorTile',
@@ -49,7 +56,7 @@ vi.mock('@/src/hooks/useSession', () => ({
     user: { id: 'u1', displayName: 'Test', email: 't@e' },
     partner: null,
     mode: 'pair' as const,
-    activeCouple: { couple: { id: 'c1', anniversary: null, name: 'Us', enabledFeatures: [] } },
+    activeCouple: { couple: { id: 'c1', name: 'Us', enabledFeatures: [] } },
     space: { id: 'c1', kind: 'pair', enabledFeatures: [] },
     isFeatureEnabled: (_id: FeatureId) => true,
     isSolo: false,
@@ -70,10 +77,7 @@ vi.mock('@/src/hooks/useTasks', () => ({
 vi.mock('@/src/hooks/useReminders', () => ({
   useReminders: () => ({ reminders: [] }),
 }));
-vi.mock('@/src/hooks/useLoveNotes', () => ({ useLoveNotes: () => ({ notes: [] }) }));
 vi.mock('@/src/hooks/useCheckIns', () => ({ useCheckIns: () => ({ checkIns: [] }) }));
-vi.mock('@/src/hooks/useWishlists', () => ({ useWishlists: () => ({ wishlists: [] }) }));
-vi.mock('@/src/hooks/useMilestones', () => ({ useMilestones: () => ({ milestones: [] }) }));
 vi.mock('@/src/hooks/usePlans', () => ({ usePlans: () => ({ plans: [] }) }));
 vi.mock('@/src/hooks/useJournal', () => ({ useJournal: () => ({ entries: [] }) }));
 vi.mock('@/src/hooks/useTimetables', () => ({ useTimetables: () => ({ timetables: [] }) }));
@@ -119,28 +123,28 @@ function findNodesByText(root: any, text: string): any[] {
 }
 
 describe('UsScreen quick actions', () => {
-  it('renders + Task, + Reminder, + Timetable buttons', async () => {
+  it('renders + List, + Reminder, + Timetable buttons', async () => {
     const renderer = await renderScreen();
     const text = findAllText(renderer.root);
-    expect(text).toContain('+ Task');
+    expect(text).toContain('+ List');
     expect(text).toContain('+ Reminder');
     expect(text).toContain('+ Timetable');
     expect(text).not.toContain('+ Expense');
     act(() => renderer.unmount());
   });
 
-  it('+ Task pushes /sheets/new-task', async () => {
+  it('+ List pushes /sheets/new-list instead of opening a task sheet without listId', async () => {
     pushSpy.mockClear();
     const renderer = await renderScreen();
-    const nodes = findNodesByText(renderer.root, '+ Task');
+    const nodes = findNodesByText(renderer.root, '+ List');
     expect(nodes.length).toBeGreaterThan(0);
     // Walk up to find the PressScale with onPress
     const pressable = renderer.root.findAll(
       (n: any) => n.props?.onPress && Array.isArray(n.children) &&
-        n.findAll((c: any) => typeof c.children?.[0] === 'string' && c.children[0] === '+ Task').length > 0,
+        n.findAll((c: any) => typeof c.children?.[0] === 'string' && c.children[0] === '+ List').length > 0,
     )[0];
     pressable?.props?.onPress();
-    expect(pushSpy).toHaveBeenCalledWith('/sheets/new-task');
+    expect(pushSpy).toHaveBeenCalledWith('/sheets/new-list');
     act(() => renderer.unmount());
   });
 

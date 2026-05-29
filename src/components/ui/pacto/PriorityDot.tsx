@@ -18,7 +18,7 @@ export function PriorityDot({ level }: Props) {
 
   const map: Record<Exclude<Level, 'none'>, { color: string; n: number }> = {
     low: { color: C.ink3, n: 1 },
-    med: { color: '#D4A054', n: 2 },
+    med: { color: C.accent3, n: 2 },
     high: { color: C.accent, n: 3 },
   };
   const it = map[level];

@@ -8,6 +8,7 @@ interface Props {
   topics: MemoryTopic[];
   selected: string;
   onSelect: (topicId: string) => void;
+  compact?: boolean;
 }
 
 /**
@@ -16,13 +17,13 @@ interface Props {
  * `--ink` background with `--bg` text; idle chips use `--bg-card` with
  * an `--line` border.
  */
-export function TopicChipStrip({ topics, selected, onSelect }: Props) {
+export function TopicChipStrip({ topics, selected, onSelect, compact = false }: Props) {
   const { C } = useTheme();
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.row}
+      contentContainerStyle={[styles.row, compact && styles.rowCompact]}
     >
       {topics.map((t) => {
         const isActive = t.id === selected;
@@ -32,6 +33,7 @@ export function TopicChipStrip({ topics, selected, onSelect }: Props) {
             onPress={() => onSelect(t.id)}
             style={[
               styles.chip,
+              compact && styles.chipCompact,
               {
                 borderColor: isActive ? C.inkColor : C.lineColor,
                 backgroundColor: isActive ? C.inkColor : C.bgSoft,
@@ -43,7 +45,7 @@ export function TopicChipStrip({ topics, selected, onSelect }: Props) {
                 Typography.body,
                 {
                   color: isActive ? C.bg : C.ink2,
-                  fontSize: 13,
+                  fontSize: compact ? 12 : 13,
                   fontWeight: '500',
                 },
               ]}
@@ -77,6 +79,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  rowCompact: {
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+    gap: 6,
+  },
   chip: {
     flexShrink: 0,
     paddingHorizontal: 14,
@@ -87,8 +94,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
+  chipCompact: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
   count: {
-    fontFamily: 'GeistMono_400Regular',
+    fontFamily: 'GeistMono_500Medium',
     fontSize: 11,
     opacity: 0.7,
   },

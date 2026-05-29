@@ -4,8 +4,6 @@ import type { SpaceMode } from '@/src/lib/session';
 export type FeatureId =
   | 'tasks'
   | 'calendar'
-  | 'wishlist'
-  | 'memories'
   | 'memoryFeed'
   | 'journal'
   | 'checkins'
@@ -46,34 +44,14 @@ const RAW_FEATURE_REGISTRY = [
     defaultForCrew: true,
   },
   {
-    id: 'wishlist',
-    label: 'Wishlist',
-    description: 'Save gift ideas and things to buy.',
-    icon: 'gift',
-    supportedModes: ['pair', 'crew'],
-    defaultForSolo: false,
-    defaultForPair: true,
-    defaultForCrew: true,
-  },
-  {
-    id: 'memories',
-    label: 'Memories',
-    description: 'Keep notes, milestones, and moments.',
-    icon: 'heart',
-    supportedModes: ['pair', 'crew'],
-    defaultForSolo: false,
-    defaultForPair: true,
-    defaultForCrew: true,
-  },
-  {
     id: 'memoryFeed',
     label: 'Memory Feed',
     description: 'Private feed of moments, scoped to your space.',
     icon: 'heart',
     supportedModes: ['solo', 'pair', 'crew'],
-    defaultForSolo: false,
-    defaultForPair: false,
-    defaultForCrew: false,
+    defaultForSolo: true,
+    defaultForPair: true,
+    defaultForCrew: true,
   },
   {
     id: 'journal',
@@ -91,7 +69,7 @@ const RAW_FEATURE_REGISTRY = [
     description: 'Capture quick mood and relationship updates.',
     icon: 'messageCircle',
     supportedModes: ['solo', 'pair'],
-    defaultForSolo: false,
+    defaultForSolo: true,
     defaultForPair: true,
     defaultForCrew: false,
   },
@@ -101,7 +79,7 @@ const RAW_FEATURE_REGISTRY = [
     description: 'Manage repeating reminders and routines.',
     icon: 'repeat',
     supportedModes: ['solo', 'pair', 'crew'],
-    defaultForSolo: false,
+    defaultForSolo: true,
     defaultForPair: true,
     defaultForCrew: true,
   },
@@ -111,8 +89,8 @@ const RAW_FEATURE_REGISTRY = [
     description: 'Organize weekly routines and schedules.',
     icon: 'grid',
     supportedModes: ['solo', 'pair', 'crew'],
-    defaultForSolo: false,
-    defaultForPair: false,
+    defaultForSolo: true,
+    defaultForPair: true,
     defaultForCrew: true,
   },
   {
@@ -122,7 +100,7 @@ const RAW_FEATURE_REGISTRY = [
     icon: 'flag',
     supportedModes: ['solo', 'pair', 'crew'],
     defaultForSolo: true,
-    defaultForPair: false,
+    defaultForPair: true,
     defaultForCrew: true,
   },
 ] as const satisfies readonly FeatureEntry[];

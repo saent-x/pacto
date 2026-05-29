@@ -14,12 +14,12 @@ import { Card } from '@/src/components/ui/pacto/Card';
 import { Checkbox } from '@/src/components/ui/pacto/Checkbox';
 import { HeaderBrand } from '@/src/components/ui/pacto/HeaderBrand';
 import { HeroPactoBadge } from '@/src/components/ui/pacto/HeroPactoBadge';
-import { PriorityDot } from '@/src/components/ui/pacto/PriorityDot';
+import { PriorityPill, priorityLevelFromNumber } from '@/src/components/ui/pacto/PriorityPill';
 import { ScopeChip } from '@/src/components/ui/pacto/ScopeChip';
 import { SwipeableRow } from '@/src/components/ui/pacto/SwipeableRow';
 import { Icon } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
-import { bucketOf, orderBuckets } from '@/src/components/tasks/buckets';
+import { bucketOf, formatDueChip, orderBuckets } from '@/src/components/tasks/buckets';
 import { useTaskLists } from '@/src/hooks/useTaskLists';
 import { useTaskItems } from '@/src/hooks/useTasks';
 import { useSession } from '@/src/hooks/useSession';
@@ -42,12 +42,13 @@ function TaskListDetailInner() {
   const { C } = useTheme();
   const insets = useSafeAreaInsets();
   const { user, partner, mode } = useSession();
-  const { lists } = useTaskLists();
+  const { lists, isLoading: listsLoading } = useTaskLists();
   const list = useMemo(
     () => lists.find((l) => l.id === listId) ?? null,
     [lists, listId]
   );
-  const { tasks, toggleComplete, remove } = useTaskItems(listId ?? null);
+  const listMissing = !listsLoading && !list;
+  const { tasks, toggleComplete, remove } = useTaskItems(list ? listId ?? null : null);
 
   const partnerName = partner?.displayName ?? null;
   const youId = user?.id ?? null;
@@ -103,17 +104,11 @@ function TaskListDetailInner() {
   }, [tasks, C.error, C.accent, C.accent2, C.ink2, C.ink3]);
 
   const scopeFor = (t: Task): 'mine' | 'partner' | 'shared' => {
+    if (list?.scope === 'personal') return 'mine';
     if (!t.assigned_to) return 'shared';
     if (t.assigned_to === youId) return 'mine';
     if (t.assigned_to === partnerId) return 'partner';
     return 'shared';
-  };
-
-  const priorityLevel = (p: number): 'none' | 'low' | 'med' | 'high' => {
-    if (p >= 3) return 'high';
-    if (p === 2) return 'med';
-    if (p === 1) return 'low';
-    return 'none';
   };
 
   return (
@@ -130,7 +125,7 @@ function TaskListDetailInner() {
           headerTitle: () => (
             <HeaderBrand
               eyebrow="TASKS"
-              title={(list?.name ?? 'list').toLowerCase()}
+              title={(list?.name ?? 'tasks').toLowerCase()}
             />
           ),
           headerLeft: () => (
@@ -142,18 +137,19 @@ function TaskListDetailInner() {
               <Icon name="chevronLeft" size={22} color={C.inkColor} strokeWidth={2.2} />
             </PressScale>
           ),
-          headerRight: () => (
-            <PressScale
-              onPress={() =>
-                listId &&
-                router.push(`/sheets/new-task?listId=${listId}` as any)
-              }
-              hitSlop={12}
-              style={{ padding: 4 }}
-            >
-              <Icon name="plus" size={22} color={C.inkColor} strokeWidth={2.2} />
-            </PressScale>
-          ),
+          headerRight: () =>
+            list ? (
+              <PressScale
+                onPress={() =>
+                  listId &&
+                  router.push(`/sheets/new-task?listId=${listId}` as any)
+                }
+                hitSlop={12}
+                style={{ padding: 4 }}
+              >
+                <Icon name="plus" size={22} color={C.inkColor} strokeWidth={2.2} />
+              </PressScale>
+            ) : null,
         }}
       />
 
@@ -162,6 +158,21 @@ function TaskListDetailInner() {
         contentContainerStyle={{ paddingTop: insets.top + 60, paddingBottom: insets.bottom + 104 }}
         showsVerticalScrollIndicator={false}
       >
+        {!list ? (
+          <View style={styles.listWrap}>
+            <ActionEmptyState
+              icon="clipboard"
+              eyebrow="TASKS"
+              title={listMissing ? 'List not found' : 'Loading list'}
+              body={
+                listMissing
+                  ? 'This list may have been deleted or you may not have access.'
+                  : 'Checking this list before loading tasks.'
+              }
+            />
+          </View>
+        ) : (
+          <>
         {/* Stat hero */}
         <View style={styles.heroWrap}>
           <Card
@@ -177,7 +188,7 @@ function TaskListDetailInner() {
             <View style={styles.heroTop}>
               <View style={{ flex: 1 }}>
                 <Text style={[Typography.eyebrow, { color: tileInkMuted }]}>
-                  {list?.name ?? 'List'}
+                  {list.name}
                 </Text>
                 <View style={styles.heroNumberRow}>
                   <Text style={[styles.heroNumber, { color: tileInk }]}>
@@ -223,7 +234,7 @@ function TaskListDetailInner() {
             <ActionEmptyState
               icon="checkSquare"
               title="Nothing on this list"
-              body={`Add the first task for ${list?.name ?? 'this list'}.`}
+              body={`Add the first task for ${list.name}.`}
               actionLabel="Add task"
               onAction={() =>
                 listId &&
@@ -233,69 +244,71 @@ function TaskListDetailInner() {
           ) : (
             <BucketedList
               buckets={buckets}
+              presentation="items"
+              swipeableRows
               rowKey={(t) => t.id}
-              renderRow={(t) => (
-                <SwipeableRow
-                  deleteTitle="Delete task?"
-                  deleteMessage={`"${t.title}" will be removed.`}
-                  onEdit={() =>
-                    router.push(
-                      `/sheets/new-task?listId=${listId}&id=${t.id}` as any
-                    )
-                  }
-                  onDelete={() => remove(t.id)}
-                >
-                  <View
-                    style={[
-                      styles.row,
-                      { backgroundColor: C.bgCard },
-                    ]}
+              renderRow={(t) => {
+                const dueLabel = formatDueChip(t.due_date);
+                return (
+                  <SwipeableRow
+                    deleteTitle="Delete task?"
+                    deleteMessage={`"${t.title}" will be removed.`}
+                    onEdit={() =>
+                      router.push(
+                        `/sheets/new-task?listId=${listId}&id=${t.id}` as any
+                      )
+                    }
+                    onDelete={() => remove(t.id)}
                   >
-                    <Checkbox
-                      checked={t.is_completed}
-                      onChange={() => toggleComplete(t)}
-                      size={34}
-                    />
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={[
-                          Typography.bodyMedium,
-                          {
-                            color: t.is_completed ? C.ink3 : C.inkColor,
-                            textDecorationLine: t.is_completed
-                              ? 'line-through'
-                              : 'none',
-                          },
-                        ]}
-                        numberOfLines={2}
-                      >
-                        {t.title}
-                      </Text>
-                      <View style={styles.metaRow}>
-                        {t.due_date ? (
-                          <Text
-                            style={[
-                              Typography.mono,
-                              { color: C.ink3, fontSize: 11 },
-                            ]}
-                          >
-                            {t.due_date}
-                          </Text>
-                        ) : null}
-                        <PriorityDot level={priorityLevel(t.priority)} />
-                        <ScopeChip
-                          scope={scopeFor(t)}
-                          mode={mode}
-                          partnerName={partnerName}
-                        />
+                    <View style={styles.row}>
+                      <Checkbox
+                        checked={t.is_completed}
+                        onChange={() => toggleComplete(t)}
+                        size={34}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={[
+                            Typography.bodyMedium,
+                            {
+                              color: t.is_completed ? C.ink3 : C.inkColor,
+                              textDecorationLine: t.is_completed
+                                ? 'line-through'
+                                : 'none',
+                            },
+                          ]}
+                          numberOfLines={2}
+                        >
+                          {t.title}
+                        </Text>
+                        <View style={styles.metaRow}>
+                          {dueLabel ? (
+                            <Text
+                              style={[
+                                Typography.mono,
+                                { color: C.ink3, fontSize: 11 },
+                              ]}
+                            >
+                              {dueLabel}
+                            </Text>
+                          ) : null}
+                          <PriorityPill level={priorityLevelFromNumber(t.priority)} compact />
+                          <ScopeChip
+                            scope={scopeFor(t)}
+                            mode={mode}
+                            partnerName={partnerName}
+                          />
+                        </View>
                       </View>
                     </View>
-                  </View>
-                </SwipeableRow>
-              )}
+                  </SwipeableRow>
+                );
+              }}
             />
           )}
         </View>
+          </>
+        )}
       </ScrollView>
     </View>
   );

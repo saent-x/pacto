@@ -5,7 +5,6 @@ export type ActiveCouple = {
   couple: {
     id: string;
     name: string | null;
-    anniversary: string | null;
     kind: ReturnType<typeof useBaseSession>['mode'];
     plan?: string | null;
     enabledFeatures: FeatureId[];
@@ -35,6 +34,12 @@ export type HookSession = {
   activeCouple: ActiveCouple | null;
   space: ReturnType<typeof useBaseSession>['space'];
   membership: ReturnType<typeof useBaseSession>['membership'];
+  soloSpace: ReturnType<typeof useBaseSession>['soloSpace'];
+  soloMembership: ReturnType<typeof useBaseSession>['soloMembership'];
+  sharedSpace: ReturnType<typeof useBaseSession>['sharedSpace'];
+  sharedMembership: ReturnType<typeof useBaseSession>['sharedMembership'];
+  personalSpaceId: ReturnType<typeof useBaseSession>['personalSpaceId'];
+  sharedSpaceId: ReturnType<typeof useBaseSession>['sharedSpaceId'];
   partner: ReturnType<typeof useBaseSession>['partner'];
   members: ReturnType<typeof useBaseSession>['members'];
   mode: ReturnType<typeof useBaseSession>['mode'];
@@ -67,12 +72,11 @@ export function buildHookSession(s: ReturnType<typeof useBaseSession>): HookSess
         couple: {
           id: s.space.id,
           name: s.space.name ?? null,
-          anniversary: s.space.anniversary ?? null,
           kind: s.space.kind,
           plan: s.space.plan ?? null,
           enabledFeatures: s.space.enabledFeatures,
         },
-        memberCount: 1 + s.members.length,
+        memberCount: s.space.memberCount ?? 1 + s.members.length,
         partner: s.partner
           ? {
               id: s.partner.id,
@@ -92,6 +96,12 @@ export function buildHookSession(s: ReturnType<typeof useBaseSession>): HookSess
     activeCouple,
     space: s.space,
     membership: s.membership,
+    soloSpace: s.soloSpace,
+    soloMembership: s.soloMembership,
+    sharedSpace: s.sharedSpace,
+    sharedMembership: s.sharedMembership,
+    personalSpaceId: s.personalSpaceId,
+    sharedSpaceId: s.sharedSpaceId,
     partner: s.partner,
     members: s.members,
     mode: s.mode,

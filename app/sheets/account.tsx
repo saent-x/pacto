@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -10,7 +10,13 @@ import { DEFAULT_AVATARS, type DefaultAvatarId } from '@/src/constants/defaultAv
 import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
 import { useSession } from '@/src/lib/session';
-import { updateUserAvatar, updateUserProfile, uploadAvatarFromUri } from '@/src/lib/space-actions';
+import {
+  deleteUploadedAvatar,
+  updateUserAvatar,
+  updateUserProfile,
+  uploadAvatarFromUri,
+  type UploadedAvatar,
+} from '@/src/lib/space-actions';
 
 export default function AccountSheet() {
   const { C } = useTheme();
@@ -26,6 +32,8 @@ export default function AccountSheet() {
   const savedDisplayName = session.user?.displayName?.trim() ?? '';
   const [displayNameDraft, setDisplayNameDraft] = useState(savedDisplayName);
   const [savingName, setSavingName] = useState(false);
+  const savingNameRef = useRef(false);
+  const avatarActionRef = useRef(false);
 
   useEffect(() => {
     setDisplayNameDraft(savedDisplayName);
@@ -63,18 +71,22 @@ export default function AccountSheet() {
     : `Paired with ${partnerName ?? 'someone'}`;
 
   async function onSelectAvatar(avatarUrl: string) {
-    if (!session.user) return;
+    if (!session.user || avatarActionRef.current) return;
+    avatarActionRef.current = true;
     Haptics.selectionAsync().catch(() => undefined);
     try {
       await updateUserAvatar({ userId: session.user.id, avatarUrl });
     } catch (err) {
       console.warn('[account] avatar update failed', err);
       Alert.alert('Avatar update failed', 'Try again.');
+    } finally {
+      avatarActionRef.current = false;
     }
   }
 
   async function onSaveDisplayName() {
-    if (!session.user || !canSaveDisplayName) return;
+    if (!session.user || !canSaveDisplayName || savingNameRef.current) return;
+    savingNameRef.current = true;
     Haptics.selectionAsync().catch(() => undefined);
     setSavingName(true);
     try {
@@ -86,41 +98,66 @@ export default function AccountSheet() {
       console.warn('[account] display name update failed', err);
       Alert.alert('Name update failed', 'Try again.');
     } finally {
+      savingNameRef.current = false;
       setSavingName(false);
     }
   }
 
   async function onUploadAvatar() {
-    if (!session.user) return;
+    if (!session.user || avatarActionRef.current) return;
+    avatarActionRef.current = true;
     Haptics.selectionAsync().catch(() => undefined);
-    const ImagePicker = await import('expo-image-picker');
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      Alert.alert(
-        'Permission needed',
-        'Allow photo access to choose a custom avatar.',
-      );
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.85,
-    });
-    if (result.canceled) return;
-    const asset = result.assets?.[0];
-    if (!asset?.uri) return;
     try {
-      const url = await uploadAvatarFromUri({
-        userId: session.user.id,
-        uri: asset.uri,
-        contentType: asset.mimeType ?? 'image/jpeg',
-      });
-      await onSelectAvatar(url);
-    } catch (err) {
-      console.warn('[account] avatar upload failed', err);
-      Alert.alert('Upload failed', 'Could not save your photo. Try again.');
+      let result: Awaited<ReturnType<typeof import('expo-image-picker').launchImageLibraryAsync>>;
+      try {
+        const ImagePicker = await import('expo-image-picker');
+        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!perm.granted) {
+          Alert.alert(
+            'Permission needed',
+            'Allow photo access to choose a custom avatar.',
+          );
+          return;
+        }
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.85,
+        });
+      } catch (err) {
+        console.warn('[account] avatar picker failed', err);
+        Alert.alert('Photo picker failed', 'Could not open your photos. Try again.');
+        return;
+      }
+
+      if (result.canceled) return;
+      const asset = result.assets?.[0];
+      if (!asset?.uri) return;
+      let uploaded: UploadedAvatar | null = null;
+      try {
+        uploaded = await uploadAvatarFromUri({
+          userId: session.user.id,
+          uri: asset.uri,
+          contentType: asset.mimeType ?? 'image/jpeg',
+        });
+        await updateUserAvatar({
+          userId: session.user.id,
+          avatarUrl: uploaded.avatarUrl,
+          avatarPath: uploaded.avatarPath,
+        });
+      } catch (err) {
+        if (uploaded?.avatarPath) {
+          deleteUploadedAvatar({
+            userId: session.user.id,
+            avatarPath: uploaded.avatarPath,
+          }).catch(() => undefined);
+        }
+        console.warn('[account] avatar upload failed', err);
+        Alert.alert('Upload failed', 'Could not save your photo. Try again.');
+      }
+    } finally {
+      avatarActionRef.current = false;
     }
   }
 

@@ -180,6 +180,7 @@ function AssistantVoiceOverlay({
   const { height } = useWindowDimensions();
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder);
+  const submitPendingRef = useRef(false);
 
   const startRecording = useCallback(async () => {
     const permission = await requestRecordingPermissionsAsync();
@@ -199,9 +200,15 @@ function AssistantVoiceOverlay({
   }, [recorder, startRecording, visible]);
 
   const submitRecording = useCallback(async () => {
-    await recorder.stop();
-    if (recorder.uri) {
-      await processAudioRecording(recorder.uri);
+    if (submitPendingRef.current) return;
+    submitPendingRef.current = true;
+    try {
+      await recorder.stop();
+      if (recorder.uri) {
+        await processAudioRecording(recorder.uri);
+      }
+    } finally {
+      submitPendingRef.current = false;
     }
   }, [processAudioRecording, recorder]);
 

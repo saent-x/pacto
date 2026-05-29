@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { PressScale } from '@/src/components/ui/PressScale';
 import { useTheme } from '@/src/lib/theme';
 import { Typography } from '@/src/constants/typography';
@@ -9,19 +9,34 @@ import type { ActivityHeatmapDay } from '@/src/lib/home/activity';
 type Props = {
   days: ActivityHeatmapDay[];
   weeks?: number;
+  palette?: [string, string, string, string];
+  todayColor?: string;
+  surfaceColor?: string;
+  borderColor?: string;
+  style?: StyleProp<ViewStyle>;
   onDayPress?: (day: ActivityHeatmapDay) => void;
 };
 
 const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const LEVEL_LABELS = ['0', '1', '2', '3+'];
+const CELL_INDICES = [0, 1, 2, 3, 4, 5, 6];
 
 /**
  * Compact activity map. 4 rows × 7 cols of large cells. Today's cell gets
  * a peach outline; cells call back via onDayPress when tapped.
  */
-export function MonthlyHeatmap({ days, weeks = 4, onDayPress }: Props) {
+export function MonthlyHeatmap({
+  days,
+  weeks = 4,
+  palette: paletteOverride,
+  todayColor,
+  surfaceColor,
+  borderColor,
+  style,
+  onDayPress,
+}: Props) {
   const { C } = useTheme();
-  const palette: [string, string, string, string] = [
+  const palette: [string, string, string, string] = paletteOverride ?? [
     alphaColor(C.accent2, 0.10),
     alphaColor(C.accent2, 0.32),
     alphaColor(C.accent2, 0.62),
@@ -40,7 +55,16 @@ export function MonthlyHeatmap({ days, weeks = 4, onDayPress }: Props) {
   }, [days, weeks]);
 
   return (
-    <View style={[styles.card, { backgroundColor: C.bgCard, borderColor: C.lineColor }]}>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: surfaceColor ?? C.bgCard,
+          borderColor: borderColor ?? C.lineColor,
+        },
+        style,
+      ]}
+    >
       <View style={styles.legend}>
         {LEVEL_LABELS.map((label, i) => (
           <View key={i} style={styles.legendCell}>
@@ -83,7 +107,7 @@ export function MonthlyHeatmap({ days, weeks = 4, onDayPress }: Props) {
 
       {grid.map((row, ri) => (
         <View key={ri} style={styles.row}>
-          {Array.from({ length: 7 }).map((_, ci) => {
+          {CELL_INDICES.map((ci) => {
             const cell = row[ci];
             const fill = cell ? palette[cell.weight] ?? palette[0] : palette[0];
             const isToday = !!cell && cell.dateKey === todayKey;
@@ -94,7 +118,7 @@ export function MonthlyHeatmap({ days, weeks = 4, onDayPress }: Props) {
                   {
                     backgroundColor: fill,
                     borderWidth: isToday ? 1.75 : 0,
-                    borderColor: isToday ? C.peach : 'transparent',
+                    borderColor: isToday ? (todayColor ?? C.peach) : 'transparent',
                   },
                 ]}
               />

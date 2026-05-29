@@ -3,11 +3,7 @@ export const AI_DOMAINS = [
   'tasks',
   'taskLists',
   'events',
-  'loveNotes',
   'checkIns',
-  'wishlists',
-  'wishlistItems',
-  'milestones',
   'plans',
   'journalEntries',
   'timetables',
@@ -113,9 +109,18 @@ export type AiMutationPlan = {
   unlinks: Record<string, string>;
 };
 
+export type AiTargetSpaceMap = Partial<Record<AiDomain, Record<string, string | null | undefined>>>;
+export type AiTargetOwnerMap = Partial<Record<AiDomain, Record<string, string | null | undefined>>>;
+
 export type AiMutationContext = {
   confirmed: boolean;
   coupleId: string;
+  personalSpaceId?: string | null;
+  sharedSpaceId?: string | null;
+  assignableUserIds?: string[];
+  relationSpaceById?: Record<string, string | null | undefined>;
+  targetSpaceById?: AiTargetSpaceMap;
+  targetOwnerById?: AiTargetOwnerMap;
   userId: string;
   now: number;
   idFactory: () => string;

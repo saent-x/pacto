@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 import { FeatureUnavailable } from '@/src/components/features/FeatureUnavailable';
 import { PrimaryButton } from '@/src/components/ui/atoms';
@@ -33,7 +33,7 @@ function NewTimetableInner() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEdit = Boolean(id);
   const { C, F } = useTheme();
-  const { create, update, timetables } = useTimetables();
+  const { create, update, timetables, isLoading } = useTimetables();
   const { isSolo, partner } = useSession();
   const partnerName = partner?.displayName ?? 'Partner';
   const existing = useMemo(
@@ -48,6 +48,7 @@ function NewTimetableInner() {
     (existing?.share as Share) ?? (isSolo ? 'solo' : 'shared'),
   );
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const tmpl = TEMPLATES.find((t) => t.key === tmplKey) ?? TEMPLATES[0];
 
   const shareOptions: IconLabelOption<Share>[] = useMemo(
@@ -59,10 +60,18 @@ function NewTimetableInner() {
     [C, partnerName],
   );
 
-  const canSave = title.trim().length > 0 && !saving;
+  const canSave = title.trim().length > 0 && (!isEdit || !!existing) && !saving;
+
+  useEffect(() => {
+    if (!isEdit || !existing) return;
+    setTitle(String(existing.title ?? ''));
+    setTmplKey((existing.template as TemplateKey) ?? 'meals');
+    setShare((existing.share as Share) ?? (isSolo ? 'solo' : 'shared'));
+  }, [existing, isEdit, isSolo]);
 
   const onSave = async () => {
-    if (!canSave) return;
+    if (!canSave || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       const payload = {
@@ -81,9 +90,25 @@ function NewTimetableInner() {
       console.warn('[new-timetable] save failed', err);
       Alert.alert('Save failed', 'Try again.');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
+
+  if (isEdit && !existing) {
+    return (
+      <SheetShell
+        eyebrow="TIMETABLE"
+        title={isLoading ? 'Loading timetable' : 'Timetable missing'}
+      >
+        <Text style={{ color: C.ink2 }}>
+          {isLoading
+            ? 'Loading this timetable…'
+            : 'This timetable could not be found or is no longer available in this space.'}
+        </Text>
+      </SheetShell>
+    );
+  }
 
   return (
     <SheetShell
@@ -124,7 +149,7 @@ function NewTimetableInner() {
                 marginTop: 6,
               }}
             >
-              {title || `${tmpl.label} — your week`}
+              {title || tmpl.defaultTitle}
             </Text>
           </View>
           <View
@@ -153,7 +178,7 @@ function NewTimetableInner() {
       </SheetSection>
 
       <SheetSection title="Template">
-        {/* EXCEPTION: free-form template labels — icon-only grid would lose the user-facing name */}
+        {/* EXCEPTION: timetable templates use compact descriptive tiles, not generic pills. */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {TEMPLATES.map((t) => {
             const sel = tmplKey === t.key;
@@ -168,6 +193,7 @@ function NewTimetableInner() {
                 style={{
                   width: '48%',
                   padding: 12,
+                  minHeight: 82,
                   borderRadius: 14,
                   backgroundColor: sel ? t.color : C.bgCard,
                   borderWidth: 1,
@@ -182,23 +208,43 @@ function NewTimetableInner() {
                     width: 32,
                     height: 32,
                     borderRadius: 10,
-                    backgroundColor: sel ? `${t.ink}22` : t.color,
+                    backgroundColor: sel ? `${t.ink}22` : `${t.color}24`,
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <Icon name={t.icon as IconName} size={15} color={t.ink} strokeWidth={2.2} />
+                  <Icon
+                    name={t.icon as IconName}
+                    size={15}
+                    color={sel ? t.ink : t.color}
+                    strokeWidth={2.2}
+                  />
                 </View>
-                <Text
-                  style={{
-                    fontSize: 12,
-                    fontFamily: F.bodyBold,
-                    color: sel ? t.ink : C.inkColor,
-                    flex: 1,
-                  }}
-                >
-                  {t.label}
-                </Text>
+                <View style={{ flex: 1, gap: 3 }}>
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      lineHeight: 15,
+                      fontFamily: F.bodyBold,
+                      color: sel ? t.ink : C.inkColor,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {t.label}
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 9.5,
+                      lineHeight: 12,
+                      fontFamily: F.body,
+                      color: sel ? t.ink : C.ink2,
+                      opacity: sel ? 0.72 : 0.88,
+                    }}
+                    numberOfLines={2}
+                  >
+                    {t.description}
+                  </Text>
+                </View>
               </PressScale>
             );
           })}

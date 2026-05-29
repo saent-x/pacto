@@ -1,4 +1,5 @@
 import React from 'react';
+import { Pressable } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { WeekDay } from '@/src/lib/calendar/builders';
 
@@ -28,10 +29,14 @@ vi.mock('expo-audio', () => ({
   }),
 }));
 
+const routeParams = vi.hoisted(() => ({
+  current: {} as { date?: string | string[] },
+}));
+
 vi.mock('expo-router', () => ({
   router: { push: vi.fn(), back: vi.fn(), replace: vi.fn() },
   useRouter: () => ({ push: vi.fn(), back: vi.fn(), replace: vi.fn() }),
-  useLocalSearchParams: () => ({}),
+  useLocalSearchParams: () => routeParams.current,
   Stack: { Screen: () => null },
   Link: ({ children }: any) => <>{children}</>,
 }));
@@ -150,6 +155,7 @@ function makeWeek(selectedDate: string): WeekDay[] {
 
 describe('Calendar · date navigation', () => {
   beforeEach(() => {
+    routeParams.current = {};
     calendarState.selectDate.mockReset();
     calendarState.isLoading = false;
     calendarState.selectedDate = '2026-04-17';
@@ -184,6 +190,61 @@ describe('Calendar · date navigation', () => {
       await fri.props.onPress();
     });
     expect(calendarState.selectDate).toHaveBeenCalledWith('2026-04-18');
+    act(() => renderer.unmount());
+  });
+
+  it('uses provider today for the hero caption and jump-to-today action', async () => {
+    calendarState.selectedDate = '2026-04-18';
+    calendarState.today = '2026-04-18';
+    calendarState.week = makeWeek('2026-04-18');
+
+    const renderer = await renderCalendar();
+
+    expect(hasText(renderer, 'Today · open day')).toBe(true);
+
+    const jumpToToday = findByTestID(renderer, 'calendar-jump-today').filter(
+      (node: any) => node.type === Pressable && typeof node.props?.onPress === 'function',
+    );
+    expect(jumpToToday).toHaveLength(1);
+
+    await act(async () => {
+      await jumpToToday[0].props.onPress();
+      await flush();
+    });
+
+    expect(calendarState.selectDate).toHaveBeenCalledWith('2026-04-18');
+
+    act(() => renderer.unmount());
+  });
+
+  it('does not re-apply an unchanged date param after a manual day selection', async () => {
+    routeParams.current = { date: '2026-04-17' };
+    const { default: Calendar } = await import('@/app/(tabs)/calendar');
+    const renderer = await renderCalendar();
+
+    calendarState.selectDate.mockClear();
+    const sat = findByTestID(renderer, 'calendar-day-2026-04-18')[0];
+    await act(async () => {
+      await sat.props.onPress();
+    });
+
+    await act(async () => {
+      calendarState.selectedDate = '2026-04-18';
+      calendarState.week = makeWeek('2026-04-18');
+      renderer.update(<Calendar />);
+      await flush();
+    });
+
+    expect(calendarState.selectDate.mock.calls).toEqual([['2026-04-18']]);
+    act(() => renderer.unmount());
+  });
+
+  it('ignores impossible date params instead of selecting invalid calendar state', async () => {
+    routeParams.current = { date: '2026-99-99' };
+
+    const renderer = await renderCalendar();
+
+    expect(calendarState.selectDate).not.toHaveBeenCalled();
     act(() => renderer.unmount());
   });
 

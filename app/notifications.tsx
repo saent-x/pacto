@@ -17,6 +17,7 @@ import {
   useNotifications,
   type NotificationItem,
 } from '@/src/hooks/useNotifications';
+import { safeNotificationRoute } from '@/src/lib/notification-routes';
 
 export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
@@ -122,8 +123,9 @@ function NotificationRow({
       Haptics.selectionAsync().catch(() => undefined);
       setLocallyRead(true);
     }
-    if (notification.route) {
-      router.push(notification.route as any);
+    const route = safeNotificationRoute(notification.route);
+    if (route) {
+      router.push(route as any);
     }
   };
 

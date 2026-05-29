@@ -1,29 +1,67 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { format } from 'date-fns';
+import { addDays, endOfDay, format, startOfDay, subWeeks } from 'date-fns';
 import { db } from '@/src/lib/instant';
 import type { PresenceInfo } from '@/src/lib/home/types';
 import {
   buildTimelineItems,
   buildMemoryPreviews,
-  buildMilestones,
   selectFeaturedSignal,
 } from '@/src/lib/home/builders';
 import { buildActivityHeatmapDays } from '@/src/lib/home/activity';
 import { getCuratedDailyVerse } from '@/src/lib/home/dailyVerse';
 import { buildTodayRingSummary, type TodayRingSummary } from '@/src/lib/home/todayRings';
 import { useSession } from '@/src/hooks/useSession';
+import { childRowMatchesParentSpace, relationWhere, uniqueSpaceIds } from '@/src/lib/space-scope';
 
 export type TodaySummary = TodayRingSummary;
 
-const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? '';
+const API_BASE = normalizeApiBase(process.env.EXPO_PUBLIC_API_URL);
+const HOME_ACTIVITY_WEEKS = 15;
+const HOME_SOURCE_LIMIT = 250;
+const HOME_RECENT_SOURCE_LIMIT = 100;
 
 function getLocalDateKey(date: Date = new Date()) {
   return format(date, 'yyyy-MM-dd');
 }
 
+function getHomeQueryWindow(previewDays: number, now: Date = new Date()) {
+  const start = startOfDay(subWeeks(now, HOME_ACTIVITY_WEEKS));
+  const end = endOfDay(addDays(now, previewDays));
+  return {
+    startMs: start.getTime(),
+    endMs: end.getTime(),
+    startKey: getLocalDateKey(start),
+    endKey: getLocalDateKey(end),
+  };
+}
+
+function boundedSource(
+  baseWhere: Record<string, unknown>,
+  rangeWhere: Record<string, unknown>,
+  order: Record<string, 'asc' | 'desc'>,
+  limit = HOME_SOURCE_LIMIT,
+) {
+  return {
+    $: {
+      where: { ...baseWhere, ...rangeWhere },
+      order,
+      limit,
+    },
+    couple: {},
+  };
+}
+
 export function useHomeTimeline(options?: { previewDays?: number }) {
-  const { activeCouple, profile, isFeatureEnabled } = useSession();
+  const { activeCouple, profile, isFeatureEnabled, personalSpaceId, sharedSpaceId } = useSession();
   const coupleId = activeCouple?.couple?.id ?? null;
+  const readableSpaceIdsKey = uniqueSpaceIds([
+    personalSpaceId ?? coupleId,
+    sharedSpaceId ?? coupleId,
+  ]).join('|');
+  const readableSpaceIds = useMemo(
+    () => (readableSpaceIdsKey ? readableSpaceIdsKey.split('|') : []),
+    [readableSpaceIdsKey],
+  );
   const previewDays = options?.previewDays ?? 7;
   const todayKey = getLocalDateKey();
   const warmedDateRef = useRef<string | null>(null);
@@ -32,43 +70,102 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
   const recurringEnabled = isFeatureEnabled('recurring');
   const checkinsEnabled = isFeatureEnabled('checkins');
   const tasksEnabled = isFeatureEnabled('tasks');
-  const memoriesEnabled = isFeatureEnabled('memories');
   const memoryFeedEnabled = isFeatureEnabled('memoryFeed');
   const journalEnabled = isFeatureEnabled('journal');
-  const timetableEnabled = isFeatureEnabled('timetable');
-  const wishlistEnabled = isFeatureEnabled('wishlist');
 
   const query = useMemo(() => {
-    if (!coupleId) return null;
-    const spaceWhere = { $: { where: { 'couple.id': coupleId } } };
+    if (readableSpaceIds.length === 0) return null;
+    const coupleWhere = relationWhere('couple', readableSpaceIds);
+    const window = getHomeQueryWindow(previewDays);
+    const recentCoupleSource = {
+      $: { where: coupleWhere, order: { createdAt: 'desc' as const }, limit: HOME_RECENT_SOURCE_LIMIT },
+      couple: {},
+    };
     // The new `memories` entity uses link `space` (not `couple`), so it needs
     // a separate where clause keyed on `space.id`.
-    const memoriesWhere = { $: { where: { 'space.id': coupleId } } };
+    const memoriesWhere = {
+      $: {
+        where: {
+          ...relationWhere('space', readableSpaceIds),
+          createdAt: { $gte: window.startMs, $lte: window.endMs },
+        },
+        order: { createdAt: 'desc' as const },
+        limit: HOME_SOURCE_LIMIT,
+      },
+      space: {},
+    };
     return {
-      ...(calendarEnabled ? { events: spaceWhere } : {}),
-      ...(goalsEnabled ? { plans: spaceWhere } : {}),
-      ...(recurringEnabled ? { rituals: spaceWhere, reminders: spaceWhere } : {}),
-      ...(checkinsEnabled ? { checkIns: spaceWhere } : {}),
-      ...(tasksEnabled ? { tasks: { ...spaceWhere, list: {} } } : {}),
-      ...(memoriesEnabled ? { milestones: spaceWhere, loveNotes: spaceWhere } : {}),
-      ...((memoriesEnabled || memoryFeedEnabled) ? { memories: memoriesWhere } : {}),
-      ...(journalEnabled ? { journalEntries: spaceWhere } : {}),
-      ...(timetableEnabled ? { timetableItems: spaceWhere } : {}),
-      ...(wishlistEnabled ? { wishlistItems: spaceWhere } : {}),
-      dailyVerseCache: { $: { where: { dateKey: todayKey } } },
+      ...(calendarEnabled
+        ? {
+            events: boundedSource(
+              coupleWhere,
+              { startsAt: { $gte: window.startMs, $lte: window.endMs } },
+              { startsAt: 'asc' },
+            ),
+          }
+        : {}),
+      ...(goalsEnabled
+        ? {
+            plans: boundedSource(
+              coupleWhere,
+              { targetDate: { $gte: window.startKey, $lte: window.endKey } },
+              { targetDate: 'asc' },
+            ),
+          }
+        : {}),
+      ...(recurringEnabled
+        ? {
+            rituals: recentCoupleSource,
+            reminders: boundedSource(
+              coupleWhere,
+              { dueAt: { $gte: window.startMs, $lte: window.endMs } },
+              { dueAt: 'asc' },
+            ),
+          }
+        : {}),
+      ...(checkinsEnabled
+        ? {
+            checkIns: boundedSource(
+              coupleWhere,
+              { checkInDate: { $gte: window.startKey, $lte: window.endKey } },
+              { checkInDate: 'desc' },
+            ),
+          }
+        : {}),
+      ...(tasksEnabled
+        ? {
+            tasks: {
+              ...boundedSource(
+                coupleWhere,
+                { dueDate: { $gte: window.startKey, $lte: window.endKey } },
+                { dueDate: 'asc' },
+              ),
+              list: { couple: {} },
+            },
+          }
+        : {}),
+      ...(memoryFeedEnabled ? { memories: memoriesWhere } : {}),
+      ...(journalEnabled
+        ? {
+            journalEntries: boundedSource(
+              coupleWhere,
+              { entryDate: { $gte: window.startKey, $lte: window.endKey } },
+              { entryDate: 'desc' },
+            ),
+          }
+        : {}),
+      dailyVerseCache: { $: { where: { dateKey: todayKey }, limit: 1 } },
     };
   }, [
-    coupleId,
+    readableSpaceIdsKey,
+    previewDays,
     calendarEnabled,
     goalsEnabled,
     recurringEnabled,
     checkinsEnabled,
     tasksEnabled,
-    memoriesEnabled,
     memoryFeedEnabled,
     journalEnabled,
-    timetableEnabled,
-    wishlistEnabled,
     todayKey,
   ]);
 
@@ -77,7 +174,7 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
   ).useQuery(query);
 
   useEffect(() => {
-    if (warmedDateRef.current === todayKey || !activeCouple) return;
+    if (warmedDateRef.current === todayKey || !activeCouple || !API_BASE) return;
     warmedDateRef.current = todayKey;
     (db as any).getAuth().then((auth: any) => {
       const token = auth?.refresh_token ?? null;
@@ -114,33 +211,25 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
 
   const homeView = useMemo(() => {
     const now = Date.now();
-    const events = calendarEnabled ? data?.events ?? [] : [];
-    const plans = goalsEnabled ? data?.plans ?? [] : [];
-    const reminders = recurringEnabled ? data?.reminders ?? [] : [];
-    const rituals = recurringEnabled ? data?.rituals ?? [] : [];
-    const tasks = tasksEnabled ? data?.tasks ?? [] : [];
-    const journalEntries = journalEnabled ? data?.journalEntries ?? [] : [];
-    const loveNotes = memoriesEnabled ? data?.loveNotes ?? [] : [];
-    const checkIns = checkinsEnabled ? data?.checkIns ?? [] : [];
-    const milestones = memoriesEnabled ? data?.milestones ?? [] : [];
-    const wishlistItems = wishlistEnabled ? data?.wishlistItems ?? [] : [];
-    const timetableItems = timetableEnabled ? data?.timetableItems ?? [] : [];
-    const feedMemories = memoriesEnabled || memoryFeedEnabled ? data?.memories ?? [] : [];
+    const events = calendarEnabled ? normalizePersonalSpacePrivacy(data?.events ?? [], personalSpaceId) : [];
+    const plans = goalsEnabled ? normalizePersonalSpacePrivacy(data?.plans ?? [], personalSpaceId) : [];
+    const reminders = recurringEnabled ? normalizePersonalSpacePrivacy(data?.reminders ?? [], personalSpaceId) : [];
+    const rituals = recurringEnabled ? normalizePersonalSpacePrivacy(data?.rituals ?? [], personalSpaceId) : [];
+    const tasks = tasksEnabled
+      ? normalizePersonalSpacePrivacy(data?.tasks ?? [], personalSpaceId).filter((task) =>
+          childRowMatchesParentSpace(task, 'list'),
+        )
+      : [];
+    const journalEntries = journalEnabled ? normalizePersonalSpacePrivacy(data?.journalEntries ?? [], personalSpaceId) : [];
+    const checkIns = checkinsEnabled ? normalizePersonalSpacePrivacy(data?.checkIns ?? [], personalSpaceId) : [];
+    const feedMemories = memoryFeedEnabled
+      ? normalizePersonalSpacePrivacy(data?.memories ?? [], personalSpaceId, 'space')
+      : [];
 
     const memories = buildMemoryPreviews({
       journalEntries,
-      loveNotes,
     });
     const memoryPreview = memories[0] ?? null;
-
-    const milestoneStrip = buildMilestones({
-      now,
-      couple: {
-        id: coupleId ?? '',
-        anniversary: memoriesEnabled ? activeCouple?.couple?.anniversary ?? null : null,
-      },
-      milestones,
-    });
 
     const timeline = buildTimelineItems({
       now,
@@ -150,14 +239,13 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
       reminders,
       tasks,
       rituals,
-      memories: memoryPreview ? [memoryPreview] : [],
+      memories: [],
     });
 
     const hero = selectFeaturedSignal({
       now,
       presence,
-      milestones: milestoneStrip,
-      memoryPreview,
+      memoryPreview: null,
       checkIns,
     });
 
@@ -189,18 +277,13 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
       tasks,
       rituals,
       checkIns,
-      milestones,
       journalEntries,
-      loveNotes,
-      wishlistItems,
-      timetableItems,
       memories: feedMemories,
     });
 
     return {
       hero,
       timeline,
-      milestones: milestoneStrip,
       memories,
       memoryPreview,
       dailyVerse,
@@ -210,8 +293,6 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
   }, [
     data,
     previewDays,
-    coupleId,
-    activeCouple?.couple?.anniversary,
     presence,
     todayKey,
     calendarEnabled,
@@ -219,11 +300,9 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
     recurringEnabled,
     checkinsEnabled,
     tasksEnabled,
-    memoriesEnabled,
     memoryFeedEnabled,
     journalEnabled,
-    timetableEnabled,
-    wishlistEnabled,
+    personalSpaceId,
   ]);
 
   return {
@@ -231,7 +310,6 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
     error: queryError ?? null,
     hero: homeView.hero,
     timeline: homeView.timeline,
-    milestones: homeView.milestones,
     memories: homeView.memories,
     memoryPreview: homeView.memoryPreview,
     presence,
@@ -240,4 +318,37 @@ export function useHomeTimeline(options?: { previewDays?: number }) {
     activity: homeView.activity,
     refetch: async () => {},
   };
+}
+
+function normalizeApiBase(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    return trimmed.replace(/\/+$/, '');
+  } catch {
+    return null;
+  }
+}
+
+function normalizePersonalSpacePrivacy<T extends { isPrivate?: boolean }>(
+  rows: T[],
+  personalSpaceId: string | null | undefined,
+  relationKey: 'couple' | 'space' = 'couple',
+): T[] {
+  if (!personalSpaceId) return rows;
+  return rows.map((row: any) => {
+    const spaceId =
+      firstRel(row[relationKey])?.id ??
+      firstRel(firstRel(row.list)?.couple)?.id ??
+      null;
+    const isPrivate = row.isPrivate === true || spaceId === personalSpaceId;
+    return row.isPrivate === isPrivate ? row : { ...row, isPrivate };
+  });
+}
+
+function firstRel(value: any): any | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
 }

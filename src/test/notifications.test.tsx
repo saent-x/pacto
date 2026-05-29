@@ -271,10 +271,10 @@ describe('notifications screen', () => {
         label: 'Today',
         items: [
           itemFixture({
-            id: 'memory:a',
+            id: 'memory:33333333-3333-4333-8333-333333333339',
             kind: 'memory',
             unread: false,
-            route: '/(tabs)/memories/a',
+            route: '/(tabs)/memories/33333333-3333-4333-8333-333333333339',
           }),
         ],
       },
@@ -284,7 +284,7 @@ describe('notifications screen', () => {
       renderer = TestRenderer.create(<Notifications />);
       await flush();
     });
-    const row = findByTestID(renderer.root, 'notification-row-memory:a');
+    const row = findByTestID(renderer.root, 'notification-row-memory:33333333-3333-4333-8333-333333333339');
     const pressable = row.findAll(
       (n: any) => typeof n.props?.onPress === 'function',
     )[0];
@@ -292,7 +292,93 @@ describe('notifications screen', () => {
       pressable.props.onPress();
       await flush();
     });
-    expect(routerSpy.push).toHaveBeenCalledWith('/(tabs)/memories/a');
+    expect(routerSpy.push).toHaveBeenCalledWith('/(tabs)/memories/33333333-3333-4333-8333-333333333339');
+    act(() => renderer.unmount());
+  });
+
+  it('does not route notification rows with external or unknown destinations', async () => {
+    notifState.buckets = [
+      {
+        label: 'Today',
+        items: [
+          itemFixture({
+            id: 'memory:a',
+            kind: 'memory',
+            unread: false,
+            route: 'https://example.test/phish',
+          }),
+          itemFixture({
+            id: 'memory:b',
+            kind: 'memory',
+            unread: false,
+            route: '/forged',
+          }),
+          itemFixture({
+            id: 'memory:c',
+            kind: 'memory',
+            unread: false,
+            route: '/(tabs)/us/milestones',
+          }),
+          itemFixture({
+            id: 'memory:d',
+            kind: 'memory',
+            unread: false,
+            route: '/(tabs)/not-real',
+          }),
+          itemFixture({
+            id: 'memory:e',
+            kind: 'memory',
+            unread: false,
+            route: '/(tabs)/memories/not-a-uuid',
+          }),
+          itemFixture({
+            id: 'memory:f',
+            kind: 'memory',
+            unread: false,
+            route: '/(tabs)/memories/profile/not-a-uuid',
+          }),
+          itemFixture({
+            id: 'memory:g',
+            kind: 'memory',
+            unread: false,
+            route: '/(tabs)/us/tasks/not-a-uuid?taskId=also-bad',
+          }),
+          itemFixture({
+            id: 'memory:h',
+            kind: 'memory',
+            unread: false,
+            route: '/(tabs)/us/timetables/../plans',
+          }),
+        ],
+      },
+    ];
+    let renderer: any;
+    await act(async () => {
+      renderer = TestRenderer.create(<Notifications />);
+      await flush();
+    });
+
+    for (const id of [
+      'notification-row-memory:a',
+      'notification-row-memory:b',
+      'notification-row-memory:c',
+      'notification-row-memory:d',
+      'notification-row-memory:e',
+      'notification-row-memory:f',
+      'notification-row-memory:g',
+      'notification-row-memory:h',
+    ]) {
+      const row = findByTestID(renderer.root, id);
+      const pressable = row.findAll(
+        (n: any) => typeof n.props?.onPress === 'function',
+      )[0];
+      await act(async () => {
+        pressable.props.onPress();
+        await flush();
+      });
+    }
+
+    expect(routerSpy.push).not.toHaveBeenCalled();
     act(() => renderer.unmount());
   });
 

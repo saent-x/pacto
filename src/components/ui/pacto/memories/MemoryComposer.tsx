@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   Alert,
@@ -12,21 +12,35 @@ import {
   View,
 } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '@/src/components/ui/pacto';
+import { Icon } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
+import { PulsingDot } from '@/src/components/ui/pacto/PulsingDot';
+import { shouldAppendAccentDot } from '@/src/components/ui/titlePunctuation';
 import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
 import { useSession } from '@/src/hooks/useSession';
 import {
   addMemoryDraftAttachment,
+  canSubmitComposerDraft,
+  deleteOwnedDraftMediaPath,
+  removeMemoryDraftAttachmentAt,
+  resolveMemoryDraftAttachmentScopeId,
+  resolveComposerTargetSpace,
+  setMemoryComposerPrivacy,
+  sumDraftMediaBytes,
   useMemoryComposer,
 } from '@/src/hooks/memories/useMemoryComposer';
+import { useMemory } from '@/src/hooks/memories/useMemory';
 import { useMediaUpload } from '@/src/hooks/memories/useMediaUpload';
-import { useMediaQuota } from '@/src/hooks/memories/useMediaQuota';
+import { canAddMediaBytes, useMediaQuota } from '@/src/hooks/memories/useMediaQuota';
 import { MemoriesIcon } from './MemoriesIcon';
 import { QuotaBadge } from './QuotaBadge';
 import { useMediaPicker } from './MediaPickerSheet';
 import { EntityRefCard } from './EntityRefCard';
+import { isEntityRefKind } from '@/src/hooks/memories/useEntityRef';
+import { uniqueSpaceIds } from '@/src/lib/space-scope';
 
 type Visibility = 'pair' | 'crew' | 'private';
 
@@ -44,27 +58,59 @@ type Visibility = 'pair' | 'crew' | 'private';
 export function MemoryComposer() {
   const params = useLocalSearchParams<{
     mode?: string;
+    id?: string;
     parentId?: string;
     quoteId?: string;
     pickedRefId?: string;
     pickedRefType?: string;
   }>();
   const { C } = useTheme();
+  const insets = useSafeAreaInsets();
   const session = useSession() as any;
   const me = session?.user;
   const spaceMode: 'solo' | 'pair' | 'couple' | 'crew' =
     session?.mode ?? session?.space?.kind ?? 'solo';
-  const space = session?.activeCouple?.couple ?? session?.space;
   const isSolo = spaceMode === 'solo';
 
   const { draft, setDraft, submit } = useMemoryComposer();
+  const space = resolveComposerTargetSpace(session, draft);
+  const editId = firstParam(params.id);
+  const isEditing = params.mode === 'edit' && !!editId;
+  const editSpaceIds = useMemo(
+    () =>
+      uniqueSpaceIds([
+        session?.personalSpaceId,
+        session?.sharedSpaceId,
+        session?.soloSpace?.id,
+        session?.sharedSpace?.id,
+        session?.space?.id,
+        session?.activeCouple?.couple?.id,
+      ]),
+    [
+      session?.personalSpaceId,
+      session?.sharedSpaceId,
+      session?.soloSpace?.id,
+      session?.sharedSpace?.id,
+      session?.space?.id,
+      session?.activeCouple?.couple?.id,
+    ],
+  );
+  const { memory: editingMemory } = useMemory(
+    isEditing ? editId : null,
+    editSpaceIds,
+    session?.personalSpaceId ?? null,
+    me?.id ?? null,
+  );
   const { upload } = useMediaUpload();
   const { pick } = useMediaPicker();
-  const quota = useMediaQuota(space?.id);
+  const quota = useMediaQuota(isEditing ? null : space?.id);
+  const pendingMediaBytes = sumDraftMediaBytes(draft.attachments);
   const [submitting, setSubmitting] = useState(false);
+  const pickingMediaRef = useRef(false);
 
   // Sync route params → draft once on mount / param change.
   useEffect(() => {
+    if (params.mode === 'edit') return;
     setDraft((prev: any) => ({
       ...prev,
       mode: (params.mode as any) ?? 'post',
@@ -73,6 +119,39 @@ export function MemoryComposer() {
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.mode, params.parentId, params.quoteId]);
+
+  useEffect(() => {
+    if (!isEditing) return;
+    if (!editingMemory) {
+      if (draft.mode !== 'edit' || draft.editId !== editId) {
+        setDraft({
+          body: '',
+          attachments: [],
+          pollOptions: [],
+          mode: 'edit',
+          editId: editId!,
+          isPrivate: false,
+          notifyMembers: false,
+        });
+      }
+      return;
+    }
+    if (draft.editId === editId && draft.editKind) return;
+    const editKind =
+      editingMemory.kind === 'reply' || editingMemory.kind === 'quote'
+        ? editingMemory.kind
+        : 'post';
+    setDraft({
+      body: editingMemory.body ?? '',
+      attachments: [],
+      pollOptions: [],
+      mode: 'edit',
+      editId: editId!,
+      editKind,
+      isPrivate: !!editingMemory.isPrivate,
+      notifyMembers: false,
+    });
+  }, [draft.editId, editId, editingMemory, isEditing, setDraft]);
 
   // Backward-compatible picked-entity round-trip for older routes/tests. The
   // attach sheet now writes straight into the shared composer draft store.
@@ -104,32 +183,51 @@ export function MemoryComposer() {
   const visibility: Visibility =
     draft.isPrivate ? 'private' : spaceMode === 'crew' ? 'crew' : 'pair';
 
-  const setVisibility = (v: Visibility) => {
+  const setVisibility = async (v: Visibility) => {
     const isPrivate = v === 'private';
-    setDraft({
-      ...draft,
-      isPrivate,
-      // Force notify off when private (mirrors perms rule).
-      notifyMembers: isPrivate ? false : draft.notifyMembers ?? true,
-    });
+    try {
+      const nextSpace = resolveComposerTargetSpace(session, { isPrivate });
+      const result = await setMemoryComposerPrivacy(isPrivate, me?.id, nextSpace?.id);
+      if (result.removedMediaCount > 0) {
+        Alert.alert(
+          'Media removed',
+          'Reattach media after changing visibility so storage stays in the right space.',
+        );
+      } else if (result.removedEntityRefCount > 0) {
+        Alert.alert(
+          'Attachments removed',
+          'Reattach items after changing visibility so private and shared spaces stay separate.',
+        );
+      }
+    } catch (e: any) {
+      Alert.alert('Could not change visibility', e?.message ?? 'Try again.');
+    }
   };
 
   // ── Attachment actions ──────────────────────────────────────────────────
   const onPickImage = async () => {
-    if (!space?.id) return;
-    const asset = await pick();
-    if (!asset) return;
-    if (quota.isAtCap) {
-      router.push('/sheets/upgrade' as any);
-      return;
-    }
+    if (!space?.id || !me?.id) return;
+    if (pickingMediaRef.current) return;
+    pickingMediaRef.current = true;
     try {
+      const asset = await pick();
+      if (!asset) return;
+      if (quota.isAtCap || (asset.isGif && !canAddMediaBytes(quota, pendingMediaBytes + (asset.size ?? 0)))) {
+        router.push('/sheets/upgrade' as any);
+        return;
+      }
       const uploaded = await upload({
         spaceId: space.id,
+        userId: me.id,
         type: asset.isGif ? 'gif' : 'image',
         uri: asset.uri,
         rawSize: asset.size,
       });
+      if (!canAddMediaBytes(quota, pendingMediaBytes + uploaded.mediaSize)) {
+        await deleteOwnedDraftMediaPath(uploaded.mediaPath, me.id);
+        router.push('/sheets/upgrade' as any);
+        return;
+      }
       addMemoryDraftAttachment({
         type: asset.isGif ? 'gif' : 'image',
         mediaUrl: uploaded.mediaUrl,
@@ -140,12 +238,15 @@ export function MemoryComposer() {
       });
     } catch (e: any) {
       Alert.alert('Upload failed', e?.message ?? 'Unknown error');
+    } finally {
+      pickingMediaRef.current = false;
     }
   };
 
   const onAttachEntity = () => router.push('/sheets/memory-attach-entity' as any);
 
-  const showPollOption = spaceMode === 'crew';
+  const showCreationTools = !isEditing;
+  const showPollOption = showCreationTools && spaceMode === 'crew';
   const onTogglePoll = () =>
     setDraft({
       ...draft,
@@ -154,9 +255,13 @@ export function MemoryComposer() {
 
 
   // ── Submit ──────────────────────────────────────────────────────────────
-  const canPost = draft.body.trim().length > 0 || draft.attachments.length > 0;
+  const canPost = canSubmitComposerDraft(draft, space);
   const onPost = async () => {
     if (!canPost || submitting) return;
+    if (!isEditing && !canAddMediaBytes(quota, sumDraftMediaBytes(draft.attachments))) {
+      router.push('/sheets/upgrade' as any);
+      return;
+    }
     setSubmitting(true);
     try {
       await submit();
@@ -176,18 +281,22 @@ export function MemoryComposer() {
 
   const placeholder = isSolo
     ? 'remember something…'
+    : isEditing
+    ? 'update this memory…'
     : params.mode === 'reply'
     ? 'reply…'
     : "what's on your mind?";
 
   const headerTitle =
-    params.mode === 'reply'
+    isEditing
+      ? 'Edit memory'
+      : params.mode === 'reply'
       ? 'Reply'
       : params.mode === 'quote'
       ? 'Quote memory'
       : 'New memory';
 
-  const ctaLabel = params.mode === 'reply' ? 'Reply' : 'Post memory';
+  const ctaLabel = isEditing ? 'Save changes' : params.mode === 'reply' ? 'Reply' : 'Post memory';
 
   return (
     <KeyboardAvoidingView
@@ -195,22 +304,27 @@ export function MemoryComposer() {
       style={[styles.root, { backgroundColor: (C as any).coal ?? C.bg }]}
     >
       {/* Sheet header */}
-      <View style={[styles.header, { borderBottomColor: C.lineColor }]}>
-        <PressScale onPress={() => router.back()} hitSlop={12} style={styles.headerBtn}>
-          <MemoriesIcon
-            name="plus"
-            size={20}
-            color={C.ink3}
-            stroke={1.6}
-            style={{ transform: [{ rotate: '45deg' }] }}
-          />
+      <View style={styles.header}>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.headerTitle, { color: C.inkColor }]}>
+            {headerTitle}
+            {shouldAppendAccentDot(headerTitle) ? <PulsingDot color={C.accent} /> : null}
+          </Text>
+        </View>
+        <PressScale
+          onPress={() => router.back()}
+          hitSlop={8}
+          style={[
+            styles.closeBtn,
+            { backgroundColor: C.bgSoft, borderColor: (C as any).line2 ?? C.lineColor },
+          ]}
+        >
+          <Icon name="x" size={18} color={C.inkColor} />
         </PressScale>
-        <Text style={[styles.headerTitle, { color: C.inkColor }]}>{headerTitle}</Text>
-        <View style={styles.headerBtn} />
       </View>
 
       <ScrollView
-        contentContainerStyle={{ padding: 18, paddingBottom: 32 }}
+        contentContainerStyle={{ padding: 18, paddingBottom: 12 }}
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -233,28 +347,32 @@ export function MemoryComposer() {
             />
 
             {/* Attachments toolbar */}
-            <View style={styles.toolbar}>
-              <PressScale onPress={onPickImage} hitSlop={8} style={styles.toolBtn}>
-                <ImageIcon color={C.ink3} />
-              </PressScale>
-              <PressScale onPress={onAttachEntity} hitSlop={8} style={styles.toolBtn}>
-                <LinkIcon color={C.ink3} />
-              </PressScale>
-              {showPollOption ? (
-                <PressScale
-                  onPress={onTogglePoll}
-                  hitSlop={8}
-                  style={[
-                    styles.toolBtn,
-                    draft.pollOptions.length > 0 && { backgroundColor: C.bgSoft },
-                  ]}
-                >
-                  <PollIcon color={draft.pollOptions.length > 0 ? C.accent : C.ink3} />
+            {showCreationTools ? (
+              <View style={styles.toolbar}>
+                <PressScale onPress={onPickImage} hitSlop={8} style={styles.toolBtn}>
+                  <ImageIcon color={C.ink3} />
                 </PressScale>
-              ) : null}
-            </View>
+                <PressScale onPress={onAttachEntity} hitSlop={8} style={styles.toolBtn}>
+                  <LinkIcon color={C.ink3} />
+                </PressScale>
+                {showPollOption ? (
+                  <PressScale
+                    onPress={onTogglePoll}
+                    hitSlop={8}
+                    style={[
+                      styles.toolBtn,
+                      draft.pollOptions.length > 0 && { backgroundColor: C.bgSoft },
+                    ]}
+                  >
+                    <PollIcon color={draft.pollOptions.length > 0 ? C.accent : C.ink3} />
+                  </PressScale>
+                ) : null}
+              </View>
+            ) : null}
 
-            <QuotaBadge percent={quota.percent} isOverThreshold={quota.isOverThreshold} />
+            {showCreationTools ? (
+              <QuotaBadge percent={quota.percent} isOverThreshold={quota.isOverThreshold} />
+            ) : null}
 
             {/* Media preview list */}
             {draft.attachments.length > 0 ? (
@@ -278,9 +396,13 @@ export function MemoryComposer() {
                         style={StyleSheet.absoluteFill as any}
                         resizeMode="cover"
                       />
-                    ) : a.refId ? (
-                      <View pointerEvents="none" style={styles.entityPreview}>
-                        <EntityRefCard type={a.type as any} refId={a.refId} />
+                    ) : a.refId && isEntityRefKind(a.type) ? (
+                      <View style={[styles.entityPreview, styles.nonInteractive]}>
+                        <EntityRefCard
+                          type={a.type}
+                          refId={a.refId}
+                          spaceId={resolveMemoryDraftAttachmentScopeId(space?.id, a.spaceId)}
+                        />
                       </View>
                     ) : (
                       <Text style={[styles.mediaLabel, { color: C.ink3 }]}>
@@ -289,10 +411,12 @@ export function MemoryComposer() {
                     )}
                     <PressScale
                       hitSlop={8}
-                      onPress={() => {
-                        const next = [...draft.attachments];
-                        next.splice(i, 1);
-                        setDraft({ ...draft, attachments: next });
+                      onPress={async () => {
+                        try {
+                          await removeMemoryDraftAttachmentAt(i, me?.id);
+                        } catch (e: any) {
+                          Alert.alert('Could not remove media', e?.message ?? 'Try again.');
+                        }
                       }}
                       style={[styles.mediaRemove, { backgroundColor: C.bg + 'cc' }]}
                     >
@@ -346,7 +470,7 @@ export function MemoryComposer() {
         </View>
 
         {/* Visibility chips — hidden in solo (private inherent) */}
-        {visibilityOptions.length > 0 ? (
+        {!isEditing && visibilityOptions.length > 0 ? (
           <View style={[styles.chipRow, { borderTopColor: C.lineColor }]}>
             {visibilityOptions.map((opt) => {
               const active = visibility === opt.id;
@@ -383,7 +507,11 @@ export function MemoryComposer() {
       <View
         style={[
           styles.footer,
-          { borderTopColor: C.lineColor, backgroundColor: (C as any).coal ?? C.bg },
+          {
+            borderTopColor: C.lineColor,
+            backgroundColor: (C as any).coal ?? C.bg,
+            paddingBottom: Math.max(18, insets.bottom + 12),
+          },
         ]}
       >
         <PressScale
@@ -411,6 +539,10 @@ export function MemoryComposer() {
       </View>
     </KeyboardAvoidingView>
   );
+}
+
+function firstParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
 }
 
 // ─── Toolbar mini icons (image / link / poll / sparkle) ────────────────
@@ -447,24 +579,27 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    alignItems: 'flex-start',
+    gap: 16,
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 16,
   },
-  headerBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  closeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
   },
   headerTitle: {
-    fontFamily: 'Geist_600SemiBold',
-    fontSize: 15,
-    fontWeight: '600',
+    fontFamily: Typography.pixelFont,
+    fontSize: 28,
+    lineHeight: 32,
+    letterSpacing: 0,
+    textTransform: 'uppercase',
   },
   authorRow: {
     flexDirection: 'row',
@@ -519,13 +654,16 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
   },
   mediaLabel: {
-    fontFamily: 'GeistMono_400Regular',
+    fontFamily: 'GeistMono_500Medium',
     fontSize: 10,
     letterSpacing: 1.4,
   },
   entityPreview: {
     width: '100%',
     paddingHorizontal: 8,
+  },
+  nonInteractive: {
+    pointerEvents: 'none',
   },
   mediaRemove: {
     position: 'absolute',

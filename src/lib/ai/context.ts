@@ -51,14 +51,33 @@ function compareContextRecords(left: AiContextRecord, right: AiContextRecord) {
 }
 
 function getContextTimestamp(record: AiContextRecord) {
-  if (typeof record.updatedAt === 'number') return record.updatedAt;
-  if (typeof record.createdAt === 'number') return record.createdAt;
-  if (typeof record.date === 'number') return record.date;
+  if (typeof record.updatedAt === 'number') return validTimestamp(record.updatedAt);
+  if (typeof record.createdAt === 'number') return validTimestamp(record.createdAt);
+  if (typeof record.date === 'number') return validTimestamp(record.date);
   if (typeof record.date === 'string') {
+    if (!hasValidDatePrefix(record.date)) return 0;
     const parsed = Date.parse(record.date);
-    return Number.isNaN(parsed) ? 0 : parsed;
+    return validTimestamp(parsed);
   }
   return 0;
+}
+
+function validTimestamp(value: number) {
+  return Number.isFinite(value) && Number.isFinite(new Date(value).getTime()) ? value : 0;
+}
+
+function hasValidDatePrefix(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (!match) return true;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
 }
 
 function formatContextRecord(record: AiContextRecord) {

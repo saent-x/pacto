@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     fontFamily: Typography.displayFont,
     fontSize: 32,
     lineHeight: 34,
-    letterSpacing: -0.8,
+    letterSpacing: 0,
   },
   meta: {
     marginTop: 6,

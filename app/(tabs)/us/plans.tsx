@@ -2,7 +2,7 @@ import { router, Stack } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { differenceInCalendarDays, format, parseISO } from 'date-fns';
+import { differenceInCalendarDays, format, isValid, parseISO } from 'date-fns';
 import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import {
   ActionEmptyState,
@@ -11,15 +11,18 @@ import {
   HeaderBrand,
   PulsingDot,
   SegmentedTabs,
-  PriorityDot,
+  PriorityPill,
+  priorityLevelFromNumber,
+  ScopeChip,
   StatBar,
   SwipeableRow,
 } from '@/src/components/ui/pacto';
-import { Icon, type IconName } from '@/src/components/ui/Icon';
+import { Icon } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
 import { usePlans } from '@/src/hooks/usePlans';
 import { useSession } from '@/src/hooks/useSession';
 import { Typography } from '@/src/constants/typography';
+import { TARGET_COLOR_KEYS, colorValueForKey, resolveColorKey } from '@/src/lib/color-cycle';
 import { useTheme } from '@/src/lib/theme';
 
 type PlanStatus = 'active' | 'planning' | 'done' | 'paused';
@@ -33,39 +36,22 @@ type PlanRow = {
   budget: number | null;
   status: PlanStatus;
   priority: number;
-  icon: IconName;
+  color: string;
+  isPrivate: boolean;
   daysUntil: number | null;
 };
 
 type FilterKey = 'all' | 'active' | 'planning' | 'done';
 
-const VALID_ICON_NAMES: ReadonlySet<IconName> = new Set<IconName>([
-  'compass',
-  'mapPin',
-  'flag',
-  'gift',
-  'heart',
-  'star',
-  'home',
-  'coffee',
-  'briefcase',
-  'camera',
-  'music',
-  'book',
-  'feather',
-  'sparkle',
-  'sun',
-  'moon',
-]);
-
-function resolvePlanIcon(value: string | null | undefined): IconName {
-  if (value && VALID_ICON_NAMES.has(value as IconName)) return value as IconName;
-  return 'compass';
-}
-
 function statusOf(raw: string | null | undefined): PlanStatus {
   if (raw === 'planning' || raw === 'done' || raw === 'paused') return raw;
   return 'active';
+}
+
+function parseTargetDate(value: string | null): Date | null {
+  if (!value) return null;
+  const date = parseISO(value);
+  return isValid(date) ? date : null;
 }
 
 export default function PlansScreen() {
@@ -90,15 +76,14 @@ function PlansScreenInner() {
   const rows = useMemo<PlanRow[]>(() => {
     const today = new Date();
     return plans.map((p: any): PlanRow => {
-      const targetDate = (p.targetDate as string | null) ?? null;
+      const rawTargetDate = (p.targetDate as string | null) ?? null;
+      const parsedTargetDate = parseTargetDate(rawTargetDate);
+      const targetDate = parsedTargetDate ? rawTargetDate : null;
       let daysUntil: number | null = null;
-      if (targetDate) {
-        try {
-          daysUntil = differenceInCalendarDays(parseISO(targetDate), today);
-        } catch {
-          daysUntil = null;
-        }
+      if (parsedTargetDate) {
+        daysUntil = differenceInCalendarDays(parsedTargetDate, today);
       }
+      const colorKey = resolveColorKey(p, TARGET_COLOR_KEYS, C);
       return {
         id: String(p.id),
         title: String(p.title ?? ''),
@@ -108,11 +93,16 @@ function PlansScreenInner() {
         budget: typeof p.budget === 'number' ? p.budget : null,
         status: statusOf(p.status),
         priority: Number(p.priority ?? 0),
-        icon: resolvePlanIcon(p.icon),
+        color: colorKey
+          ? colorValueForKey(C, colorKey)
+          : typeof p.color === 'string' && p.color.trim()
+            ? p.color
+            : C.accent2,
+        isPrivate: p.isPrivate === true,
         daysUntil,
       };
     });
-  }, [plans]);
+  }, [plans, C]);
 
   const stats = useMemo(() => {
     const active = rows.filter((r) => r.status === 'active').length;
@@ -188,10 +178,7 @@ function PlansScreenInner() {
     { key: 'done', label: 'Done' },
   ];
 
-  const priorityLevel = (p: number): 'none' | 'low' | 'med' | 'high' =>
-    p >= 3 ? 'high' : p === 2 ? 'med' : p === 1 ? 'low' : 'none';
-
-  const heroEyebrow = stats.featured?.daysUntil != null
+const heroEyebrow = stats.featured?.daysUntil != null
     ? stats.featured.daysUntil === 0
       ? 'NEXT · TODAY'
       : stats.featured.daysUntil === 1
@@ -335,118 +322,125 @@ function PlansScreenInner() {
           ) : (
             <BucketedList
               buckets={buckets}
+              presentation="items"
+              swipeableRows
               rowKey={(p) => p.id}
-              renderRow={(p) => (
-                <SwipeableRow
-                  deleteTitle="Delete target?"
-                  deleteMessage={`"${p.title}" will be removed.`}
-                  onEdit={() =>
-                    router.push(`/sheets/new-plan?id=${p.id}` as any)
-                  }
-                  onDelete={() => remove(p.id)}
-                >
-                  <View
-                    style={[
-                      styles.row,
-                      p.status === 'done' ? { opacity: 0.7 } : null,
-                    ]}
+              renderRow={(p) => {
+                const hasTextBeforeCategory = Boolean(
+                  p.description ||
+                    p.targetDate ||
+                    (p.daysUntil != null && p.status !== 'done'),
+                );
+
+                return (
+                  <SwipeableRow
+                    deleteTitle="Delete target?"
+                    deleteMessage={`"${p.title}" will be removed.`}
+                    onEdit={() =>
+                      router.push(`/sheets/new-plan?id=${p.id}` as any)
+                    }
+                    onDelete={() => remove(p.id)}
                   >
-                    <View style={[styles.iconTile, { backgroundColor: C.accent2Soft }]}>
-                      <Icon
-                        name={p.icon}
-                        size={16}
-                        color={C.accent2}
-                        strokeWidth={2.2}
+                    <View
+                      style={[
+                        styles.row,
+                        p.status === 'done' ? { opacity: 0.7 } : null,
+                      ]}
+                    >
+                      <View
+                        testID={`target-status-dot-${p.id}`}
+                        style={[
+                          styles.statusDot,
+                          {
+                            backgroundColor:
+                              p.status === 'active'
+                                ? C.accent
+                                : p.status === 'planning'
+                                ? C.accent2
+                                : C.ink3,
+                          },
+                        ]}
                       />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <View style={styles.headRow}>
-                        <Text
-                          style={[
-                            Typography.bodyMedium,
-                            {
-                              color: p.status === 'done' ? C.ink3 : C.inkColor,
-                              flex: 1,
-                              textDecorationLine:
-                                p.status === 'done' ? 'line-through' : 'none',
-                            },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {p.title}
-                        </Text>
-                        {p.status !== 'done' ? (
-                          <View
+                      <View style={{ flex: 1 }}>
+                        <View style={styles.headRow}>
+                          <Text
                             style={[
-                              styles.statusMark,
+                              Typography.bodyMedium,
                               {
-                                backgroundColor:
-                                  p.status === 'active'
-                                    ? C.accent
-                                    : p.status === 'planning'
-                                    ? C.accent2
-                                    : C.ink3,
-                                borderColor:
-                                  p.status === 'active'
-                                    ? C.accent
-                                    : p.status === 'planning'
-                                    ? C.accent2
-                                    : C.lineColor,
+                                color: p.status === 'done' ? C.ink3 : C.inkColor,
+                                flex: 1,
+                                textDecorationLine:
+                                  p.status === 'done' ? 'line-through' : 'none',
                               },
                             ]}
-                            accessibilityLabel={`${p.status} target`}
+                            numberOfLines={1}
+                          >
+                            {p.title}
+                          </Text>
+                        </View>
+                        <View style={styles.metaRow}>
+                          {p.description ? (
+                            <Text
+                              style={[
+                                Typography.caption,
+                                { color: C.ink2, flexShrink: 1 },
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {p.description}
+                            </Text>
+                          ) : null}
+                          {p.targetDate ? (
+                            <Text
+                              style={[Typography.mono, { color: C.ink3, fontSize: 11 }]}
+                            >
+                              {format(parseISO(p.targetDate), 'MMM d, yyyy')}
+                            </Text>
+                          ) : null}
+                          {p.daysUntil != null && p.status !== 'done' ? (
+                            <Text
+                              style={[
+                                Typography.eyebrowSm,
+                                {
+                                  color: p.daysUntil < 0 ? C.error : C.accent,
+                                  fontSize: 9.5,
+                                },
+                              ]}
+                            >
+                              {p.daysUntil < 0
+                                ? `${Math.abs(p.daysUntil)}D OVERDUE`
+                                : p.daysUntil === 0
+                                ? 'TODAY'
+                                : `IN ${p.daysUntil}D`}
+                            </Text>
+                          ) : null}
+                          <PriorityPill level={priorityLevelFromNumber(p.priority)} />
+                          <ScopeChip
+                            scope={p.isPrivate ? 'mine' : 'shared'}
+                            mode={mode}
                           />
-                        ) : null}
-                        <PriorityDot level={priorityLevel(p.priority)} />
-                      </View>
-                      {p.description ? (
-                        <Text
-                          style={[Typography.caption, { color: C.ink2, marginTop: 2 }]}
-                          numberOfLines={2}
-                        >
-                          {p.description}
-                        </Text>
-                      ) : null}
-                      <View style={styles.metaRow}>
-                        {p.targetDate ? (
-                          <Text
-                            style={[Typography.mono, { color: C.ink3, fontSize: 11 }]}
-                          >
-                            {format(parseISO(p.targetDate), 'MMM d, yyyy')}
-                          </Text>
-                        ) : null}
-                        {p.daysUntil != null && p.status !== 'done' ? (
-                          <Text
-                            style={[
-                              Typography.eyebrowSm,
-                              {
-                                color: p.daysUntil < 0 ? C.error : C.accent,
-                                fontSize: 9.5,
-                              },
-                            ]}
-                          >
-                            {p.daysUntil < 0
-                              ? `${Math.abs(p.daysUntil)}D OVERDUE`
-                              : p.daysUntil === 0
-                              ? 'TODAY'
-                              : `IN ${p.daysUntil}D`}
-                          </Text>
-                        ) : null}
-                        {p.category ? (
-                          <Text
-                            style={[
-                              Typography.eyebrowSm,
-                              { color: C.ink3, fontSize: 9.5 },
-                            ]}
-                          >
-                            · {p.category.toUpperCase()}
-                          </Text>
-                        ) : null}
+                          {p.category ? (
+                            <Text
+                              style={[
+                                Typography.eyebrowSm,
+                                {
+                                  color: C.ink3,
+                                  fontSize: 9.5,
+                                  lineHeight: 18,
+                                  textAlignVertical: 'center',
+                                },
+                              ]}
+                            >
+                              {hasTextBeforeCategory ? '· ' : ''}
+                              {p.category.toUpperCase()}
+                            </Text>
+                          ) : null}
+                        </View>
                       </View>
                     </View>
-                  </View>
-                </SwipeableRow>
-              )}
+                  </SwipeableRow>
+                );
+              }}
             />
           )}
         </View>
@@ -465,11 +459,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 4,
   },
-  statusMark: {
-    width: 13,
-    height: 13,
-    borderRadius: 999,
-    borderWidth: 3,
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginTop: 7,
   },
   filterRow: {
     paddingHorizontal: 18,
@@ -491,6 +485,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 8,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },

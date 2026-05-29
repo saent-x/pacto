@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   text_gold: {
-    color: '#3A1F14',
+    color: '#212437',
     fontFamily: Typography.displayBoldFont,
     fontWeight: '700',
     letterSpacing: 0.3,

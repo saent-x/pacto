@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useMemo, useReducer } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useReducer, useRef } from 'react';
 import { applyMutationPlan, buildActionDraft, parseAiToolCall } from './tools';
 import {
   confirmAiActionDrafts,
@@ -9,7 +9,15 @@ import { AI_MODEL_PACKS } from './modelRegistry';
 import { getAiModelStorageStatus } from './modelManager';
 import { createLlamaRnPlanningAdapter, createWhisperRnAdapter } from './runtime';
 import { createInitialAiTurn, reduceAiTurn } from './state';
-import type { AiActionDraft, AiDomain, AiToolCall, AiTurn } from './types';
+import type {
+  AiActionDraft,
+  AiDomain,
+  AiTargetOwnerMap,
+  AiTargetSpaceMap,
+  AiToolCall,
+  AiTurn,
+} from './types';
+import { getLocalAiDateKey } from './date';
 import { db, id } from '@/src/lib/instant';
 
 type AiAssistantContextValue = {
@@ -40,12 +48,19 @@ export function AiAssistantProvider({
   allowedDomains?: readonly AiDomain[];
   mutationContext?: {
     coupleId: string | null;
+    personalSpaceId?: string | null;
+    sharedSpaceId?: string | null;
+    assignableUserIds?: string[];
+    relationSpaceById?: Record<string, string | null | undefined>;
+    targetSpaceById?: AiTargetSpaceMap;
+    targetOwnerById?: AiTargetOwnerMap;
     userId: string | null;
   };
 }) {
   const [turn, dispatch] = useReducer(reduceAiTurn, undefined, () =>
     createInitialAiTurn(`turn-${Date.now()}`),
   );
+  const confirmingRef = useRef(false);
 
   const startVoiceTurn = useCallback(() => {
     dispatch({ type: 'reset' });
@@ -138,6 +153,7 @@ export function AiAssistantProvider({
 
   const confirmPendingActions = useCallback(() => {
     if (turn.pendingActions.length === 0) return;
+    if (confirmingRef.current) return;
     const coupleId = mutationContext?.coupleId;
     const userId = mutationContext?.userId;
     if (!coupleId || !userId) {
@@ -145,9 +161,16 @@ export function AiAssistantProvider({
       return;
     }
 
+    confirmingRef.current = true;
     dispatch({ type: 'applyConfirmedActions' });
     confirmAiActionDrafts(turn.pendingActions, {
       coupleId,
+      personalSpaceId: mutationContext?.personalSpaceId ?? null,
+      sharedSpaceId: mutationContext?.sharedSpaceId ?? null,
+      assignableUserIds: mutationContext?.assignableUserIds,
+      relationSpaceById: mutationContext?.relationSpaceById,
+      targetSpaceById: mutationContext?.targetSpaceById,
+      targetOwnerById: mutationContext?.targetOwnerById,
       userId,
       now: Date.now(),
       idFactory: id,
@@ -161,8 +184,21 @@ export function AiAssistantProvider({
           type: 'error',
           message: error instanceof Error ? error.message : 'Pacto AI could not apply those actions.',
         });
+      })
+      .finally(() => {
+        confirmingRef.current = false;
       });
-  }, [mutationContext?.coupleId, mutationContext?.userId, turn.pendingActions]);
+  }, [
+    mutationContext?.coupleId,
+    mutationContext?.personalSpaceId,
+    mutationContext?.assignableUserIds,
+    mutationContext?.relationSpaceById,
+    mutationContext?.sharedSpaceId,
+    mutationContext?.targetOwnerById,
+    mutationContext?.targetSpaceById,
+    mutationContext?.userId,
+    turn.pendingActions,
+  ]);
 
   const cancelPendingActions = useCallback(() => {
     dispatch({ type: 'complete', body: 'Cancelled.' });
@@ -221,7 +257,7 @@ async function createDefaultLocalAdapters() {
 
 function buildDefaultContextPrompt() {
   return [
-    `today: ${new Date().toISOString().slice(0, 10)}`,
+    `today: ${getLocalAiDateKey()}`,
     `timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC'}`,
     'records: use read tools for app data; do not assume unavailable records.',
   ].join('\n');

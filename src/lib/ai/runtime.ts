@@ -67,8 +67,20 @@ export async function createLlamaRnPlanningAdapter(modelUri: string): Promise<Ai
         n_predict: 512,
         temperature: 0.2,
       });
-      const parsed = JSON.parse(result.text) as { toolCalls: AiToolCall[] };
-      return parsed.toolCalls.map(parseAiToolCall);
+      // SEC-8: The model's raw text is untrusted. Wrap JSON.parse so malformed
+      // output throws a clear, catchable error instead of a bare SyntaxError.
+      // The parsed tool calls are NOT trusted past this point: every call is
+      // re-validated by `parseAiToolCall` (which allowlists `domain`/`operation`
+      // via a Zod enum), then `buildMutationPlan` re-checks the target's space
+      // ownership against server-derived context maps before any dispatch.
+      let parsed: { toolCalls?: unknown };
+      try {
+        parsed = JSON.parse(result.text) as { toolCalls?: unknown };
+      } catch {
+        throw new Error('Pacto AI returned malformed planner output.');
+      }
+      const toolCalls = Array.isArray(parsed?.toolCalls) ? parsed.toolCalls : [];
+      return toolCalls.map(parseAiToolCall);
     },
     dispose: () => context.release?.(),
   };

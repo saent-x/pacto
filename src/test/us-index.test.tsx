@@ -10,6 +10,15 @@ const routerSpy = vi.hoisted(() => ({
   push: vi.fn(),
 }));
 
+const dataHookSpies = vi.hoisted(() => ({
+  useTasks: vi.fn(() => ({ allTasks: [], taskFeed: [] })),
+  useReminders: vi.fn(() => ({ reminders: [] })),
+  useCheckIns: vi.fn(() => ({ checkIns: [] })),
+  usePlans: vi.fn(() => ({ plans: [] })),
+  useJournal: vi.fn(() => ({ entries: [] })),
+  useTimetables: vi.fn(() => ({ timetables: [] })),
+}));
+
 vi.mock('expo-router', () => ({
   router: routerSpy,
 }));
@@ -33,6 +42,13 @@ vi.mock('@/src/components/ui/pacto', () => {
   return {
     Card: ({ children }: any) => Reactx.createElement('Card', null, children),
     CardHalo: ({ children }: any) => Reactx.createElement('CardHalo', null, children),
+    PixelHero: ({ eyebrow, title }: any) =>
+      Reactx.createElement(
+        'PixelHero',
+        null,
+        Reactx.createElement('Text', null, String(eyebrow ?? '')),
+        Reactx.createElement('Text', null, String(title ?? '')),
+      ),
     ColorTile: ({ title, stat }: any) =>
       Reactx.createElement(
         'ColorTile',
@@ -69,7 +85,7 @@ const sessionState = vi.hoisted(() => ({
   user: { id: 'me', email: 'me@example.com', displayName: 'Mattia', avatarUrl: null },
   profile: null,
   activeCouple: {
-    couple: { id: 'space-1', name: null, anniversary: null, enabledFeatures: [] },
+    couple: { id: 'space-1', name: null, enabledFeatures: [] },
     memberCount: 2,
     partner: null,
   },
@@ -91,39 +107,27 @@ vi.mock('@/src/hooks/useSession', () => ({
 }));
 
 vi.mock('@/src/hooks/useTasks', () => ({
-  useTasks: () => ({ allTasks: [], taskFeed: [] }),
+  useTasks: dataHookSpies.useTasks,
 }));
 
 vi.mock('@/src/hooks/useReminders', () => ({
-  useReminders: () => ({ reminders: [] }),
-}));
-
-vi.mock('@/src/hooks/useLoveNotes', () => ({
-  useLoveNotes: () => ({ notes: [] }),
+  useReminders: dataHookSpies.useReminders,
 }));
 
 vi.mock('@/src/hooks/useCheckIns', () => ({
-  useCheckIns: () => ({ checkIns: [] }),
-}));
-
-vi.mock('@/src/hooks/useWishlists', () => ({
-  useWishlists: () => ({ wishlists: [] }),
-}));
-
-vi.mock('@/src/hooks/useMilestones', () => ({
-  useMilestones: () => ({ milestones: [] }),
+  useCheckIns: dataHookSpies.useCheckIns,
 }));
 
 vi.mock('@/src/hooks/usePlans', () => ({
-  usePlans: () => ({ plans: [] }),
+  usePlans: dataHookSpies.usePlans,
 }));
 
 vi.mock('@/src/hooks/useJournal', () => ({
-  useJournal: () => ({ entries: [] }),
+  useJournal: dataHookSpies.useJournal,
 }));
 
 vi.mock('@/src/hooks/useTimetables', () => ({
-  useTimetables: () => ({ timetables: [] }),
+  useTimetables: dataHookSpies.useTimetables,
 }));
 
 import UsIndex from '@/app/(tabs)/us/index';
@@ -155,7 +159,10 @@ describe('UsIndex feature gates', () => {
     sessionState.isPair = true;
     sessionState.isCrew = false;
     sessionState.isCouple = true;
-    sessionState.enabledFeatures = ['memories', 'goals'];
+    sessionState.enabledFeatures = ['goals'];
+    for (const spy of Object.values(dataHookSpies)) {
+      spy.mockClear();
+    }
   });
 
   afterEach(() => {
@@ -166,9 +173,9 @@ describe('UsIndex feature gates', () => {
     const renderer = await render();
     const text = readText(renderer.root);
 
-    expect(text).toContain('Memories');
     expect(text).toContain('Targets');
     expect(text).not.toContain('Expenses');
+    expect(text).not.toContain('Memories');
     expect(text).not.toContain('Wishlist');
     expect(text).not.toContain('Journal');
     expect(text).not.toContain('Check-ins');
@@ -178,18 +185,32 @@ describe('UsIndex feature gates', () => {
   });
 
   it('uses feature registry names for enabled modules', async () => {
-    sessionState.enabledFeatures = ['wishlist', 'goals', 'timetable'];
+    sessionState.enabledFeatures = ['goals', 'timetable'];
 
     const renderer = await render();
     const text = readText(renderer.root);
 
-    expect(text).toContain('Wishlist');
     expect(text).toContain('Targets');
     expect(text).toContain('Timetable');
+    expect(text).not.toContain('Wishlist');
+    expect(text).not.toContain('Memories');
     expect(text).not.toContain('Expenses');
     expect(text).not.toContain('Plans');
     expect(text).not.toContain('Timetables');
     expect(text).not.toContain('rhythms');
+
+    act(() => renderer.unmount());
+  });
+
+  it('does not enable data hooks for disabled modules', async () => {
+    const renderer = await render();
+
+    expect(dataHookSpies.useTasks).toHaveBeenCalledWith({ enabled: false });
+    expect(dataHookSpies.useReminders).toHaveBeenCalledWith({ enabled: false });
+    expect(dataHookSpies.useCheckIns).toHaveBeenCalledWith({ enabled: false });
+    expect(dataHookSpies.usePlans).toHaveBeenCalledWith(undefined, { enabled: true });
+    expect(dataHookSpies.useJournal).toHaveBeenCalledWith({ enabled: false });
+    expect(dataHookSpies.useTimetables).toHaveBeenCalledWith({ enabled: false });
 
     act(() => renderer.unmount());
   });

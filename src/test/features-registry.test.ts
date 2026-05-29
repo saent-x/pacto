@@ -25,19 +25,17 @@ describe('memoryFeed feature', () => {
     expect(isFeatureSupportedForMode('memoryFeed', 'crew')).toBe(true);
   });
 
-  it('is OFF by default in every mode (gated rollout)', () => {
+  it('is ON by default in every supported mode', () => {
     const feature = getFeature('memoryFeed');
-    expect(feature?.defaultForSolo).toBe(false);
-    expect(feature?.defaultForPair).toBe(false);
-    expect(feature?.defaultForCrew).toBe(false);
+    expect(feature?.defaultForSolo).toBe(true);
+    expect(feature?.defaultForPair).toBe(true);
+    expect(feature?.defaultForCrew).toBe(true);
   });
 
-  it('does not collide with the existing memories feature id', () => {
-    expect(getFeature('memories')).toBeDefined();
+  it('is the only memory-related feature id', () => {
     expect(getFeature('memoryFeed')).toBeDefined();
     expect(getAllFeatures().filter(f => f.id === 'memoryFeed')).toHaveLength(1);
-    expect(getFeature('memories')?.id).not.toBe(getFeature('memoryFeed')?.id);
-    expect(getFeature('memories')?.label).not.toBe(getFeature('memoryFeed')?.label);
+    expect(getFeature('memories')).toBeUndefined();
   });
 });
 
@@ -45,8 +43,6 @@ describe('feature registry', () => {
   const expectedOrder = [
     'tasks',
     'calendar',
-    'wishlist',
-    'memories',
     'memoryFeed',
     'journal',
     'checkins',
@@ -68,21 +64,30 @@ describe('feature registry', () => {
   });
 
   it('returns mode defaults in registry order', () => {
-    expect(getDefaultFeatureIds('solo')).toEqual(['tasks', 'calendar', 'journal', 'goals']);
-    expect(getDefaultFeatureIds('pair')).toEqual([
+    expect(getDefaultFeatureIds('solo')).toEqual([
       'tasks',
       'calendar',
-      'wishlist',
-      'memories',
+      'memoryFeed',
       'journal',
       'checkins',
       'recurring',
+      'timetable',
+      'goals',
+    ]);
+    expect(getDefaultFeatureIds('pair')).toEqual([
+      'tasks',
+      'calendar',
+      'memoryFeed',
+      'journal',
+      'checkins',
+      'recurring',
+      'timetable',
+      'goals',
     ]);
     expect(getDefaultFeatureIds('crew')).toEqual([
       'tasks',
       'calendar',
-      'wishlist',
-      'memories',
+      'memoryFeed',
       'recurring',
       'timetable',
       'goals',
@@ -93,8 +98,6 @@ describe('feature registry', () => {
     expect(getSupportedFeatures('crew').map((feature) => feature.id)).toEqual([
       'tasks',
       'calendar',
-      'wishlist',
-      'memories',
       'memoryFeed',
       'recurring',
       'timetable',
@@ -147,8 +150,6 @@ describe('feature registry', () => {
     expect(getSupportedFeatures('pair').map((feature) => feature.id)).toEqual([
       'tasks',
       'calendar',
-      'wishlist',
-      'memories',
       'memoryFeed',
       'journal',
       'checkins',

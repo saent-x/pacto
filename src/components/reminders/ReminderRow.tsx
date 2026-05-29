@@ -8,6 +8,7 @@ import Animated, {
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
+  type SharedValue,
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
@@ -15,6 +16,14 @@ import ReanimatedSwipeable, {
   type SwipeableMethods,
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { Icon } from '@/src/components/ui/Icon';
+import {
+  SWIPE_ACTION_GAP,
+  SWIPE_ACTION_WIDTH,
+  SWIPE_ANIMATION_OPTIONS,
+  SWIPE_ROW_RADIUS,
+  SwipeActionButton,
+  SwipeActionRail,
+} from '@/src/components/ui/pacto/SwipeableRow';
 import { useTheme } from '@/src/lib/theme';
 import type { Reminder } from '@/src/types/database';
 import { formatWhenChip, isOverdue } from './buckets';
@@ -71,59 +80,64 @@ export function ReminderRow({
     reminder.priority >= 3 ? C.error : reminder.priority === 2 ? C.butter : C.ash;
   const when = formatWhenChip(reminder.due_at);
 
-  const renderLeftActions = () => (
-    <View
-      testID={`${rootTestID}-complete-action`}
-      style={{
-        width: 96,
-        backgroundColor: C.mint,
-        borderRadius: 18,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 8,
-      }}
-    >
-      <Icon name="check" size={20} color={C.mintInk} strokeWidth={3} />
-    </View>
+  const completeReminder = () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+    onToggle();
+    swipeRef.current?.close();
+  };
+
+  const renderLeftActions = (progress: SharedValue<number>) => (
+    <SwipeActionRail side="left">
+      <SwipeActionButton
+        testID={`${rootTestID}-complete-action`}
+        progress={progress}
+        side="left"
+        icon="check"
+        color={C.mint}
+        iconColor={C.mintInk}
+        accessibilityLabel={done ? 'Mark reminder open' : 'Complete reminder'}
+        onPress={completeReminder}
+      />
+    </SwipeActionRail>
   );
 
-  const renderRightActions = () => (
-    <View style={{ flexDirection: 'row', marginLeft: 8, gap: 6 }}>
-      <Pressable
-        testID={`${rootTestID}-snooze-action`}
-        onPress={() => {
-          Haptics.selectionAsync().catch(() => undefined);
-          onSnooze();
-          swipeRef.current?.close();
-        }}
-        style={{
-          width: 64,
-          backgroundColor: C.sky,
-          borderRadius: 18,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Icon name="clock" size={18} color={C.skyInk} strokeWidth={3} />
-      </Pressable>
-      <Pressable
-        testID={`${rootTestID}-delete-action`}
-        onPress={() => {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined);
-          onDelete();
-          swipeRef.current?.close();
-        }}
-        style={{
-          width: 64,
-          backgroundColor: C.error,
-          borderRadius: 18,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Icon name="trash" size={18} color="#fff" />
-      </Pressable>
-    </View>
+  const renderRightActions = (progress: SharedValue<number>) => (
+    <SwipeActionRail
+      side="right"
+      width={SWIPE_ACTION_WIDTH * 2 + SWIPE_ACTION_GAP}
+      style={{ paddingRight: 8 }}
+    >
+      <View style={{ flexDirection: 'row', gap: SWIPE_ACTION_GAP }}>
+        <SwipeActionButton
+          testID={`${rootTestID}-snooze-action`}
+          progress={progress}
+          side="right"
+          icon="clock"
+          color={C.sky}
+          iconColor={C.skyInk}
+          accessibilityLabel="Snooze reminder"
+          onPress={() => {
+            Haptics.selectionAsync().catch(() => undefined);
+            onSnooze();
+            swipeRef.current?.close();
+          }}
+        />
+        <SwipeActionButton
+          testID={`${rootTestID}-delete-action`}
+          progress={progress}
+          side="right"
+          icon="trash"
+          color={C.error}
+          iconColor={C.bgCard}
+          accessibilityLabel="Delete reminder"
+          onPress={() => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined);
+            onDelete();
+            swipeRef.current?.close();
+          }}
+        />
+      </View>
+    </SwipeActionRail>
   );
 
   return (
@@ -131,21 +145,36 @@ export function ReminderRow({
       testID={rootTestID}
       entering={ZoomIn.duration(180)}
       layout={LinearTransition.springify().damping(18).stiffness(180)}
+      style={{
+        borderRadius: SWIPE_ROW_RADIUS,
+        backgroundColor: 'transparent',
+        overflow: 'visible',
+      }}
     >
       <ReanimatedSwipeable
         ref={swipeRef}
-        friction={2}
-        overshootLeft={false}
-        overshootRight={false}
-        leftThreshold={64}
-        rightThreshold={80}
+        friction={1.18}
+        overshootFriction={8}
+        overshootLeft
+        overshootRight
+        leftThreshold={SWIPE_ACTION_WIDTH * 0.56}
+        rightThreshold={(SWIPE_ACTION_WIDTH * 2 + SWIPE_ACTION_GAP) * 0.5}
+        animationOptions={SWIPE_ANIMATION_OPTIONS}
+        containerStyle={{
+          borderRadius: SWIPE_ROW_RADIUS,
+          backgroundColor: 'transparent',
+          overflow: 'visible',
+        }}
+        childrenContainerStyle={{
+          borderRadius: SWIPE_ROW_RADIUS,
+          backgroundColor: 'transparent',
+          overflow: 'hidden',
+        }}
         renderLeftActions={renderLeftActions}
         renderRightActions={renderRightActions}
         onSwipeableOpen={(direction) => {
           if (direction === 'left') {
-            swipeRef.current?.close();
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-            onToggle();
+            completeReminder();
           }
         }}
       >
@@ -156,10 +185,11 @@ export function ReminderRow({
             gap: 14,
             paddingVertical: 14,
             paddingHorizontal: 16,
-            borderRadius: 18,
+            borderRadius: SWIPE_ROW_RADIUS,
             backgroundColor: C.card,
             borderWidth: 1,
             borderColor: C.line,
+            overflow: 'hidden',
           }}
         >
           <Animated.View style={checkStyle}>
@@ -180,7 +210,7 @@ export function ReminderRow({
                 justifyContent: 'center',
               }}
             >
-              {done ? <Icon name="check" size={14} color="#fff" strokeWidth={3} /> : null}
+              {done ? <Icon name="check" size={14} color={C.bgCard} strokeWidth={3} /> : null}
             </Pressable>
           </Animated.View>
           <View style={{ flex: 1 }}>

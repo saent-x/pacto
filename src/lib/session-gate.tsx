@@ -23,7 +23,6 @@ export function SessionGate({ children }: PropsWithChildren) {
     if (status === 'onboarding') {
       const allowed = group === '(auth)' && (
         leaf === 'onboarding'
-        || leaf === 'onboarding-features'
         || leaf === 'invite'
         || leaf === 'invite-code'
       );
@@ -33,8 +32,8 @@ export function SessionGate({ children }: PropsWithChildren) {
 
     if (status === 'ready' && group === '(auth)') {
       // Allow ready users to revisit invite-code (e.g. after upgrading solo→couple
-      // or regenerating from profile).
-      if (leaf === 'invite-code') return;
+      // or regenerating from profile) and invite entry from profile.
+      if (leaf === 'invite' || leaf === 'invite-code') return;
       router.replace('/(tabs)/home' as any);
       return;
     }

@@ -11,6 +11,7 @@ import {
 } from 'date-fns';
 import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import { AnimatedTripleRing } from '@/src/components/ui/atoms';
+import { ActionEmptyState } from '@/src/components/ui/pacto';
 import { SheetShell } from '@/src/components/ui/SheetShell';
 import { alphaColor } from '@/src/lib/color';
 import { useTheme } from '@/src/lib/theme';
@@ -153,7 +154,7 @@ export default function RingsHistory() {
 }
 
 function RingsHistoryContent() {
-  const { C, F } = useTheme();
+  const { C } = useTheme();
   const { activeCouple } = useSession();
   const { byDateKey, error } = useRingsHistory();
 
@@ -164,19 +165,15 @@ function RingsHistoryContent() {
   if (!activeCouple) {
     return (
       <SheetShell eyebrow="RINGS · HISTORY" title="Day by day.">
-        <View style={{ padding: 24, alignItems: 'center' }}>
-          <Text
+        <View style={{ padding: 18 }}>
+          <ActionEmptyState
             testID="rings-empty"
-            style={{
-              fontFamily: F.body,
-              fontSize: 14,
-              color: C.ink2,
-              textAlign: 'center',
-              lineHeight: 20,
-            }}
-          >
-            Connect a space to start tracking your rings.
-          </Text>
+            icon="activity"
+            eyebrow="Open history"
+            title="No space yet"
+            body="Connect a space to start tracking your rings."
+            accent={C.accent2}
+          />
         </View>
       </SheetShell>
     );

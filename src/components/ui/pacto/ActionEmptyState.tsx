@@ -7,41 +7,53 @@ import { useTheme } from '@/src/lib/theme';
 
 type Props = {
   icon: IconName;
+  eyebrow?: string;
   title: string;
   body?: string;
   actionLabel?: string;
   onAction?: () => void;
+  actionIcon?: IconName;
   accent?: string;
   children?: ReactNode;
   style?: StyleProp<ViewStyle>;
+  testID?: string;
 };
 
 export function ActionEmptyState({
   icon,
+  eyebrow = 'Open space',
   title,
   body,
   actionLabel,
   onAction,
+  actionIcon = 'plus',
   accent,
   children,
   style,
+  testID,
 }: Props) {
   const { C } = useTheme();
   const active = accent ?? C.accent;
+
   return (
-    <View style={[styles.wrap, { borderColor: C.lineColor, backgroundColor: C.bgCard }, style]}>
-      <View style={[styles.icon, { backgroundColor: C.bgSoft, borderColor: C.lineColor }]}>
-        <Icon name={icon} size={20} color={active} />
+    <View
+      testID={testID}
+      style={[styles.wrap, { borderColor: C.lineColor, backgroundColor: C.bgCard }, style]}
+    >
+      <View style={styles.header}>
+        <Icon name={icon} size={20} color={active} strokeWidth={2.1} />
+        <Text style={[Typography.eyebrowSm, { color: C.ink3 }]}>{eyebrow}</Text>
       </View>
-      <Text style={[Typography.subheading, { color: C.inkColor, textAlign: 'center' }]}>
+
+      <Text style={[Typography.pixelHeroSm, styles.title, { color: C.inkColor }]}>
         {title}
       </Text>
       {body ? (
-        <Text style={[Typography.caption, { color: C.ink2, textAlign: 'center', maxWidth: 280 }]}>
+        <Text style={[Typography.body, styles.body, { color: C.ink2 }]}>
           {body}
         </Text>
       ) : null}
-      {children}
+      {children ? <View style={styles.children}>{children}</View> : null}
       {actionLabel && onAction ? (
         <PressScale
           onPress={onAction}
@@ -49,7 +61,7 @@ export function ActionEmptyState({
           accessibilityRole="button"
           accessibilityLabel={actionLabel}
         >
-          <Icon name="plus" size={14} color={C.bg} />
+          <Icon name={actionIcon} size={14} color={C.bg} strokeWidth={2.4} />
           <Text style={[Typography.buttonLabel, { color: C.bg }]}>{actionLabel}</Text>
         </PressScale>
       ) : null}
@@ -60,30 +72,34 @@ export function ActionEmptyState({
 const styles = StyleSheet.create({
   wrap: {
     borderWidth: 1,
-    borderRadius: 20,
-    paddingTop: 28,
-    paddingBottom: 28,
+    borderRadius: 24,
     paddingHorizontal: 18,
-    alignItems: 'center',
+    paddingVertical: 18,
     gap: 10,
-    overflow: 'hidden',
   },
-  icon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    borderWidth: 1,
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 9,
+  },
+  title: {
+    marginTop: 4,
+  },
+  body: {
+    maxWidth: 310,
+  },
+  children: {
+    marginTop: 4,
   },
   action: {
-    minHeight: 40,
+    minHeight: 44,
+    alignSelf: 'flex-start',
     marginTop: 4,
     borderRadius: 999,
-    paddingHorizontal: 15,
+    paddingHorizontal: 17,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 7,
+    gap: 8,
   },
 });

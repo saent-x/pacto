@@ -1,30 +1,35 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { format, parseISO } from 'date-fns';
 import { Card } from '@/src/components/ui/pacto';
 import { Icon, IconName } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
 import { SheetShell } from '@/src/components/ui/SheetShell';
 import { Typography } from '@/src/constants/typography';
-import {
-  getSupportedFeatures,
-  sanitizeFeatureIds,
-} from '@/src/lib/features/registry';
+import { deleteAccountFromServer } from '@/src/lib/account';
 import { useTheme } from '@/src/lib/theme';
-import { type SpaceMode, useSession } from '@/src/lib/session';
+import { useSession } from '@/src/lib/session';
 import { db } from '@/src/lib/db';
 import {
+  createSharedPactInvite,
   leaveSpace,
   regenerateInviteCode,
 } from '@/src/lib/space-actions';
+import { unregisterPushTokenForUser } from '@/src/lib/notifications';
 
 export default function ProfileSheet() {
   const { C, mode: themeMode, setMode } = useTheme();
   const navRouter = useRouter();
   const session = useSession();
-  const featureMode = normalizeProfileMode(session.space?.kind ?? session.mode);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [inviteBusy, setInviteBusy] = useState(false);
+  const inviteBusyRef = useRef(false);
+  const deleteBusyRef = useRef(false);
+  const leaveBusyRef = useRef(false);
 
   useEffect(() => {
     if (session.status === 'unauthed') {
@@ -46,25 +51,37 @@ export default function ProfileSheet() {
   const isSolo = spaceMode === 'solo';
   const isCrew = spaceMode === 'crew';
   const isPair = spaceMode === 'pair';
-  const supportedFeatures =
-    session.status === 'ready' && session.space
-      ? getSupportedFeatures(featureMode)
-      : [];
-  const enabledFeatureCount = sanitizeFeatureIds(session.enabledFeatures, featureMode).length;
-
-  const anniversary = session.space?.anniversary
-    ? parseISO(session.space.anniversary)
-    : null;
-  const anniversaryLabel = anniversary
-    ? format(anniversary, 'MMM d, yyyy')
-    : 'Add date →';
 
   const inviteCode = session.space?.inviteCode ?? null;
+  const memberCount = session.space?.memberCount ?? 1 + (session.members?.length ?? 0);
+  const hasOtherMembers = memberCount > 1;
+  const canDeleteAccount = deleteConfirmText.trim().toUpperCase() === 'IRREVERSIBLE';
 
   async function onGenerateCode() {
-    if (!session.space) return;
-    const code = inviteCode ?? (await regenerateInviteCode({ spaceId: session.space.id }));
-    navRouter.push({ pathname: '/(auth)/invite-code', params: { code } } as any);
+    if (inviteBusyRef.current || !session.space || !session.user) return;
+    inviteBusyRef.current = true;
+    setInviteBusy(true);
+    try {
+      const shouldPromotePairInvite = isPair && hasOtherMembers;
+      let code: string;
+      if (isSolo) {
+        code = await createSharedPactInvite({ userId: session.user.id, mode: 'pair' });
+      } else if (!shouldPromotePairInvite && inviteCode) {
+        code = inviteCode;
+      } else {
+        code = await regenerateInviteCode({
+          spaceId: session.space.id,
+          userId: session.user.id,
+          promoteToCrew: shouldPromotePairInvite,
+        });
+      }
+      navRouter.push({ pathname: '/(auth)/invite-code', params: { code } } as any);
+    } catch {
+      Alert.alert('Invite failed', 'Try again.');
+    } finally {
+      inviteBusyRef.current = false;
+      setInviteBusy(false);
+    }
   }
 
   function onSignOut() {
@@ -74,6 +91,13 @@ export default function ProfileSheet() {
         text: 'Sign out',
         style: 'destructive',
         onPress: async () => {
+          if (session.user?.id) {
+            try {
+              await unregisterPushTokenForUser(session.user.id);
+            } catch (error) {
+              console.warn('[profile] push-token unregister failed during sign-out', error);
+            }
+          }
           await db.auth.signOut();
         },
       },
@@ -82,24 +106,71 @@ export default function ProfileSheet() {
 
   function onLeave() {
     if (!session.space || !session.membership) return;
-    const isLast = !session.partner;
+    const remainingMemberCount = Math.max(memberCount - 1, 0);
+    const isLast = remainingMemberCount === 0;
     const msg = isLast
-      ? 'This deletes your solo pact and everything in it. Cannot be undone.'
-      : 'You will no longer see shared content. The other member keeps the pact.';
+      ? 'You will leave this pact. Your private entries stay in your solo base.'
+      : 'You will no longer see shared content. Your private entries stay in your solo base.';
     Alert.alert('Leave this pact?', msg, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Leave',
         style: 'destructive',
         onPress: async () => {
-          await leaveSpace({
-            spaceId: session.space!.id,
-            membershipId: session.membership!.id,
-            isLastMember: isLast,
-          });
+          if (leaveBusyRef.current) return;
+          leaveBusyRef.current = true;
+          try {
+            await leaveSpace({
+              userId: session.user!.id,
+              spaceId: session.space!.id,
+              membershipId: session.membership!.id,
+              isLastMember: isLast,
+              remainingMemberCount,
+              personalSpaceId: session.personalSpaceId,
+            });
+          } catch {
+            Alert.alert('Leave failed', 'Try again.');
+          } finally {
+            leaveBusyRef.current = false;
+          }
         },
       },
     ]);
+  }
+
+  function openDeleteAccount() {
+    setDeleteConfirmText('');
+    setDeleteError(null);
+    setDeleteModalOpen(true);
+  }
+
+  async function onDeleteAccount() {
+    if (!canDeleteAccount || !session.user) return;
+    if (deleteBusyRef.current) return;
+    deleteBusyRef.current = true;
+    setDeleteBusy(true);
+    setDeleteError(null);
+    try {
+      const memberCount = session.space?.memberCount;
+      await deleteAccountFromServer({
+        membershipId: session.membership?.id ?? null,
+        spaceId: session.space?.id ?? null,
+        isLastMember:
+          typeof memberCount === 'number' ? memberCount <= 1 : undefined,
+        personalMembershipId: session.soloMembership?.id ?? null,
+        personalSpaceId: session.personalSpaceId ?? null,
+        sharedMembershipId: session.sharedMembership?.id ?? null,
+        sharedSpaceId: session.sharedSpaceId ?? null,
+        sharedIsLastMember:
+          typeof memberCount === 'number' && !isSolo ? memberCount <= 1 : undefined,
+      });
+      await db.auth.signOut();
+    } catch (error) {
+      setDeleteError('Could not delete the account. Please try again.');
+    } finally {
+      deleteBusyRef.current = false;
+      setDeleteBusy(false);
+    }
   }
 
   type SettingRow =
@@ -110,6 +181,7 @@ export default function ProfileSheet() {
         icon: IconName;
         muted?: boolean;
         accent?: boolean;
+        disabled?: boolean;
         testID?: string;
         onPress?: () => void;
       };
@@ -127,19 +199,12 @@ export default function ProfileSheet() {
       ? ([
           {
             kind: 'value',
-            label: 'Anniversary',
-            value: anniversaryLabel,
-            icon: 'heart',
-            testID: 'profile-row-anniversary',
-          },
-          {
-            kind: 'value',
-            label: 'Invite code',
-            value: session.partner ? '— paired —' : inviteCode ?? 'Generate →',
+            label: 'Invite a member',
+            value: inviteBusy ? 'Generating...' : inviteCode ?? 'Generate →',
             icon: 'sparkle',
-            muted: !!session.partner,
-            accent: !session.partner,
-            onPress: !session.partner ? onGenerateCode : undefined,
+            accent: true,
+            disabled: inviteBusy,
+            onPress: onGenerateCode,
             testID: 'profile-row-code',
           },
         ] as SettingRow[])
@@ -147,25 +212,22 @@ export default function ProfileSheet() {
           {
             kind: 'value',
             label: 'Invite a member',
-            value: 'Generate code →',
+            value: inviteBusy ? 'Generating...' : 'Generate code →',
             icon: 'users',
             accent: true,
+            disabled: inviteBusy,
             onPress: onGenerateCode,
             testID: 'profile-row-invite',
           },
-        ] as SettingRow[])),
-    ...(supportedFeatures.length > 0
-      ? ([
           {
             kind: 'value',
-            label: 'Features',
-            value: `${enabledFeatureCount}/${supportedFeatures.length} on →`,
-            icon: 'grid',
-            onPress: () => navRouter.push('/sheets/profile-features' as any),
-            testID: 'profile-row-features',
+            label: 'Join a pact',
+            value: 'Enter code →',
+            icon: 'link',
+            onPress: () => navRouter.push('/(auth)/invite' as any),
+            testID: 'profile-row-join',
           },
-        ] as SettingRow[])
-      : []),
+        ] as SettingRow[])),
   ];
 
   return (
@@ -176,7 +238,7 @@ export default function ProfileSheet() {
           <PressScale
             key={r.label}
             onPress={r.onPress}
-            disabled={!r.onPress}
+            disabled={!r.onPress || r.disabled}
             testID={r.testID}
             style={[
               styles.row,
@@ -263,6 +325,17 @@ export default function ProfileSheet() {
             {isSolo ? 'Sign out' : 'Leave pact'}
           </Text>
         </PressScale>
+        <PressScale
+          testID="profile-delete-account"
+          onPress={openDeleteAccount}
+          haptic="warning"
+          style={[styles.dangerRow, { borderTopWidth: 1, borderTopColor: `${C.error}22` }]}
+        >
+          <Icon name="trash" size={17} color={C.error} />
+          <Text style={[Typography.bodyMedium, { flex: 1, color: C.error }]}>
+            Delete account
+          </Text>
+        </PressScale>
       </Card>
 
       {!isSolo ? (
@@ -275,6 +348,89 @@ export default function ProfileSheet() {
           <Text style={[Typography.captionMedium, { color: C.ink3 }]}>Sign out</Text>
         </PressScale>
       ) : null}
+
+      <Modal
+        visible={deleteModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!deleteBusy) setDeleteModalOpen(false);
+        }}
+      >
+        <View style={styles.modalBackdrop}>
+          <View
+            testID="profile-delete-account-modal"
+            style={[
+              styles.deleteModal,
+              { backgroundColor: C.bgCard, borderColor: `${C.error}66` },
+            ]}
+          >
+            <View style={[styles.deleteIcon, { backgroundColor: `${C.error}18` }]}>
+              <Icon name="trash" size={22} color={C.error} />
+            </View>
+            <Text style={[Typography.subheading, { color: C.inkColor, textAlign: 'center' }]}>
+              Delete account?
+            </Text>
+            <Text style={[Typography.body, { color: C.ink2, textAlign: 'center', marginTop: 10 }]}>
+              This is irreversible. Your solo pact and linked items will be deleted.
+              In shared pacts, your membership and personal rows are removed.
+            </Text>
+            <Text style={[Typography.eyebrowSm, { color: C.ink3, marginTop: 20, alignSelf: 'flex-start' }]}>
+              Type IRREVERSIBLE
+            </Text>
+            <TextInput
+              testID="profile-delete-account-input"
+              value={deleteConfirmText}
+              onChangeText={setDeleteConfirmText}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              editable={!deleteBusy}
+              placeholder="IRREVERSIBLE"
+              placeholderTextColor={C.ink3}
+              style={[
+                styles.deleteInput,
+                {
+                  borderColor: canDeleteAccount ? C.error : C.lineColor,
+                  color: C.inkColor,
+                  backgroundColor: C.bg,
+                },
+              ]}
+            />
+            {deleteError ? (
+              <Text style={[Typography.caption, { color: C.error, marginTop: 10 }]}>
+                {deleteError}
+              </Text>
+            ) : null}
+            <View style={styles.deleteActions}>
+              <PressScale
+                testID="profile-delete-account-cancel"
+                onPress={() => setDeleteModalOpen(false)}
+                disabled={deleteBusy}
+                style={[styles.deleteSecondary, { borderColor: C.lineColor }]}
+              >
+                <Text style={[Typography.captionMedium, { color: C.ink2 }]}>Cancel</Text>
+              </PressScale>
+              <PressScale
+                testID="profile-delete-account-confirm"
+                onPress={onDeleteAccount}
+                disabled={!canDeleteAccount || deleteBusy}
+                haptic="warning"
+                style={[
+                  styles.deletePrimary,
+                  {
+                    backgroundColor: C.error,
+                    opacity: !canDeleteAccount || deleteBusy ? 0.45 : 1,
+                  },
+                ]}
+              >
+                <Text style={[Typography.captionMedium, { color: C.bg }]}>
+                  {deleteBusy ? 'Deleting...' : 'Delete'}
+                </Text>
+              </PressScale>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SheetShell>
   );
 }
@@ -320,8 +476,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 13,
   },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: 'rgba(20, 24, 39, 0.52)',
+  },
+  deleteModal: {
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 22,
+    alignItems: 'center',
+  },
+  deleteIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  deleteInput: {
+    width: '100%',
+    borderWidth: 1.5,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 10,
+    fontFamily: Typography.geistMonoMediumFont,
+    fontSize: 14,
+  },
+  deleteActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 18,
+    width: '100%',
+  },
+  deleteSecondary: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 14,
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  deletePrimary: {
+    flex: 1,
+    borderRadius: 14,
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
 });
-
-function normalizeProfileMode(mode: SpaceMode | 'couple'): SpaceMode {
-  return mode === 'couple' ? 'pair' : mode;
-}

@@ -34,6 +34,19 @@ vi.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 
+vi.mock('react-native', async () => {
+  const actual: any = await vi.importActual('react-native');
+  return {
+    ...actual,
+    useWindowDimensions: () => ({
+      width: 397,
+      height: 962,
+      scale: 2,
+      fontScale: 1,
+    }),
+  };
+});
+
 vi.mock('expo-constants', () => ({ default: { statusBarHeight: 44 } }));
 
 vi.mock('expo-haptics', () => ({
@@ -91,6 +104,8 @@ vi.mock('@/src/components/ui/pacto', () => {
           ),
         ),
       ),
+    SwipeableRow: (props: any) =>
+      Reactx.createElement('MockSwipeableRow', props, props.children),
     HeaderBrand: ({ eyebrow, title }: any) =>
       Reactx.createElement('HeaderBrand', null, `${eyebrow} ${title}`),
     SegmentedTabs: ({ options, onChange }: any) =>
@@ -188,6 +203,12 @@ describe('Timetable detail rendering', () => {
     vi.setSystemTime(new Date('2026-04-28T12:00:00Z'));
     routerPush.mockClear();
     timetableState.remove.mockClear();
+    timetableState.timetable = {
+      id: 'tt-1',
+      title: 'Our meals this week',
+      template: 'meals',
+      share: 'shared',
+    };
     timetableState.items = [
       item('mon-breakfast', 1, 7, 1, 'Oat porridge'),
       item('tue-lunch', 2, 12.5, 1, 'Caprese sandwich'),
@@ -240,38 +261,53 @@ describe('Timetable detail rendering', () => {
     act(() => renderer.unmount());
   });
 
-  it('keeps the timeline grid constrained to an internal scroll viewport', async () => {
+  it('hides timetable controls and add actions when the timetable is missing', async () => {
+    timetableState.timetable = null as any;
+    timetableState.items = [];
     const renderer = await renderTimetable();
 
-    await act(async () => {
-      pressablesWithText(renderer, 'timeline')[0].props.onPress();
-      await flush();
-    });
+    expect(nodeText(renderer.root)).toContain('Timetable not found');
+    expect(pressablesWithText(renderer, 'grid')).toHaveLength(0);
+    expect(pressablesWithText(renderer, 'list')).toHaveLength(0);
 
-    expect(findByTestID(renderer, 'timetable-timeline-panel')).toHaveLength(1);
-    const panelStyles = findByTestID(renderer, 'timetable-timeline-panel')[0].props.style.flat();
-    expect(panelStyles).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ paddingHorizontal: 8, borderRadius: 0, overflow: 'hidden' }),
-      ]),
+    const addRouteTriggers = renderer.root.findAll(
+      (node: any) =>
+        node.type === 'PressScale' &&
+        typeof node.props?.onPress === 'function' &&
+        node.findAll((child: any) => child.props?.name === 'plus').length > 0,
     );
-
-    const viewportStyles = findByTestID(renderer, 'timetable-timeline-viewport')[0].props.style.flat();
-    expect(viewportStyles).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ borderRadius: 14, overflow: 'hidden' }),
-      ]),
-    );
-
-    const scrollStyles = findByTestID(renderer, 'timetable-timeline-scroll')[0].props.style.flat();
-    expect(scrollStyles).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ height: expect.any(Number) }),
-      ]),
-    );
-    expect(findByTestID(renderer, 'timetable-timeline-block-tue-lunch')).toHaveLength(1);
-    expect(findByTestID(renderer, 'timetable-timeline-block-tue-dinner')).toHaveLength(1);
+    expect(addRouteTriggers).toHaveLength(0);
 
     act(() => renderer.unmount());
   });
+
+  it('adds edit and delete swipe actions to timetable detail items', async () => {
+    const renderer = await renderTimetable();
+
+    const rows = renderer.root.findAll((node: any) => node.type === 'MockSwipeableRow');
+    expect(rows.length).toBeGreaterThan(0);
+
+    const lunchRow = rows.find((row: any) => nodeText(row).includes('Caprese sandwich'));
+    expect(lunchRow?.props.onEdit).toEqual(expect.any(Function));
+    expect(lunchRow?.props.onDelete).toEqual(expect.any(Function));
+
+    await act(async () => {
+      lunchRow.props.onEdit();
+      await flush();
+    });
+    expect(routerPush).toHaveBeenCalledWith(
+      '/sheets/new-timetable-item?timetableId=tt-1&id=tue-lunch',
+    );
+
+    let deleteResult: Promise<void> | undefined;
+    await act(async () => {
+      deleteResult = lunchRow.props.onDelete();
+      await deleteResult;
+      await flush();
+    });
+    expect(deleteResult).toEqual(expect.any(Promise));
+    expect(timetableState.remove).toHaveBeenCalledWith('tue-lunch');
+    act(() => renderer.unmount());
+  });
+
 });

@@ -1,2 +1,2 @@
 export { db } from './db';
-export { id } from '@instantdb/react-native';
+export { id, lookup } from '@instantdb/react-native';

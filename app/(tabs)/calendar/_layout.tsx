@@ -2,7 +2,6 @@ import { router, Stack } from 'expo-router';
 import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import { HeaderBrand } from '@/src/components/ui/pacto';
 import { Icon } from '@/src/components/ui/Icon';
-import { NavAddBtn } from '@/src/components/ui/NavAddBtn';
 import { PressScale } from '@/src/components/ui/PressScale';
 import { CalendarProvider, useCalendar } from '@/src/lib/calendar/context';
 import { useTheme } from '@/src/lib/theme';
@@ -41,7 +40,6 @@ function CalendarStack() {
               <Icon name="bell" size={22} color={C.inkColor} strokeWidth={2.2} />
             </PressScale>
           ),
-          headerRight: () => <NavAddBtn href="/sheets/new-reminder" />,
         }}
       />
     </Stack>

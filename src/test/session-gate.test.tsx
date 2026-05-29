@@ -82,4 +82,14 @@ describe('SessionGate', () => {
 
     act(() => renderer.unmount());
   });
+
+  it('allows ready users to enter an invite code from profile', async () => {
+    sessionState.status = 'ready';
+    routeState.segments = ['(auth)', 'invite'];
+    const renderer = await renderGate();
+
+    expect(routerSpy.replace).not.toHaveBeenCalled();
+
+    act(() => renderer.unmount());
+  });
 });

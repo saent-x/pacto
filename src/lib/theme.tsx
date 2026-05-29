@@ -44,9 +44,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Track system changes only until the user picks a mode.
   useEffect(() => {
     if (!hydrated) return;
-    AsyncStorage.getItem(STORAGE_KEY).then((stored) => {
-      if (!stored && isThemeMode(sys)) setModeState(sys);
-    });
+    let cancelled = false;
+    AsyncStorage.getItem(STORAGE_KEY)
+      .then((stored) => {
+        if (cancelled) return;
+        if (!stored && isThemeMode(sys)) setModeState(sys);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
   }, [sys, hydrated]);
 
   const setMode = (m: ThemeMode) => {

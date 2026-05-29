@@ -50,7 +50,7 @@ vi.mock('react-native-reanimated', () => {
 });
 
 const sessionState = vi.hoisted(() => ({
-  activeCouple: { couple: { id: 's1', name: null, anniversary: null }, memberCount: 2, partner: null } as any,
+  activeCouple: { couple: { id: 's1', name: null }, memberCount: 2, partner: null } as any,
   user: { id: 'u1', email: 'x@y.z', displayName: 'X', avatarUrl: null },
   space: { id: 's1' } as any,
   partner: null,
@@ -93,7 +93,7 @@ describe('rings-history sheet', () => {
       now: new Date('2026-04-23T12:00:00Z'),
       toFake: ['Date'],
     });
-    sessionState.activeCouple = { couple: { id: 's1', name: null, anniversary: null }, memberCount: 2, partner: null };
+    sessionState.activeCouple = { couple: { id: 's1', name: null }, memberCount: 2, partner: null };
     sessionState.isFeatureEnabled.mockImplementation((featureId: string) => featureId !== 'disabled-feature');
     sessionState.isFeatureEnabled.mockClear();
     ringsHistorySpy.mockClear();

@@ -64,7 +64,7 @@ export const sheet = StyleSheet.create({
     fontFamily: Typography.sansSemiBold,
     fontSize: 24,
     lineHeight: 30,
-    letterSpacing: -0.3,
+    letterSpacing: 0,
     padding: 0,
   },
 
@@ -118,7 +118,7 @@ export const sheet = StyleSheet.create({
     ...Typography.captionMedium,
   },
 
-  /** Inline text field wrapped in a glass rectangle (URL, price). */
+  /** Inline text field wrapped in a glass rectangle. */
   inputCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -176,7 +176,7 @@ export const sheet = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
 
-  /** Chip with icon + text (milestones). */
+  /** Chip with icon + text. */
   chipWithIcon: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -218,7 +218,7 @@ export const sheet = StyleSheet.create({
     flex: 1,
   },
 
-  /** Smaller inline currency symbol (wishlist price). */
+  /** Smaller inline currency symbol. */
   currencySymbol: {
     fontFamily: Typography.sansMedium,
     fontSize: 18,

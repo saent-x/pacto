@@ -12,9 +12,17 @@ export interface PickedAsset {
 
 export function useMediaPicker() {
   const pick = useCallback(async (): Promise<PickedAsset | null> => {
+    let permission: Awaited<ReturnType<typeof ImagePicker.requestMediaLibraryPermissionsAsync>>;
+    try {
+      permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    } catch (e) {
+      console.warn('[media-picker] media permission request failed', e);
+      return null;
+    }
+    if (!permission.granted) return null;
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
+      quality: 0.8,
       exif: false,
     });
     if (result.canceled || !result.assets?.[0]) return null;

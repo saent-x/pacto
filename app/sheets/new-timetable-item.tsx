@@ -1,10 +1,9 @@
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 import { FeatureUnavailable } from '@/src/components/features/FeatureUnavailable';
 import { Pill, PrimaryButton } from '@/src/components/ui/atoms';
-import { IconName } from '@/src/components/ui/Icon';
 import { PressScale } from '@/src/components/ui/PressScale';
 import {
   SheetDurationField,
@@ -23,18 +22,17 @@ import { useFeatureGate } from '@/src/hooks/useFeatureGate';
 import { useSession } from '@/src/hooks/useSession';
 import { useTimetable } from '@/src/hooks/useTimetables';
 import { useTheme } from '@/src/lib/theme';
-import { pastels } from '@/src/lib/tokens';
-import { DAYS_LETTER, type Who, normalizeWho } from '@/src/lib/timetables-data';
+import {
+  DAYS_LETTER,
+  itemOptionForTemplate,
+  itemOptionsForTemplate,
+  normalizeTemplateKey,
+  tmplByKey,
+  type Who,
+  normalizeWho,
+} from '@/src/lib/timetables-data';
 
-type Cat = 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack';
 type Repeat = 'weekly' | 'once';
-
-const CATS: { k: Cat; color: string; ink: string; icon: IconName }[] = [
-  { k: 'Breakfast', color: pastels.peach, ink: pastels.peachInk, icon: 'coffee' },
-  { k: 'Lunch', color: pastels.mint, ink: pastels.mintInk, icon: 'feather' },
-  { k: 'Dinner', color: pastels.butter, ink: pastels.butterInk, icon: 'coffee' },
-  { k: 'Snack', color: pastels.rose, ink: pastels.roseInk, icon: 'gift' },
-];
 
 function dateFromHour(startHour: number): Date {
   const d = new Date();
@@ -48,19 +46,34 @@ function hourFromDate(d: Date): number {
   return d.getHours() + d.getMinutes() / 60;
 }
 
-function categoryFor(raw: string | undefined): Cat {
-  if (raw === 'breakfast') return 'Breakfast';
-  if (raw === 'lunch') return 'Lunch';
-  if (raw === 'snack') return 'Snack';
-  return 'Dinner';
-}
-
 function whoFor(raw: string | undefined): Who {
   return normalizeWho(raw);
 }
 
 function repeatFor(raw: string | undefined): Repeat {
   return raw === 'once' ? 'once' : 'weekly';
+}
+
+function durationMinutesFromItem(value: unknown): number {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return 90;
+  // useTimetable() exposes normalized item duration in hours for rendering.
+  // The sheet writes minutes, so convert normalized edit values back.
+  return n <= 24 ? Math.round(n * 60) : Math.round(n);
+}
+
+function normalizeDayIndex(value: unknown, fallback = 0): number {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return ((Math.trunc(n) % 7) + 7) % 7;
+}
+
+function storageDayToUiDay(value: unknown): number {
+  return (normalizeDayIndex(value, 0) + 6) % 7;
+}
+
+function uiDayToStorageDay(value: unknown): number {
+  return (normalizeDayIndex(value, 0) + 1) % 7;
 }
 
 // solo-mode: who-for hidden — defaults to me
@@ -79,25 +92,29 @@ function NewTimetableItemInner() {
       : null;
   const editId = typeof params.id === 'string' && params.id.length > 0 ? params.id : null;
   const isEdit = Boolean(editId);
-  const { add, update, items } = useTimetable(timetableId);
+  const { add, update, items, timetable, isLoading } = useTimetable(timetableId);
   const { isSolo, partner } = useSession();
   const partnerName = partner?.displayName ?? 'Partner';
   const existingRaw = useMemo(
     () => (isEdit && editId ? (items as any[]).find((i) => i.id === editId) : undefined),
     [isEdit, editId, items],
   );
+  const templateKey = normalizeTemplateKey(timetable?.template, timetable?.title);
+  const templateMeta = tmplByKey(templateKey);
+  const itemOptions = useMemo(() => itemOptionsForTemplate(templateKey), [templateKey]);
 
   const [title, setTitle] = useState(existingRaw?.title ?? '');
-  const [cat, setCat] = useState<Cat>(
-    existingRaw ? categoryFor((existingRaw as any).cat) : 'Dinner',
+  const [itemKind, setItemKind] = useState<string>(
+    existingRaw
+      ? itemOptionForTemplate(templateKey, (existingRaw as any).cat).key
+      : 'none',
   );
   const [time, setTime] = useState<Date>(() =>
     dateFromHour(existingRaw ? Number((existingRaw as any).start ?? 19) : 19),
   );
-  const [timeOpen, setTimeOpen] = useState(false);
-  const [dur, setDur] = useState(existingRaw ? Number((existingRaw as any).dur ?? 90) : 90);
+  const [dur, setDur] = useState(() => durationMinutesFromItem((existingRaw as any)?.dur));
   const [days, setDays] = useState<number[]>(
-    existingRaw ? [Number((existingRaw as any).day ?? 2)] : [2],
+    existingRaw ? [storageDayToUiDay((existingRaw as any).day)] : [2],
   );
   const [who, setWho] = useState<Who>(
     existingRaw ? whoFor((existingRaw as any).who) : isSolo ? 'me' : 'both',
@@ -106,14 +123,24 @@ function NewTimetableItemInner() {
     existingRaw ? repeatFor((existingRaw as any).repeat) : 'weekly',
   );
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
-  const active = CATS.find((c) => c.k === cat) ?? CATS[0];
+  const effectiveItemKind = itemOptions.some((o) => o.key === itemKind)
+    ? itemKind
+    : itemOptions[0].key;
+  const active = itemOptions.find((o) => o.key === effectiveItemKind) ?? itemOptions[0] ?? templateMeta;
   const toggleDay = (i: number) =>
     setDays((d) => (d.includes(i) ? d.filter((x) => x !== i) : [...d, i].sort()));
 
-  const catOptions: IconLabelOption<Cat>[] = useMemo(
-    () => CATS.map((c) => ({ key: c.k, icon: c.icon, label: c.k, color: c.color })),
-    [],
+  const typeOptions: IconLabelOption<string>[] = useMemo(
+    () =>
+      itemOptions.map((o) => ({
+        key: o.key,
+        icon: o.icon,
+        label: o.label,
+        color: o.color,
+      })),
+    [itemOptions],
   );
   const whoOptions: SegmentOption<Who>[] = [
     { key: 'me', label: 'Me' },
@@ -125,16 +152,34 @@ function NewTimetableItemInner() {
     { key: 'once', label: 'Once' },
   ];
 
+  useEffect(() => {
+    if (!isEdit || !existingRaw) return;
+    setTitle(String((existingRaw as any).title ?? ''));
+    setItemKind(itemOptionForTemplate(templateKey, (existingRaw as any).cat).key);
+    setTime(dateFromHour(Number((existingRaw as any).start ?? 19)));
+    setDur(durationMinutesFromItem((existingRaw as any).dur));
+    setDays([storageDayToUiDay((existingRaw as any).day)]);
+    setWho(whoFor((existingRaw as any).who));
+    setRepeat(repeatFor((existingRaw as any).repeat));
+  }, [existingRaw, isEdit, templateKey]);
+
   const canSave =
-    title.trim().length > 0 && !!timetableId && days.length > 0 && dur > 0 && !saving;
+    title.trim().length > 0 &&
+    !!timetableId &&
+    !!timetable &&
+    (!isEdit || !!existingRaw) &&
+    days.length > 0 &&
+    dur > 0 &&
+    !saving;
 
   const onSave = async () => {
-    if (!canSave) return;
+    if (!canSave || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       const base = {
         title: title.trim(),
-        category: cat.toLowerCase(),
+        category: effectiveItemKind,
         icon: active.icon,
         color: active.color,
         ink: active.ink,
@@ -144,10 +189,10 @@ function NewTimetableItemInner() {
         duration: dur,
       };
       if (isEdit && editId) {
-        await update(editId, { ...base, day: days[0] });
+        await update(editId, { ...base, day: uiDayToStorageDay(days[0]) });
       } else {
         for (const d of days) {
-          await add({ ...base, day: d });
+          await add({ ...base, day: uiDayToStorageDay(d) });
         }
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -156,13 +201,46 @@ function NewTimetableItemInner() {
       console.warn('[new-timetable-item] save failed', err);
       Alert.alert('Save failed', 'Try again.');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
 
+  if (!timetableId || !timetable) {
+    return (
+      <SheetShell
+        eyebrow="TIMETABLE ITEM"
+        eyebrowColor={templateMeta.color}
+        title={isLoading ? 'Loading timetable' : 'Timetable missing'}
+      >
+        <Text style={{ color: C.ink2, fontFamily: F.body, fontSize: 14, lineHeight: 20 }}>
+          {isLoading
+            ? 'Loading this timetable…'
+            : 'This timetable could not be found or is no longer available in this space.'}
+        </Text>
+      </SheetShell>
+    );
+  }
+
+  if (isEdit && !existingRaw) {
+    return (
+      <SheetShell
+        eyebrow="TIMETABLE ITEM"
+        eyebrowColor={active.color}
+        title={isLoading ? 'Loading item' : 'Item missing'}
+      >
+        <Text style={{ color: C.ink2, fontFamily: F.body, fontSize: 14, lineHeight: 20 }}>
+          {isLoading
+            ? 'Loading this timetable item…'
+            : 'This timetable item could not be found or is no longer available in this space.'}
+        </Text>
+      </SheetShell>
+    );
+  }
+
   return (
     <SheetShell
-      eyebrow={`${isEdit ? 'EDIT' : 'NEW'} ITEM · ${cat.toUpperCase()}`}
+      eyebrow={`${isEdit ? 'EDIT' : 'NEW'} ITEM · ${active.label.toUpperCase()}`}
       eyebrowColor={active.color}
       title={isEdit ? 'Edit item' : 'New item'}
       footer={
@@ -181,11 +259,11 @@ function NewTimetableItemInner() {
         />
       </SheetSection>
 
-      <SheetSection title="Category">
+      <SheetSection title={templateKey === 'meals' ? 'Meal' : 'Type'}>
         <SheetIconLabelPicker
-          options={catOptions}
-          selected={cat}
-          onChange={setCat}
+          options={typeOptions}
+          selected={effectiveItemKind}
+          onChange={setItemKind}
           testIDPrefix="new-timetable-item-cat"
         />
       </SheetSection>
@@ -198,8 +276,6 @@ function NewTimetableItemInner() {
             value={time}
             onChange={setTime}
             accent={active.color}
-            open={timeOpen}
-            onPress={() => setTimeOpen((v) => !v)}
           />
         </View>
         <View style={{ flex: 1 }}>
@@ -221,6 +297,7 @@ function NewTimetableItemInner() {
               <PressScale
                 key={i}
                 testID={`new-timetable-item-day-${i}`}
+                accessibilityState={{ selected: sel }}
                 onPress={() => {
                   Haptics.selectionAsync().catch(() => undefined);
                   toggleDay(i);

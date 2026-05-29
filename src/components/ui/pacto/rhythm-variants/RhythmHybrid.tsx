@@ -37,29 +37,32 @@ export function RhythmHybrid({ days, weeks = 7, todayColor }: Props) {
   const tip = todayColor ?? C.peach;
 
   const stats = useMemo(() => deriveStats(days, weeks), [days, weeks]);
-  const metrics = [
-    {
-      key: 'week',
-      label: 'WEEK',
-      value: stats.weekRatio,
-      color: C.accent2,
-      readout: `${stats.weekActive}/7`,
-    },
-    {
-      key: 'streak',
-      label: 'STREAK',
-      value: stats.streakRatio,
-      color: tip,
-      readout: `${stats.streak}d`,
-    },
-    {
-      key: 'pulse',
-      label: 'PULSE',
-      value: stats.pulseRatio,
-      color: C.accent,
-      readout: `${Math.round(stats.pulseRatio * 100)}%`,
-    },
-  ];
+  const metrics = useMemo(
+    () => [
+      {
+        key: 'week',
+        label: 'WEEK',
+        value: stats.weekRatio,
+        color: C.accent2,
+        readout: `${stats.weekActive}/7`,
+      },
+      {
+        key: 'streak',
+        label: 'STREAK',
+        value: stats.streakRatio,
+        color: tip,
+        readout: `${stats.streak}d`,
+      },
+      {
+        key: 'pulse',
+        label: 'PULSE',
+        value: stats.pulseRatio,
+        color: C.accent,
+        readout: `${Math.round(stats.pulseRatio * 100)}%`,
+      },
+    ],
+    [stats, C.accent2, C.accent, tip],
+  );
 
   const cx = RING_SIZE / 2;
   const cy = RING_SIZE / 2;
@@ -123,7 +126,7 @@ export function RhythmHybrid({ days, weeks = 7, todayColor }: Props) {
                 color: C.inkColor,
                 fontSize: 18,
                 lineHeight: 20,
-                letterSpacing: -0.3,
+                letterSpacing: 0,
                 fontVariant: ['tabular-nums'],
               }}
               numberOfLines={1}

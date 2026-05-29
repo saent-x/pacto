@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FeatureRouteGuard } from '@/src/components/features/FeatureRouteGuard';
 import { PressScale } from '@/src/components/ui/PressScale';
 import { Typography } from '@/src/constants/typography';
 import { useTheme } from '@/src/lib/theme';
@@ -8,18 +9,51 @@ import { useMemory } from '@/src/hooks/memories/useMemory';
 import { MemoryPost } from '@/src/components/ui/pacto/memories/MemoryPost';
 import { Avatar } from '@/src/components/ui/pacto/Avatar';
 import { useSession } from '@/src/hooks/useSession';
+import { uniqueSpaceIds } from '@/src/lib/space-scope';
 
 export default function MemoryDetailScreen() {
+  return (
+    <FeatureRouteGuard featureId="memoryFeed">
+      <MemoryDetailScreenInner />
+    </FeatureRouteGuard>
+  );
+}
+
+function MemoryDetailScreenInner() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { C } = useTheme();
   const session = useSession() as any;
-  const { memory } = useMemory(id);
+  const readableMemorySpaceIds = uniqueSpaceIds([
+    session?.personalSpaceId,
+    session?.sharedSpaceId,
+    session?.soloSpace?.id,
+    session?.sharedSpace?.id,
+    session?.space?.id,
+    session?.activeCouple?.couple?.id,
+  ]);
+  const { memory, isLoading } = useMemory(
+    id,
+    readableMemorySpaceIds,
+    session?.personalSpaceId ?? null,
+    session?.user?.id ?? null,
+  );
 
   if (!memory) {
+    const title = isLoading ? 'Loading…' : 'Memory not found';
+    const body = isLoading
+      ? null
+      : 'This memory may have been deleted or is no longer available in this space.';
     return (
       <View style={[styles.empty, { backgroundColor: C.bg }]}>
-        <Text style={[Typography.body, { color: C.ink3 }]}>Loading…</Text>
+        <Text style={[Typography.bodyMedium, { color: C.inkColor, textAlign: 'center' }]}>
+          {title}
+        </Text>
+        {body ? (
+          <Text style={[Typography.caption, { color: C.ink3, textAlign: 'center', marginTop: 8, paddingHorizontal: 28 }]}>
+            {body}
+          </Text>
+        ) : null}
       </View>
     );
   }

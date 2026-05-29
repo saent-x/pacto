@@ -33,6 +33,10 @@ describe('bucketOfDue', () => {
     expect(bucketOfDue(iso('2026-05-03T12:00:00'))).toBe('MAY');
     expect(bucketOfDue(iso('2026-06-10T12:00:00'))).toBe('JUN');
   });
+  it('puts malformed due dates into Later instead of creating an invalid bucket', () => {
+    expect(bucketOfDue('')).toBe('Later');
+    expect(bucketOfDue('not-a-date')).toBe('Later');
+  });
 });
 
 describe('orderReminderBuckets', () => {
@@ -66,6 +70,10 @@ describe('formatWhenChip', () => {
   it('returns month day past the week', () => {
     expect(formatWhenChip(iso('2026-05-03T09:00:00'))).toBe('MAY 3');
   });
+  it('labels malformed due dates without NaN text', () => {
+    expect(formatWhenChip('')).toBe('No date');
+    expect(formatWhenChip('not-a-date')).toBe('No date');
+  });
 });
 
 describe('isOverdue', () => {
@@ -80,5 +88,9 @@ describe('isOverdue', () => {
   });
   it('is false when due_at is in the future', () => {
     expect(isOverdue(iso('2026-04-22T12:00:00'), false)).toBe(false);
+  });
+  it('is false when due_at is malformed', () => {
+    expect(isOverdue('', false)).toBe(false);
+    expect(isOverdue('not-a-date', false)).toBe(false);
   });
 });

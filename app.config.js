@@ -1,4 +1,4 @@
-const appJson = require('./app.json');
+const appJson = require('./app.config.base.json');
 
 const GOOGLE_CLIENT_ID_SUFFIX = '.apps.googleusercontent.com';
 const GOOGLE_IOS_SCHEME_PREFIX = 'com.googleusercontent.apps.';
