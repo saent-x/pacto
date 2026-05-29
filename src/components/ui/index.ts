@@ -41,9 +41,9 @@ export { SubscreenHero } from './SubscreenHero';
 // the existing `WarmPill`/`WarmAvatar` convention.
 export {
   Badge as WarmBadge,
-  CouplRings,
+  PactoRings,
   DateSectioned,
   PrimaryButton,
-  ScreenHeader as CouplScreenHeader,
+  ScreenHeader as PactoScreenHeader,
   StickyDate,
 } from './atoms';

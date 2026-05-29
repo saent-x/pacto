@@ -60,7 +60,7 @@ vi.mock('@/src/components/ui/Icon', () => ({
 const sessionState = vi.hoisted(() => ({
   user: {
     id: 'user-1',
-    email: 'test@coupl.app',
+    email: 'test@pacto.app',
     avatarUrl: null,
   } as any,
 }));
@@ -125,7 +125,7 @@ describe('onboarding flow', () => {
     routerSpy.back.mockClear();
     sessionState.user = {
       id: 'user-1',
-      email: 'test@coupl.app',
+      email: 'test@pacto.app',
       avatarUrl: null,
     };
     spaceActions.createSpace.mockClear();
@@ -141,7 +141,7 @@ describe('onboarding flow', () => {
 
     expect(spaceActions.ensureUserRow).toHaveBeenCalledWith({
       userId: 'user-1',
-      email: 'test@coupl.app',
+      email: 'test@pacto.app',
       avatarUrl: 'avatar-1',
     });
     expect(spaceActions.createSpace).toHaveBeenCalledWith({
@@ -201,7 +201,7 @@ describe('onboarding flow', () => {
 
     expect(spaceActions.ensureUserRow).toHaveBeenCalledWith({
       userId: 'user-1',
-      email: 'test@coupl.app',
+      email: 'test@pacto.app',
       avatarUrl: 'avatar-1',
     });
     expect(spaceActions.createSpace).not.toHaveBeenCalled();

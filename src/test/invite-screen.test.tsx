@@ -43,7 +43,7 @@ vi.mock('@/src/components/ui/Icon', () => ({
 
 const sessionState = vi.hoisted(() => ({
   status: 'ready' as const,
-  user: { id: 'user-1', email: 'test@coupl.app' } as any,
+  user: { id: 'user-1', email: 'test@pacto.app' } as any,
   isSolo: true,
   space: { id: 'solo-space' } as any,
   membership: { id: 'solo-membership' } as any,

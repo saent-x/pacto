@@ -997,7 +997,7 @@ export function DateSectioned<T>({
 }
 
 // ───────── Couple rings ─────────
-export function CouplRings({
+export function PactoRings({
   size = 36,
   opacity = 1,
   a,

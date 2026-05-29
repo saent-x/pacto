@@ -101,9 +101,9 @@ function runPreflightWithFakeTools({
         ANDROID_HOME: androidHome,
         EXPO_PUBLIC_INSTANT_APP_ID: 'staging-app-id',
         INSTANT_ADMIN_TOKEN: 'admin-secret-token',
-        COUPL_QA_ENV: 'staging',
-        COUPL_QA_CONFIRM_APP_ID: 'staging-app-id',
-        COUPL_QA_ALLOW_STAGING_WRITES: '1',
+        PACTO_QA_ENV: 'staging',
+        PACTO_QA_CONFIRM_APP_ID: 'staging-app-id',
+        PACTO_QA_ALLOW_STAGING_WRITES: '1',
         ...extraEnv,
       },
     });
@@ -137,9 +137,9 @@ describe('production readiness preflight', () => {
     const result = runPreflight({
       EXPO_PUBLIC_INSTANT_APP_ID: 'staging-app-id',
       INSTANT_ADMIN_TOKEN: 'admin-secret-token',
-      COUPL_QA_ENV: 'staging',
-      COUPL_QA_CONFIRM_APP_ID: 'staging-app-id',
-      COUPL_QA_ALLOW_STAGING_WRITES: '1',
+      PACTO_QA_ENV: 'staging',
+      PACTO_QA_CONFIRM_APP_ID: 'staging-app-id',
+      PACTO_QA_ALLOW_STAGING_WRITES: '1',
     });
 
     expect(result.instant).toMatchObject({
@@ -158,9 +158,9 @@ describe('production readiness preflight', () => {
     const result = runPreflight({
       EXPO_PUBLIC_INSTANT_APP_ID: 'production-shaped-id',
       INSTANT_ADMIN_TOKEN: 'admin-secret-token',
-      COUPL_QA_ENV: 'production',
-      COUPL_QA_CONFIRM_APP_ID: 'different-id',
-      COUPL_QA_ALLOW_STAGING_WRITES: '0',
+      PACTO_QA_ENV: 'production',
+      PACTO_QA_CONFIRM_APP_ID: 'different-id',
+      PACTO_QA_ALLOW_STAGING_WRITES: '0',
     });
 
     expect(result.instant).toMatchObject({
@@ -178,9 +178,9 @@ describe('production readiness preflight', () => {
     const result = runPreflight({
       EXPO_PUBLIC_INSTANT_APP_ID: 'staging-app-id',
       INSTANT_ADMIN_TOKEN: 'admin-secret-token',
-      COUPL_QA_ENV: 'staging',
-      COUPL_QA_CONFIRM_APP_ID: 'staging-app-id',
-      COUPL_QA_ALLOW_STAGING_WRITES: '1',
+      PACTO_QA_ENV: 'staging',
+      PACTO_QA_CONFIRM_APP_ID: 'staging-app-id',
+      PACTO_QA_ALLOW_STAGING_WRITES: '1',
     });
 
     expect(result.server).toMatchObject({
@@ -195,11 +195,11 @@ describe('production readiness preflight', () => {
     const result = runPreflight({
       EXPO_PUBLIC_INSTANT_APP_ID: 'staging-app-id',
       INSTANT_ADMIN_TOKEN: 'admin-secret-token',
-      COUPL_QA_ENV: 'staging',
-      COUPL_QA_CONFIRM_APP_ID: 'staging-app-id',
-      COUPL_QA_ALLOW_STAGING_WRITES: '1',
+      PACTO_QA_ENV: 'staging',
+      PACTO_QA_CONFIRM_APP_ID: 'staging-app-id',
+      PACTO_QA_ALLOW_STAGING_WRITES: '1',
       EXPO_PUBLIC_API_URL: 'https://pacto.invalid.test',
-      COUPL_QA_API_HEALTH_TIMEOUT_MS: '1',
+      PACTO_QA_API_HEALTH_TIMEOUT_MS: '1',
     });
 
     expect(result.server).toMatchObject({
@@ -336,12 +336,12 @@ describe('production readiness preflight', () => {
           ].join('\n'),
           extraEnv: {
             EXPO_PUBLIC_API_URL: 'https://127.0.0.1',
-            COUPL_QA_MOCK_API_HEALTH: '1',
-            COUPL_QA_API_HEALTH_PAYLOAD: healthPayload,
-            COUPL_ANDROID_RELEASE_STORE_FILE: storeFile,
-            COUPL_ANDROID_RELEASE_STORE_PASSWORD: 'store-password',
-            COUPL_ANDROID_RELEASE_KEY_ALIAS: 'release',
-            COUPL_ANDROID_RELEASE_KEY_PASSWORD: 'key-password',
+            PACTO_QA_MOCK_API_HEALTH: '1',
+            PACTO_QA_API_HEALTH_PAYLOAD: healthPayload,
+            PACTO_ANDROID_RELEASE_STORE_FILE: storeFile,
+            PACTO_ANDROID_RELEASE_STORE_PASSWORD: 'store-password',
+            PACTO_ANDROID_RELEASE_KEY_ALIAS: 'release',
+            PACTO_ANDROID_RELEASE_KEY_PASSWORD: 'key-password',
           },
         }),
       );
@@ -372,9 +372,9 @@ describe('production readiness preflight', () => {
     const result = runPreflight({
       EXPO_PUBLIC_INSTANT_APP_ID: 'staging-app-id',
       INSTANT_ADMIN_TOKEN: 'admin-secret-token',
-      COUPL_QA_ENV: 'staging',
-      COUPL_QA_CONFIRM_APP_ID: 'staging-app-id',
-      COUPL_QA_ALLOW_STAGING_WRITES: '1',
+      PACTO_QA_ENV: 'staging',
+      PACTO_QA_CONFIRM_APP_ID: 'staging-app-id',
+      PACTO_QA_ALLOW_STAGING_WRITES: '1',
     });
 
     expect(result.native.android.releaseSigning).toMatchObject({
@@ -383,10 +383,10 @@ describe('production readiness preflight', () => {
       credentialsPresent: false,
       ready: false,
     });
-    expect(result.native.android.missing).toContain('COUPL_ANDROID_RELEASE_STORE_FILE');
-    expect(result.native.android.missing).toContain('COUPL_ANDROID_RELEASE_STORE_PASSWORD');
-    expect(result.native.android.missing).toContain('COUPL_ANDROID_RELEASE_KEY_ALIAS');
-    expect(result.native.android.missing).toContain('COUPL_ANDROID_RELEASE_KEY_PASSWORD');
+    expect(result.native.android.missing).toContain('PACTO_ANDROID_RELEASE_STORE_FILE');
+    expect(result.native.android.missing).toContain('PACTO_ANDROID_RELEASE_STORE_PASSWORD');
+    expect(result.native.android.missing).toContain('PACTO_ANDROID_RELEASE_KEY_ALIAS');
+    expect(result.native.android.missing).toContain('PACTO_ANDROID_RELEASE_KEY_PASSWORD');
     expect(result.releaseReady).toBe(false);
   });
 });

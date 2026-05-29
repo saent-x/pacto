@@ -157,14 +157,14 @@ async function main() {
 }
 
 function assertStagingWriteGuard(appId) {
-  if (process.env.COUPL_QA_ENV !== 'staging') {
-    throw new Error('Refusing quota writes without COUPL_QA_ENV=staging.');
+  if (process.env.PACTO_QA_ENV !== 'staging') {
+    throw new Error('Refusing quota writes without PACTO_QA_ENV=staging.');
   }
-  if (process.env.COUPL_QA_CONFIRM_APP_ID !== appId) {
-    throw new Error('Refusing quota writes unless COUPL_QA_CONFIRM_APP_ID exactly matches EXPO_PUBLIC_INSTANT_APP_ID.');
+  if (process.env.PACTO_QA_CONFIRM_APP_ID !== appId) {
+    throw new Error('Refusing quota writes unless PACTO_QA_CONFIRM_APP_ID exactly matches EXPO_PUBLIC_INSTANT_APP_ID.');
   }
-  if (process.env.COUPL_QA_ALLOW_STAGING_WRITES !== '1') {
-    throw new Error('Refusing quota writes without COUPL_QA_ALLOW_STAGING_WRITES=1.');
+  if (process.env.PACTO_QA_ALLOW_STAGING_WRITES !== '1') {
+    throw new Error('Refusing quota writes without PACTO_QA_ALLOW_STAGING_WRITES=1.');
   }
 }
 

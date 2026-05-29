@@ -782,21 +782,21 @@ async function withStagingDb(callback) {
   loadDotEnvFiles();
   const appId = process.env.EXPO_PUBLIC_INSTANT_APP_ID;
   const adminToken = process.env.INSTANT_ADMIN_TOKEN;
-  const envName = process.env.COUPL_QA_ENV;
-  const allowWrites = process.env.COUPL_QA_ALLOW_STAGING_WRITES;
-  const confirmedAppId = process.env.COUPL_QA_CONFIRM_APP_ID;
+  const envName = process.env.PACTO_QA_ENV;
+  const allowWrites = process.env.PACTO_QA_ALLOW_STAGING_WRITES;
+  const confirmedAppId = process.env.PACTO_QA_CONFIRM_APP_ID;
 
   if (!appId || !adminToken) {
     throw new Error('Missing EXPO_PUBLIC_INSTANT_APP_ID or INSTANT_ADMIN_TOKEN.');
   }
   if (envName !== 'staging') {
-    throw new Error('Refusing backend QA without COUPL_QA_ENV=staging.');
+    throw new Error('Refusing backend QA without PACTO_QA_ENV=staging.');
   }
   if (confirmedAppId !== appId) {
-    throw new Error('Refusing backend QA unless COUPL_QA_CONFIRM_APP_ID exactly matches EXPO_PUBLIC_INSTANT_APP_ID.');
+    throw new Error('Refusing backend QA unless PACTO_QA_CONFIRM_APP_ID exactly matches EXPO_PUBLIC_INSTANT_APP_ID.');
   }
   if (command === 'apply' && allowWrites !== '1') {
-    throw new Error('Refusing staging writes without COUPL_QA_ALLOW_STAGING_WRITES=1.');
+    throw new Error('Refusing staging writes without PACTO_QA_ALLOW_STAGING_WRITES=1.');
   }
 
   const db = init({ appId, adminToken });
@@ -813,8 +813,8 @@ function writeEvidenceFile(prefix, runIdValue, result) {
 function safetyText() {
   return [
     'Default describe/validate modes do not touch InstantDB.',
-    'Backend verify/apply require COUPL_QA_ENV=staging and COUPL_QA_CONFIRM_APP_ID matching EXPO_PUBLIC_INSTANT_APP_ID.',
-    'Apply additionally requires COUPL_QA_ALLOW_STAGING_WRITES=1.',
+    'Backend verify/apply require PACTO_QA_ENV=staging and PACTO_QA_CONFIRM_APP_ID matching EXPO_PUBLIC_INSTANT_APP_ID.',
+    'Apply additionally requires PACTO_QA_ALLOW_STAGING_WRITES=1.',
   ];
 }
 

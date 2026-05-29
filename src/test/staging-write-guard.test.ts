@@ -12,12 +12,12 @@ describe('staging write guard', () => {
         appId: 'app-prod',
         operation: 'base solo backfill',
         env: {
-          COUPL_QA_ENV: 'production',
-          COUPL_QA_CONFIRM_APP_ID: 'app-prod',
-          COUPL_QA_ALLOW_STAGING_WRITES: '1',
+          PACTO_QA_ENV: 'production',
+          PACTO_QA_CONFIRM_APP_ID: 'app-prod',
+          PACTO_QA_ALLOW_STAGING_WRITES: '1',
         },
       }),
-    ).toThrow(/COUPL_QA_ENV=staging/);
+    ).toThrow(/PACTO_QA_ENV=staging/);
   });
 
   it('rejects apply writes unless the confirmed app id matches the loaded Instant app id', () => {
@@ -26,12 +26,12 @@ describe('staging write guard', () => {
         appId: 'app-staging',
         operation: 'base solo backfill',
         env: {
-          COUPL_QA_ENV: 'staging',
-          COUPL_QA_CONFIRM_APP_ID: 'app-prod',
-          COUPL_QA_ALLOW_STAGING_WRITES: '1',
+          PACTO_QA_ENV: 'staging',
+          PACTO_QA_CONFIRM_APP_ID: 'app-prod',
+          PACTO_QA_ALLOW_STAGING_WRITES: '1',
         },
       }),
-    ).toThrow(/COUPL_QA_CONFIRM_APP_ID/);
+    ).toThrow(/PACTO_QA_CONFIRM_APP_ID/);
   });
 
   it('allows apply writes only when all staging confirmations are present', () => {
@@ -40,9 +40,9 @@ describe('staging write guard', () => {
         appId: 'app-staging',
         operation: 'base solo backfill',
         env: {
-          COUPL_QA_ENV: 'staging',
-          COUPL_QA_CONFIRM_APP_ID: 'app-staging',
-          COUPL_QA_ALLOW_STAGING_WRITES: '1',
+          PACTO_QA_ENV: 'staging',
+          PACTO_QA_CONFIRM_APP_ID: 'app-staging',
+          PACTO_QA_ALLOW_STAGING_WRITES: '1',
         },
       }),
     ).not.toThrow();

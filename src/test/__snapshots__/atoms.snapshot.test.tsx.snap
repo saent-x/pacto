@@ -201,58 +201,6 @@ exports[`atoms snapshots > BlockCard — static 1`] = `
 </div>
 `;
 
-exports[`atoms snapshots > CouplRings — custom size + colors 1`] = `
-<Svg
-  height={64}
-  opacity={0.8}
-  viewBox="0 0 40 40"
-  width={64}
->
-  <Circle
-    cx={15}
-    cy={20}
-    fill="none"
-    r={11}
-    stroke="#f00"
-    strokeWidth={2}
-  />
-  <Circle
-    cx={25}
-    cy={20}
-    fill="none"
-    r={11}
-    stroke="#00f"
-    strokeWidth={2}
-  />
-</Svg>
-`;
-
-exports[`atoms snapshots > CouplRings — default 1`] = `
-<Svg
-  height={36}
-  opacity={1}
-  viewBox="0 0 40 40"
-  width={36}
->
-  <Circle
-    cx={15}
-    cy={20}
-    fill="none"
-    r={11}
-    stroke="#D88B74"
-    strokeWidth={2}
-  />
-  <Circle
-    cx={25}
-    cy={20}
-    fill="none"
-    r={11}
-    stroke="#A89BC8"
-    strokeWidth={2}
-  />
-</Svg>
-`;
-
 exports[`atoms snapshots > DarkCard — borderless + custom padding 1`] = `
 <div
   className="css-view-g5y9jx"
@@ -1185,6 +1133,58 @@ exports[`atoms snapshots > Overline — default 1`] = `
 >
   Hello
 </div>
+`;
+
+exports[`atoms snapshots > PactoRings — custom size + colors 1`] = `
+<Svg
+  height={64}
+  opacity={0.8}
+  viewBox="0 0 40 40"
+  width={64}
+>
+  <Circle
+    cx={15}
+    cy={20}
+    fill="none"
+    r={11}
+    stroke="#f00"
+    strokeWidth={2}
+  />
+  <Circle
+    cx={25}
+    cy={20}
+    fill="none"
+    r={11}
+    stroke="#00f"
+    strokeWidth={2}
+  />
+</Svg>
+`;
+
+exports[`atoms snapshots > PactoRings — default 1`] = `
+<Svg
+  height={36}
+  opacity={1}
+  viewBox="0 0 40 40"
+  width={36}
+>
+  <Circle
+    cx={15}
+    cy={20}
+    fill="none"
+    r={11}
+    stroke="#D88B74"
+    strokeWidth={2}
+  />
+  <Circle
+    cx={25}
+    cy={20}
+    fill="none"
+    r={11}
+    stroke="#A89BC8"
+    strokeWidth={2}
+  />
+</Svg>
 `;
 
 exports[`atoms snapshots > Pill — active sm 1`] = `

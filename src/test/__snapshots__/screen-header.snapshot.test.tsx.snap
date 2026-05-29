@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScreenHeader) — eyebrow + meta + custom accent 1`] = `
+exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (PactoScreenHeader) — eyebrow + meta + custom accent 1`] = `
 <div
   className="css-view-g5y9jx"
   dir={null}
@@ -126,7 +126,7 @@ exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScre
 </div>
 `;
 
-exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (CouplScreenHeader) — title only 1`] = `
+exports[`ScreenHeader — both variants coexist > atoms::ScreenHeader (PactoScreenHeader) — title only 1`] = `
 <div
   className="css-view-g5y9jx"
   dir={null}

@@ -204,8 +204,8 @@ describe('production readiness Spaces fixtures', () => {
     const result = runFixtureScript(['describe', '--run-id', 'test']);
 
     expect(result.mode).toBe('describe');
-    expect(result.safety.join('\n')).toContain('COUPL_QA_ENV=staging');
-    expect(result.safety.join('\n')).toContain('COUPL_QA_ALLOW_STAGING_WRITES=1');
+    expect(result.safety.join('\n')).toContain('PACTO_QA_ENV=staging');
+    expect(result.safety.join('\n')).toContain('PACTO_QA_ALLOW_STAGING_WRITES=1');
     expect(isValidInviteCode(result.fixture.spaces.pending_pair_invite.inviteCode)).toBe(true);
     expect(result.fixture.spaces.pair_shared.inviteCode).toBeNull();
   });

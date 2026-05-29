@@ -7,7 +7,7 @@ import {
   Avatar,
   Badge,
   BlockCard,
-  CouplRings,
+  PactoRings,
   DarkCard,
   DateSectioned,
   Display,
@@ -252,13 +252,13 @@ describe('atoms snapshots', () => {
     ).toMatchSnapshot();
   });
 
-  it('CouplRings — default', () => {
-    expect(render(<CouplRings />)).toMatchSnapshot();
+  it('PactoRings — default', () => {
+    expect(render(<PactoRings />)).toMatchSnapshot();
   });
 
-  it('CouplRings — custom size + colors', () => {
+  it('PactoRings — custom size + colors', () => {
     expect(
-      render(<CouplRings size={64} opacity={0.8} a="#f00" b="#00f" />),
+      render(<PactoRings size={64} opacity={0.8} a="#f00" b="#00f" />),
     ).toMatchSnapshot();
   });
 

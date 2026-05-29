@@ -22,7 +22,7 @@ vi.mock('@expo/vector-icons', () => ({
 
 // Import after mocks so the Feather + Haptics imports inside ScreenHeader.tsx resolve.
 import { ScreenHeader } from '@/src/components/ui/ScreenHeader';
-import { ScreenHeader as CouplScreenHeader } from '@/src/components/ui/atoms';
+import { ScreenHeader as PactoScreenHeader } from '@/src/components/ui/atoms';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const TestRenderer: any = require('react-test-renderer');
@@ -57,16 +57,16 @@ describe('ScreenHeader — both variants coexist', () => {
     ).toMatchSnapshot();
   });
 
-  it('atoms::ScreenHeader (CouplScreenHeader) — title only', () => {
+  it('atoms::ScreenHeader (PactoScreenHeader) — title only', () => {
     expect(
-      render(<CouplScreenHeader title="Journal" />),
+      render(<PactoScreenHeader title="Journal" />),
     ).toMatchSnapshot();
   });
 
-  it('atoms::ScreenHeader (CouplScreenHeader) — eyebrow + meta + custom accent', () => {
+  it('atoms::ScreenHeader (PactoScreenHeader) — eyebrow + meta + custom accent', () => {
     expect(
       render(
-        <CouplScreenHeader
+        <PactoScreenHeader
           eyebrow="03 · JOURNAL"
           title="Today"
           accent="#f0c050"
@@ -79,7 +79,7 @@ describe('ScreenHeader — both variants coexist', () => {
 
   it('divergence guard — the two headers render distinct trees', () => {
     const A = render(<ScreenHeader title="Same" />);
-    const B = render(<CouplScreenHeader title="Same" />);
+    const B = render(<PactoScreenHeader title="Same" />);
     expect(JSON.stringify(A)).not.toBe(JSON.stringify(B));
   });
 });

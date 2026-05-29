@@ -35,9 +35,9 @@ if (strict && !releaseReady) process.exit(1);
 function inspectInstantEnv() {
   const appId = process.env.EXPO_PUBLIC_INSTANT_APP_ID ?? '';
   const adminToken = process.env.INSTANT_ADMIN_TOKEN ?? '';
-  const qaEnv = process.env.COUPL_QA_ENV ?? null;
-  const confirmedAppId = process.env.COUPL_QA_CONFIRM_APP_ID ?? '';
-  const allowWrites = process.env.COUPL_QA_ALLOW_STAGING_WRITES ?? '';
+  const qaEnv = process.env.PACTO_QA_ENV ?? null;
+  const confirmedAppId = process.env.PACTO_QA_CONFIRM_APP_ID ?? '';
+  const allowWrites = process.env.PACTO_QA_ALLOW_STAGING_WRITES ?? '';
   const appIdPresent = appId.length > 0;
   const adminTokenPresent = adminToken.length > 0;
   const confirmedAppIdMatches = appIdPresent && confirmedAppId === appId;
@@ -47,9 +47,9 @@ function inspectInstantEnv() {
 
   if (!appIdPresent) missing.push('EXPO_PUBLIC_INSTANT_APP_ID');
   if (!adminTokenPresent) missing.push('INSTANT_ADMIN_TOKEN');
-  if (qaEnv !== 'staging') missing.push('COUPL_QA_ENV=staging');
-  if (!confirmedAppIdMatches) missing.push('COUPL_QA_CONFIRM_APP_ID must match EXPO_PUBLIC_INSTANT_APP_ID');
-  if (allowWrites !== '1') missing.push('COUPL_QA_ALLOW_STAGING_WRITES=1');
+  if (qaEnv !== 'staging') missing.push('PACTO_QA_ENV=staging');
+  if (!confirmedAppIdMatches) missing.push('PACTO_QA_CONFIRM_APP_ID must match EXPO_PUBLIC_INSTANT_APP_ID');
+  if (allowWrites !== '1') missing.push('PACTO_QA_ALLOW_STAGING_WRITES=1');
 
   return {
     appIdPresent,
@@ -122,12 +122,12 @@ async function inspectServerEnv() {
 }
 
 function getMockApiHealthPayload() {
-  const mockFlag = process.env.COUPL_QA_MOCK_API_HEALTH;
+  const mockFlag = process.env.PACTO_QA_MOCK_API_HEALTH;
   if (mockFlag !== '1') {
     return null;
   }
 
-  const rawPayload = process.env.COUPL_QA_API_HEALTH_PAYLOAD?.trim();
+  const rawPayload = process.env.PACTO_QA_API_HEALTH_PAYLOAD?.trim();
   const payload = rawPayload ? parseJson(rawPayload) : null;
   if (!payload || typeof payload !== 'object') {
     return { ok: true, routes: { push: true, memories: true, account: true }, instantAdminConfigured: true };
@@ -159,7 +159,7 @@ function parseJson(raw) {
 }
 
 async function fetchApiHealth(url) {
-  const timeoutMs = Number.parseInt(process.env.COUPL_QA_API_HEALTH_TIMEOUT_MS ?? '5000', 10);
+  const timeoutMs = Number.parseInt(process.env.PACTO_QA_API_HEALTH_TIMEOUT_MS ?? '5000', 10);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), Number.isFinite(timeoutMs) ? timeoutMs : 5000);
   try {
@@ -230,12 +230,12 @@ function inspectNative(skipToolChecks) {
   const adbAvailable = commandAvailable('adb');
   const emulatorAvailable = commandAvailable('emulator');
   const avdmanagerAvailable = commandAvailable('avdmanager');
-  const playStoreAvdName = process.env.COUPL_QA_ANDROID_PLAY_STORE_AVD ?? null;
+  const playStoreAvdName = process.env.PACTO_QA_ANDROID_PLAY_STORE_AVD ?? null;
   const playStoreAvds = avdmanagerAvailable ? listPlayStoreAvds() : [];
   const playStoreAvdAvailable = playStoreAvdName
     ? playStoreAvds.includes(playStoreAvdName)
     : playStoreAvds.length > 0;
-  const googleAuthDeviceOverride = process.env.COUPL_QA_ANDROID_GOOGLE_AUTH_DEVICE === '1';
+  const googleAuthDeviceOverride = process.env.PACTO_QA_ANDROID_GOOGLE_AUTH_DEVICE === '1';
   const googleAuthReady = playStoreAvdAvailable || googleAuthDeviceOverride;
   const xcrunAvailable = commandAvailable('xcrun');
   const iosSimctlAvailable = xcrunAvailable && commandSucceeds('xcrun', ['simctl', 'list', 'devices', 'available', '-j']);
@@ -394,18 +394,18 @@ function inspectNativeReleaseConfig() {
 function inspectAndroidReleaseSigning() {
   const gradlePath = join(process.cwd(), 'android/app/build.gradle');
   const requiredVars = [
-    'COUPL_ANDROID_RELEASE_STORE_FILE',
-    'COUPL_ANDROID_RELEASE_STORE_PASSWORD',
-    'COUPL_ANDROID_RELEASE_KEY_ALIAS',
-    'COUPL_ANDROID_RELEASE_KEY_PASSWORD',
+    'PACTO_ANDROID_RELEASE_STORE_FILE',
+    'PACTO_ANDROID_RELEASE_STORE_PASSWORD',
+    'PACTO_ANDROID_RELEASE_KEY_ALIAS',
+    'PACTO_ANDROID_RELEASE_KEY_PASSWORD',
   ];
   const values = Object.fromEntries(requiredVars.map((name) => [name, configValue(name)]));
-  const storeFile = values.COUPL_ANDROID_RELEASE_STORE_FILE;
+  const storeFile = values.PACTO_ANDROID_RELEASE_STORE_FILE;
   const storeFileExists = Boolean(storeFile && existsSync(resolveProjectPath(storeFile)));
   const credentialsPresent = requiredVars.every((name) => Boolean(values[name]));
   const missing = requiredVars.filter((name) => !values[name]);
   if (storeFile && !storeFileExists) {
-    missing.push('COUPL_ANDROID_RELEASE_STORE_FILE must point to an existing keystore');
+    missing.push('PACTO_ANDROID_RELEASE_STORE_FILE must point to an existing keystore');
   }
 
   if (!existsSync(gradlePath)) {
@@ -437,7 +437,7 @@ function inspectAndroidReleaseSigning() {
 
 function androidNativeMissing({ googleAuthReady, releaseSigning }) {
   const missing = [];
-  if (!googleAuthReady) missing.push('Play Store AVD or COUPL_QA_ANDROID_GOOGLE_AUTH_DEVICE=1');
+  if (!googleAuthReady) missing.push('Play Store AVD or PACTO_QA_ANDROID_GOOGLE_AUTH_DEVICE=1');
   if (!releaseSigning?.configured) missing.push('Android release signing config');
   missing.push(...(releaseSigning?.missing ?? []));
   return missing;

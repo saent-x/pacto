@@ -65,7 +65,7 @@ const sessionState = vi.hoisted(() => ({
   status: 'ready' as 'ready' | 'loading' | 'unauthed' | 'onboarding',
   user: {
     id: 'u1',
-    email: 'mattia@coupl.app',
+    email: 'mattia@pacto.app',
     displayName: 'Mattia',
     avatarUrl: null,
   } as any,
@@ -84,7 +84,7 @@ const sessionState = vi.hoisted(() => ({
   sharedSpaceId: 's1',
   partner: {
     id: 'u2',
-    email: 'sofia@coupl.app',
+    email: 'sofia@pacto.app',
     displayName: 'Sofia',
     avatarUrl: null,
   } as any,
@@ -156,7 +156,7 @@ describe('profile sheet', () => {
     sessionState.isCouple = true;
     sessionState.partner = {
       id: 'u2',
-      email: 'sofia@coupl.app',
+      email: 'sofia@pacto.app',
       displayName: 'Sofia',
       avatarUrl: null,
     };
@@ -183,7 +183,7 @@ describe('profile sheet', () => {
 
     const labels = readText(renderer.root);
     expect(labels).toContain('Mattia');
-    expect(labels).not.toContain('mattia@coupl.app');
+    expect(labels).not.toContain('mattia@pacto.app');
     expect(findByTestID(renderer.root, 'profile-row-account')).toBeDefined();
     expect(findByTestID(renderer.root, 'profile-row-code')).toBeDefined();
     expect(findByTestID(renderer.root, 'profile-row-features')).toBeUndefined();
