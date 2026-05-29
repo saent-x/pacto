@@ -23,7 +23,7 @@ async function withApiHealthServer<T>(
   payload: Record<string, unknown>,
   callback: (apiUrl: string) => T | Promise<T>,
 ): Promise<T> {
-  const dir = mkdtempSync(join(tmpdir(), 'coupl-api-health-'));
+  const dir = mkdtempSync(join(tmpdir(), 'pacto-api-health-'));
   const scriptPath = join(dir, 'server.mjs');
   writeFileSync(join(dir, 'cert.pem'), TEST_CERT);
   writeFileSync(join(dir, 'key.pem'), TEST_KEY);
@@ -81,7 +81,7 @@ function runPreflightWithFakeTools({
   avdOutput: string;
   extraEnv?: Record<string, string>;
 }) {
-  const binDir = mkdtempSync(join(tmpdir(), 'coupl-preflight-bin-'));
+  const binDir = mkdtempSync(join(tmpdir(), 'pacto-preflight-bin-'));
   const makeCommand = (name: string, body: string) => {
     const path = join(binDir, name);
     writeFileSync(path, `#!/bin/sh\n${body}\n`);
@@ -255,13 +255,13 @@ describe('production readiness preflight', () => {
   });
 
   it('reports Android Google auth readiness when a Play Store AVD is available', () => {
-    const androidHome = mkdtempSync(join(tmpdir(), 'coupl-android-home-'));
+    const androidHome = mkdtempSync(join(tmpdir(), 'pacto-android-home-'));
     try {
       const result = runPreflightWithFakeTools({
         androidHome,
         avdOutput: [
           'Available Android Virtual Devices:',
-          '    Name: coupl_android_35_play',
+          '    Name: pacto_android_35_play',
           '  Target: Google Play (Google Inc.)',
           '          Based on: Android 15.0 Tag/ABI: google_apis_playstore/arm64-v8a',
         ].join('\n'),
@@ -287,13 +287,13 @@ describe('production readiness preflight', () => {
   });
 
   it('does not treat generic Android tooling as Google-auth ready without a Play Store AVD', () => {
-    const androidHome = mkdtempSync(join(tmpdir(), 'coupl-android-home-'));
+    const androidHome = mkdtempSync(join(tmpdir(), 'pacto-android-home-'));
     try {
       const result = runPreflightWithFakeTools({
         androidHome,
         avdOutput: [
           'Available Android Virtual Devices:',
-          '    Name: coupl_android_35',
+          '    Name: pacto_android_35',
           '  Target: Default Android System Image',
           '          Based on: Android 15.0 Tag/ABI: default/arm64-v8a',
         ].join('\n'),
@@ -314,8 +314,8 @@ describe('production readiness preflight', () => {
   });
 
   it('reports native release readiness when production Android signing credentials and API health are present', async () => {
-    const androidHome = mkdtempSync(join(tmpdir(), 'coupl-android-home-'));
-    const signingDir = mkdtempSync(join(tmpdir(), 'coupl-android-signing-'));
+    const androidHome = mkdtempSync(join(tmpdir(), 'pacto-android-home-'));
+    const signingDir = mkdtempSync(join(tmpdir(), 'pacto-android-signing-'));
     const storeFile = join(signingDir, 'release.keystore');
     const healthPayload = JSON.stringify({
       ok: true,
@@ -330,7 +330,7 @@ describe('production readiness preflight', () => {
           androidHome,
           avdOutput: [
             'Available Android Virtual Devices:',
-            '    Name: coupl_android_35_play',
+            '    Name: pacto_android_35_play',
             '  Target: Google Play (Google Inc.)',
             '          Based on: Android 15.0 Tag/ABI: google_apis_playstore/arm64-v8a',
           ].join('\n'),
