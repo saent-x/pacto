@@ -1,0 +1,104 @@
+{
+  "expo": {
+    "name": "Pacto",
+    "slug": "pacto",
+    "owner": "stbrn-studios",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/pacto-app-icon.png",
+    "scheme": "pacto",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "com.stbrnstudios.pacto",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Pacto uses your microphone so you can talk to the Pacto assistant.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "bitcode": false
+    },
+    "android": {
+      "package": "com.stbrnstudios.pacto",
+      "adaptiveIcon": {
+        "backgroundColor": "#EEEEEA",
+        "foregroundImage": "./assets/images/pacto-icon.png",
+        "monochromeImage": "./assets/images/pacto-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.CAMERA",
+        "android.permission.INTERNET",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.WAKE_LOCK",
+        "android.permission.BLUETOOTH",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.CAMERA",
+        "android.permission.INTERNET",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.WAKE_LOCK",
+        "android.permission.BLUETOOTH",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ]
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "./plugins/withTrimIosPermissions",
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F1EBE1",
+          "image": "./assets/images/pacto-splash.png",
+          "imageWidth": 220
+        }
+      ],
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": false
+        }
+      ],
+      "expo-build-properties",
+      "@config-plugins/react-native-webrtc",
+      "expo-audio",
+      "@react-native-community/datetimepicker",
+      "expo-image",
+      "expo-asset",
+      "expo-apple-authentication",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/pacto-monochrome.png",
+          "color": "#F1EBE1"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "378cd223-a0f0-4361-b5ea-57889e30a0a0"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/378cd223-a0f0-4361-b5ea-57889e30a0a0"
+    }
+  }
+}
