@@ -100,6 +100,9 @@ export default defineSchema({
     repeat: v.optional(v.string()),
     done: v.boolean(),
     priority: v.optional(priority),
+    // IANA timezone the reminder time was set in — used to compute recurring
+    // occurrences at the same local wall-clock time (DST/weekday/month correct).
+    tz: v.optional(v.string()),
     // Scheduled push-notification job id (_scheduled_functions); see tasks.notifyJobId.
     notifyJobId: v.optional(v.string()),
   })

@@ -17,6 +17,7 @@ import type * as checkins from "../checkins.js";
 import type * as http from "../http.js";
 import type * as invites from "../invites.js";
 import type * as lib_notify from "../lib/notify.js";
+import type * as lib_recurrence from "../lib/recurrence.js";
 import type * as lib_spaces from "../lib/spaces.js";
 import type * as members from "../members.js";
 import type * as migrations from "../migrations.js";
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   invites: typeof invites;
   "lib/notify": typeof lib_notify;
+  "lib/recurrence": typeof lib_recurrence;
   "lib/spaces": typeof lib_spaces;
   members: typeof members;
   migrations: typeof migrations;

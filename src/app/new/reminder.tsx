@@ -46,6 +46,9 @@ export default function NewReminder() {
     if (!title.trim() || !spaceId || busy) return;
     setBusy(true);
     const remindAt = time.getTime();
+    // Capture the device timezone so recurring reminders fire at the same local
+    // time/day (DST/weekday/month-correct) regardless of where the server runs.
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     try {
       if (editing && id) {
         await update({
@@ -54,6 +57,7 @@ export default function NewReminder() {
           remindAt,
           whenLabel: fmtTime(remindAt),
           repeat,
+          tz,
           priority: prioOf(prio) as 'low' | 'med' | 'high',
           assigneeUserId: assignee ? (assignee as Id<'users'>) : undefined,
         });
@@ -64,6 +68,7 @@ export default function NewReminder() {
           repeat,
           remindAt,
           whenLabel: fmtTime(remindAt),
+          tz,
           priority: prioOf(prio) as 'low' | 'med' | 'high',
           assigneeUserId: assignee ? (assignee as Id<'users'>) : undefined,
         });

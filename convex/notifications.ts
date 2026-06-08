@@ -5,10 +5,12 @@ import {
   internalMutation,
   internalAction,
   ActionCtx,
+  QueryCtx,
 } from './_generated/server';
 import { internal } from './_generated/api';
 import { getAuthUserId } from '@convex-dev/auth/server';
 import { Id } from './_generated/dataModel';
+import { nextOccurrenceAfter } from './lib/recurrence';
 
 // ---------------------------------------------------------------------------
 // Public: device push-token registration (one row per device per user)
@@ -40,11 +42,15 @@ export const registerPushToken = mutation({
 export const removePushToken = mutation({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
+    // Require auth and only detach tokens owned by the caller — a public mutation
+    // must not let an arbitrary caller delete another user's device token.
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
     const rows = await ctx.db
       .query('pushTokens')
       .withIndex('by_token', (q) => q.eq('token', token))
       .collect();
-    for (const r of rows) await ctx.db.delete(r._id);
+    for (const r of rows) if (r.userId === userId) await ctx.db.delete(r._id);
     return null;
   },
 });
@@ -70,15 +76,12 @@ export const removeTokenInternal = internalMutation({
 
 type Deliverable = { title: string; route: string; repeat: string | null; tokens: string[] };
 
-async function tokensForUser(
-  ctx: { db: any },
-  userId: Id<'users'>,
-): Promise<string[]> {
+async function tokensForUser(ctx: QueryCtx, userId: Id<'users'>): Promise<string[]> {
   const rows = await ctx.db
     .query('pushTokens')
-    .withIndex('by_user', (q: any) => q.eq('userId', userId))
+    .withIndex('by_user', (q) => q.eq('userId', userId))
     .take(20);
-  return rows.map((r: any) => r.token);
+  return rows.map((r) => r.token);
 }
 
 export const prepareReminderDelivery = internalQuery({
@@ -151,40 +154,17 @@ export const deliverTask = internalAction({
 
 // ---------------------------------------------------------------------------
 // Recurrence: schedule the next occurrence of a repeating reminder.
+// Timezone-aware math lives in ./lib/recurrence (unit-tested).
 // ---------------------------------------------------------------------------
-
-const DAY = 24 * 60 * 60 * 1000;
-
-/** Next fire time for a repeat rule, or null for one-shot / unknown rules. */
-function nextOccurrence(base: number, repeat: string): number | null {
-  switch (repeat) {
-    case 'Daily':
-      return base + DAY;
-    case 'Weekly':
-      return base + 7 * DAY;
-    case 'Weekdays': {
-      let next = base + DAY;
-      let day = new Date(next).getUTCDay(); // 0 Sun .. 6 Sat
-      if (day === 6) next += 2 * DAY; // Sat -> Mon
-      else if (day === 0) next += DAY; // Sun -> Mon
-      return next;
-    }
-    case 'Monthly': {
-      const d = new Date(base);
-      d.setUTCMonth(d.getUTCMonth() + 1);
-      return d.getTime();
-    }
-    default:
-      return null;
-  }
-}
 
 export const rearmReminder = internalMutation({
   args: { reminderId: v.id('reminders') },
   handler: async (ctx, { reminderId }) => {
     const r = await ctx.db.get(reminderId);
     if (!r || r.done || typeof r.remindAt !== 'number' || !r.repeat) return null;
-    const next = nextOccurrence(r.remindAt, r.repeat);
+    // Advance to the first occurrence strictly in the future (collapses missed
+    // periods into one fire) using the user's timezone.
+    const next = nextOccurrenceAfter(r.remindAt, r.repeat, r.tz ?? 'UTC', Date.now());
     if (next === null) {
       await ctx.db.patch(reminderId, { notifyJobId: undefined });
       return null;

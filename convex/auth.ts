@@ -82,11 +82,24 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   callbacks: {
     // Allowlist the redirect targets the native app uses (deep link + Expo dev).
     async redirect({ redirectTo }) {
-      const allowed = ['pacto://', 'exp://', 'exp+pacto://', 'http://localhost', 'https://localhost'];
-      if (!allowed.some((prefix) => redirectTo.startsWith(prefix))) {
-        throw new Error(`Invalid redirectTo URI: ${redirectTo}`);
+      // Custom app schemes (deep links): exact scheme match.
+      const schemes = ['pacto://', 'exp://', 'exp+pacto://'];
+      if (schemes.some((s) => redirectTo.startsWith(s))) return redirectTo;
+      // http(s) only for localhost during development — match the host EXACTLY
+      // (a startsWith('http://localhost') check would also accept
+      // http://localhostattacker.com, leaking the OAuth code to an attacker domain).
+      try {
+        const u = new URL(redirectTo);
+        if (
+          (u.protocol === 'http:' || u.protocol === 'https:') &&
+          (u.hostname === 'localhost' || u.hostname === '127.0.0.1')
+        ) {
+          return redirectTo;
+        }
+      } catch {
+        // not a parseable URL — reject below
       }
-      return redirectTo;
+      throw new Error(`Invalid redirectTo URI: ${redirectTo}`);
     },
   },
 });

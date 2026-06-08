@@ -35,6 +35,7 @@ export const createReminder = mutation({
     whenLabel: v.optional(v.string()),
     repeat: v.optional(v.string()),
     priority: v.optional(priority),
+    tz: v.optional(v.string()),
     assigneeUserId: v.optional(v.id('users')),
   },
   handler: async (ctx, a) => {
@@ -47,6 +48,7 @@ export const createReminder = mutation({
       whenLabel: a.whenLabel,
       repeat: a.repeat,
       priority: a.priority,
+      tz: a.tz,
       done: false,
       assigneeUserId,
       createdBy: userId,
@@ -75,6 +77,7 @@ export const updateReminder = mutation({
     whenLabel: v.optional(v.string()),
     repeat: v.optional(v.string()),
     priority: v.optional(priority),
+    tz: v.optional(v.string()),
     done: v.optional(v.boolean()),
     assigneeUserId: v.optional(v.id('users')),
   },

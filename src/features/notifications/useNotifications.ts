@@ -21,6 +21,11 @@ Notifications.setNotificationHandler({
 // detach it from the current user (see unregisterPushToken).
 let lastToken: string | null = null;
 
+// getLastNotificationResponseAsync() is persistent for the whole app process, so
+// the cold-start tap is consumed once — otherwise it replays the same navigation
+// every time the registrar remounts (e.g. switching spaces).
+let coldStartConsumed = false;
+
 function getProjectId(): string | undefined {
   return (
     Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId
@@ -91,7 +96,9 @@ export function useRegisterPushNotifications() {
     };
   }, [register]);
 
-  // Route to the item when a notification is tapped (foreground/background + cold start).
+  // Route to the item when a notification is tapped. The live listener handles
+  // taps while the app runs; the cold-start launch response is consumed only once
+  // per process (it is persistent and would otherwise re-navigate on remount).
   useEffect(() => {
     const go = (response: Notifications.NotificationResponse | null) => {
       const route = response?.notification.request.content.data?.route;
@@ -99,7 +106,10 @@ export function useRegisterPushNotifications() {
         router.push(route as never);
       }
     };
-    Notifications.getLastNotificationResponseAsync().then(go);
+    if (!coldStartConsumed) {
+      coldStartConsumed = true;
+      Notifications.getLastNotificationResponseAsync().then(go);
+    }
     const sub = Notifications.addNotificationResponseReceivedListener(go);
     return () => sub.remove();
   }, [router]);
