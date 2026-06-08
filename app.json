@@ -13,6 +13,7 @@
       "supportsTablet": false,
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Pacto uses your microphone so you can talk to the Pacto assistant.",
+        "NSCameraUsageDescription": "Pacto's voice assistant uses a real-time audio library that requires camera access to be declared. Pacto only records audio for the assistant and never uses the camera or captures video.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "bitcode": false

@@ -3,13 +3,14 @@ const { withInfoPlist } = require('@expo/config-plugins');
 /**
  * Strips iOS permission usage-description keys that upstream config plugins
  * inject but this app never exercises:
- *   - NSCameraUsageDescription  — added by @config-plugins/react-native-webrtc,
- *     but Pacto uses WebRTC for voice only and never opens the camera.
  *   - NSFaceIDUsageDescription  — added by expo-secure-store, but SecureStore is
- *     used without `requireAuthentication`, so Face ID is never invoked.
+ *     used without `requireAuthentication`, so Face ID is never invoked. Apple's
+ *     binary scan does not flag it, so removing it is safe.
  *
- * Declaring purpose strings for capabilities the binary doesn't use is an App
- * Store review / App-Privacy mismatch risk, so we remove them on every prebuild.
+ * NSCameraUsageDescription is NOT stripped: react-native-webrtc links the Camera
+ * API, so Apple's automated processing rejects the binary (ITMS-90683) without a
+ * purpose string even though Pacto only captures audio. That camera string is
+ * declared in app.json's ios.infoPlist instead.
  *
  * We delete in BOTH places to be robust to plugin ordering and to a stale
  * existing Info.plist:
@@ -18,7 +19,10 @@ const { withInfoPlist } = require('@expo/config-plugins');
  * This plugin is registered last in app.json, so the other plugins have already
  * added the keys by the time it runs.
  */
-const REMOVE_KEYS = ['NSCameraUsageDescription', 'NSFaceIDUsageDescription'];
+// NOTE: NSCameraUsageDescription is intentionally NOT stripped — react-native-webrtc
+// links the Camera API, so Apple rejects the binary (ITMS-90683) without a purpose
+// string even though Pacto only uses audio. That string is declared in app.json.
+const REMOVE_KEYS = ['NSFaceIDUsageDescription'];
 
 module.exports = function withTrimIosPermissions(config) {
   config.ios = config.ios || {};
