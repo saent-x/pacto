@@ -17,14 +17,20 @@
       "autoIncrement": true,
       "channel": "production",
       "env": {
-        "EXPO_PUBLIC_AI_ENGINE": "whisper"
+        "EXPO_PUBLIC_AI_ENGINE": "whisper",
+        "EXPO_PUBLIC_CONVEX_URL": "https://efficient-cormorant-391.eu-west-1.convex.cloud",
+        "EXPO_PUBLIC_CONVEX_SITE_URL": "https://efficient-cormorant-391.eu-west-1.convex.site"
       }
     }
   },
   "submit": {
     "production": {
       "ios": {
-        "ascAppId": "6770158733"
+        "ascAppId": "6770158733",
+        "appleTeamId": "FY8SWUHG89",
+        "ascApiKeyPath": "./secrets/AuthKey_RZAS9AD4CL.p8",
+        "ascApiKeyId": "RZAS9AD4CL",
+        "ascApiKeyIssuerId": "2abab1e7-c431-44eb-97f5-8620ea6863cc"
       }
     }
   }
