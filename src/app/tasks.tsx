@@ -9,6 +9,7 @@ import { FONTS } from '@/theme/tokens';
 import { QScreen, SubBar, QSection, T, Kick, Div, Icon, Press, RoundBtn, Mono, Numeral, Bar, CollapsibleList } from '@/ui';
 import { useSpace } from '@/features/account/SpaceProvider';
 import { MemberAvatar } from '@/features/account/avatars';
+import { QEmpty } from '@/art/motifs';
 import { confirmDelete } from '@/lib/confirm';
 import { isToday, startOfToday } from '@/lib/datetime';
 import { dueLabelForDate } from '@/lib/taskDueDate';
@@ -266,6 +267,8 @@ export default function Tasks() {
         </View>
       ))}
 
+      {sections.length === 0 && <QEmpty kind="tasks" title="All kept." />}
+
       {/* New list — quiet inline creator: tap, type, Return. */}
       {newMode ? (
         <View
@@ -321,7 +324,7 @@ export default function Tasks() {
         <View style={{ marginTop: 30 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 }}>
             <Kick>Done ·</Kick>
-            <Mono size={11} weight={600} lh={1}>
+            <Mono size={11} weight={600} color={C.ink3} lh={1}>
               {done.length}
             </Mono>
           </View>

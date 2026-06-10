@@ -8,6 +8,8 @@ import Animated, {
   useAnimatedStyle,
   interpolate,
   Extrapolation,
+  FadeIn,
+  FadeOut,
   type SharedValue,
 } from 'react-native-reanimated';
 import { useColors } from '../theme';
@@ -58,6 +60,9 @@ export function QScreen({
 }) {
   const C = useColors();
   const insets = useSafeAreaInsets();
+  // Captured once on mount (setter unused): only screens that actually showed the
+  // spinner crossfade into content — warm-cache mounts don't double the push transition.
+  const [sawSpinner] = useState(loading);
   const [hdrH, setHdrH] = useState(insets.top + 56);
   const scrollY = useSharedValue(0);
   const onScrollHandler = useAnimatedScrollHandler((e) => {
@@ -96,11 +101,16 @@ export function QScreen({
     <View style={{ flex: 1, backgroundColor: bg ?? C.bg }}>
       {motif}
       {loading ? (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <Animated.View
+          exiting={FadeOut.duration(150)}
+          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+        >
           <ActivityIndicator color={C.accent} />
-        </View>
+        </Animated.View>
       ) : (
-        scroll
+        <Animated.View style={{ flex: 1 }} entering={sawSpinner ? FadeIn.duration(250) : undefined}>
+          {scroll}
+        </Animated.View>
       )}
       {header ? (
         <HeaderScroll.Provider value={scrollY}>

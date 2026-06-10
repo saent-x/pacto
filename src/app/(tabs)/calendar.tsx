@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { View } from 'react-native';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useQuery } from 'convex/react';
 import { api } from '@cvx/_generated/api';
 import { Id } from '@cvx/_generated/dataModel';
@@ -103,7 +104,9 @@ export default function Calendar() {
           </Kick>
         </View>
         {!isCurrentWeek && (
-          <Pill onPress={goToday}>Today</Pill>
+          <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(140)}>
+            <Pill onPress={goToday}>Today</Pill>
+          </Animated.View>
         )}
       </View>
 
@@ -164,9 +167,22 @@ export default function Calendar() {
           }
         />
         {rows.length === 0 ? (
-          <T size={15} color={C.ink2}>
-            No events for this day.
-          </T>
+          <View style={{ paddingVertical: 6 }}>
+            <Serif size={24} italic color={C.ink2}>
+              Nothing planned.
+            </Serif>
+            <Press
+              onPress={() => router.push(`/new/event?day=${startOfDay(sel)}`)}
+              haptic
+              accessibilityLabel="Add an event"
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 14, alignSelf: 'flex-start' }}
+            >
+              <Icon name="plus" size={15} color={C.ink4} strokeWidth={2} />
+              <T size={15.5} weight={500} color={C.ink4}>
+                Add an event
+              </T>
+            </Press>
+          </View>
         ) : (
           <CollapsibleList items={rows} limit={6}>
             {(e, i) => {

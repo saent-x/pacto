@@ -184,7 +184,7 @@ export default function Tools() {
         <View key={t.label}>
           {i > 0 && <Div style={{ backgroundColor: C.hair }} />}
           <Press onPress={() => router.push(t.route as never)} haptic>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 17 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16 }}>
               <Icon name={t.icon} size={20} color={C.ink2} strokeWidth={1.8} />
               <T size={17} weight={500} style={{ flex: 1 }}>
                 {t.label}

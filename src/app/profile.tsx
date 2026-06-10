@@ -182,7 +182,7 @@ export default function Profile() {
         contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 26, paddingBottom: insets.bottom + 96 }}
       >
         {/* Display name */}
-        <View style={{ paddingVertical: 12, borderTopWidth: 1, borderTopColor: C.hair }}>
+        <View style={{ paddingVertical: 18, borderTopWidth: 1, borderTopColor: C.hair }}>
           <Kick style={{ marginBottom: 8 }}>Display name</Kick>
           <TextInput
             value={displayName}
@@ -229,7 +229,7 @@ export default function Profile() {
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <Kick>Members ·</Kick>
-                <Mono size={11} weight={600} lh={1}>
+                <Mono size={11} weight={600} lh={1} color={C.ink3}>
                   {members.length}
                 </Mono>
               </View>

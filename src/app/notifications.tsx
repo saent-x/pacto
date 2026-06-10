@@ -116,6 +116,13 @@ export default function Notifications() {
           </View>
         );
       })}
+
+      <View style={{ alignItems: 'center', marginTop: 30, gap: 10 }}>
+        <View style={{ width: 5, height: 5, borderRadius: 5, backgroundColor: C.line }} />
+        <Serif size={19} italic color={C.ink3}>
+          That&apos;s everything for now.
+        </Serif>
+      </View>
     </QScreen>
   );
 }

@@ -10,6 +10,7 @@ import {
   QSection,
   Mono,
   Numeral,
+  Serif,
   T,
   Kick,
   Div,
@@ -22,7 +23,7 @@ import { useSpace } from '@/features/account/SpaceProvider';
 import { MemberAvatar } from '@/features/account/avatars';
 import { moodById, moodColor } from '@/constants/moods';
 import { fmtTime, startOfToday } from '@/lib/datetime';
-import { QCornerMotif } from '@/art/motifs';
+import { QCornerMotif, QEmptyArt } from '@/art/motifs';
 
 const DAY_MS = 86_400_000;
 const WEEK_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -160,8 +161,8 @@ export default function Checkins() {
             return (
               <View key={mem.userId}>
                 {i > 0 && <Div style={{ backgroundColor: C.hair }} />}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12 }}>
-                  <MemberAvatar member={mem} size={30} />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 }}>
+                  <MemberAvatar member={mem} size={28} />
                   <T size={16.5} weight={500} style={{ flex: 1 }} numberOfLines={1}>
                     {mem.isYou ? 'You' : mem.displayName}
                   </T>
@@ -192,9 +193,23 @@ export default function Checkins() {
       {rows.length === 0 ? (
         <>
           <QSection label="History" />
-          <T size={15} weight={450} color={C.ink2}>
-            No check-ins yet. How did today feel?
-          </T>
+          <View style={{ paddingTop: 10, paddingBottom: 8, alignItems: 'center' }}>
+            <QEmptyArt kind="calm" size={120} />
+            <View style={{ marginTop: 14 }}>
+              <Serif size={24} italic>
+                How did today feel?
+              </Serif>
+            </View>
+            <Press
+              onPress={() => router.push('/new/checkin')}
+              haptic
+              hitSlop={10}
+              accessibilityLabel="Check in"
+              style={{ marginTop: 12 }}
+            >
+              <Kick color={C.accent}>Check in →</Kick>
+            </Press>
+          </View>
         </>
       ) : (
         history.map((sec) => (

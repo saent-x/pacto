@@ -9,6 +9,7 @@ import { useSpace } from '@/features/account/SpaceProvider';
 import { MemberStack } from '@/features/account/avatars';
 import { useNow } from '@/lib/useNow';
 import { formatTimetableTimeLabel, timetableTimeMinutes } from '@/lib/timetableTime';
+import { QEmpty } from '@/art/motifs';
 
 const shareLabel = (share?: string) => {
   const s = (share ?? '').toLowerCase();
@@ -91,47 +92,51 @@ export default function Timetable() {
 
       <QSection label={isShared ? 'Shared rhythms' : 'Your rhythms'} />
 
-      {rows.map((t) => {
-        const days = t.days ?? t.items.length;
-        const n = nextStep(t.items as TTItem[], nowMin);
-        const next = n ? `${n.item.title || 'Untitled'} · ${formatTimetableTimeLabel(n.item.time)}` : 'No steps yet';
-        return (
-          <Press
-            key={t._id}
-            onPress={() => router.push(`/timetable/${t._id}` as any)}
-            haptic
-            accessibilityLabel={`Open ${t.title} timetable`}
-            style={{ borderRadius: RADII.card, marginBottom: 12 }}
-          >
-            <View
-              style={[
-                { backgroundColor: C.surface, borderRadius: RADII.card, padding: 22 },
-                { boxShadow: SHADOWS.soft } as object,
-              ]}
+      {rows.length === 0 ? (
+        <QEmpty kind="calm" title="No rhythms yet." />
+      ) : (
+        rows.map((t) => {
+          const days = t.days ?? t.items.length;
+          const n = nextStep(t.items as TTItem[], nowMin);
+          const next = n ? `${n.item.title || 'Untitled'} · ${formatTimetableTimeLabel(n.item.time)}` : 'No steps yet';
+          return (
+            <Press
+              key={t._id}
+              onPress={() => router.push(`/timetable/${t._id}` as any)}
+              haptic
+              accessibilityLabel={`Open ${t.title} timetable`}
+              style={{ borderRadius: RADII.card, marginBottom: 12 }}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-                <View style={{ flex: 1 }}>
-                  <Serif size={26} numberOfLines={1}>
-                    {t.title}
-                  </Serif>
-                  <Kick color={C.ink3} style={{ marginTop: 4 }}>
-                    {`${t.items.length} ${t.items.length === 1 ? 'item' : 'items'} · ${days} ${days === 1 ? 'day' : 'days'}`}
-                  </Kick>
+              <View
+                style={[
+                  { backgroundColor: C.surface, borderRadius: RADII.card, padding: 22 },
+                  { boxShadow: SHADOWS.soft } as object,
+                ]}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                  <View style={{ flex: 1 }}>
+                    <Serif size={26} numberOfLines={1}>
+                      {t.title}
+                    </Serif>
+                    <Kick color={C.ink3} style={{ marginTop: 4 }}>
+                      {`${t.items.length} ${t.items.length === 1 ? 'item' : 'items'} · ${days} ${days === 1 ? 'day' : 'days'}`}
+                    </Kick>
+                  </View>
+                  {isShared ? (
+                    <MemberStack members={members} size={26} max={4} />
+                  ) : (
+                    <Kick color={C.ink3}>{shareLabel(t.share)}</Kick>
+                  )}
                 </View>
-                {isShared ? (
-                  <MemberStack members={members} size={26} max={4} />
-                ) : (
-                  <Kick color={C.ink3}>{shareLabel(t.share)}</Kick>
-                )}
+                <Div style={{ backgroundColor: C.line, marginVertical: 16 }} />
+                <Kick color={C.ink2} numberOfLines={1}>
+                  Next · {next}
+                </Kick>
               </View>
-              <Div style={{ backgroundColor: C.line, marginVertical: 16 }} />
-              <Kick color={C.ink2} numberOfLines={1}>
-                Next · {next}
-              </Kick>
-            </View>
-          </Press>
-        );
-      })}
+            </Press>
+          );
+        })
+      )}
     </QScreen>
   );
 }

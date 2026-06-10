@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useColors } from '../theme';
 import { T, Mono } from './Text';
 import { Icon } from './Icon';
@@ -56,7 +57,21 @@ export function CollapsibleList<Item>({
   const hidden = items.length - limit;
   return (
     <>
-      {shown.map((item, i) => children(item, i))}
+      {shown.map((item, i) =>
+        // Rows within `limit` reconcile untouched; only the revealed tail cascades in.
+        i < limit ? (
+          children(item, i)
+        ) : (
+          <Animated.View
+            key={`reveal-${i}`}
+            entering={FadeInDown.duration(220)
+              .delay(Math.min(i - limit, 8) * 25)
+              .withInitialValues({ transform: [{ translateY: 8 }] })}
+          >
+            {children(item, i)}
+          </Animated.View>
+        ),
+      )}
       {hidden > 0 && <ShowMore expanded={expanded} hidden={hidden} onToggle={() => setExpanded((v) => !v)} />}
     </>
   );

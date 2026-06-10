@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleProp, ViewStyle } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming, Easing } from 'react-native-reanimated';
 import { useColors } from '../theme';
 import { FONTS, RADII, SHADOWS } from '../theme/tokens';
 import { Press } from './Press';
@@ -176,16 +177,20 @@ export function Bar({
   style?: StyleProp<ViewStyle>;
 }) {
   const C = useColors();
+  const [w, setW] = useState(0);
+  const clamped = Math.min(1, Math.max(0, value));
+  // Initialized at the current value so mount doesn't replay; only changes ease.
+  const p = useSharedValue(clamped);
+  useEffect(() => {
+    p.value = withTiming(clamped, { duration: 350, easing: Easing.out(Easing.cubic) });
+  }, [clamped, p]);
+  const fill = useAnimatedStyle(() => ({ width: w * p.value }), [w]);
   return (
-    <View style={[{ height: h, borderRadius: h, backgroundColor: track ?? C.line, overflow: 'hidden' }, style]}>
-      <View
-        style={{
-          width: `${Math.min(100, Math.max(0, value * 100))}%`,
-          height: '100%',
-          borderRadius: h,
-          backgroundColor: color ?? C.accent,
-        }}
-      />
+    <View
+      onLayout={(e) => setW(e.nativeEvent.layout.width)}
+      style={[{ height: h, borderRadius: h, backgroundColor: track ?? C.line, overflow: 'hidden' }, style]}
+    >
+      <Animated.View style={[{ height: '100%', borderRadius: h, backgroundColor: color ?? C.accent }, fill]} />
     </View>
   );
 }

@@ -1,7 +1,7 @@
 import React, { forwardRef } from 'react';
 import { Pressable, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import Animated, { FadeIn, useAnimatedStyle } from 'react-native-reanimated';
 import { TabTrigger, type TabTriggerSlotProps } from 'expo-router/ui';
 import { GlassView } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
@@ -47,9 +47,11 @@ const TabButton = forwardRef<View, TabButtonProps>(
       >
         <Icon name={icon} size={20} color={isFocused ? C.bg : C.ink3} strokeWidth={1.9} />
         {isFocused && (
-          <T size={13.5} weight={600} color={C.bg} maxFontSizeMultiplier={1.2} style={{ letterSpacing: -0.2 }}>
-            {label}
-          </T>
+          <Animated.View entering={FadeIn.duration(180)}>
+            <T size={13.5} weight={600} color={C.bg} maxFontSizeMultiplier={1.2} style={{ letterSpacing: -0.2 }}>
+              {label}
+            </T>
+          </Animated.View>
         )}
       </Pressable>
     );

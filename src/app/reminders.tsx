@@ -21,7 +21,7 @@ import {
 import { useSpace } from '@/features/account/SpaceProvider';
 import { MemberAvatar } from '@/features/account/avatars';
 import { fmtTime } from '@/lib/datetime';
-import { QCornerMotif } from '@/art/motifs';
+import { QCornerMotif, QEmpty } from '@/art/motifs';
 import { confirmDelete } from '@/lib/confirm';
 import { priorityColor, priorityKeyOrNull } from '@/constants/priority';
 
@@ -195,19 +195,17 @@ export default function Reminders() {
       {/* Upcoming */}
       <QSection label="Upcoming" />
       {open.length === 0 ? (
-        <T size={15} weight={450} color={C.ink2}>
-          Nothing on the horizon. A clear mind.
-        </T>
+        <QEmpty kind="reminders" title="Nothing on the horizon." />
       ) : (
         <CollapsibleList items={open} limit={6}>{(r) => <QReminderRow key={r._id} r={r} />}</CollapsibleList>
       )}
 
       {/* Done */}
       {done.length > 0 && (
-        <View style={{ marginTop: 26 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 }}>
+        <View style={{ marginTop: 30 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 }}>
             <Kick>Done ·</Kick>
-            <Mono size={11} weight={600} lh={1}>
+            <Mono size={11} weight={600} color={C.ink3} lh={1}>
               {done.length}
             </Mono>
           </View>

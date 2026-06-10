@@ -47,9 +47,9 @@ export default function NewCheckin() {
         {MOODS.map((m) => {
           const on = mood === m.id;
           return (
-            <Press key={m.id} onPress={() => setMood(m.id)} style={{ alignItems: 'center', gap: 8 }} haptic>
+            <Press key={m.id} onPress={() => setMood(m.id)} style={{ alignItems: 'center', gap: 10 }} haptic>
               <MoodGlyph mood={m.id} size={42} active={on} />
-              <Kick color={on ? C.ink : C.ink3} style={{ fontSize: 10.5, letterSpacing: 0.3 }}>
+              <Kick color={on ? C.ink : C.ink3} style={{ fontSize: 10, letterSpacing: 0.4 }}>
                 {m.label}
               </Kick>
             </Press>

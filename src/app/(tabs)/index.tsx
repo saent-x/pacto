@@ -8,6 +8,9 @@ import Animated, {
   useAnimatedStyle,
   interpolate,
   Extrapolation,
+  FadeIn,
+  FadeOut,
+  FadeInDown,
 } from 'react-native-reanimated';
 import { useQuery, useMutation } from 'convex/react';
 import type { OptimisticLocalStore } from 'convex/browser';
@@ -15,7 +18,8 @@ import { api } from '@cvx/_generated/api';
 import { Id } from '@cvx/_generated/dataModel';
 import { useColors } from '@/theme';
 import { FONTS } from '@/theme/tokens';
-import { T, Kick, Chip, RoundBtn, Press, Div, Icon, MoodGlyph, Glass, Mono, Numeral, ActivityHeatmap, buildActivity } from '@/ui';
+import { T, Kick, Chip, RoundBtn, Press, Div, Icon, MoodGlyph, Glass, Mono, Numeral, Serif, ActivityHeatmap, buildActivity } from '@/ui';
+import { QEmptyArt } from '@/art/motifs';
 import { useSpace } from '@/features/account/SpaceProvider';
 import { MemberAvatar, MemberStack } from '@/features/account/avatars';
 import { displayNameForGreeting } from '@/features/account/displayName';
@@ -96,6 +100,9 @@ export default function Today() {
     events !== undefined &&
     pulse !== undefined &&
     checkins !== undefined;
+  // Captured once on mount (setter unused) — a warm mount that never showed the
+  // spinner must not replay the entrance fade.
+  const [sawSpinner] = useState(!ready);
   const { refreshing, onRefresh } = usePullRefresh();
   const greetingName = displayNameForGreeting(user?.displayName, user?.email);
   const selfDisplayName = greetingName === 'you' ? 'You' : greetingName;
@@ -185,7 +192,7 @@ export default function Today() {
           </View>
         </View>
 
-        <View style={{ marginBottom: 38 }}>
+        <View style={{ marginBottom: 34 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 18 }}>
             <T size={19} weight={600} lh={1.2} numberOfLines={1} style={{ flex: 1 }}>
               How&apos;s today?
@@ -221,10 +228,11 @@ export default function Today() {
         </View>
 
         {agendaRows.length === 0 ? (
-          <View style={{ paddingVertical: 20 }}>
-            <T size={16.5} weight={500} lh={1.3} color={C.ink2}>
-              Nothing open for the day.
-            </T>
+          <View style={{ paddingTop: 18, paddingBottom: 10, alignItems: 'center' }}>
+            <QEmptyArt kind="calm" size={120} />
+            <View style={{ marginTop: 14 }}>
+              <Serif size={24} italic>A clear day.</Serif>
+            </View>
           </View>
         ) : (
           agendaRows.map((r, i) => {
@@ -238,7 +246,7 @@ export default function Today() {
             const showAvatar = dated && isShared && !!m;
             const typeLabel = { reminder: 'Reminder', task: 'Task', event: 'Event' }[r.kind];
             return (
-              <View key={r.id}>
+              <Animated.View key={r.id} entering={FadeInDown.duration(240).delay(Math.min(i, 8) * 30).withInitialValues({ transform: [{ translateY: 8 }] })}>
                 {i > 0 && <Div style={{ backgroundColor: C.hair }} />}
                 <Press onPress={() => router.push(editRoute(r))} style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16 }} haptic>
                   <View style={{ minWidth: 56, alignItems: 'flex-start' }}>
@@ -270,7 +278,7 @@ export default function Today() {
                     )}
                   </View>
                 </Press>
-              </View>
+              </Animated.View>
             );
           })
         )}
@@ -366,11 +374,13 @@ export default function Today() {
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       {ready ? (
-        scrollContent
+        <Animated.View style={{ flex: 1 }} entering={sawSpinner ? FadeIn.duration(250) : undefined}>
+          {scrollContent}
+        </Animated.View>
       ) : (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <Animated.View exiting={FadeOut.duration(150)} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator color={C.accent} />
-        </View>
+        </Animated.View>
       )}
       {floatingHeader}
     </View>
