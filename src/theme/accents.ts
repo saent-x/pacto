@@ -24,7 +24,7 @@ export const ACCENTS: Record<AccentKey, AccentDef> = {
   },
   terracotta: {
     label: 'Terracotta',
-    light: { accent: '#C0573B', accentSoft: '#F1DED4', onAccent: '#FCF6EE' },
+    light: { accent: '#C0573B', accentSoft: '#F1DED4', onAccent: '#FFFFFF' },
     dark: { accent: '#E07A5A', accentSoft: '#34211B', onAccent: '#0C0D0F' },
   },
   green: {
@@ -39,7 +39,8 @@ export const ACCENTS: Record<AccentKey, AccentDef> = {
   },
   amber: {
     label: 'Amber',
-    light: { accent: '#B8791F', accentSoft: '#F4E8D2', onAccent: '#FFFFFF' },
+    // 4.9:1 with white button text — #B8791F sat at 3.6:1, the only failing accent.
+    light: { accent: '#9A6519', accentSoft: '#F4E8D2', onAccent: '#FFFFFF' },
     dark: { accent: '#E0A94B', accentSoft: '#322712', onAccent: '#0C0D0F' },
   },
 };

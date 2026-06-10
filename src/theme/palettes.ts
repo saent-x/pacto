@@ -13,6 +13,8 @@ export type BasePalette = {
   ink4: string;
   line: string;
   hair: string;
+  /** Destructive/error color — distinct from every accent in both themes. */
+  danger: string;
 };
 
 export const CLOUD: BasePalette = {
@@ -22,10 +24,13 @@ export const CLOUD: BasePalette = {
   sunk: '#EAEAE5',
   ink: '#16171A',
   ink2: '#6A6C71',
-  ink3: '#9C9EA3',
+  // 3.9:1 on bg / 4.5:1 on surface — the old #9C9EA3 sat at 2.3:1, below even
+  // the large-text floor, and this is the default color of all Kick metadata.
+  ink3: '#74767C',
   ink4: '#BFC0C5',
   line: '#E3E3DD',
   hair: '#ECECE6',
+  danger: '#B84F43',
 };
 
 export const INK: BasePalette = {
@@ -39,6 +44,9 @@ export const INK: BasePalette = {
   ink4: '#4A4D52',
   line: '#26272B',
   hair: '#1D1E21',
+  // Not terracotta's dark accent (#E07A5A) — errors must stay distinguishable
+  // from accent text when the terracotta accent is selected.
+  danger: '#D96B5C',
 };
 
 export const basePalette = (isDark: boolean): BasePalette => (isDark ? INK : CLOUD);
