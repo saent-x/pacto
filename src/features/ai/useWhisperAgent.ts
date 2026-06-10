@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import {
   useAudioRecorder,
   AudioModule,
@@ -42,6 +43,23 @@ const friendlyError = (e: any): string => {
     return 'A little fast — give it a minute and try again.';
   return "Couldn't reach the assistant — try again.";
 };
+
+// Web: recorder.uri is a blob: URL the legacy FileSystem API can't read — go
+// through fetch + FileReader instead. Returns the payload plus the blob's real
+// container type so the server names the upload correctly for transcription.
+async function readBlobUri(uri: string): Promise<{ base64: string; mime: string }> {
+  const blob = await (await fetch(uri)).blob();
+  const base64 = await new Promise<string>((resolve, reject) => {
+    const r = new (globalThis as any).FileReader();
+    r.onload = () => {
+      const s = String(r.result);
+      resolve(s.slice(s.indexOf(',') + 1));
+    };
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(blob);
+  });
+  return { base64, mime: blob.type || 'audio/webm' };
+}
 
 // Restore playback routing after recording (allowsRecording keeps the whole app
 // in the record category) and deactivate the session so audio we interrupted
@@ -130,13 +148,20 @@ export function useWhisperAgent(levelRef?: SharedValue<number>) {
       return;
     }
     try {
-      const audioBase64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+      let audioBase64: string;
+      let mime: string | undefined;
+      if (Platform.OS === 'web') {
+        ({ base64: audioBase64, mime } = await readBlobUri(uri));
+      } else {
+        audioBase64 = await FileSystem.readAsStringAsync(uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+      }
       if (genRef.current !== gen) return; // dismissed — don't run a billed turn
       const res = await runTurn({
         spaceId: space.id,
         audioBase64,
+        mime,
         lang: deviceLang,
         history: historyFrom(),
         nowIso: localNowIso(),

@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState } from 'react-native';
-import {
-  RTCPeerConnection,
-  RTCSessionDescription,
-  mediaDevices,
-} from 'react-native-webrtc';
+import { AppState, Platform } from 'react-native';
+import { RTCPeerConnection, RTCSessionDescription, mediaDevices } from './webrtc';
 import { useAction, useConvex } from 'convex/react';
 import { ConvexError } from 'convex/values';
 import { api } from '@cvx/_generated/api';
@@ -55,6 +51,9 @@ export function useRealtimeAgent() {
   const pcRef = useRef<any>(null);
   const dcRef = useRef<any>(null);
   const streamRef = useRef<any>(null);
+  // Web only: browsers don't auto-play remote WebRTC audio the way the native
+  // session does — the remote track must be attached to an <audio> element.
+  const audioElRef = useRef<any>(null);
   // Session generation — stop() bumps it so an in-flight start() knows it was
   // cancelled and must tear down instead of going live with the dock closed.
   const genRef = useRef(0);
@@ -178,6 +177,11 @@ export function useRealtimeAgent() {
     try {
       pcRef.current?.close?.();
     } catch {}
+    if (audioElRef.current) {
+      try {
+        audioElRef.current.srcObject = null;
+      } catch {}
+    }
     streamRef.current = null;
     dcRef.current = null;
     pcRef.current = null;
@@ -227,6 +231,16 @@ export function useRealtimeAgent() {
 
       pc = new RTCPeerConnection({ iceServers: [] });
       pcRef.current = pc;
+
+      if (Platform.OS === 'web') {
+        pc.addEventListener('track', (e: any) => {
+          if (pcRef.current !== pc || !e.streams?.[0]) return;
+          const el = (audioElRef.current ??= new (globalThis as any).Audio());
+          el.autoplay = true;
+          el.srcObject = e.streams[0];
+          el.play?.().catch(() => {});
+        });
+      }
 
       stream = await mediaDevices.getUserMedia({ audio: true });
       if (gen !== genRef.current) {

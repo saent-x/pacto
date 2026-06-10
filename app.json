@@ -16,7 +16,8 @@
         "NSCameraUsageDescription": "Pacto's voice assistant uses a real-time audio library that requires camera access to be declared. Pacto only records audio for the assistant and never uses the camera or captures video.",
         "ITSAppUsesNonExemptEncryption": false
       },
-      "bitcode": false
+      "bitcode": false,
+      "appleTeamId": "FY8SWUHG89"
     },
     "android": {
       "package": "com.stbrnstudios.pacto",

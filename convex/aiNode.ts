@@ -125,8 +125,11 @@ export const whisperTurn = action({
     nowIso: v.optional(v.string()),
     // IANA zone name, stored on reminders so notifications schedule correctly.
     tz: v.optional(v.string()),
+    // Audio container type — native records m4a, web records webm/ogg; Whisper
+    // picks its decoder from the uploaded filename, so the name must match.
+    mime: v.optional(v.string()),
   },
-  handler: async (ctx, { spaceId, audioBase64, text, lang, history, nowIso, tz }) => {
+  handler: async (ctx, { spaceId, audioBase64, text, lang, history, nowIso, tz, mime }) => {
     // Gate BEFORE any paid OpenAI call: authenticate, confirm the caller is a
     // member of the space, and apply a per-user rate limit. Previously the only
     // membership check happened transitively inside the tool mutations, which
@@ -149,8 +152,10 @@ export const whisperTurn = action({
     if (audioBase64) {
       // Node Buffer via globalThis (avoids node-global typing in the app tsc).
       const buf = (globalThis as any).Buffer.from(audioBase64, 'base64');
+      const type = mime && /^audio\//.test(mime) ? mime : 'audio/m4a';
+      const ext = type.includes('webm') ? 'webm' : type.includes('ogg') ? 'ogg' : type.includes('wav') ? 'wav' : 'm4a';
       const form = new FormData();
-      form.append('file', new Blob([buf], { type: 'audio/m4a' }), 'audio.m4a');
+      form.append('file', new Blob([buf], { type }), `audio.${ext}`);
       form.append('model', 'whisper-1');
       // Pin Whisper to the device language so noise can't be misdetected as another language.
       if (lang) form.append('language', lang);

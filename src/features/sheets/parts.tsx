@@ -7,6 +7,7 @@ import { FONTS } from '@/theme/tokens';
 import { Serif, T, Kick, Pill, PrimaryBtn, RoundBtn, Press, Mono, type IconName } from '@/ui';
 import { PRIORITY_OPTIONS, PRIORITY_ICON, priorityColor } from '@/constants/priority';
 import { fmtTime } from '@/lib/datetime';
+import { QPickerWeb } from './QPickerWeb';
 import type { Member } from '@/features/account/SpaceProvider';
 import { MemberAvatar } from '@/features/account/avatars';
 
@@ -30,6 +31,17 @@ export function QPicker({
 }) {
   const C = useColors();
   const { isDark } = useTheme();
+
+  if (Platform.OS === 'web') {
+    // The RNC datetimepicker has no web implementation — QPickerWeb forks to an
+    // HTML <input type="date|time"> styled like the underlined sheet fields.
+    return (
+      <View style={{ marginBottom: 24 }}>
+        <Kick style={{ marginBottom: 10 }}>{label}</Kick>
+        <QPickerWeb value={value} onChange={onChange} mode={mode} />
+      </View>
+    );
+  }
 
   if (Platform.OS === 'ios') {
     return (
