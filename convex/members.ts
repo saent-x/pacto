@@ -1,36 +1,6 @@
-import { query, mutation } from './_generated/server';
+import { mutation } from './_generated/server';
 import { v } from 'convex/values';
 import { assertMember, assertOwner, requireUserId } from './lib/spaces';
-
-const displayNameOf = (u: { displayName?: string; name?: string; email?: string }) =>
-  u.displayName ?? u.name ?? u.email ?? 'Member';
-
-/** Live member roster for a space (with profiles). */
-export const listMembers = query({
-  args: { spaceId: v.id('spaces') },
-  handler: async (ctx, { spaceId }) => {
-    const { userId } = await assertMember(ctx, spaceId);
-    const memberships = await ctx.db
-      .query('memberships')
-      .withIndex('by_space', (q) => q.eq('spaceId', spaceId))
-      .collect();
-    const out = [];
-    for (const m of memberships) {
-      const u = await ctx.db.get(m.userId);
-      if (!u) continue;
-      out.push({
-        userId: m.userId,
-        displayName: displayNameOf(u),
-        avatarColor: u.avatarColor ?? null,
-        role: m.role,
-        isYou: m.userId === userId,
-        joinedAt: m.joinedAt,
-      });
-    }
-    out.sort((a, b) => (a.role !== b.role ? (a.role === 'owner' ? -1 : 1) : a.joinedAt - b.joinedAt));
-    return out;
-  },
-});
 
 /** Owner removes a member (cannot remove themselves here — use leaveSpace). */
 export const removeMember = mutation({

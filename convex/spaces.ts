@@ -1,7 +1,6 @@
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
 import { assertMember, capFor, ensureSoloSpaceFor, requireUserId } from './lib/spaces';
-import { spaceType } from './schema';
 
 const displayNameOf = (u: { displayName?: string; name?: string; email?: string }) =>
   u.displayName ?? u.name ?? u.email ?? 'Member';
@@ -150,5 +149,3 @@ export const setActiveSpace = mutation({
     await ctx.db.patch(userId, { activeSpaceId: spaceId });
   },
 });
-
-export { spaceType };

@@ -11,7 +11,7 @@ export function normalizeTimetableTime(input: string, fallback = '9:00') {
   return formatTimetableTimeMinutes(minutes);
 }
 
-export function parseTimetableTimeMinutes(input: string) {
+function parseTimetableTimeMinutes(input: string) {
   const raw = input.trim().toLowerCase().replace(/\s+/g, '');
   if (!raw || /[^0-9:apm]/.test(raw) || raw.length > 7) return null;
   const suffix = raw.endsWith('am') ? 'am' : raw.endsWith('pm') ? 'pm' : undefined;
@@ -83,7 +83,7 @@ export function timetableTimeMinutes(input: string | undefined, fallback = '9:00
   return parseTimetableTimeMinutes(input ?? '') ?? parseTimetableTimeMinutes(fallback) ?? 9 * 60;
 }
 
-export function parseTimetableDurationMinutes(input: string) {
+function parseTimetableDurationMinutes(input: string) {
   const raw = input.trim().toLowerCase();
   if (!raw || /[^0-9hm]/.test(raw) || raw.length > 6) return null;
 

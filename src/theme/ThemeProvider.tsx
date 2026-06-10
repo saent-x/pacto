@@ -9,7 +9,6 @@ import React, {
 import { useColorScheme } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { useFonts } from 'expo-font';
-import { BitcountPropSingle_400Regular } from '@expo-google-fonts/bitcount-prop-single';
 import { basePalette, type BasePalette } from './palettes';
 import { ACCENTS, accentTriple, DEFAULT_ACCENT, type AccentKey } from './accents';
 
@@ -47,10 +46,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     InstrumentSerif_400Regular: require('../../assets/fonts/InstrumentSerif_400Regular.ttf'),
     SchibstedGrotesk_400Regular: require('../../assets/fonts/SchibstedGrotesk_400Regular.ttf'),
     SchibstedGrotesk_500Medium: require('../../assets/fonts/SchibstedGrotesk_500Medium.ttf'),
-    SchibstedGrotesk_500Medium_Italic: require('../../assets/fonts/SchibstedGrotesk_500Medium_Italic.ttf'),
     SchibstedGrotesk_600SemiBold: require('../../assets/fonts/SchibstedGrotesk_600SemiBold.ttf'),
     SchibstedGrotesk_700Bold: require('../../assets/fonts/SchibstedGrotesk_700Bold.ttf'),
-    BitcountPropSingle_400Regular,
   });
 
   // Hydrate persisted prefs once.

@@ -1,8 +1,3 @@
-export function greeting(d: Date = new Date()): string {
-  const h = d.getHours();
-  return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
-}
-
 // Locale-aware so list rows match the pickers (12h vs 24h follows the device).
 export function fmtTime(ts: number): string {
   return new Date(ts).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
@@ -36,7 +31,7 @@ export function startOfToday(now: number = Date.now()): number {
   return d.getTime();
 }
 
-export function endOfToday(now: number = Date.now()): number {
+function endOfToday(now: number = Date.now()): number {
   const d = new Date(now);
   d.setHours(23, 59, 59, 999);
   return d.getTime();

@@ -4,8 +4,6 @@ import { useColors } from '@/theme';
 import { FONTS } from '@/theme/tokens';
 import { avatarLetter, type Member } from './SpaceProvider';
 
-export { avatarLetter };
-
 const ring = (color: string): ViewStyle =>
   ({ boxShadow: `0px 0px 0px 2px ${color}` }) as unknown as ViewStyle;
 

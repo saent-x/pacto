@@ -10,7 +10,7 @@ import React, {
   useState,
 } from 'react';
 import { useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
-import { resolveEngine, loadEngine, saveEngine, type Engine } from './engine';
+import { resolveEngine, loadEngine, type Engine } from './engine';
 import { useWhisperAgent } from './useWhisperAgent';
 import type { AIMessage } from './useRealtimeAgent';
 
@@ -34,7 +34,6 @@ type Bridge = {
 
 type AICtx = {
   engine: Engine;
-  setEngine: (e: Engine) => void;
   /** 'hold' = press-and-hold (Whisper); 'live' = tap-to-converse (Realtime). */
   mode: 'hold' | 'live';
   active: boolean;
@@ -161,24 +160,9 @@ export function AIControllerProvider({ children }: { children: React.ReactNode }
     bridgeRef.current.stop?.();
   }, [vizRef]);
 
-  const setEngine = useCallback(
-    (e: Engine) => {
-      // Switching engines tears down (cancels) any live session.
-      bridgeRef.current.cancel?.();
-      bridgeRef.current.stop?.();
-      bridgeRef.current = {};
-      setState({ status: 'idle', messages: [], error: null, live: false, micDenied: false, capped: false });
-      vizRef.set(0);
-      setEngineState(e);
-      saveEngine(e);
-    },
-    [vizRef],
-  );
-
   const value = useMemo<AICtx>(
     () => ({
       engine,
-      setEngine,
       mode,
       active,
       state,
@@ -193,7 +177,7 @@ export function AIControllerProvider({ children }: { children: React.ReactNode }
       sendText,
       close,
     }),
-    [engine, setEngine, mode, active, state, vizRef, levelRef, overlayPRef, pillW, begin, end, toggleLive, sendText, close],
+    [engine, mode, active, state, vizRef, levelRef, overlayPRef, pillW, begin, end, toggleLive, sendText, close],
   );
 
   return (

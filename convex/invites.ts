@@ -1,4 +1,4 @@
-import { query, mutation } from './_generated/server';
+import { mutation } from './_generated/server';
 import { v } from 'convex/values';
 import { assertOwner, capFor, ensureSoloSpaceFor, requireUserId } from './lib/spaces';
 
@@ -43,37 +43,6 @@ export const createInvite = mutation({
       status: 'active',
     });
     return { inviteId, code, link: `pacto://join/${code}` };
-  },
-});
-
-/** Active invites for a space (owner view). */
-export const listInvites = query({
-  args: { spaceId: v.id('spaces') },
-  handler: async (ctx, { spaceId }) => {
-    await assertOwner(ctx, spaceId);
-    const invites = await ctx.db
-      .query('invites')
-      .withIndex('by_space', (q) => q.eq('spaceId', spaceId))
-      .collect();
-    return invites
-      .filter((i) => i.status === 'active' && i.expiresAt > Date.now())
-      .map((i) => ({
-        id: i._id,
-        code: i.code,
-        link: `pacto://join/${i.code}`,
-        expiresAt: i.expiresAt,
-        seatsLeft: i.maxUses - i.usedBy.length,
-      }));
-  },
-});
-
-export const revokeInvite = mutation({
-  args: { inviteId: v.id('invites') },
-  handler: async (ctx, { inviteId }) => {
-    const invite = await ctx.db.get(inviteId);
-    if (!invite) throw new Error('NOT_FOUND');
-    await assertOwner(ctx, invite.spaceId);
-    await ctx.db.patch(inviteId, { status: 'revoked' });
   },
 });
 

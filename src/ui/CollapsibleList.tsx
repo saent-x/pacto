@@ -7,7 +7,7 @@ import { Icon } from './Icon';
 import { Press } from './Press';
 
 // "Show N more / Show less" toggle — the agenda control from the Today screen, shared.
-export function ShowMore({ expanded, hidden, onToggle }: { expanded: boolean; hidden: number; onToggle: () => void }) {
+function ShowMore({ expanded, hidden, onToggle }: { expanded: boolean; hidden: number; onToggle: () => void }) {
   const C = useColors();
   return (
     <Press onPress={onToggle} haptic style={{ alignSelf: 'flex-start', paddingVertical: 14 }}>

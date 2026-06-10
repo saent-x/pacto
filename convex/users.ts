@@ -1,5 +1,4 @@
-import { query, mutation, type MutationCtx } from './_generated/server';
-import { getAuthUserId } from '@convex-dev/auth/server';
+import { mutation, type MutationCtx } from './_generated/server';
 import { v } from 'convex/values';
 import { Id } from './_generated/dataModel';
 import { requireUserId } from './lib/spaces';
@@ -12,16 +11,6 @@ const normalizeDisplayName = (value: string) => {
   if (displayName.length > DISPLAY_NAME_LIMIT) throw new Error('DISPLAY_NAME_TOO_LONG');
   return displayName;
 };
-
-/** The signed-in user document, or null. */
-export const me = query({
-  args: {},
-  handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (userId === null) return null;
-    return await ctx.db.get(userId);
-  },
-});
 
 export const updateProfile = mutation({
   args: { displayName: v.optional(v.string()), avatarColor: v.optional(v.string()) },

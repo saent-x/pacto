@@ -1,6 +1,6 @@
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
-import { assertMember, requireUserId } from './lib/spaces';
+import { assertMember } from './lib/spaces';
 
 export const listCheckins = query({
   args: { spaceId: v.id('spaces'), limit: v.optional(v.number()) },
@@ -53,17 +53,5 @@ export const createCheckin = mutation({
       note: a.note,
       createdBy: userId,
     });
-  },
-});
-
-export const removeCheckin = mutation({
-  args: { checkinId: v.id('checkins') },
-  handler: async (ctx, { checkinId }) => {
-    const c = await ctx.db.get(checkinId);
-    if (!c) throw new Error('NOT_FOUND');
-    const userId = await requireUserId(ctx);
-    await assertMember(ctx, c.spaceId);
-    if (c.createdBy !== userId) throw new Error('NOT_YOUR_CHECKIN');
-    await ctx.db.delete(checkinId);
   },
 });

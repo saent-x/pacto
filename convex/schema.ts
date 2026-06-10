@@ -4,8 +4,8 @@ import { authTables } from '@convex-dev/auth/server';
 
 // Shared validators
 export const spaceType = v.union(v.literal('solo'), v.literal('pair'), v.literal('crew'));
-export const memberRole = v.union(v.literal('owner'), v.literal('member'));
-export const inviteStatus = v.union(
+const memberRole = v.union(v.literal('owner'), v.literal('member'));
+const inviteStatus = v.union(
   v.literal('active'),
   v.literal('revoked'),
   v.literal('exhausted'),

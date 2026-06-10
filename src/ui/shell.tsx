@@ -20,7 +20,7 @@ import { RoundBtn } from './primitives';
 // Gap below a screen header before content begins (also applied as the bottom
 // margin of TopBar/SubBar, which the floating-header measurement folds into the
 // scroll content's top padding).
-export const HEADER_GAP = 30;
+const HEADER_GAP = 30;
 
 // QScreen shares its scroll offset so a fixed header can shrink its centered
 // title as the content scrolls (matching the Today screen's pill).

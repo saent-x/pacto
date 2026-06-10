@@ -1,7 +1,7 @@
 import React from 'react';
 import Svg, { Path } from 'react-native-svg';
 
-export type SocialName = 'github' | 'google' | 'apple';
+type SocialName = 'github' | 'google' | 'apple';
 
 /**
  * Brand glyphs for the auth social buttons. GitHub + Apple are monochrome

@@ -21,16 +21,6 @@ export const createList = mutation({
   },
 });
 
-export const renameList = mutation({
-  args: { listId: v.id('taskLists'), name: v.string() },
-  handler: async (ctx, { listId, name }) => {
-    const list = await ctx.db.get(listId);
-    if (!list) throw new Error('NOT_FOUND');
-    await assertMember(ctx, list.spaceId);
-    await ctx.db.patch(listId, { name: name.trim() || list.name });
-  },
-});
-
 // Delete a list. Its tasks are unfiled (kept), not deleted.
 export const removeList = mutation({
   args: { listId: v.id('taskLists') },

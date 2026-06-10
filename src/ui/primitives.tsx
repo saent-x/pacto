@@ -1,78 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleProp, ViewStyle } from 'react-native';
+import { View, StyleProp, ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming, Easing } from 'react-native-reanimated';
 import { useColors } from '../theme';
 import { FONTS, RADII, SHADOWS } from '../theme/tokens';
 import { Press } from './Press';
 import { Icon, type IconName } from './Icon';
-import { Serif, T, Kick } from './Text';
+import { T } from './Text';
 import { Glass, glassOK } from './Glass';
 
 // RN 0.85 (new arch) supports the boxShadow style string; cast past the older types.
 const shadow = (s: string): ViewStyle => ({ boxShadow: s }) as unknown as ViewStyle;
-
-export function Card({
-  children,
-  onPress,
-  pad = 20,
-  radius = RADII.card,
-  style,
-}: {
-  children?: React.ReactNode;
-  onPress?: () => void;
-  pad?: number;
-  radius?: number;
-  style?: StyleProp<ViewStyle>;
-}) {
-  const C = useColors();
-  const inner = (
-    <View
-      style={[
-        { backgroundColor: C.surface, borderRadius: radius, padding: pad },
-        shadow(SHADOWS.card),
-        style,
-      ]}
-    >
-      {children}
-    </View>
-  );
-  return onPress ? <Press onPress={onPress}>{inner}</Press> : inner;
-}
-
-export function Avatar({
-  letter = 'V',
-  size = 34,
-  accent,
-}: {
-  letter?: string;
-  size?: number;
-  accent?: boolean;
-}) {
-  const C = useColors();
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size,
-        backgroundColor: accent ? C.accent : C.ink,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <Text
-        style={{
-          fontFamily: FONTS.display600,
-          fontSize: size * 0.5,
-          lineHeight: size * 0.62,
-          color: accent ? C.onAccent : C.bg,
-        }}
-      >
-        {letter}
-      </Text>
-    </View>
-  );
-}
 
 export function Pill({
   children,
@@ -365,39 +302,5 @@ export function GhostBtn({
         </T>
       </View>
     </Press>
-  );
-}
-
-export function Stat({
-  value,
-  label,
-  size = 64,
-  accent,
-}: {
-  value: React.ReactNode;
-  label: string;
-  size?: number;
-  accent?: boolean;
-}) {
-  const C = useColors();
-  return (
-    <View>
-      <Serif size={size} color={accent ? C.accent : C.ink} lh={0.95}>
-        {value}
-      </Serif>
-      <Kick style={{ marginTop: 4 }}>{label}</Kick>
-    </View>
-  );
-}
-
-export function MoodDot({ v, size = 30, style }: { v: number; size?: number; style?: StyleProp<ViewStyle> }) {
-  const C = useColors();
-  return (
-    <View
-      style={[
-        { width: size, height: size, borderRadius: size, backgroundColor: C.accent, opacity: 0.25 + v * 0.75 },
-        style,
-      ]}
-    />
   );
 }
