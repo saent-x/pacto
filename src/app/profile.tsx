@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, View, Share, TextInput } from 'react-native';
+import { Alert, RefreshControl, ScrollView, View, Share, TextInput } from 'react-native';
+import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { useMutation, useQuery } from 'convex/react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@cvx/_generated/api';
-import { useTheme, ACCENTS, ACCENT_ORDER, type AccentKey, type ThemePref } from '@/theme';
-import { FONTS } from '@/theme/tokens';
+import { useTheme, ACCENTS, ACCENT_ORDER, accentTriple, type AccentKey, type ThemePref } from '@/theme';
+import { FONTS, RADII } from '@/theme/tokens';
 import { Serif, T, Kick, Div, Icon, Press, RoundBtn, GhostBtn, PrimaryBtn, Mono } from '@/ui';
 import { useSpace } from '@/features/account/SpaceProvider';
 import { MemberAvatar } from '@/features/account/avatars';
@@ -16,9 +17,6 @@ import { convex } from '@/lib/convex';
 import { confirmDelete } from '@/lib/confirm';
 import { usePullRefresh } from '@/lib/usePullRefresh';
 
-// Terracotta red for destructive actions — reads on both light + dark.
-const DANGER = '#C2564A';
-
 const THEME_OPTIONS: { id: ThemePref; label: string }[] = [
   { id: 'light', label: 'Light' },
   { id: 'dark', label: 'Dark' },
@@ -26,7 +24,7 @@ const THEME_OPTIONS: { id: ThemePref; label: string }[] = [
 ];
 
 export default function Profile() {
-  const { C, themePref, setThemePref, accentKey, setAccentKey } = useTheme();
+  const { C, isDark, themePref, setThemePref, accentKey, setAccentKey } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user, space, members, isShared, role } = useSpace();
@@ -48,6 +46,7 @@ export default function Profile() {
   const { refreshing, onRefresh } = usePullRefresh();
   const [invite, setInvite] = useState<{ code: string; link: string } | null>(null);
   const [inviting, setInviting] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
   const [displayNameDraft, setDisplayName] = useState<string | null>(null);
   const [savingName, setSavingName] = useState(false);
   const [nameSaved, setNameSaved] = useState(false);
@@ -91,11 +90,13 @@ export default function Profile() {
   const genInvite = async () => {
     if (!space || inviting) return;
     setInviting(true);
+    setInviteError(null);
     try {
       const r = await createInvite({ spaceId: space.id });
       setInvite({ code: r.code, link: r.link });
     } catch {
-      // not owner, or space full
+      // Server-side rejection (space filled or ownership changed under us).
+      setInviteError("Couldn't create an invite — try again.");
     } finally {
       setInviting(false);
     }
@@ -141,7 +142,12 @@ export default function Profile() {
         try {
           await deleteAccount({});
         } catch {
-          // even on partial failure, sign the user out
+          // Convex mutations are atomic — a rejection means nothing was deleted.
+          Alert.alert(
+            "Couldn't delete your account",
+            'Something went wrong and nothing was deleted. Check your connection and try again.',
+          );
+          return;
         }
         doSignOut();
       },
@@ -165,7 +171,7 @@ export default function Profile() {
             {isShared && space ? space.name : profileTitle}
           </Serif>
         </View>
-        <RoundBtn name="x" onPress={() => router.back()} />
+        <RoundBtn name="x" onPress={() => router.back()} accessibilityLabel="Close" />
       </View>
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -186,7 +192,7 @@ export default function Profile() {
               setNameError(null);
             }}
             placeholder="Your name"
-            placeholderTextColor={C.ink4}
+            placeholderTextColor={C.ink2}
             autoCapitalize="words"
             autoCorrect={false}
             textContentType="name"
@@ -203,7 +209,7 @@ export default function Profile() {
             }}
           />
           {nameError && (
-            <T selectable size={13.5} weight={500} color={C.accent} style={{ marginTop: 10 }}>
+            <T selectable size={13.5} weight={500} color={C.danger} style={{ marginTop: 10 }}>
               {nameError}
             </T>
           )}
@@ -233,6 +239,11 @@ export default function Profile() {
                 </Press>
               )}
             </View>
+            {inviteError && (
+              <T selectable size={13.5} weight={500} color={C.danger} style={{ marginTop: 6 }}>
+                {inviteError}
+              </T>
+            )}
             {displayMembers.map((m, i) => (
               <View key={m.userId}>
                 {i > 0 && <Div style={{ backgroundColor: C.hair }} />}
@@ -243,7 +254,12 @@ export default function Profile() {
                   </T>
                   <Kick color={C.ink3}>{m.role === 'owner' ? 'Owner' : 'Member'}</Kick>
                   {role === 'owner' && !m.isYou && (
-                    <Press onPress={() => onRemoveMember(m.userId, m.displayName)} hitSlop={8} style={{ marginLeft: 4 }}>
+                    <Press
+                      onPress={() => onRemoveMember(m.userId, m.displayName)}
+                      hitSlop={8}
+                      style={{ marginLeft: 4 }}
+                      accessibilityLabel={`Remove ${m.displayName}`}
+                    >
                       <Icon name="x" size={15} color={C.ink4} strokeWidth={2} />
                     </Press>
                   )}
@@ -252,7 +268,7 @@ export default function Profile() {
             ))}
 
             {invite && (
-              <View style={{ marginTop: 14, padding: 16, borderRadius: 16, backgroundColor: C.surface2 }}>
+              <View style={{ marginTop: 14, padding: 16, borderRadius: RADII.cardSm, backgroundColor: C.surface2 }}>
                 <Kick color={C.ink3}>Invite code</Kick>
                 <Mono size={36} weight={600} style={{ marginTop: 4, letterSpacing: 2 }}>
                   {invite.code}
@@ -282,7 +298,11 @@ export default function Profile() {
             {mySpaces.map((s) => {
               const active = s.spaceId === space?.id;
               return (
-                <Press key={s.spaceId} onPress={() => switchSpace({ spaceId: s.spaceId })}>
+                <Press
+                  key={s.spaceId}
+                  onPress={() => { switchSpace({ spaceId: s.spaceId }).catch(() => {}); }}
+                  accessibilityState={{ selected: active }}
+                >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 }}>
                     <View style={{ width: 8, height: 8, borderRadius: 8, backgroundColor: active ? C.accent : C.line }} />
                     <T size={16} weight={active ? 600 : 500} style={{ flex: 1 }} numberOfLines={1}>
@@ -316,6 +336,8 @@ export default function Profile() {
                 <Press
                   key={o.id}
                   onPress={() => pickTheme(o.id)}
+                  accessibilityLabel={o.label}
+                  accessibilityState={{ selected: on }}
                   style={[
                     {
                       flex: 1,
@@ -350,11 +372,14 @@ export default function Profile() {
           <View style={{ flexDirection: 'row', gap: 12 }}>
             {ACCENT_ORDER.map((a) => {
               const on = accentKey === a;
-              const hex = ACCENTS[a].light.accent;
+              const hex = accentTriple(a, isDark).accent;
               return (
                 <Press
                   key={a}
                   onPress={() => pickAccent(a)}
+                  accessibilityLabel={ACCENTS[a].label}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: on }}
                   style={[
                     { flex: 1, height: 44, borderRadius: 12, backgroundColor: hex },
                     on ? ({ boxShadow: `0px 0px 0px 2px ${C.surface}, 0px 0px 0px 4px ${hex}` } as object) : null,
@@ -391,8 +416,8 @@ export default function Profile() {
           <Div style={{ backgroundColor: C.hair }} />
           <Press onPress={onDeleteAccount}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 15 }}>
-              <Icon name="trash" size={19} color={DANGER} strokeWidth={1.8} />
-              <T size={16.5} weight={500} color={DANGER}>
+              <Icon name="trash" size={19} color={C.danger} strokeWidth={1.8} />
+              <T size={16.5} weight={500} color={C.danger}>
                 Delete account
               </T>
             </View>
@@ -400,7 +425,7 @@ export default function Profile() {
         </View>
 
         <View style={{ alignItems: 'center', marginTop: 12 }}>
-          <Kick color={C.ink4}>Pacto · v0.1</Kick>
+          <Kick color={C.ink4}>{`Pacto · v${Constants.expoConfig?.version ?? '?'}`}</Kick>
         </View>
       </ScrollView>
     </View>

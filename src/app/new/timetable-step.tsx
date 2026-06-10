@@ -122,6 +122,7 @@ export default function NewTimetableStep() {
   const tt = useQuery(api.timetables.getTimetable, id ? { timetableId: ttId } : 'skip');
   const update = useMutation(api.timetables.updateTimetable);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // The full list, normalized — submit rewrites this array with the edited step spliced in.
   const loadedItems: Item[] = (tt?.items ?? []).map((it) => ({
@@ -161,14 +162,19 @@ export default function NewTimetableStep() {
   const submit = async () => {
     if (!id || busy) return;
     setBusy(true);
+    setError(null);
     const step: Item = { time: stepTime, title: stepTitle.trim(), dur: stepDur };
     const items = [...loadedItems];
     if (editing && stepIndex != null) items[stepIndex] = step;
     else items.push(step);
+    // Keep storage in time order — the timeline renders insertion order, so an
+    // out-of-order add would misplace the Now marker and next-step countdown.
+    items.sort((a, b) => timetableTimeMinutes(a.time, '9:00') - timetableTimeMinutes(b.time, '9:00'));
     try {
       await update({ timetableId: ttId, items });
       router.back();
     } catch {
+      setError("Couldn't save — check your connection and try again.");
       setBusy(false);
     }
   };
@@ -193,9 +199,11 @@ export default function NewTimetableStep() {
       footerLabel={busy ? 'Saving…' : editing ? 'Save step' : 'Add step'}
       footerIcon={editing ? 'check' : 'plus'}
       onSubmit={submit}
-      disabled={busy}
+      disabled={!stepTitle.trim() || busy}
       onDelete={onDelete}
       loading={tt === undefined}
+      busy={busy}
+      error={error}
     >
       <View style={{ marginBottom: 24 }}>
         <Kick style={{ marginBottom: 10 }}>Starts at</Kick>

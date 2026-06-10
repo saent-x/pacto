@@ -65,6 +65,9 @@ export function AIFab({ size = 54 }: { size?: number }) {
           impact();
           toggleLive();
         }}
+        accessibilityLabel="Pacto assistant"
+        accessibilityRole="button"
+        accessibilityHint="Double-tap to start or stop a live conversation"
         scale={0.94}
         style={{ borderRadius: size }}
       >
@@ -74,6 +77,9 @@ export function AIFab({ size = 54 }: { size?: number }) {
   }
 
   // Whisper: press-and-hold to record (press-in starts, release sends).
+  // The role is passed explicitly — with only pressIn/pressOut handlers Press
+  // wouldn't default it, leaving the FAB invisible to VoiceOver. VoiceOver's
+  // double-tap-and-hold pass-through gesture drives the existing handlers.
   return (
     <Press
       onPressIn={() => {
@@ -81,6 +87,9 @@ export function AIFab({ size = 54 }: { size?: number }) {
         begin();
       }}
       onPressOut={() => end()}
+      accessibilityLabel="Pacto assistant"
+      accessibilityRole="button"
+      accessibilityHint="Double-tap and hold to talk"
       scale={0.92}
       style={{ borderRadius: size }}
     >

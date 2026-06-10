@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Share, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMutation } from 'convex/react';
 import { api } from '@cvx/_generated/api';
+import { Id } from '@cvx/_generated/dataModel';
 import { useColors } from '@/theme';
+import { RADII } from '@/theme/tokens';
 import { Serif, T, Kick, GhostBtn, PrimaryBtn, RoundBtn, Mono } from '@/ui';
 import { SheetShell, QField, QChips } from '@/features/sheets/parts';
 
@@ -19,18 +21,26 @@ export default function NewSpace() {
   const [type, setType] = useState<string>('Crew');
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [invite, setInvite] = useState<{ code: string; link: string; name: string } | null>(null);
+  // createSpace already switched the active space, so a retry must resume the
+  // seed → invite chain on this id instead of creating a duplicate space.
+  const spaceIdRef = useRef<Id<'spaces'> | null>(null);
 
   const submit = async () => {
     if (busy) return;
     setBusy(true);
+    setError(null);
     try {
       const t = type === 'Pair' ? 'pair' : 'crew';
-      const spaceId = await createSpace({ type: t, name: name.trim() });
+      const spaceId = spaceIdRef.current ?? (await createSpace({ type: t, name: name.trim() }));
+      spaceIdRef.current = spaceId;
       await seed({ spaceId, tzOffset: new Date().getTimezoneOffset() });
       const inv = await createInvite({ spaceId });
       setInvite({ code: inv.code, link: inv.link, name: name.trim() || (t === 'pair' ? 'Our pact' : 'The crew') });
     } catch {
+      setError("Couldn't create the space — try again.");
+    } finally {
       setBusy(false);
     }
   };
@@ -57,15 +67,16 @@ export default function NewSpace() {
               {invite.name}
             </Serif>
           </View>
-          <RoundBtn name="x" onPress={() => router.replace('/')} />
+          <RoundBtn name="x" accessibilityLabel="Close" onPress={() => router.replace('/')} />
         </View>
 
         <View style={{ paddingHorizontal: 24, paddingTop: 8, flex: 1 }}>
           <T size={15.5} weight={450} color={C.ink2} lh={1.5} style={{ marginBottom: 22 }}>
-            Invite people with this code. They can join from the sign-in screen or by tapping your link.
+            Invite people with this code. They can enter it when they sign up, or anytime from Your spaces — or just
+            tap your link.
           </T>
 
-          <View style={{ padding: 20, borderRadius: 20, backgroundColor: C.surface2, alignItems: 'center' }}>
+          <View style={{ padding: 20, borderRadius: RADII.cardSm, backgroundColor: C.surface2, alignItems: 'center' }}>
             <Kick color={C.ink3}>Invite code</Kick>
             <Mono size={48} weight={600} style={{ marginTop: 6, letterSpacing: 3 }}>
               {invite.code}
@@ -99,6 +110,8 @@ export default function NewSpace() {
       footerLabel={busy ? 'Creating…' : 'Create space'}
       onSubmit={submit}
       disabled={!name.trim() || busy}
+      busy={busy}
+      error={error}
     >
       <T size={15.5} weight={450} color={C.ink2} lh={1.5} style={{ marginBottom: 22 }}>
         Start a shared space alongside your own. You can switch between spaces anytime.

@@ -1,5 +1,5 @@
 import { internalMutation } from './_generated/server';
-import { v } from 'convex/values';
+import { ConvexError, v } from 'convex/values';
 import { assertMember, requireUserId } from './lib/spaces';
 
 /**
@@ -38,7 +38,9 @@ export const guard = internalMutation({
       else await ctx.db.insert('aiRateLimits', { userId, kind, windowStart: now, count: 1 });
       return { userId };
     }
-    if (existing.count >= limit) throw new Error('RATE_LIMITED');
+    // ConvexError so the client can read .data in production — plain Error
+    // messages are redacted, which would break the dock's friendly rate-limit copy.
+    if (existing.count >= limit) throw new ConvexError('RATE_LIMITED');
     await ctx.db.patch(existing._id, { count: existing.count + 1 });
     return { userId };
   },

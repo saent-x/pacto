@@ -92,7 +92,13 @@ export function Pill({
 }) {
   const C = useColors();
   return (
-    <Press onPress={onPress} haptic style={[{ borderRadius: RADII.pill }, style]}>
+    <Press
+      onPress={onPress}
+      haptic
+      accessibilityRole="button"
+      accessibilityState={{ selected: !!active }}
+      style={[{ borderRadius: RADII.pill }, style]}
+    >
       <View
         style={{
           flexDirection: 'row',
@@ -142,7 +148,7 @@ export function Chip({
     >
       <T
         size={10}
-        allowFontScaling={false}
+        maxFontSizeMultiplier={1.4}
         color={solid ? C.onAccent : C.ink3}
         style={{
           fontFamily: FONTS.sans600,

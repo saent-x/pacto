@@ -33,7 +33,8 @@ export default function Checkins() {
   const { user, space, spaceId, members, isShared } = useSpace();
 
   const skip = spaceId ? { spaceId } : 'skip';
-  const checkins = useQuery(api.checkins.listCheckins, skip);
+  // Raise the default 100-row cap so weekly stats and history stay complete.
+  const checkins = useQuery(api.checkins.listCheckins, spaceId ? { spaceId, limit: 1000 } : 'skip');
   const pulse = useQuery(api.checkins.latestByMember, skip);
 
   const rows = checkins ?? [];
@@ -67,23 +68,26 @@ export default function Checkins() {
   const loggedDays = week.filter((d) => d.mood).length;
   const elapsedDays = week.filter((d) => !d.future).length;
 
-  // History grouped by recency: Yesterday · This week · Earlier.
+  // History grouped by recency: Today · Yesterday · This week · Earlier.
+  // Recent buckets keep time-of-day; older ones show the date instead.
   const history = useMemo(() => {
     const src = checkins ?? [];
     const today = startOfToday();
     const yesterday = today - DAY_MS;
     const dow = (new Date(today).getDay() + 6) % 7;
     const weekStart = today - dow * DAY_MS;
-    const buckets: { label: string; rows: typeof src }[] = [
-      { label: 'Yesterday', rows: [] },
-      { label: 'This week', rows: [] },
-      { label: 'Earlier', rows: [] },
+    const buckets: { label: string; dated: boolean; rows: typeof src }[] = [
+      { label: 'Today', dated: false, rows: [] },
+      { label: 'Yesterday', dated: false, rows: [] },
+      { label: 'This week', dated: true, rows: [] },
+      { label: 'Earlier', dated: true, rows: [] },
     ];
     for (const c of src) {
       const t = c._creationTime;
-      if (t >= yesterday && t < today) buckets[0].rows.push(c);
-      else if (t >= weekStart) buckets[1].rows.push(c);
-      else buckets[2].rows.push(c);
+      if (t >= today) buckets[0].rows.push(c);
+      else if (t >= yesterday) buckets[1].rows.push(c);
+      else if (t >= weekStart) buckets[2].rows.push(c);
+      else buckets[3].rows.push(c);
     }
     return buckets.filter((b) => b.rows.length > 0);
   }, [checkins]);
@@ -95,7 +99,15 @@ export default function Checkins() {
       header={
         <SubBar
           kicker={isShared && space ? `Check-ins · ${space.name}` : 'Check-ins'}
-          right={<RoundBtn name="plus" fill={C.ink} color={C.bg} onPress={() => router.push('/new/checkin')} />}
+          right={
+            <RoundBtn
+              name="plus"
+              fill={C.ink}
+              color={C.bg}
+              onPress={() => router.push('/new/checkin')}
+              accessibilityLabel="New check-in"
+            />
+          }
         />
       }
     >
@@ -155,11 +167,15 @@ export default function Checkins() {
                   </T>
                   {mood ? (
                     <>
-                      <Kick color={mood.color}>{mood.label}</Kick>
+                      <Kick color={C.ink2}>{mood.label}</Kick>
                       <MoodGlyph mood={mood.id} size={26} />
                     </>
                   ) : mem.isYou ? (
-                    <Press onPress={() => router.push('/new/checkin')} haptic>
+                    <Press
+                      onPress={() => router.push('/new/checkin')}
+                      haptic
+                      hitSlop={{ top: 16, bottom: 16, left: 12, right: 12 }}
+                    >
                       <Kick color={C.accent}>Check in →</Kick>
                     </Press>
                   ) : (
@@ -176,7 +192,7 @@ export default function Checkins() {
       {rows.length === 0 ? (
         <>
           <QSection label="History" />
-          <T size={15} weight={450} color={C.ink3}>
+          <T size={15} weight={450} color={C.ink2}>
             No check-ins yet. How did today feel?
           </T>
         </>
@@ -203,7 +219,9 @@ export default function Checkins() {
                       <View style={{ width: 20, height: 20, borderRadius: 20, backgroundColor: moodColor(c.mood) }} />
                     )}
                     <Mono size={16} weight={500} color={C.ink3}>
-                      {fmtTime(c._creationTime)}
+                      {sec.dated
+                        ? new Date(c._creationTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                        : fmtTime(c._creationTime)}
                     </Mono>
                   </View>
                 </View>

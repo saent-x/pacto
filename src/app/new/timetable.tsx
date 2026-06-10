@@ -29,6 +29,7 @@ export default function NewTimetable() {
   const [titleDraft, setTitle] = useState<string | null>(null);
   const [shareDraft, setShare] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const title = titleDraft ?? existing?.title ?? '';
   const share = shareDraft ?? shareLabel(existing?.share);
@@ -36,6 +37,7 @@ export default function NewTimetable() {
   const submit = async () => {
     if (!title.trim() || !spaceId || busy) return;
     setBusy(true);
+    setError(null);
     try {
       if (editing && id) {
         await update({ timetableId: id as Id<'timetables'>, title: title.trim(), share });
@@ -44,6 +46,7 @@ export default function NewTimetable() {
       }
       router.back();
     } catch {
+      setError("Couldn't save — check your connection and try again.");
       setBusy(false);
     }
   };
@@ -66,6 +69,8 @@ export default function NewTimetable() {
       disabled={!title.trim() || busy}
       onDelete={editing ? onDelete : undefined}
       loading={editing && timetables === undefined}
+      busy={busy}
+      error={error}
     >
       <QField label="Name it" value={title} onChangeText={setTitle} placeholder="Weekday rhythm" big />
       <QChips label="Share" options={['Solo', 'Shared', 'Partner']} value={share} onPick={setShare} />

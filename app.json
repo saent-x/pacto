@@ -27,26 +27,14 @@
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.ACCESS_NETWORK_STATE",
-        "android.permission.CAMERA",
-        "android.permission.INTERNET",
-        "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.RECORD_AUDIO",
-        "android.permission.SYSTEM_ALERT_WINDOW",
-        "android.permission.WAKE_LOCK",
-        "android.permission.BLUETOOTH",
-        "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
-        "android.permission.ACCESS_NETWORK_STATE",
-        "android.permission.CAMERA",
-        "android.permission.INTERNET",
         "android.permission.MODIFY_AUDIO_SETTINGS",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.SYSTEM_ALERT_WINDOW",
-        "android.permission.WAKE_LOCK",
-        "android.permission.BLUETOOTH",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ],
+      "blockedPermissions": [
+        "android.permission.CAMERA",
+        "android.permission.SYSTEM_ALERT_WINDOW"
       ]
     },
     "web": {
@@ -59,9 +47,13 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#F1EBE1",
+          "backgroundColor": "#EEEEEA",
           "image": "./assets/images/pacto-splash.png",
-          "imageWidth": 220
+          "imageWidth": 220,
+          "dark": {
+            "backgroundColor": "#0C0D0F",
+            "image": "./assets/images/pacto-splash-dark.png"
+          }
         }
       ],
       [

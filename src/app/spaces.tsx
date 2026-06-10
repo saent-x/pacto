@@ -32,8 +32,17 @@ export default function Spaces() {
       router.back();
       return;
     }
-    await switchSpace({ spaceId: id as any });
-    router.back();
+    if (busy) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      await switchSpace({ spaceId: id as any });
+      router.back();
+    } catch {
+      setErr("Couldn't switch spaces — try again.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const join = async () => {
@@ -67,7 +76,7 @@ export default function Spaces() {
           </Kick>
           <Serif size={34}>Your spaces</Serif>
         </View>
-        <RoundBtn name="x" onPress={() => router.back()} />
+        <RoundBtn name="x" onPress={() => router.back()} accessibilityLabel="Close" />
       </View>
 
       <View style={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 28 }}>
@@ -81,7 +90,7 @@ export default function Spaces() {
           return (
             <View key={s.spaceId}>
               {i > 0 && <Div style={{ backgroundColor: C.hair }} />}
-              <Press onPress={() => pick(s.spaceId)} haptic>
+              <Press onPress={() => pick(s.spaceId)} haptic accessibilityState={{ selected: active }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 15 }}>
                   <View
                     style={{
@@ -119,6 +128,13 @@ export default function Spaces() {
           );
         })}
 
+        {/* A failed switch must surface even when the join form is collapsed. */}
+        {err && !showCode && (
+          <T size={13.5} weight={500} color={C.danger} style={{ marginTop: 10 }}>
+            {err}
+          </T>
+        )}
+
         {/* Actions */}
         <View style={{ marginTop: 18, gap: 12 }}>
           <Press
@@ -146,7 +162,7 @@ export default function Spaces() {
                 value={code}
                 onChangeText={setCode}
                 placeholder="ABC-123"
-                placeholderTextColor={C.ink4}
+                placeholderTextColor={C.ink2}
                 autoCapitalize="characters"
                 autoCorrect={false}
                 style={{
@@ -160,7 +176,7 @@ export default function Spaces() {
                 }}
               />
               {err && (
-                <T size={13.5} weight={500} color={C.accent}>
+                <T size={13.5} weight={500} color={C.danger}>
                   {err}
                 </T>
               )}

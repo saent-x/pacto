@@ -3,11 +3,11 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@cvx/_generated/api';
 import { Id } from '@cvx/_generated/dataModel';
+import { useColors } from '@/theme';
+import { T } from '@/ui';
 import { useSpace } from '@/features/account/SpaceProvider';
 import { SheetShell, QField, QPicker, QAssign } from '@/features/sheets/parts';
 import { confirmDelete } from '@/lib/confirm';
-
-const FAR_FUTURE = 4102444800000;
 
 // Default new events to noon on the chosen day if no time is implied.
 const initialDate = (baseMs: number) => {
@@ -17,6 +17,7 @@ const initialDate = (baseMs: number) => {
 };
 
 export default function NewEvent() {
+  const C = useColors();
   const router = useRouter();
   const { id, day } = useLocalSearchParams<{ id?: string; day?: string }>();
   const editing = !!id;
@@ -25,11 +26,10 @@ export default function NewEvent() {
   const update = useMutation(api.calendar.updateEvent);
   const remove = useMutation(api.calendar.removeEvent);
 
-  const events = useQuery(
-    api.calendar.listEvents,
-    editing && spaceId ? { spaceId, from: 0, to: FAR_FUTURE } : 'skip',
-  );
-  const existing = editing ? events?.find((e) => e._id === id) : undefined;
+  // By id, not list+find: the all-time listEvents range would subscribe to the
+  // space's entire event history just to resolve one record.
+  const event = useQuery(api.calendar.getEvent, editing ? { eventId: id as Id<'calendarEvents'> } : 'skip');
+  const existing = event ?? undefined;
 
   const [createDate] = useState(() => initialDate(day ? Number(day) : Date.now()));
   const [titleDraft, setTitle] = useState<string | null>(null);
@@ -37,6 +37,7 @@ export default function NewEvent() {
   const [dateDraft, setDate] = useState<Date | null>(null);
   const [assigneeDraft, setAssignee] = useState<string | null | undefined>(undefined);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const title = titleDraft ?? existing?.title ?? '';
   const loc = locDraft ?? existing?.loc ?? '';
@@ -58,6 +59,7 @@ export default function NewEvent() {
   const submit = async () => {
     if (!title.trim() || !spaceId || busy) return;
     setBusy(true);
+    setError(null);
     try {
       const startsAt = date.getTime();
       if (editing && id) {
@@ -66,7 +68,9 @@ export default function NewEvent() {
           title: title.trim(),
           startsAt,
           loc: loc.trim() || undefined,
+          clearLoc: loc.trim() ? undefined : true,
           assigneeUserId: assignee ? (assignee as Id<'users'>) : undefined,
+          clearAssignee: assignee === null ? true : undefined,
         });
       } else {
         await create({
@@ -79,6 +83,7 @@ export default function NewEvent() {
       }
       router.back();
     } catch {
+      setError("Couldn't save — check your connection and try again.");
       setBusy(false);
     }
   };
@@ -92,6 +97,17 @@ export default function NewEvent() {
       },
     });
 
+  // Deleted, or not visible to this account — never an editable empty form.
+  if (editing && event === null) {
+    return (
+      <SheetShell kicker="Edit" title="Event" footerLabel="Close" footerIcon="x" onSubmit={() => router.back()}>
+        <T size={15.5} weight={450} color={C.ink2} lh={1.5} style={{ marginBottom: 8 }}>
+          This event isn&apos;t available anymore.
+        </T>
+      </SheetShell>
+    );
+  }
+
   return (
     <SheetShell
       kicker={editing ? 'Edit' : 'New'}
@@ -100,7 +116,9 @@ export default function NewEvent() {
       onSubmit={submit}
       disabled={!title.trim() || busy}
       onDelete={editing ? onDelete : undefined}
-      loading={editing && events === undefined}
+      loading={editing && event === undefined}
+      busy={busy}
+      error={error}
     >
       <QField label="What's happening?" value={title} onChangeText={setTitle} placeholder="Coffee with Sam" big />
       {isShared && <QAssign members={members} value={assignee} onPick={setAssignee} />}

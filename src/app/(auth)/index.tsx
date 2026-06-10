@@ -19,15 +19,25 @@ import { useAuth, type OAuthProvider, type PasswordFlow } from '@/features/auth/
 function SocialButton({
   provider,
   busy,
+  disabled,
   onPress,
 }: {
   provider: OAuthProvider;
   busy: boolean;
+  disabled?: boolean;
   onPress: () => void;
 }) {
   const C = useColors();
   return (
-    <Press onPress={onPress} haptic scale={0.94} style={{ flex: 1, borderRadius: 999 }}>
+    <Press
+      onPress={onPress}
+      haptic
+      scale={0.94}
+      disabled={disabled}
+      accessibilityLabel={provider === 'github' ? 'Continue with GitHub' : 'Continue with Google'}
+      accessibilityState={{ busy, disabled }}
+      style={{ flex: 1, borderRadius: 999 }}
+    >
       <Glass
         interactive
         fallbackStyle={{ backgroundColor: C.surface, borderWidth: 1, borderColor: C.line }}
@@ -67,7 +77,7 @@ function Field(props: {
         value={props.value}
         onChangeText={props.onChangeText}
         placeholder={props.placeholder}
-        placeholderTextColor={C.ink4}
+        placeholderTextColor={C.ink2}
         secureTextEntry={props.secureTextEntry}
         keyboardType={props.keyboardType ?? 'default'}
         autoCapitalize={props.autoCapitalize ?? 'none'}
@@ -107,6 +117,7 @@ export default function SignIn() {
   }, []);
 
   const submit = async () => {
+    if (busy) return;
     if (!email || !password) {
       setError('Enter your email and password.');
       return;
@@ -132,6 +143,7 @@ export default function SignIn() {
   };
 
   const social = async (provider: OAuthProvider) => {
+    if (busy) return;
     setError(null);
     setBusy(provider);
     try {
@@ -144,6 +156,8 @@ export default function SignIn() {
   };
 
   const onApple = async () => {
+    // The native Apple button can't be disabled, so the guard lives here.
+    if (busy) return;
     setError(null);
     setBusy('apple');
     try {
@@ -221,7 +235,7 @@ export default function SignIn() {
           />
 
           {error && (
-            <T size={13.5} weight={500} color={C.accent} style={{ marginTop: 2, marginBottom: 8 }}>
+            <T size={13.5} weight={500} color={C.danger} style={{ marginTop: 2, marginBottom: 8 }}>
               {error}
             </T>
           )}
@@ -246,7 +260,7 @@ export default function SignIn() {
 
           <View style={{ flexDirection: 'row', gap: 12 }}>
             {(['github', 'google'] as OAuthProvider[]).map((p) => (
-              <SocialButton key={p} provider={p} busy={busy === p} onPress={() => social(p)} />
+              <SocialButton key={p} provider={p} busy={busy === p} disabled={!!busy} onPress={() => social(p)} />
             ))}
           </View>
 

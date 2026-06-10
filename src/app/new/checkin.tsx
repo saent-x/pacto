@@ -17,20 +17,31 @@ export default function NewCheckin() {
   const [mood, setMood] = useState('steady');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const submit = async () => {
     if (!spaceId || busy) return;
     setBusy(true);
+    setError(null);
     try {
       await create({ spaceId, mood, note: note.trim() || undefined });
       router.back();
     } catch {
+      setError("Couldn't save — check your connection and try again.");
       setBusy(false);
     }
   };
 
   return (
-    <SheetShell kicker="Today" title="Check in" footerLabel={busy ? 'Saving…' : 'Save check-in'} onSubmit={submit} disabled={busy}>
+    <SheetShell
+      kicker="Today"
+      title="Check in"
+      footerLabel={busy ? 'Saving…' : 'Save check-in'}
+      onSubmit={submit}
+      disabled={busy}
+      busy={busy}
+      error={error}
+    >
       <Kick style={{ marginBottom: 14 }}>How&apos;s today feeling?</Kick>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 28 }}>
         {MOODS.map((m) => {

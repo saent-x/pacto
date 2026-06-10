@@ -19,11 +19,14 @@ type EngineState = {
   messages: AIMessage[];
   error: string | null;
   live: boolean;
+  micDenied: boolean; // mic permission is denied for good — only Settings can fix it
+  capped: boolean; // the last hold hit the 30s recording cap
 };
 
 type Bridge = {
   begin?: () => void;
   end?: () => void;
+  cancel?: () => void;
   start?: () => void;
   stop?: () => void;
   sendText?: (t: string) => void;
@@ -72,11 +75,18 @@ function WhisperHost({
 }) {
   const a = useWhisperAgent(levelRef);
   useEffect(() => {
-    bridgeRef.current = { begin: a.begin, end: a.end, sendText: a.sendText };
-  }, [a.begin, a.end, a.sendText, bridgeRef]);
+    bridgeRef.current = { begin: a.begin, end: a.end, cancel: a.cancel, sendText: a.sendText };
+  }, [a.begin, a.end, a.cancel, a.sendText, bridgeRef]);
   useEffect(() => {
-    onState({ status: a.status, messages: a.messages, error: a.error, live: a.status === 'recording' });
-  }, [a.status, a.messages, a.error, onState]);
+    onState({
+      status: a.status,
+      messages: a.messages,
+      error: a.error,
+      live: a.status === 'recording',
+      micDenied: a.micDenied,
+      capped: a.capped,
+    });
+  }, [a.status, a.messages, a.error, a.micDenied, a.capped, onState]);
   return null;
 }
 
@@ -89,7 +99,14 @@ export function AIControllerProvider({ children }: { children: React.ReactNode }
   const [engine, setEngineState] = useState<Engine>(() => resolveEngine(null));
   const [active, setActive] = useState(false);
   const [pillW, setPillW] = useState(0);
-  const [state, setState] = useState<EngineState>({ status: 'idle', messages: [], error: null, live: false });
+  const [state, setState] = useState<EngineState>({
+    status: 'idle',
+    messages: [],
+    error: null,
+    live: false,
+    micDenied: false,
+    capped: false,
+  });
   const stateRef = useRef(state);
   useEffect(() => {
     stateRef.current = state;
@@ -138,17 +155,19 @@ export function AIControllerProvider({ children }: { children: React.ReactNode }
   const close = useCallback(() => {
     setActive(false);
     vizRef.set(0);
-    bridgeRef.current.end?.();
+    // Dismissal cancels a pending hold — it must not send a half-finished
+    // utterance as a billed turn. Only one of cancel/stop exists per engine.
+    bridgeRef.current.cancel?.();
     bridgeRef.current.stop?.();
   }, [vizRef]);
 
   const setEngine = useCallback(
     (e: Engine) => {
-      // Switching engines tears down any live session.
-      bridgeRef.current.end?.();
+      // Switching engines tears down (cancels) any live session.
+      bridgeRef.current.cancel?.();
       bridgeRef.current.stop?.();
       bridgeRef.current = {};
-      setState({ status: 'idle', messages: [], error: null, live: false });
+      setState({ status: 'idle', messages: [], error: null, live: false, micDenied: false, capped: false });
       vizRef.set(0);
       setEngineState(e);
       saveEngine(e);

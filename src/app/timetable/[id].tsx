@@ -6,8 +6,9 @@ import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withRepe
 import { api } from '@cvx/_generated/api';
 import { Id } from '@cvx/_generated/dataModel';
 import { useColors } from '@/theme';
-import { T, Kick, Icon, Press, RoundBtn, Numeral, QScreen, SubBar } from '@/ui';
+import { T, Kick, Icon, Mono, Press, RoundBtn, Numeral, QScreen, SubBar } from '@/ui';
 import { confirmDelete } from '@/lib/confirm';
+import { useNow } from '@/lib/useNow';
 import {
   formatTimetableDurationMinutes,
   formatTimetableTimeLabel,
@@ -81,9 +82,9 @@ function TimelineStep({
       <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
         {/* Tap the step body to edit it in the sheet. */}
         <Press onPress={onPress} haptic style={{ flex: 1, flexDirection: 'row', gap: 16 }}>
-          <Numeral size={15} color={timeColor} numberOfLines={1} style={{ width: 74, textAlign: 'right' }}>
+          <Mono size={14} weight={500} color={timeColor} numberOfLines={1} style={{ minWidth: 74, textAlign: 'right' }}>
             {time}
-          </Numeral>
+          </Mono>
           <View style={{ width: 13, alignItems: 'center', paddingTop: 5 }}>
             {current ? (
               <View style={{ width: 13, height: 13, borderRadius: 13, borderWidth: 3.5, borderColor: C.accent, backgroundColor: C.bg }} />
@@ -110,7 +111,7 @@ function TimelineStep({
           </View>
         </Press>
         {/* Delete affordance — sibling Press so it never triggers the edit tap. */}
-        <Press onPress={onDelete} haptic hitSlop={8} accessibilityLabel={`Delete ${title}`} style={{ paddingTop: 5, paddingLeft: 10 }}>
+        <Press onPress={onDelete} haptic hitSlop={14} accessibilityLabel={`Delete ${title}`} style={{ paddingTop: 5, paddingLeft: 10 }}>
           <Icon name="x" size={17} color={C.ink4} strokeWidth={2} />
         </Press>
       </View>
@@ -130,9 +131,9 @@ function NowMarker({ label, C }: { label: string; C: Colors }) {
   }));
   return (
     <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center', marginVertical: 16 }}>
-      <Numeral size={13} color={C.accent} numberOfLines={1} style={{ width: 74, textAlign: 'right' }}>
+      <Mono size={12} weight={600} color={C.accent} numberOfLines={1} style={{ minWidth: 74, textAlign: 'right' }}>
         {label}
-      </Numeral>
+      </Mono>
       <View style={{ width: 13, alignItems: 'center' }}>
         <Animated.View
           style={[
@@ -167,8 +168,8 @@ export default function TimetableDetail() {
   const dayCount = tt?.days ?? items.length;
   const defaultDur = formatTimetableDurationMinutes(TIMETABLE_DURATION_DEFAULT_MINUTES);
 
-  // Current clock → per-step state + the "now" line position.
-  const now = new Date();
+  // Live clock → per-step state + the "now" line position (ticks while open).
+  const now = useNow();
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const nowLabel = formatTimetableTimeLabelMinutes(nowMin);
   const stepStateOf = (it: Item): StepState => {
@@ -222,8 +223,8 @@ export default function TimetableDetail() {
         {(
           [
             [String(items.length), items.length === 1 ? 'item' : 'items'],
-            [String(dayCount), 'days'],
-            [String(totalHrs), 'hrs'],
+            [String(dayCount), dayCount === 1 ? 'day' : 'days'],
+            [String(totalHrs), totalHrs === 1 ? 'hr' : 'hrs'],
           ] as const
         ).map(([n, l]) => (
           <View key={l}>

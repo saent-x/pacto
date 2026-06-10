@@ -1,11 +1,11 @@
 import React, { useEffect, useRef } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 import { useColors } from '@/theme';
 import { TAB_BAR_H as BAR_H } from '@/theme/tokens';
-import { T, Kick, Glass, RoundBtn } from '@/ui';
+import { T, Kick, Glass, Pill, RoundBtn } from '@/ui';
 import { useAI } from './AIController';
 import { Waveform } from './VoiceViz';
 import type { AIMessage } from './useRealtimeAgent';
@@ -13,17 +13,19 @@ import type { AIMessage } from './useRealtimeAgent';
 function Bubble({ m }: { m: AIMessage }) {
   const C = useColors();
   if (m.role === 'tool') {
+    // A failed tool call must not leave a success checkmark in the transcript.
+    const failed = m.ok === false;
     return (
       <View
         style={{
           alignSelf: 'center',
-          backgroundColor: C.accentSoft,
+          backgroundColor: failed ? C.surface : C.accentSoft,
           borderRadius: 999,
           paddingHorizontal: 12,
           paddingVertical: 5,
         }}
       >
-        <Kick color={C.accent}>{`✓ ${m.text}`}</Kick>
+        <Kick color={failed ? C.danger : C.accent}>{`${failed ? '✕' : '✓'} ${m.text}`}</Kick>
       </View>
     );
   }
@@ -48,7 +50,7 @@ function Bubble({ m }: { m: AIMessage }) {
   );
 }
 
-function hintFor(mode: 'hold' | 'live', status: string, live: boolean, error: string | null) {
+function hintFor(mode: 'hold' | 'live', status: string, live: boolean, error: string | null, capped: boolean) {
   if (error) return error;
   if (mode === 'live') {
     if (status === 'connecting') return 'Connecting…';
@@ -56,7 +58,7 @@ function hintFor(mode: 'hold' | 'live', status: string, live: boolean, error: st
     return 'Tap to start a conversation';
   }
   if (status === 'recording') return 'Listening… release to send';
-  if (status === 'thinking') return 'Thinking…';
+  if (status === 'thinking') return capped ? "Sent the first 30s — that's the max per turn" : 'Thinking…';
   return 'Hold to talk';
 }
 
@@ -73,7 +75,7 @@ export function AIDock() {
   const tintStyle = useAnimatedStyle(() => ({ opacity: overlayP.value * 0.8 }));
   const fadeStyle = useAnimatedStyle(() => ({ opacity: overlayP.value }));
 
-  const hint = hintFor(mode, state.status, state.live, state.error);
+  const hint = hintFor(mode, state.status, state.live, state.error, state.capped);
 
   return (
     <View pointerEvents={active ? 'auto' : 'none'} style={StyleSheet.absoluteFill}>
@@ -114,7 +116,7 @@ export function AIDock() {
         ]}
       >
         <Kick color={C.ink3}>Close</Kick>
-        <RoundBtn name="x" onPress={close} />
+        <RoundBtn name="x" onPress={close} accessibilityLabel="Close" />
       </Animated.View>
 
       {/* Transcript — stays mounted and fades with overlayP so it doesn't pop on close */}
@@ -152,10 +154,25 @@ export function AIDock() {
           fadeStyle,
         ]}
       >
-        <T size={14.5} weight={600} color={C.ink2}>
+        <T size={14.5} weight={600} color={state.error ? C.danger : C.ink2}>
           {hint}
         </T>
       </Animated.View>
+
+      {/* Mic permission is denied for good — only the Settings app can fix it,
+          so give that a real door. Sibling of the hint, which is pointerEvents
+          "none" and so couldn't host a tappable control. */}
+      {state.micDenied && (
+        <Animated.View
+          pointerEvents={active ? 'box-none' : 'none'}
+          style={[
+            { position: 'absolute', left: 0, right: 0, bottom: insets.bottom + 10 + BAR_H + 26, alignItems: 'center' },
+            fadeStyle,
+          ]}
+        >
+          <Pill onPress={() => Linking.openSettings()}>Open Settings</Pill>
+        </Animated.View>
+      )}
 
       {/* Voice examples */}
       <Animated.View
@@ -171,7 +188,7 @@ export function AIDock() {
           fadeStyle,
         ]}
       >
-        {state.messages.length === 0 && (
+        {state.messages.length === 0 && !state.micDenied && (
           <Kick color={C.ink3} style={{ textAlign: 'center' }}>
             Try saying “remind me at 6” or “show open tasks”
           </Kick>

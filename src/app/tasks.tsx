@@ -4,23 +4,40 @@ import { View, TextInput } from 'react-native';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@cvx/_generated/api';
 import { Id } from '@cvx/_generated/dataModel';
-import { useColors } from '@/theme';
+import { useColors, useTheme } from '@/theme';
 import { FONTS } from '@/theme/tokens';
 import { QScreen, SubBar, QSection, T, Kick, Div, Icon, Press, RoundBtn, Mono, Numeral, Bar, CollapsibleList } from '@/ui';
 import { useSpace } from '@/features/account/SpaceProvider';
 import { MemberAvatar } from '@/features/account/avatars';
 import { confirmDelete } from '@/lib/confirm';
-import { priorityColor } from '@/constants/priority';
+import { isToday, startOfToday } from '@/lib/datetime';
+import { dueLabelForDate } from '@/lib/taskDueDate';
+import { useToday } from '@/lib/useNow';
+import { priorityColor, priorityKeyOrNull } from '@/constants/priority';
+
+const DAY_MS = 86_400_000;
 
 export default function Tasks() {
   const C = useColors();
+  const { isDark } = useTheme();
   const router = useRouter();
   const { spaceId, isShared, members } = useSpace();
+  const today = useToday();
   const skip = spaceId ? { spaceId } : 'skip';
 
   const tasks = useQuery(api.tasks.listTasks, skip);
   const lists = useQuery(api.taskLists.listLists, skip);
-  const toggleTask = useMutation(api.tasks.toggleTask);
+  // Flip `done` locally so the row responds on tap rather than after the round-trip.
+  const toggleTask = useMutation(api.tasks.toggleTask).withOptimisticUpdate((store, { taskId }) => {
+    if (!spaceId) return;
+    const rows = store.getQuery(api.tasks.listTasks, { spaceId });
+    if (!rows) return;
+    store.setQuery(
+      api.tasks.listTasks,
+      { spaceId },
+      rows.map((row) => (row._id === taskId ? { ...row, done: !row.done } : row)),
+    );
+  });
   const createList = useMutation(api.taskLists.createList);
   const removeList = useMutation(api.taskLists.removeList);
   const removeTask = useMutation(api.tasks.removeTask);
@@ -29,6 +46,7 @@ export default function Tasks() {
 
   const [newMode, setNewMode] = useState(false);
   const [newName, setNewName] = useState('');
+  const [creatingList, setCreatingList] = useState(false);
 
   const all = tasks ?? [];
   const open = all.filter((t) => !t.done);
@@ -57,10 +75,15 @@ export default function Tasks() {
 
   const addList = async () => {
     const name = newName.trim();
-    if (!name || !spaceId) return;
-    await createList({ spaceId, name });
-    setNewName('');
-    setNewMode(false);
+    if (!name || !spaceId || creatingList) return;
+    setCreatingList(true);
+    try {
+      await createList({ spaceId, name });
+      setNewName('');
+      setNewMode(false);
+    } finally {
+      setCreatingList(false);
+    }
   };
 
   const addHref = (listId: string | null) =>
@@ -82,12 +105,32 @@ export default function Tasks() {
       onConfirm: () => removeTask({ taskId: t._id }),
     });
 
+  // Derive the due label from dueAt at render so 'Today'/'Tomorrow' never go
+  // stale; the stored label is only a fallback for undated tasks.
+  const dueLabelOf = (t: (typeof all)[number]): string | undefined => {
+    if (!t.dueAt) return t.dueLabel;
+    const now = today.getTime();
+    if (isToday(t.dueAt, now)) return 'Today';
+    if (isToday(t.dueAt, now + DAY_MS)) return 'Tomorrow';
+    if (t.dueAt < startOfToday(now)) return `Overdue · ${dueLabelForDate(new Date(t.dueAt))}`;
+    return dueLabelForDate(new Date(t.dueAt));
+  };
+
   const Row = ({ t }: { t: (typeof all)[number] }) => {
     const uid = (t.assigneeUserId ?? t.createdBy) as Id<'users'>;
     const owner = memberById.get(uid);
+    const due = dueLabelOf(t);
     return (
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, opacity: t.done ? 0.55 : 1 }}>
-        <Press scale={0.85} haptic onPress={() => toggleTask({ taskId: t._id })}>
+        <Press
+          scale={0.85}
+          haptic
+          hitSlop={10}
+          accessibilityRole="checkbox"
+          accessibilityLabel={t.title}
+          accessibilityState={{ checked: t.done }}
+          onPress={() => toggleTask({ taskId: t._id }).catch(() => {})}
+        >
           <View
             style={{
               width: 24,
@@ -103,7 +146,7 @@ export default function Tasks() {
             {t.done && <Icon name="check" size={13} color={C.onAccent} strokeWidth={3} />}
           </View>
         </Press>
-        <Press onPress={() => router.push(`/new/task?id=${t._id}` as any)} style={{ flex: 1 }}>
+        <Press onPress={() => router.push(`/new/task?id=${t._id}` as any)} haptic style={{ flex: 1 }}>
           <T
             size={16.5}
             weight={500}
@@ -113,10 +156,10 @@ export default function Tasks() {
           >
             {t.title}
           </T>
-          {(!!t.dueLabel || (isShared && owner)) && (
+          {(!!due || (isShared && owner)) && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 3 }}>
-              {!!t.dueLabel && <Kick color={C.ink3}>{t.dueLabel}</Kick>}
-              {!!t.dueLabel && isShared && owner && (
+              {!!due && <Kick color={C.ink3}>{due}</Kick>}
+              {!!due && isShared && owner && (
                 <View style={{ width: 3, height: 3, borderRadius: 3, backgroundColor: C.ink4 }} />
               )}
               {isShared && owner && (
@@ -127,9 +170,14 @@ export default function Tasks() {
             </View>
           )}
         </Press>
-        <Icon name="flag" size={15} color={priorityColor(t.priority)} strokeWidth={2} />
+        <Icon
+          name="flag"
+          size={15}
+          color={priorityKeyOrNull(t.priority) ? priorityColor(t.priority, isDark) : C.ink4}
+          strokeWidth={2}
+        />
         {isShared && owner && <MemberAvatar member={owner} size={28} />}
-        <Press onPress={() => deleteTask(t)} haptic hitSlop={8} accessibilityLabel={`Delete ${t.title}`}>
+        <Press onPress={() => deleteTask(t)} haptic hitSlop={14} accessibilityLabel={`Delete ${t.title}`}>
           <Icon name="x" size={16} color={C.ink4} strokeWidth={2} />
         </Press>
       </View>
@@ -139,10 +187,19 @@ export default function Tasks() {
   return (
     <QScreen
       loading={tasks === undefined || lists === undefined}
+      keyboardAvoiding
       header={
         <SubBar
           kicker="Tasks"
-          right={<RoundBtn name="plus" fill={C.ink} color={C.bg} onPress={() => router.push('/new/task')} />}
+          right={
+            <RoundBtn
+              name="plus"
+              fill={C.ink}
+              color={C.bg}
+              onPress={() => router.push('/new/task')}
+              accessibilityLabel="New task"
+            />
+          }
         />
       }
     >
@@ -179,7 +236,7 @@ export default function Tasks() {
             }
             action={
               s.id != null ? (
-                <Press onPress={() => deleteList(s.id, s.name)} haptic hitSlop={8} accessibilityLabel={`Delete ${s.name} list`}>
+                <Press onPress={() => deleteList(s.id, s.name)} haptic hitSlop={15} accessibilityLabel={`Delete ${s.name} list`}>
                   <Icon name="x" size={15} color={C.ink4} strokeWidth={2} />
                 </Press>
               ) : undefined
@@ -226,17 +283,18 @@ export default function Tasks() {
             value={newName}
             onChangeText={setNewName}
             placeholder="Name your list"
-            placeholderTextColor={C.ink4}
+            placeholderTextColor={C.ink2}
             autoFocus
+            editable={!creatingList}
             returnKeyType="done"
             onSubmitEditing={addList}
             onBlur={() => {
-              if (!newName.trim()) setNewMode(false);
+              if (!creatingList && !newName.trim()) setNewMode(false);
             }}
             style={{ flex: 1, fontFamily: FONTS.sans500, fontSize: 16.5, color: C.ink }}
           />
           {newName.trim() ? (
-            <Press onPress={addList} haptic hitSlop={8}>
+            <Press onPress={addList} haptic hitSlop={8} disabled={creatingList}>
               <Kick color={C.accent}>Create</Kick>
             </Press>
           ) : (

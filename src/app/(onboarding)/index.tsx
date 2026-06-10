@@ -114,7 +114,7 @@ export default function ChooseMode() {
               setError(null);
             }}
             placeholder="Your name"
-            placeholderTextColor={C.ink4}
+            placeholderTextColor={C.ink2}
             autoCapitalize="words"
             autoCorrect={false}
             textContentType="name"
@@ -132,10 +132,13 @@ export default function ChooseMode() {
         </View>
 
         <View style={{ marginTop: 24, flex: 1 }}>
-          <T size={16} weight={450} color={C.ink2} style={{ marginBottom: 4 }}>
-            What kind of pact are you starting?
-          </T>
-          {MODES.map((m, i) => {
+          {/* Joining ignores the mode picker entirely, so hide it behind the code form. */}
+          {!showCode && (
+            <T size={16} weight={450} color={C.ink2} style={{ marginBottom: 4 }}>
+              What kind of pact are you starting?
+            </T>
+          )}
+          {!showCode && MODES.map((m, i) => {
             const on = sel === m.id;
             return (
               <View key={m.id}>
@@ -179,17 +182,20 @@ export default function ChooseMode() {
           })}
 
           {showCode && (
-            <View style={{ marginTop: 8 }}>
+            <View>
+              <T size={16} weight={450} color={C.ink2} style={{ marginBottom: 16 }}>
+                Joining with an invite
+              </T>
               <Kick style={{ marginBottom: 8 }}>Invite code</Kick>
               <TextInput
                 value={code}
                 onChangeText={setCode}
                 placeholder="ABC-123"
-                placeholderTextColor={C.ink4}
+                placeholderTextColor={C.ink2}
                 autoCapitalize="characters"
                 autoCorrect={false}
                 style={{
-                  fontFamily: FONTS.sans600,
+                  fontFamily: FONTS.mono600,
                   fontSize: 18,
                   letterSpacing: 1,
                   color: C.ink,
@@ -202,7 +208,7 @@ export default function ChooseMode() {
           )}
 
           {error && (
-            <T selectable size={13.5} weight={500} color={C.accent} style={{ marginTop: 12 }}>
+            <T selectable size={13.5} weight={500} color={C.danger} style={{ marginTop: 12 }}>
               {error}
             </T>
           )}

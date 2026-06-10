@@ -1,6 +1,30 @@
 import { ConvexReactClient } from 'convex/react';
 import { api } from '@cvx/_generated/api';
 import { Id } from '@cvx/_generated/dataModel';
+import { fmtTime } from '@/lib/datetime';
+import { dueLabelForDate } from '@/lib/taskDueDate';
+
+// Current local date-time as an offset-qualified ISO string. Both engines put
+// this in the model prompt so it can ground "tomorrow at 6" into the absolute
+// `atIso` that create_reminder needs to actually schedule a notification.
+export function localNowIso(d: Date = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  const off = -d.getTimezoneOffset();
+  const sign = off >= 0 ? '+' : '-';
+  return (
+    `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` +
+    `T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}` +
+    `${sign}${p(Math.floor(Math.abs(off) / 60))}:${p(Math.abs(off) % 60)}`
+  );
+}
+
+export const deviceTz = (() => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return undefined;
+  }
+})();
 
 // Tool definitions advertised to the Realtime model. Mirrors convex/aiNode.ts TOOLS.
 export const AI_TOOLS = [
@@ -13,6 +37,11 @@ export const AI_TOOLS = [
       properties: {
         title: { type: 'string', description: 'What needs doing' },
         priority: { type: 'string', enum: ['low', 'med', 'high'] },
+        dueIso: {
+          type: 'string',
+          description:
+            'Due date-time as an offset-qualified ISO datetime, e.g. "2026-06-10T18:00:00+02:00" — compute it from the current date and time in your instructions. Omit if the user gave no date.',
+        },
       },
       required: ['title'],
     },
@@ -26,6 +55,11 @@ export const AI_TOOLS = [
       properties: {
         title: { type: 'string' },
         when: { type: 'string', description: 'A natural-language time, e.g. "6pm" or "tomorrow"' },
+        atIso: {
+          type: 'string',
+          description:
+            'Absolute reminder time as an offset-qualified ISO datetime, e.g. "2026-06-09T18:00:00+02:00" — compute it from the current date and time in your instructions. Must be in the future: if the named time already passed today, use its next occurrence. Omit if the user gave no time.',
+        },
       },
       required: ['title'],
     },
@@ -109,21 +143,45 @@ export async function dispatchTool(
   args: Args,
 ): Promise<Record<string, unknown>> {
   switch (name) {
-    case 'create_task':
+    case 'create_task': {
+      // A real dueAt (not a phantom "Today" label) so the rows derive a live
+      // Today/Tomorrow/Overdue label and the due push can actually schedule.
+      const dueAt = args.dueIso ? Date.parse(String(args.dueIso)) : NaN;
       await convex.mutation(api.tasks.createTask, {
         spaceId,
         title: String(args.title),
         priority: args.priority,
-        dueLabel: 'Today',
+        ...(Number.isFinite(dueAt) ? { dueAt, dueLabel: dueLabelForDate(new Date(dueAt)) } : {}),
       });
-      return { ok: true, created: 'task', title: args.title };
-    case 'create_reminder':
+      // "scheduled" = a due push will actually fire; a past dueAt schedules nothing.
+      return { ok: true, created: 'task', title: args.title, scheduled: Number.isFinite(dueAt) && dueAt > Date.now() };
+    }
+    case 'create_reminder': {
+      // An offset-qualified atIso parses to an absolute instant, so the reminder
+      // can actually notify. Without it the reminder is title-only — the result
+      // says so, so the model tells the user no time was set.
+      const remindAt = args.atIso ? Date.parse(String(args.atIso)) : NaN;
+      if (Number.isFinite(remindAt)) {
+        await convex.mutation(api.reminders.createReminder, {
+          spaceId,
+          title: String(args.title),
+          remindAt,
+          whenLabel: fmtTime(remindAt),
+          tz: deviceTz,
+        });
+        // A past instant gets no notification job — say so instead of confirming.
+        const scheduled = remindAt > Date.now();
+        return scheduled
+          ? { ok: true, created: 'reminder', title: args.title, scheduled }
+          : { ok: true, created: 'reminder', title: args.title, scheduled, note: 'that time already passed — ask the user for a future time' };
+      }
       await convex.mutation(api.reminders.createReminder, {
         spaceId,
         title: String(args.title),
         whenLabel: args.when,
       });
-      return { ok: true, created: 'reminder', title: args.title };
+      return { ok: true, created: 'reminder', title: args.title, scheduled: false };
+    }
     case 'create_checkin':
       await convex.mutation(api.checkins.createCheckin, {
         spaceId,

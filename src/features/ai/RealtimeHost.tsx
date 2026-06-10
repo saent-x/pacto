@@ -7,7 +7,14 @@ type Bridge = {
   sendText?: (t: string) => void;
 };
 
-type EngineState = { status: string; messages: AIMessage[]; error: string | null; live: boolean };
+type EngineState = {
+  status: string;
+  messages: AIMessage[];
+  error: string | null;
+  live: boolean;
+  micDenied: boolean;
+  capped: boolean;
+};
 
 // Headless host: runs the Realtime WebRTC agent and bridges its controls + state
 // up to the AI controller. Lazy-imported so webrtc only loads for this engine.
@@ -25,8 +32,15 @@ export default function RealtimeHost({
   }, [a.start, a.stop, a.sendText, bridgeRef]);
 
   useEffect(() => {
-    onState({ status: a.status, messages: a.messages, error: a.error, live: a.status === 'live' });
-  }, [a.status, a.messages, a.error, onState]);
+    onState({
+      status: a.status,
+      messages: a.messages,
+      error: a.error,
+      live: a.status === 'live',
+      micDenied: a.micDenied,
+      capped: false, // the Realtime path has no recording cap
+    });
+  }, [a.status, a.messages, a.error, a.micDenied, onState]);
 
   // Tear down the session ONLY on unmount (engine switch / app exit). Depending on
   // `a` (a fresh object each render) would call stop() on every state update and

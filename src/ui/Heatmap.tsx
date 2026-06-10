@@ -5,7 +5,6 @@ import { QSection } from './shell';
 import { Kick } from './Text';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const DAY_MS = 86_400_000;
 
 // Single-hue intensity for a level: 0 = empty (hairline), 1..4 = accent ramp,
 // <0 = blank (future day in the current week).
@@ -36,11 +35,14 @@ export function ActivityHeatmap({ levels, weekStartMs }: { levels: number[][]; w
   );
 
   // Distinct months spanning the window, in order (spaced across the grid width).
+  // Calendar math, not w*7*DAY_MS — fixed 24h steps drift across DST transitions.
   const months = useMemo(() => {
     const out: string[] = [];
     let prev = -1;
     for (let w = 0; w < weeks; w++) {
-      const m = new Date(weekStartMs + w * 7 * DAY_MS).getMonth();
+      const md = new Date(weekStartMs);
+      md.setDate(md.getDate() + w * 7);
+      const m = md.getMonth();
       if (m !== prev) {
         out.push(MONTHS[m]);
         prev = m;
@@ -106,8 +108,12 @@ export function buildActivity(timestamps: number[], weeks = 17, now: number = Da
   todayStart.setHours(0, 0, 0, 0);
   const todayMs = todayStart.getTime();
   const dow = (todayStart.getDay() + 6) % 7; // 0 = Monday
-  const mondayThisWeek = todayMs - dow * DAY_MS;
-  const weekStartMs = mondayThisWeek - (weeks - 1) * 7 * DAY_MS;
+  // Calendar math, not fixed 24h steps — the window spans DST transitions, and
+  // ms arithmetic would land day keys off local midnight for older weeks.
+  const weekStart = new Date(todayStart);
+  weekStart.setDate(todayStart.getDate() - dow - (weeks - 1) * 7);
+  weekStart.setHours(0, 0, 0, 0);
+  const weekStartMs = weekStart.getTime();
 
   // count activity per day
   const counts = new Map<number, number>();
@@ -125,7 +131,10 @@ export function buildActivity(timestamps: number[], weeks = 17, now: number = Da
   for (let d = 0; d < 7; d++) {
     const row: number[] = [];
     for (let w = 0; w < weeks; w++) {
-      const dayMs = weekStartMs + (w * 7 + d) * DAY_MS;
+      const c = new Date(weekStart);
+      c.setDate(weekStart.getDate() + w * 7 + d);
+      c.setHours(0, 0, 0, 0);
+      const dayMs = c.getTime();
       if (dayMs > todayMs) row.push(-1); // future day in the current week
       else row.push(levelFor(counts.get(dayMs) ?? 0));
     }

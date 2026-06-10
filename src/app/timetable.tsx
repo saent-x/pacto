@@ -3,10 +3,11 @@ import { useRouter } from 'expo-router';
 import { useQuery } from 'convex/react';
 import { api } from '@cvx/_generated/api';
 import { useColors } from '@/theme';
-import { SHADOWS } from '@/theme/tokens';
+import { RADII, SHADOWS } from '@/theme/tokens';
 import { QScreen, SubBar, QSection, Serif, T, Kick, RoundBtn, Press, Numeral, Div } from '@/ui';
 import { useSpace } from '@/features/account/SpaceProvider';
 import { MemberStack } from '@/features/account/avatars';
+import { useNow } from '@/lib/useNow';
 import { formatTimetableTimeLabel, timetableTimeMinutes } from '@/lib/timetableTime';
 
 const shareLabel = (share?: string) => {
@@ -42,7 +43,7 @@ export default function Timetable() {
   const rows = timetables ?? [];
   const kicker = isShared && space ? `Timetable · ${space.name}` : 'Timetable';
 
-  const now = new Date();
+  const now = useNow();
   const nowMin = now.getHours() * 60 + now.getMinutes();
   let globalNext: { item: TTItem; delta: number } | null = null;
   for (const t of rows) {
@@ -50,10 +51,11 @@ export default function Timetable() {
     if (n && (!globalNext || n.delta < globalNext.delta)) globalNext = n;
   }
   const rhythmWord = rows.length === 1 ? 'rhythm' : 'rhythms';
+  const nextHrs = globalNext ? Math.round(globalNext.delta / 60) : 0;
   const nextIn = globalNext
     ? globalNext.delta < 60
       ? `next in ${globalNext.delta} min`
-      : `next in ${Math.round(globalNext.delta / 60)} hrs`
+      : `next in ${nextHrs} ${nextHrs === 1 ? 'hr' : 'hrs'}`
     : null;
   const leadLabel = nextIn ? `${rhythmWord} ·\n${nextIn}` : `${rhythmWord}\nthis week`;
 
@@ -63,7 +65,15 @@ export default function Timetable() {
       header={
         <SubBar
           kicker={kicker}
-          right={<RoundBtn name="plus" fill={C.ink} color={C.bg} onPress={() => router.push('/new/timetable')} />}
+          right={
+            <RoundBtn
+              name="plus"
+              fill={C.ink}
+              color={C.bg}
+              onPress={() => router.push('/new/timetable')}
+              accessibilityLabel="New timetable"
+            />
+          }
         />
       }
     >
@@ -91,11 +101,11 @@ export default function Timetable() {
             onPress={() => router.push(`/timetable/${t._id}` as any)}
             haptic
             accessibilityLabel={`Open ${t.title} timetable`}
-            style={{ borderRadius: 22, marginBottom: 12 }}
+            style={{ borderRadius: RADII.card, marginBottom: 12 }}
           >
             <View
               style={[
-                { backgroundColor: C.surface, borderRadius: 22, padding: 22 },
+                { backgroundColor: C.surface, borderRadius: RADII.card, padding: 22 },
                 { boxShadow: SHADOWS.soft } as object,
               ]}
             >
@@ -105,7 +115,7 @@ export default function Timetable() {
                     {t.title}
                   </Serif>
                   <Kick color={C.ink3} style={{ marginTop: 4 }}>
-                    {`${t.items.length} items · ${days} days`}
+                    {`${t.items.length} ${t.items.length === 1 ? 'item' : 'items'} · ${days} ${days === 1 ? 'day' : 'days'}`}
                   </Kick>
                 </View>
                 {isShared ? (

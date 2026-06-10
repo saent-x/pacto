@@ -3,18 +3,19 @@ export function greeting(d: Date = new Date()): string {
   return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
 }
 
+// Locale-aware so list rows match the pickers (12h vs 24h follows the device).
 export function fmtTime(ts: number): string {
-  const d = new Date(ts);
-  let h = d.getHours();
-  const m = d.getMinutes();
-  const ap = h >= 12 ? 'PM' : 'AM';
-  h = h % 12 || 12;
-  return `${h}:${m.toString().padStart(2, '0')} ${ap}`;
+  return new Date(ts).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
-/** Time without the AM/PM suffix (used on the Today timeline). */
+/** Time without the day-period suffix (used on the Today timeline). */
 export function fmtTimeBare(ts: number): string {
-  return fmtTime(ts).replace(/ ?[AP]M$/, '');
+  return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' })
+    .formatToParts(new Date(ts))
+    .filter((p) => p.type !== 'dayPeriod')
+    .map((p) => p.value)
+    .join('')
+    .trim();
 }
 
 const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];

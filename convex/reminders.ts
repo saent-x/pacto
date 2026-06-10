@@ -1,7 +1,7 @@
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
 import { Doc } from './_generated/dataModel';
-import { assertMember, validateAssignee } from './lib/spaces';
+import { assertMember, isMember, validateAssignee } from './lib/spaces';
 import { cancelJob, syncReminderNotification } from './lib/notify';
 import { priority } from './schema';
 
@@ -24,6 +24,16 @@ export const listReminders = query({
       .withIndex('by_space', (q) => q.eq('spaceId', spaceId))
       .order('desc')
       .collect();
+  },
+});
+
+export const getReminder = query({
+  args: { reminderId: v.id('reminders') },
+  handler: async (ctx, { reminderId }) => {
+    const r = await ctx.db.get(reminderId);
+    // Ex-members get null (the sheet's "isn't available" state), not a render throw.
+    if (!r || !(await isMember(ctx, r.spaceId))) return null;
+    return r;
   },
 });
 
@@ -80,14 +90,18 @@ export const updateReminder = mutation({
     tz: v.optional(v.string()),
     done: v.optional(v.boolean()),
     assigneeUserId: v.optional(v.id('users')),
+    clearAssignee: v.optional(v.boolean()),
   },
-  handler: async (ctx, { reminderId, ...fields }) => {
+  handler: async (ctx, { reminderId, clearAssignee, ...fields }) => {
     const r = await ctx.db.get(reminderId);
     if (!r) throw new Error('NOT_FOUND');
     await assertMember(ctx, r.spaceId);
     if (fields.assigneeUserId !== undefined)
       await validateAssignee(ctx, r.spaceId, fields.assigneeUserId);
-    await ctx.db.patch(reminderId, clean(fields) as Partial<Doc<'reminders'>>);
+    // clean() strips undefined, so unsetting the assignee needs an explicit flag.
+    const patch = clean(fields) as Partial<Doc<'reminders'>>;
+    if (clearAssignee) patch.assigneeUserId = undefined;
+    await ctx.db.patch(reminderId, patch);
     await syncReminderNotification(ctx, reminderId);
   },
 });

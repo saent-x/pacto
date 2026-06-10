@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { ActivityIndicator, RefreshControl, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, AppState, RefreshControl, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Animated, {
@@ -10,6 +10,7 @@ import Animated, {
   Extrapolation,
 } from 'react-native-reanimated';
 import { useQuery, useMutation } from 'convex/react';
+import type { OptimisticLocalStore } from 'convex/browser';
 import { api } from '@cvx/_generated/api';
 import { Id } from '@cvx/_generated/dataModel';
 import { useColors } from '@/theme';
@@ -19,7 +20,7 @@ import { useSpace } from '@/features/account/SpaceProvider';
 import { MemberAvatar, MemberStack } from '@/features/account/avatars';
 import { displayNameForGreeting } from '@/features/account/displayName';
 import { MOODS, moodById } from '@/constants/moods';
-import { dateLabel, fmtTimeBare, isToday } from '@/lib/datetime';
+import { dateLabel, fmtTimeBare, isToday, startOfToday } from '@/lib/datetime';
 import { usePullRefresh } from '@/lib/usePullRefresh';
 
 type Row = {
@@ -35,6 +36,22 @@ type Row = {
 const editRoute = (r: Row): any =>
   r.kind === 'task' ? `/new/task?id=${r.id}` : r.kind === 'reminder' ? `/new/reminder?id=${r.id}` : `/new/event?id=${r.id}`;
 
+// Module scope keeps the impure Date.now() out of render (react-hooks/purity) —
+// Convex runs this at mutation time and rolls it back if the mutation fails.
+const optimisticPulse = (
+  store: OptimisticLocalStore,
+  args: { spaceId: Id<'spaces'>; mood: string; energy?: number },
+  userId: Id<'users'> | undefined,
+) => {
+  if (!userId) return;
+  const current = store.getQuery(api.checkins.latestByMember, { spaceId: args.spaceId });
+  if (current === undefined) return;
+  store.setQuery(api.checkins.latestByMember, { spaceId: args.spaceId }, [
+    { userId, mood: args.mood, energy: args.energy ?? null, at: Date.now() },
+    ...current.filter((p) => p.userId !== userId),
+  ]);
+};
+
 export default function Today() {
   const C = useColors();
   const router = useRouter();
@@ -45,14 +62,31 @@ export default function Today() {
   const tasks = useQuery(api.tasks.listTasks, skip);
   const reminders = useQuery(api.reminders.listReminders, skip);
   // Stable window (lazy state so Date.now() doesn't re-subscribe each render): recent + next 30 days.
-  const [win] = useState(() => {
+  // Tagged with the day it was built for and rebuilt when a foreground crosses midnight —
+  // tab screens stay mounted (and iOS keeps the app alive) for days.
+  const [win, setWin] = useState(() => {
     const now = Date.now();
-    return { from: now - 12 * 3600_000, to: now + 30 * 86_400_000 };
+    return { day: startOfToday(now), from: now - 12 * 3600_000, to: now + 30 * 86_400_000 };
   });
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s !== 'active') return;
+      setWin((prev) => {
+        const now = Date.now();
+        const day = startOfToday(now);
+        return day === prev.day ? prev : { day, from: now - 12 * 3600_000, to: now + 30 * 86_400_000 };
+      });
+    });
+    return () => sub.remove();
+  }, []);
   const events = useQuery(api.calendar.listEvents, spaceId ? { spaceId, from: win.from, to: win.to } : 'skip');
   const pulse = useQuery(api.checkins.latestByMember, skip);
-  const checkins = useQuery(api.checkins.listCheckins, skip);
-  const createCheckin = useMutation(api.checkins.createCheckin);
+  // Explicit limit so the heatmap isn't starved by the server's 100-row default.
+  const checkins = useQuery(api.checkins.listCheckins, spaceId ? { spaceId, limit: 1000 } : 'skip');
+  // Upsert your entry in the pulse immediately — Convex rolls it back on failure.
+  const createCheckin = useMutation(api.checkins.createCheckin).withOptimisticUpdate(
+    (store, args) => optimisticPulse(store, args, user?.id),
+  );
 
   // Hold the screen on a spinner until every query the page reads has resolved,
   // so the hero count, mood row, agenda, and heatmap never flash partial data.
@@ -146,7 +180,7 @@ export default function Today() {
           </Numeral>
           <View style={{ paddingBottom: 33 }}>
             <T size={17} weight={600} lh={1.25}>
-              {`${agendaWord} on\n${isShared ? 'the day' : 'your day'}`}
+              {`${agendaWord} open\nfor ${isShared ? 'us' : 'you'}`}
             </T>
           </View>
         </View>
@@ -164,7 +198,14 @@ export default function Today() {
             {MOODS.map((m) => {
               const on = myMoodToday?.id === m.id;
               return (
-                <Press key={m.id} onPress={() => spaceId && createCheckin({ spaceId, mood: m.id })} style={{ flex: 1, alignItems: 'center', gap: 10 }} haptic>
+                <Press
+                  key={m.id}
+                  onPress={() => spaceId && createCheckin({ spaceId, mood: m.id }).catch(() => {})}
+                  accessibilityLabel={m.label}
+                  accessibilityState={{ selected: on }}
+                  style={{ flex: 1, alignItems: 'center', gap: 10 }}
+                  haptic
+                >
                   <MoodGlyph mood={m.id} size={42} active={on} />
                   <Kick color={on ? C.ink : C.ink3} style={{ fontSize: 10, letterSpacing: 0.4 }}>
                     {m.label}
@@ -200,9 +241,9 @@ export default function Today() {
               <View key={r.id}>
                 {i > 0 && <Div style={{ backgroundColor: C.hair }} />}
                 <Press onPress={() => router.push(editRoute(r))} style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16 }} haptic>
-                  <View style={{ width: 56, alignItems: 'flex-start' }}>
+                  <View style={{ minWidth: 56, alignItems: 'flex-start' }}>
                     <Text
-                      allowFontScaling={false}
+                      maxFontSizeMultiplier={1.4}
                       numberOfLines={1}
                       style={{
                         fontFamily: FONTS.editorialSerif,
@@ -279,7 +320,7 @@ export default function Today() {
       }}
     >
       <View style={{ flex: 1, alignItems: 'flex-start' }}>
-        <RoundBtn name="bell" onPress={() => router.push('/notifications')} />
+        <RoundBtn name="bell" accessibilityLabel="Notifications" onPress={() => router.push('/notifications')} />
       </View>
 
       <Animated.View style={pillStyle}>
@@ -298,18 +339,18 @@ export default function Today() {
               overflow: 'hidden',
             }}
           >
-            <Mono size={10.5} weight={600} color={C.ink3} ls={1.2}>
+            <Mono size={10.5} weight={600} color={C.ink3} ls={1.2} maxFontSizeMultiplier={1.2}>
               {dateLabel()}
             </Mono>
-            <Kick color={C.ink4}>·</Kick>
-            <Kick color={C.accent}>{isShared && space ? space.name : 'Just me'}</Kick>
+            <Kick color={C.ink4} maxFontSizeMultiplier={1.2}>·</Kick>
+            <Kick color={C.accent} maxFontSizeMultiplier={1.2}>{isShared && space ? space.name : 'Just me'}</Kick>
             <Icon name="chevronDown" size={11} color={C.accent} strokeWidth={2.2} />
           </Glass>
         </Press>
       </Animated.View>
 
       <View style={{ flex: 1, alignItems: 'flex-end' }}>
-        <Press onPress={() => router.push('/profile')} haptic scale={0.92} style={{ borderRadius: 999 }}>
+        <Press onPress={() => router.push('/profile')} haptic scale={0.92} accessibilityLabel="Profile" style={{ borderRadius: 999 }}>
           <Glass interactive fallbackStyle={{ backgroundColor: C.surface }} style={{ padding: 4, borderRadius: 999, overflow: 'hidden' }}>
             {isShared ? (
               <MemberStack members={displayMembers} size={32} max={3} />

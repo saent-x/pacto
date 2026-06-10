@@ -45,6 +45,7 @@ export const monoFamily = (weight: number = 500): string =>
 
 export const RADII = {
   card: 26,
+  cardSm: 18, // inner/sunk boxes (invite code, members card) nested inside cards
   button: 999, // fully rounded — every button is a capsule
   pill: 999,
   sheet: 30,

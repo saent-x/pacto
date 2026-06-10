@@ -1,6 +1,7 @@
 import { internal } from '../_generated/api';
 import { Id } from '../_generated/dataModel';
 import { MutationCtx } from '../_generated/server';
+import { nextOccurrenceAfter } from './recurrence';
 
 // Helpers that keep a reminder/task's scheduled push-notification job in sync
 // with its current state. Called from the reminder/task CRUD mutations so that:
@@ -26,11 +27,28 @@ export async function syncReminderNotification(ctx: MutationCtx, reminderId: Id<
   if (!r) return;
   await cancelJob(ctx, r.notifyJobId);
   let jobId: string | undefined;
-  if (!r.done && typeof r.remindAt === 'number' && r.remindAt > Date.now()) {
-    jobId = await ctx.scheduler.runAt(r.remindAt, internal.notifications.deliverReminder, {
-      reminderId,
-      expectedRemindAt: r.remindAt,
-    });
+  if (!r.done && typeof r.remindAt === 'number') {
+    if (r.remindAt > Date.now()) {
+      jobId = await ctx.scheduler.runAt(r.remindAt, internal.notifications.deliverReminder, {
+        reminderId,
+        expectedRemindAt: r.remindAt,
+      });
+    } else if (r.repeat && r.repeat !== 'Once') {
+      // A recurring reminder anchored to a past time (e.g. "Daily 7:00 AM" created
+      // at noon) must still fire — re-arming normally happens in deliverReminder,
+      // which never runs if no job was scheduled. Roll forward to the next
+      // occurrence here; null means an unknown repeat rule, so leave unscheduled.
+      const next = nextOccurrenceAfter(r.remindAt, r.repeat, r.tz ?? 'UTC', Date.now());
+      if (next !== null) {
+        jobId = await ctx.scheduler.runAt(next, internal.notifications.deliverReminder, {
+          reminderId,
+          expectedRemindAt: next,
+        });
+        // remindAt must match expectedRemindAt or deliverReminder drops the job as stale.
+        await ctx.db.patch(reminderId, { remindAt: next, notifyJobId: jobId });
+        return;
+      }
+    }
   }
   await ctx.db.patch(reminderId, { notifyJobId: jobId });
 }

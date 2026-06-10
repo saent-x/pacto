@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@cvx/_generated/api';
 import { Id } from '@cvx/_generated/dataModel';
-import { useColors } from '@/theme';
+import { useColors, useTheme } from '@/theme';
 import {
   QScreen,
   SubBar,
@@ -23,7 +23,7 @@ import { MemberAvatar } from '@/features/account/avatars';
 import { fmtTime } from '@/lib/datetime';
 import { QCornerMotif } from '@/art/motifs';
 import { confirmDelete } from '@/lib/confirm';
-import { priorityColor } from '@/constants/priority';
+import { priorityColor, priorityKeyOrNull } from '@/constants/priority';
 
 type Reminder = {
   _id: Id<'reminders'>;
@@ -39,12 +39,23 @@ type Reminder = {
 
 export default function Reminders() {
   const C = useColors();
+  const { isDark } = useTheme();
   const router = useRouter();
   const { spaceId, isShared, members, space } = useSpace();
   const skip = spaceId ? { spaceId } : 'skip';
 
   const reminders = useQuery(api.reminders.listReminders, skip) as Reminder[] | undefined;
-  const toggle = useMutation(api.reminders.toggleReminder);
+  // Flip `done` locally so the row responds on tap rather than after the round-trip.
+  const toggle = useMutation(api.reminders.toggleReminder).withOptimisticUpdate((store, { reminderId }) => {
+    if (!spaceId) return;
+    const rows = store.getQuery(api.reminders.listReminders, { spaceId });
+    if (!rows) return;
+    store.setQuery(
+      api.reminders.listReminders,
+      { spaceId },
+      rows.map((row) => (row._id === reminderId ? { ...row, done: !row.done } : row)),
+    );
+  });
   const removeReminder = useMutation(api.reminders.removeReminder);
 
   const memberById = useMemo(
@@ -63,8 +74,16 @@ export default function Reminders() {
       onConfirm: () => removeReminder({ reminderId: r._id }),
     });
 
-  const QCheck = ({ on, onPress }: { on: boolean; onPress: () => void }) => (
-    <Press onPress={onPress} scale={0.85} haptic hitSlop={8}>
+  const QCheck = ({ on, label, onPress }: { on: boolean; label: string; onPress: () => void }) => (
+    <Press
+      onPress={onPress}
+      scale={0.85}
+      haptic
+      hitSlop={10}
+      accessibilityRole="checkbox"
+      accessibilityLabel={label}
+      accessibilityState={{ checked: on }}
+    >
       <View
         style={{
           width: 24,
@@ -97,8 +116,8 @@ export default function Reminders() {
           opacity: r.done ? 0.5 : 1,
         }}
       >
-        <QCheck on={r.done} onPress={() => toggle({ reminderId: r._id })} />
-        <Press onPress={() => router.push(`/new/reminder?id=${r._id}`)} style={{ flex: 1, gap: 4 }}>
+        <QCheck on={r.done} label={r.title} onPress={() => toggle({ reminderId: r._id }).catch(() => {})} />
+        <Press onPress={() => router.push(`/new/reminder?id=${r._id}`)} haptic style={{ flex: 1, gap: 4 }}>
           <T
             size={16.5}
             weight={500}
@@ -127,9 +146,14 @@ export default function Reminders() {
             )}
           </View>
         </Press>
-        <Icon name="flag" size={15} color={priorityColor(r.priority)} strokeWidth={2} />
+        <Icon
+          name="flag"
+          size={15}
+          color={priorityKeyOrNull(r.priority) ? priorityColor(r.priority, isDark) : C.ink4}
+          strokeWidth={2}
+        />
         {isShared && member && <MemberAvatar member={member} size={28} />}
-        <Press onPress={() => deleteReminder(r)} haptic hitSlop={8} accessibilityLabel={`Delete ${r.title}`}>
+        <Press onPress={() => deleteReminder(r)} haptic hitSlop={14} accessibilityLabel={`Delete ${r.title}`}>
           <Icon name="x" size={16} color={C.ink4} strokeWidth={2} />
         </Press>
       </View>
@@ -144,7 +168,13 @@ export default function Reminders() {
         <SubBar
           kicker={isShared && space ? `Reminders · ${space.name}` : 'Reminders'}
           right={
-            <RoundBtn name="plus" fill={C.ink} color={C.bg} onPress={() => router.push('/new/reminder')} />
+            <RoundBtn
+              name="plus"
+              fill={C.ink}
+              color={C.bg}
+              onPress={() => router.push('/new/reminder')}
+              accessibilityLabel="New reminder"
+            />
           }
         />
       }
@@ -165,7 +195,7 @@ export default function Reminders() {
       {/* Upcoming */}
       <QSection label="Upcoming" />
       {open.length === 0 ? (
-        <T size={15} weight={450} color={C.ink3}>
+        <T size={15} weight={450} color={C.ink2}>
           Nothing on the horizon. A clear mind.
         </T>
       ) : (

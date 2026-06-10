@@ -8,7 +8,7 @@ type Common = {
   color?: string;
   style?: StyleProp<TextStyle>;
   numberOfLines?: number;
-} & Pick<TextProps, 'onPress' | 'ellipsizeMode' | 'allowFontScaling' | 'selectable'>;
+} & Pick<TextProps, 'onPress' | 'ellipsizeMode' | 'allowFontScaling' | 'maxFontSizeMultiplier' | 'selectable'>;
 
 // Editorial display. (`lineHeight` is absolute px in RN.)
 export function Serif({
@@ -62,7 +62,9 @@ export function Numeral({
   const lineHeight = Math.round(size * Math.max(lh, 1.04));
   return (
     <Text
-      allowFontScaling={false}
+      // Scale with Dynamic Type but cap it — these are big standalone numbers
+      // inside fixed layouts (hero counts, day pickers). Overridable via rest.
+      maxFontSizeMultiplier={1.4}
       numberOfLines={numberOfLines}
       style={[
         {

@@ -51,6 +51,18 @@ export async function assertMember(ctx: QueryCtx | MutationCtx, spaceId: Id<'spa
   return { userId, membership };
 }
 
+/** Non-throwing membership probe — for by-id queries that should degrade to
+ *  "not found" (null) for ex-members instead of throwing into the render. */
+export async function isMember(ctx: QueryCtx | MutationCtx, spaceId: Id<'spaces'>): Promise<boolean> {
+  const userId = await getAuthUserId(ctx);
+  if (userId === null) return false;
+  const membership = await ctx.db
+    .query('memberships')
+    .withIndex('by_space_user', (q) => q.eq('spaceId', spaceId).eq('userId', userId))
+    .unique();
+  return !!membership;
+}
+
 /** Stronger check for owner-only ops (invites, removing members, deleting a space). */
 export async function assertOwner(ctx: QueryCtx | MutationCtx, spaceId: Id<'spaces'>) {
   const { userId, membership } = await assertMember(ctx, spaceId);

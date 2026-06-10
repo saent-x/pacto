@@ -3,6 +3,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@cvx/_generated/api';
 import { Id } from '@cvx/_generated/dataModel';
+import { useColors } from '@/theme';
+import { T } from '@/ui';
 import { useSpace } from '@/features/account/SpaceProvider';
 import { SheetShell, QField, QChips, QPriority, QPicker, QAssign } from '@/features/sheets/parts';
 import { confirmDelete } from '@/lib/confirm';
@@ -17,6 +19,7 @@ const todayAtDate = (h: number) => {
 };
 
 export default function NewReminder() {
+  const C = useColors();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const editing = !!id;
@@ -25,8 +28,9 @@ export default function NewReminder() {
   const update = useMutation(api.reminders.updateReminder);
   const remove = useMutation(api.reminders.removeReminder);
 
-  const reminders = useQuery(api.reminders.listReminders, editing && spaceId ? { spaceId } : 'skip');
-  const existing = editing ? reminders?.find((r) => r._id === id) : undefined;
+  // By id, not list+find: a push tap can open a reminder from a non-active space.
+  const reminder = useQuery(api.reminders.getReminder, editing ? { reminderId: id as Id<'reminders'> } : 'skip');
+  const existing = reminder ?? undefined;
 
   const [createTime] = useState(() => todayAtDate(18));
   const [titleDraft, setTitle] = useState<string | null>(null);
@@ -35,6 +39,7 @@ export default function NewReminder() {
   const [prioDraft, setPrio] = useState<string | undefined>(undefined);
   const [assigneeDraft, setAssignee] = useState<string | null | undefined>(undefined);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const title = titleDraft ?? existing?.title ?? '';
   const time = timeDraft ?? (existing?.remindAt ? new Date(existing.remindAt) : createTime);
@@ -45,6 +50,7 @@ export default function NewReminder() {
   const submit = async () => {
     if (!title.trim() || !spaceId || busy) return;
     setBusy(true);
+    setError(null);
     const remindAt = time.getTime();
     // Capture the device timezone so recurring reminders fire at the same local
     // time/day (DST/weekday/month-correct) regardless of where the server runs.
@@ -60,6 +66,7 @@ export default function NewReminder() {
           tz,
           priority: prioOf(prio) as 'low' | 'med' | 'high',
           assigneeUserId: assignee ? (assignee as Id<'users'>) : undefined,
+          clearAssignee: assignee === null ? true : undefined,
         });
       } else {
         await create({
@@ -75,6 +82,7 @@ export default function NewReminder() {
       }
       router.back();
     } catch {
+      setError("Couldn't save — check your connection and try again.");
       setBusy(false);
     }
   };
@@ -88,6 +96,17 @@ export default function NewReminder() {
       },
     });
 
+  // Deleted, or not visible to this account — never an editable empty form.
+  if (editing && reminder === null) {
+    return (
+      <SheetShell kicker="Edit" title="Reminder" footerLabel="Close" footerIcon="x" onSubmit={() => router.back()}>
+        <T size={15.5} weight={450} color={C.ink2} lh={1.5} style={{ marginBottom: 8 }}>
+          This reminder isn&apos;t available anymore.
+        </T>
+      </SheetShell>
+    );
+  }
+
   return (
     <SheetShell
       kicker={editing ? 'Edit' : 'New'}
@@ -96,7 +115,9 @@ export default function NewReminder() {
       onSubmit={submit}
       disabled={!title.trim() || busy}
       onDelete={editing ? onDelete : undefined}
-      loading={editing && reminders === undefined}
+      loading={editing && reminder === undefined}
+      busy={busy}
+      error={error}
     >
       <QField label="Remind me to" value={title} onChangeText={setTitle} placeholder="Water the monstera" big />
       {isShared && <QAssign members={members} value={assignee} onPick={setAssignee} />}

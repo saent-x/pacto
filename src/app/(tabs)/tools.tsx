@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import { useQuery } from 'convex/react';
 import { api } from '@cvx/_generated/api';
 import { useColors } from '@/theme';
-import { SHADOWS } from '@/theme/tokens';
+import { RADII, SHADOWS } from '@/theme/tokens';
 import {
   QScreen,
   TopBar,
@@ -32,7 +32,8 @@ export default function Tools() {
 
   const tasks = useQuery(api.tasks.listTasks, skip);
   const reminders = useQuery(api.reminders.listReminders, skip);
-  const checkins = useQuery(api.checkins.listCheckins, skip);
+  // Explicit limit so the streak isn't capped by the server's 100-row default.
+  const checkins = useQuery(api.checkins.listCheckins, spaceId ? { spaceId, limit: 1000 } : 'skip');
   const timetables = useQuery(api.timetables.listTimetables, skip);
 
   const openTasks = (tasks ?? []).filter((t) => !t.done).length;
@@ -45,6 +46,8 @@ export default function Tools() {
   const sinceDate = space ? `${MONTHS[new Date(space.createdAt).getMonth()]} ${new Date(space.createdAt).getDate()}` : '';
   const sinceLabel =
     space?.type === 'pair' ? 'days together' : space?.type === 'crew' ? 'days as a crew' : 'days solo';
+  const streakLabel =
+    space?.type === 'crew' ? 'crew streak' : space?.type === 'pair' ? 'shared streak' : 'day streak';
 
   const streak = useMemo(() => {
     const days = new Set<number>();
@@ -53,21 +56,28 @@ export default function Tools() {
       d.setHours(0, 0, 0, 0);
       days.add(d.getTime());
     }
-    const todayD = new Date();
-    todayD.setHours(0, 0, 0, 0);
-    let cur = todayD.getTime();
-    if (!days.has(cur)) cur -= DAY_MS; // today not logged yet — don't break the streak
+    // Walk back a calendar day at a time (re-anchoring to midnight, since a fixed
+    // -24h step lands on 23:00/01:00 across DST and misses the day keys).
+    const cur = new Date();
+    cur.setHours(0, 0, 0, 0);
+    if (!days.has(cur.getTime())) {
+      // today not logged yet — don't break the streak
+      cur.setDate(cur.getDate() - 1);
+      cur.setHours(0, 0, 0, 0);
+    }
     let n = 0;
-    while (days.has(cur)) {
+    while (days.has(cur.getTime())) {
       n += 1;
-      cur -= DAY_MS;
+      cur.setDate(cur.getDate() - 1);
+      cur.setHours(0, 0, 0, 0);
     }
     return n;
   }, [checkins]);
 
+  const rhythms = (timetables ?? []).length;
   const TOOLS: { label: string; icon: IconName; value: number; unit: string; route: string }[] = [
-    { label: 'Check-ins', icon: 'message', value: keptCheckins, unit: 'entries', route: '/checkins' },
-    { label: 'Timetable', icon: 'grid', value: (timetables ?? []).length, unit: 'rhythm', route: '/timetable' },
+    { label: 'Check-ins', icon: 'message', value: keptCheckins, unit: keptCheckins === 1 ? 'entry' : 'entries', route: '/checkins' },
+    { label: 'Timetable', icon: 'grid', value: rhythms, unit: rhythms === 1 ? 'rhythm' : 'rhythms', route: '/timetable' },
     { label: 'Tasks', icon: 'checkSquare', value: openTasks, unit: 'open', route: '/tasks' },
     { label: 'Reminders', icon: 'bell', value: openReminders, unit: 'set', route: '/reminders' },
   ];
@@ -79,7 +89,7 @@ export default function Tools() {
       header={
         <TopBar
           right={
-            <Press onPress={() => router.push('/profile')}>
+            <Press onPress={() => router.push('/profile')} haptic accessibilityLabel="Profile">
               {isShared ? (
                 <MemberStack members={members} size={34} max={3} />
               ) : (
@@ -104,13 +114,13 @@ export default function Tools() {
           <Numeral size={34} color={C.accent}>
             {streak}
           </Numeral>
-          <Kick style={{ marginTop: 2 }}>{isShared ? 'crew streak' : 'day streak'}</Kick>
+          <Kick style={{ marginTop: 2 }}>{streakLabel}</Kick>
         </View>
       </View>
 
       {/* Members card (shared) */}
       {isShared && space && (
-        <Press onPress={() => router.push('/profile')} style={{ marginBottom: 22 }}>
+        <Press onPress={() => router.push('/profile')} haptic style={{ marginBottom: 22 }}>
           <View
             style={[
               {
@@ -119,7 +129,7 @@ export default function Tools() {
                 gap: 12,
                 paddingVertical: 13,
                 paddingHorizontal: 16,
-                borderRadius: 16,
+                borderRadius: RADII.cardSm,
                 backgroundColor: C.surface,
               },
               { boxShadow: SHADOWS.soft } as object,
@@ -173,7 +183,7 @@ export default function Tools() {
       {TOOLS.map((t, i) => (
         <View key={t.label}>
           {i > 0 && <Div style={{ backgroundColor: C.hair }} />}
-          <Press onPress={() => router.push(t.route as never)}>
+          <Press onPress={() => router.push(t.route as never)} haptic>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 17 }}>
               <Icon name={t.icon} size={20} color={C.ink2} strokeWidth={1.8} />
               <T size={17} weight={500} style={{ flex: 1 }}>

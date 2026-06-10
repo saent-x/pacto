@@ -32,6 +32,9 @@ const TabButton = forwardRef<View, TabButtonProps>(
           onPress?.(e);
         }}
         {...rest}
+        accessibilityRole="tab"
+        accessibilityLabel={label}
+        accessibilityState={{ selected: isFocused }}
         style={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -44,7 +47,7 @@ const TabButton = forwardRef<View, TabButtonProps>(
       >
         <Icon name={icon} size={20} color={isFocused ? C.bg : C.ink3} strokeWidth={1.9} />
         {isFocused && (
-          <T size={13.5} weight={600} color={C.bg} style={{ letterSpacing: -0.2 }}>
+          <T size={13.5} weight={600} color={C.bg} maxFontSizeMultiplier={1.2} style={{ letterSpacing: -0.2 }}>
             {label}
           </T>
         )}

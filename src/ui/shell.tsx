@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
-import { View, StyleProp, ViewStyle, KeyboardAvoidingView, Platform, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, StyleProp, ViewStyle, ActivityIndicator, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Animated, {
@@ -44,7 +44,9 @@ export function QScreen({
   motif?: React.ReactNode;
   bg?: string;
   contentStyle?: StyleProp<ViewStyle>;
-  /** Lift the scroll content above the keyboard. Opt-in for screens with text inputs. */
+  /** Inset the scroll for the keyboard and scroll focused inputs into view.
+   *  Opt-in for screens with text inputs. (One mechanism only — pairing a
+   *  KeyboardAvoidingView with these insets double-compensates on iOS.) */
   keyboardAvoiding?: boolean;
   /** While true, the screen shows a centered spinner instead of its content — so partial
    *  data (zeroed counts, empty lists) never flashes before the queries resolve. */
@@ -69,6 +71,8 @@ export function QScreen({
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
+      // Scroll focused inputs (e.g. the inline "New list" field) above the keyboard.
+      automaticallyAdjustKeyboardInsets={keyboardAvoiding}
       refreshControl={
         refreshable ? (
           <RefreshControl
@@ -95,13 +99,6 @@ export function QScreen({
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator color={C.accent} />
         </View>
-      ) : keyboardAvoiding ? (
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          {scroll}
-        </KeyboardAvoidingView>
       ) : (
         scroll
       )}
@@ -172,7 +169,7 @@ export function SubBar({
       }}
     >
       <View style={{ flex: 1, alignItems: 'flex-start' }}>
-        <RoundBtn name="chevronLeft" onPress={onBack ?? (() => router.back())} />
+        <RoundBtn name="chevronLeft" accessibilityLabel="Back" onPress={onBack ?? (() => router.back())} />
       </View>
       <Animated.View style={[{ flexShrink: 1 }, titleStyle]}>
         <Kick numberOfLines={1} style={{ textAlign: 'center', paddingHorizontal: 8 }}>

@@ -1,7 +1,7 @@
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
 import { Doc } from './_generated/dataModel';
-import { assertMember, validateAssignee } from './lib/spaces';
+import { assertMember, isMember, validateAssignee } from './lib/spaces';
 
 const clean = <T extends object>(o: T) =>
   Object.fromEntries(Object.entries(o).filter(([, val]) => val !== undefined));
@@ -22,6 +22,16 @@ export const listEvents = query({
       .query('calendarEvents')
       .withIndex('by_space_time', (q) => q.eq('spaceId', spaceId))
       .collect();
+  },
+});
+
+export const getEvent = query({
+  args: { eventId: v.id('calendarEvents') },
+  handler: async (ctx, { eventId }) => {
+    const e = await ctx.db.get(eventId);
+    // Ex-members get null (the sheet's "isn't available" state), not a render throw.
+    if (!e || !(await isMember(ctx, e.spaceId))) return null;
+    return e;
   },
 });
 
@@ -56,15 +66,21 @@ export const updateEvent = mutation({
     startsAt: v.optional(v.number()),
     endsAt: v.optional(v.number()),
     loc: v.optional(v.string()),
+    clearLoc: v.optional(v.boolean()),
     assigneeUserId: v.optional(v.id('users')),
+    clearAssignee: v.optional(v.boolean()),
   },
-  handler: async (ctx, { eventId, ...fields }) => {
+  handler: async (ctx, { eventId, clearAssignee, clearLoc, ...fields }) => {
     const e = await ctx.db.get(eventId);
     if (!e) throw new Error('NOT_FOUND');
     await assertMember(ctx, e.spaceId);
     if (fields.assigneeUserId !== undefined)
       await validateAssignee(ctx, e.spaceId, fields.assigneeUserId);
-    await ctx.db.patch(eventId, clean(fields) as Partial<Doc<'calendarEvents'>>);
+    // clean() strips undefined, so unsetting a field needs an explicit flag.
+    const patch = clean(fields) as Partial<Doc<'calendarEvents'>>;
+    if (clearAssignee) patch.assigneeUserId = undefined;
+    if (clearLoc) patch.loc = undefined;
+    await ctx.db.patch(eventId, patch);
   },
 });
 

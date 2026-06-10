@@ -1,6 +1,7 @@
 import { mutation } from './_generated/server';
 import { v } from 'convex/values';
 import { assertMember } from './lib/spaces';
+import { syncReminderNotification, syncTaskNotification } from './lib/notify';
 
 // Populate a space with representative content so screens look alive immediately.
 // Idempotent: no-op if the space already has tasks. Mirrors the design's sample data.
@@ -28,14 +29,21 @@ export const seedSpace = mutation({
 
     const base = { spaceId, createdBy: userId };
 
-    await ctx.db.insert('tasks', { ...base, title: 'Draft the studio invoice', done: false, list: 'Work', priority: 'high', dueLabel: 'Today', dueAt: at(20) });
-    await ctx.db.insert('tasks', { ...base, title: 'Pick up dry cleaning', done: false, list: 'Errands', priority: 'low', dueLabel: 'Tomorrow', dueAt: at(12, 1) });
+    const invoiceTask = await ctx.db.insert('tasks', { ...base, title: 'Draft the studio invoice', done: false, list: 'Work', priority: 'high', dueLabel: 'Today', dueAt: at(20) });
+    const cleaningTask = await ctx.db.insert('tasks', { ...base, title: 'Pick up dry cleaning', done: false, list: 'Errands', priority: 'low', dueLabel: 'Tomorrow', dueAt: at(12, 1) });
     await ctx.db.insert('tasks', { ...base, title: 'Book dentist appointment', done: false, list: 'Health', priority: 'med', dueLabel: 'Next week' });
     await ctx.db.insert('tasks', { ...base, title: 'Water the plants', done: true, list: 'Home', priority: 'low', dueLabel: 'Today' });
 
-    await ctx.db.insert('reminders', { ...base, title: 'Take vitamins', whenLabel: '8:00 AM', repeat: 'Daily', remindAt: at(8), done: false, priority: 'med' });
-    await ctx.db.insert('reminders', { ...base, title: 'Water the monstera', whenLabel: '6:30 PM', repeat: 'Every 3 days', remindAt: at(18), done: false, priority: 'med' });
+    const vitaminsReminder = await ctx.db.insert('reminders', { ...base, title: 'Take vitamins', whenLabel: '8:00 AM', repeat: 'Daily', remindAt: at(8), done: false, priority: 'med' });
+    const monsteraReminder = await ctx.db.insert('reminders', { ...base, title: 'Water the monstera', whenLabel: '6:30 PM', repeat: 'Weekly', remindAt: at(18), done: false, priority: 'med' });
     await ctx.db.insert('reminders', { ...base, title: 'Morning pages', whenLabel: '7:00 AM', repeat: 'Daily', remindAt: at(7), done: true, priority: 'low' });
+
+    // Schedule pushes for the timed seeds — the sync helpers already no-op for
+    // past times and done items, so no future-ness checks are needed here.
+    await syncTaskNotification(ctx, invoiceTask);
+    await syncTaskNotification(ctx, cleaningTask);
+    await syncReminderNotification(ctx, vitaminsReminder);
+    await syncReminderNotification(ctx, monsteraReminder);
 
     await ctx.db.insert('checkins', { ...base, mood: 'good' });
     await ctx.db.insert('checkins', { ...base, mood: 'steady' });

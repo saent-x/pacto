@@ -9,6 +9,7 @@ import { QScreen, TopBar, QSection, Serif, T, Kick, Div, Icon, Pill, RoundBtn, P
 import { useSpace } from '@/features/account/SpaceProvider';
 import { MemberAvatar } from '@/features/account/avatars';
 import { fmtTimeBare, weekdayName } from '@/lib/datetime';
+import { useToday } from '@/lib/useNow';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -31,7 +32,7 @@ export default function Calendar() {
   const router = useRouter();
   const { spaceId, space, isShared, members } = useSpace();
 
-  const today = useMemo(() => new Date(), []);
+  const today = useToday();
   const todayIdx = mondayIdx(today);
 
   // `anchor` is any day in the displayed week; `selIdx` is the chosen weekday.
@@ -59,25 +60,37 @@ export default function Calendar() {
     setAnchor(d);
   };
   const goToday = () => {
-    setAnchor(new Date());
-    setSelIdx(todayIdx);
+    const now = new Date();
+    setAnchor(now);
+    setSelIdx(mondayIdx(now));
   };
 
   const events = useQuery(
     api.calendar.listEvents,
     spaceId ? { spaceId, from: startOfDay(sel), to: endOfDay(sel) } : 'skip',
   );
-  const rows = (events ?? []).slice().sort((a, b) => a.startsAt - b.startsAt);
+  // Day taps and week swipes re-key the query and Convex returns undefined while it
+  // round-trips — hold the last resolved rows (render-phase state adjustment, ref-free
+  // for the compiler) so the screen never blanks mid-interaction. Keyed by spaceId so
+  // a space switch never flashes another space's events.
+  const [held, setHeld] = useState<{ spaceId: typeof spaceId; rows: typeof events }>({ spaceId, rows: undefined });
+  if (held.spaceId !== spaceId) {
+    setHeld({ spaceId, rows: undefined });
+  } else if (events !== undefined && held.rows !== events) {
+    setHeld({ spaceId, rows: events });
+  }
+  const data = events ?? (held.spaceId === spaceId ? held.rows : undefined);
+  const rows = (data ?? []).slice().sort((a, b) => a.startsAt - b.startsAt);
 
   const memberById = useMemo(() => new Map(members.map((m) => [m.userId, m])), [members]);
 
   return (
     <QScreen
-      loading={events === undefined}
+      loading={data === undefined}
       header={
         <TopBar
           left={<Kick>{`${MONTHS[sel.getMonth()]} ${sel.getFullYear()}${isShared && space ? ` · ${space.name}` : ''}`}</Kick>}
-          right={<RoundBtn name="plus" fill={C.ink} color={C.bg} onPress={() => router.push(`/new/event?day=${startOfDay(sel)}`)} />}
+          right={<RoundBtn name="plus" fill={C.ink} color={C.bg} accessibilityLabel="New event" onPress={() => router.push(`/new/event?day=${startOfDay(sel)}`)} />}
         />
       }
     >
@@ -86,7 +99,7 @@ export default function Calendar() {
         <View>
           <Serif size={42}>{weekdayName(sel)}</Serif>
           <Kick style={{ marginTop: 6 }}>
-            {`${sel.getDate()} ${MONTHS[sel.getMonth()]} · ${selIsToday ? 'Today' : weekdayName(sel)}`}
+            {`${MONTHS[sel.getMonth()]} ${sel.getDate()}${selIsToday ? ' · Today' : ''}`}
           </Kick>
         </View>
         {!isCurrentWeek && (
@@ -96,7 +109,7 @@ export default function Calendar() {
 
       {/* Week strip with prev/next navigation */}
       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 22, marginBottom: 30 }}>
-        <Press onPress={() => shiftWeek(-1)} hitSlop={10} style={{ paddingRight: 4 }}>
+        <Press onPress={() => shiftWeek(-1)} hitSlop={10} accessibilityLabel="Previous week" style={{ paddingRight: 4 }}>
           <Icon name="chevronLeft" size={20} color={C.ink3} strokeWidth={2} />
         </Press>
         <View style={{ flex: 1, flexDirection: 'row', gap: 4 }}>
@@ -104,7 +117,13 @@ export default function Calendar() {
             const on = i === selIdx;
             const isToday = sameDay(d, today);
             return (
-              <Press key={i} onPress={() => setSelIdx(i)} style={{ flex: 1, alignItems: 'center', gap: 6 }}>
+              <Press
+                key={i}
+                onPress={() => setSelIdx(i)}
+                accessibilityLabel={d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+                accessibilityState={{ selected: on }}
+                style={{ flex: 1, alignItems: 'center', gap: 6 }}
+              >
                 <Kick color={C.ink3} style={{ fontSize: 10.5, letterSpacing: 0.5 }}>
                   {LETTERS[i]}
                 </Kick>
@@ -127,56 +146,60 @@ export default function Calendar() {
             );
           })}
         </View>
-        <Press onPress={() => shiftWeek(1)} hitSlop={10} style={{ paddingLeft: 4 }}>
+        <Press onPress={() => shiftWeek(1)} hitSlop={10} accessibilityLabel="Next week" style={{ paddingLeft: 4 }}>
           <Icon name="chevronRight" size={20} color={C.ink3} strokeWidth={2} />
         </Press>
       </View>
 
-      <QSection
-        label={
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
-            <Mono size={11} weight={600} color={C.ink3} ls={1.2}>
-              {rows.length}
-            </Mono>
-            <Kick>{rows.length === 1 ? 'event' : 'events'}</Kick>
-          </View>
-        }
-      />
-      {rows.length === 0 ? (
-        <T size={15} color={C.ink3}>
-          No events for this day.
-        </T>
-      ) : (
-        <CollapsibleList items={rows} limit={6}>
-          {(e, i) => {
-          const owner = e.assigneeUserId ? memberById.get(e.assigneeUserId) : memberById.get(e.createdBy as Id<'users'>);
-          return (
-            <View key={e._id}>
-              {i > 0 && <Div style={{ backgroundColor: C.hair }} />}
-              <Press
-                onPress={() => router.push(`/new/event?id=${e._id}`)}
-                style={{ flexDirection: 'row', gap: 18, paddingVertical: 16, alignItems: 'flex-start' }}
-              >
-                <Mono size={19} weight={500} color={C.ink2} style={{ width: 56 }}>
-                  {fmtTimeBare(e.startsAt)}
-                </Mono>
-                <View style={{ flex: 1 }}>
-                  <T size={17} weight={500} numberOfLines={1}>
-                    {e.title}
-                  </T>
-                  {!!e.loc && (
-                    <Kick color={C.ink3} style={{ marginTop: 2 }}>
-                      {e.loc}
-                    </Kick>
-                  )}
-                </View>
-                {isShared && owner && <MemberAvatar member={owner} size={26} />}
-              </Press>
+      {/* Dim (not blank) while a re-keyed day query is in flight */}
+      <View style={{ opacity: events === undefined ? 0.5 : 1 }}>
+        <QSection
+          label={
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
+              <Mono size={11} weight={600} color={C.ink3} ls={1.2}>
+                {rows.length}
+              </Mono>
+              <Kick>{rows.length === 1 ? 'event' : 'events'}</Kick>
             </View>
-          );
-        }}
-        </CollapsibleList>
-      )}
+          }
+        />
+        {rows.length === 0 ? (
+          <T size={15} color={C.ink2}>
+            No events for this day.
+          </T>
+        ) : (
+          <CollapsibleList items={rows} limit={6}>
+            {(e, i) => {
+            const owner = e.assigneeUserId ? memberById.get(e.assigneeUserId) : memberById.get(e.createdBy as Id<'users'>);
+            return (
+              <View key={e._id}>
+                {i > 0 && <Div style={{ backgroundColor: C.hair }} />}
+                <Press
+                  onPress={() => router.push(`/new/event?id=${e._id}`)}
+                  haptic
+                  style={{ flexDirection: 'row', gap: 18, paddingVertical: 16, alignItems: 'flex-start' }}
+                >
+                  <Mono size={19} weight={500} color={C.ink2} style={{ width: 56 }}>
+                    {fmtTimeBare(e.startsAt)}
+                  </Mono>
+                  <View style={{ flex: 1 }}>
+                    <T size={17} weight={500} numberOfLines={1}>
+                      {e.title}
+                    </T>
+                    {!!e.loc && (
+                      <Kick color={C.ink3} style={{ marginTop: 2 }}>
+                        {e.loc}
+                      </Kick>
+                    )}
+                  </View>
+                  {isShared && owner && <MemberAvatar member={owner} size={26} />}
+                </Press>
+              </View>
+            );
+          }}
+          </CollapsibleList>
+        )}
+      </View>
     </QScreen>
   );
 }
